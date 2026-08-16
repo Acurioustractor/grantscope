@@ -13,6 +13,9 @@ export async function GET(req: NextRequest) {
 
   const q = req.nextUrl.searchParams.get('q')?.trim();
   const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') || 20), 50);
+  // scope=full is the /search page: every live lane runs, no wording heuristics.
+  // The default (typeahead) path keeps its fast-path gating.
+  const fullScope = req.nextUrl.searchParams.get('scope') === 'full';
 
   if (!q || q.length < 2) {
     return NextResponse.json({ entities: [], grants: [] });
@@ -24,16 +27,13 @@ export async function GET(req: NextRequest) {
   // grants/foundations can hit database statement timeouts, so only search those
   // lanes when the wording suggests a funding query.
   const entityResults = await EntityService.search(db, q, Math.min(limit, 10));
-  const shouldSearchFunding = FUNDING_SEARCH_TERMS.test(q);
-  const [grantResults, foundationResults] = shouldSearchFunding
-    ? await Promise.all([
-        GrantService.search(db, q, 5),
-        FoundationService.search(db, q, 5),
-      ])
-    : [
-        { data: [], error: null },
-        { data: [], error: null },
-      ];
+  const shouldSearchFunding = fullScope || FUNDING_SEARCH_TERMS.test(q);
+  const [grantResults, foundationResults, peopleResults, placeResults] = await Promise.all([
+    shouldSearchFunding ? GrantService.search(db, q, 5) : Promise.resolve({ data: [], error: null }),
+    shouldSearchFunding ? FoundationService.search(db, q, 5) : Promise.resolve({ data: [], error: null }),
+    fullScope ? searchPeople(db, q) : Promise.resolve([]),
+    fullScope ? searchPlaces(db, q) : Promise.resolve([]),
+  ]);
 
   const entities = (entityResults.data).map((e, i) => {
     const sourceWeight = Math.min(e.source_count ?? 0, 5);
@@ -84,5 +84,45 @@ export async function GET(req: NextRequest) {
     href: `/grants/${g.id}`,
   }));
 
-  return NextResponse.json({ entities, foundations, grants });
+  return NextResponse.json({ entities, foundations, grants, people: peopleResults, places: placeResults });
+}
+
+type Db = ReturnType<typeof getServiceSupabase>;
+
+async function searchPeople(db: Db, q: string) {
+  const { data } = await db
+    .from('mv_board_interlocks')
+    .select('person_name_display, board_count, interlock_score')
+    .ilike('person_name_display', `%${q}%`)
+    .order('interlock_score', { ascending: false, nullsFirst: false })
+    .limit(5);
+  return (data ?? []).map(p => ({
+    type: 'person' as const,
+    name: p.person_name_display,
+    boardCount: p.board_count,
+    // /person/[name] decodes dashes back to spaces before normalising.
+    href: `/person/${encodeURIComponent(p.person_name_display.replace(/\s+/g, '-'))}`,
+  }));
+}
+
+async function searchPlaces(db: Db, q: string) {
+  const isPostcode = /^\d{2,4}$/.test(q);
+  let query = db.from('postcode_geo').select('postcode, locality, state, lga_name').limit(24);
+  query = isPostcode ? query.like('postcode', `${q}%`) : query.ilike('locality', `%${q}%`);
+  const { data } = await query;
+  // postcode_geo is one row per locality; a place result is a postcode. Some rows carry a
+  // junk locality equal to the postcode itself — prefer a real name when one exists.
+  const byPostcode = new Map<string, { postcode: string; locality: string | null; state: string | null; lga: string | null }>();
+  for (const row of data ?? []) {
+    const locality = row.locality && row.locality !== row.postcode ? row.locality : null;
+    const existing = byPostcode.get(row.postcode);
+    if (!existing || (!existing.locality && locality)) {
+      byPostcode.set(row.postcode, { postcode: row.postcode, locality, state: row.state, lga: row.lga_name });
+    }
+  }
+  return Array.from(byPostcode.values()).slice(0, 5).map(p => ({
+    type: 'place' as const,
+    ...p,
+    href: `/places/${p.postcode}`,
+  }));
 }

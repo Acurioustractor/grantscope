@@ -210,11 +210,16 @@ export function UnifiedSearch() {
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelectedIndex(i => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter' && allResults[selectedIndex]) {
+    } else if (e.key === 'Enter') {
       e.preventDefault();
-      router.push(allResults[selectedIndex].href);
+      if (allResults[selectedIndex]) {
+        router.push(allResults[selectedIndex].href);
+      } else if (query.trim().length >= 2) {
+        // No typeahead hit — hand off to the full /search page (all 8 kinds).
+        router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+      }
     }
-  }, [mode, searchResults, selectedIndex, handleAskSubmit, router]);
+  }, [mode, searchResults, selectedIndex, handleAskSubmit, router, query]);
 
   // Handle example chip click
   const handleExample = useCallback((ex: { label: string; query: string }) => {
@@ -427,11 +432,26 @@ export function UnifiedSearch() {
         </div>
       )}
 
+      {/* Full-search handoff */}
+      {mode === 'search' && hasSearchResults && (
+        <button
+          onClick={() => router.push(`/search?q=${encodeURIComponent(query.trim())}`)}
+          className="mt-2 w-full text-left px-4 py-2.5 border-4 border-bauhaus-black bg-white text-xs font-black uppercase tracking-widest text-bauhaus-blue hover:bg-bauhaus-canvas transition-colors cursor-pointer"
+        >
+          All results for &ldquo;{query.trim()}&rdquo; &rarr; reports, questions, people, places &amp; more
+        </button>
+      )}
+
       {/* No search results */}
       {mode === 'search' && query.length >= 2 && !loading && searchResults && !hasSearchResults && (
         <div className="mt-4 border-4 border-bauhaus-black/20 p-6 bg-white text-center">
           <p className="text-sm font-bold text-bauhaus-muted">No results for &ldquo;{query}&rdquo;</p>
-          <p className="text-xs text-bauhaus-muted mt-1">Try a different name, ABN, or ask a question</p>
+          <p className="text-xs text-bauhaus-muted mt-1">
+            Try a different name or ABN, ask a question, or{' '}
+            <a href={`/search?q=${encodeURIComponent(query.trim())}`} className="text-bauhaus-blue hover:underline">
+              search everything
+            </a>
+          </p>
         </div>
       )}
 

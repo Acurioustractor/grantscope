@@ -171,11 +171,16 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelectedIndex(i => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter' && allResults[selectedIndex]) {
+    } else if (e.key === 'Enter') {
       e.preventDefault();
-      navigate(allResults[selectedIndex].href);
+      if (allResults[selectedIndex]) {
+        navigate(allResults[selectedIndex].href);
+      } else if (query.trim().length >= 2) {
+        // No typeahead hit — hand off to the full /search page (all 8 kinds).
+        navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+      }
     }
-  }, [allResults, selectedIndex, navigate]);
+  }, [allResults, selectedIndex, navigate, query]);
 
   if (!open) return null;
 
@@ -373,6 +378,16 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                 Search across {'>'}80K entities, 14K grants, 9.8K foundations
               </p>
             </div>
+          )}
+
+          {/* Full-search handoff */}
+          {query.trim().length >= 2 && (
+            <button
+              onClick={() => navigate(`/search?q=${encodeURIComponent(query.trim())}`)}
+              className="w-full text-left px-4 py-2.5 border-t-2 border-bauhaus-black/10 text-xs font-black uppercase tracking-widest text-bauhaus-blue hover:bg-bauhaus-canvas transition-colors cursor-pointer"
+            >
+              All results for &ldquo;{query.trim()}&rdquo; &rarr; reports, questions, people, places &amp; more
+            </button>
           )}
 
           {/* Footer */}
