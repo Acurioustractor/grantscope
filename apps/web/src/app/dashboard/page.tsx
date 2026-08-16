@@ -206,9 +206,11 @@ function buildTiles(yj: ThemeMoney | null, entityCount: number | null, contractC
       icon: Money,
     },
     {
-      label: 'Organisations funded',
-      value: yj ? yj.organisationCount.toLocaleString() : '—',
-      sub: 'distinct youth justice recipients',
+      label: 'ACCO share',
+      value: yj ? `${yj.accoPctOfLinked}%` : '—',
+      sub: yj
+        ? `${money(yj.accoDollars)} of ${money(yj.linkedDollars)} linked youth justice money`
+        : 'unavailable',
       colour: '#F0C020',
       icon: Buildings,
     },

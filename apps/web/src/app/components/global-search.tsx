@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { VIEW_REGISTRY } from '@/lib/view-registry';
 
 interface EntityResult {
   type: 'entity';
@@ -87,12 +88,23 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Flatten all results for keyboard navigation
+  // Registry views are jump actions: pinned ones surface on an empty query,
+  // and any view matches by name/question text. Pure client-side — the
+  // registry is a static typed list, no fetch involved.
+  const q = query.trim().toLowerCase();
+  const viewMatches =
+    q.length === 0
+      ? VIEW_REGISTRY.filter((v) => v.pinned)
+      : VIEW_REGISTRY.filter((v) => `${v.name} ${v.question}`.toLowerCase().includes(q));
+  const viewOffset = viewMatches.length;
+
+  // Flatten all results for keyboard navigation (views first)
   const allResults: SearchResult[] = [
     ...results.entities,
     ...results.foundations,
     ...results.grants,
   ];
+  const navHrefs: string[] = [...viewMatches.map((v) => v.href), ...allResults.map((r) => r.href)];
 
   // Escape to close
   useEffect(() => {
@@ -167,24 +179,24 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex(i => Math.min(i + 1, allResults.length - 1));
+      setSelectedIndex(i => Math.min(i + 1, navHrefs.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelectedIndex(i => Math.max(i - 1, 0));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (allResults[selectedIndex]) {
-        navigate(allResults[selectedIndex].href);
+      if (navHrefs[selectedIndex]) {
+        navigate(navHrefs[selectedIndex]);
       } else if (query.trim().length >= 2) {
         // No typeahead hit — hand off to the full /search page (all 8 kinds).
         navigate(`/search?q=${encodeURIComponent(query.trim())}`);
       }
     }
-  }, [allResults, selectedIndex, navigate, query]);
+  }, [navHrefs, selectedIndex, navigate, query]);
 
   if (!open) return null;
 
-  const hasResults = allResults.length > 0;
+  const hasResults = allResults.length > 0 || viewMatches.length > 0;
 
   return (
     <div className="fixed inset-0 z-[100]" onClick={() => onClose()}>
@@ -218,6 +230,38 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
           {/* Results */}
           {hasResults && (
             <div className="max-h-[60vh] overflow-y-auto">
+              {/* Views (registry jump actions) */}
+              {viewMatches.length > 0 && (
+                <div>
+                  <div className="px-4 pt-3 pb-1">
+                    <span className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">
+                      Views
+                    </span>
+                  </div>
+                  {viewMatches.map((v, i) => (
+                    <button
+                      key={v.id}
+                      onClick={() => navigate(v.href)}
+                      className={`w-full text-left px-4 py-3 flex items-center gap-3 transition-colors cursor-pointer ${
+                        selectedIndex === i ? 'bg-bauhaus-canvas' : 'hover:bg-bauhaus-canvas/50'
+                      }`}
+                    >
+                      <span
+                        className="inline-block h-2 w-2 shrink-0"
+                        style={{
+                          background:
+                            { red: '#D02020', blue: '#1040C0', yellow: '#F0C020', green: '#059669', ink: '#6E6E6E' }[v.colour],
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-bauhaus-black truncate">{v.name}</div>
+                        <div className="text-[11px] text-bauhaus-muted font-medium truncate">{v.question}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {/* Entities */}
               {results.entities.length > 0 && (
                 <div>
@@ -227,7 +271,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                     </span>
                   </div>
                   {results.entities.map((r, i) => {
-                    const flatIndex = i;
+                    const flatIndex = viewOffset + i;
                     return (
                       <button
                         key={r.id}
@@ -276,7 +320,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                     </span>
                   </div>
                   {results.foundations.map((r, i) => {
-                    const flatIndex = results.entities.length + i;
+                    const flatIndex = viewOffset + results.entities.length + i;
                     return (
                       <button
                         key={r.id}
@@ -315,7 +359,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                     </span>
                   </div>
                   {results.grants.map((r, i) => {
-                    const flatIndex = results.entities.length + results.foundations.length + i;
+                    const flatIndex = viewOffset + results.entities.length + results.foundations.length + i;
                     return (
                       <button
                         key={r.id}

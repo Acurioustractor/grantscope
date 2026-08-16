@@ -101,6 +101,16 @@ export interface ThemeMoney {
   excludedDollars: number;
   /** Share of included rows that resolve to a graph entity, so the links can be honest. */
   linkedPct: number;
+  /** Dollars held by recipients that resolve to a graph entity — the classifiable base. */
+  linkedDollars: number;
+  /** Dollars held by linked recipients flagged `is_community_controlled`. */
+  accoDollars: number;
+  /**
+   * ACCO share **of linked dollars**, one decimal. Unlinked money cannot be classified either
+   * way, so the honest denominator is linkedDollars, and the basis must be stated wherever
+   * this renders.
+   */
+  accoPctOfLinked: number;
   top: RecipientRow[];
 }
 
@@ -198,17 +208,38 @@ export async function themeMoney(topics: readonly string[], topN = 15): Promise<
     ),
   ];
   const gsIdByEntityId = new Map<string, string>();
-  // Resolve internal ids to the public `gs_id` used by /entity/[gsId]. Chunked: a 1,274-org theme
-  // would otherwise build a URL longer than PostgREST accepts.
+  const accoByEntityId = new Map<string, boolean>();
+  // Resolve internal ids to the public `gs_id` used by /entity/[gsId], and pick up the
+  // community-controlled flag in the same pass. Chunked: a 1,274-org theme would otherwise
+  // build a URL longer than PostgREST accepts.
   for (let i = 0; i < entityIds.length; i += 200) {
     const chunk = entityIds.slice(i, i + 200);
     try {
-      const { data } = await supabase.from('gs_entities').select('id,gs_id').in('id', chunk);
-      for (const e of (data ?? []) as { id: string; gs_id: string }[]) {
+      const { data } = await supabase
+        .from('gs_entities')
+        .select('id,gs_id,is_community_controlled')
+        .in('id', chunk);
+      for (const e of (data ?? []) as {
+        id: string;
+        gs_id: string;
+        is_community_controlled: boolean | null;
+      }[]) {
         gsIdByEntityId.set(e.id, e.gs_id);
+        accoByEntityId.set(e.id, e.is_community_controlled === true);
       }
     } catch {
       // A failed chunk costs links, not numbers. The names still render.
+    }
+  }
+
+  let linkedDollars = 0;
+  let accoDollars = 0;
+  for (const v of byName.values()) {
+    // Classify against the resolved chunk, not the raw stamp: an id whose lookup chunk failed
+    // is unclassifiable and must not inflate the denominator.
+    if (v.gsEntityId && gsIdByEntityId.has(v.gsEntityId)) {
+      linkedDollars += v.dollars;
+      if (accoByEntityId.get(v.gsEntityId)) accoDollars += v.dollars;
     }
   }
 
@@ -232,6 +263,9 @@ export async function themeMoney(topics: readonly string[], topN = 15): Promise<
     excludedRows: excluded.length,
     excludedDollars: excluded.reduce((s, r) => s + (r.amount_dollars ?? 0), 0),
     linkedPct: kept.length === 0 ? 0 : Math.round((linked / kept.length) * 1000) / 10,
+    linkedDollars,
+    accoDollars,
+    accoPctOfLinked: linkedDollars === 0 ? 0 : Math.round((accoDollars / linkedDollars) * 1000) / 10,
     top,
   };
 }
