@@ -9,9 +9,9 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-16T07:20:00Z
+**Updated:** 2026-08-16T08:10:00Z
 **Goal:** Rebuild CivicGraph's console UX as a softened-Bauhaus dashboard shell (Ben's verdict on the deployed console: works but "hard to make sense of"; direction chosen: "soften Bauhaus toward the demo", shadcn dashboard reference). Every chrome element must have a real data source.
-**Branch:** `main` at `85c32ec`, clean, everything pushed. **Four PRs merged this session: #219 #220 #221 #222.**
+**Branch:** `main` at `5660801`, clean, everything pushed. **Six PRs merged this stream: #219–#222, then #223 (vocab dropdowns) + #224 (per-view pages).**
 **Test:** `cd apps/web && npx tsc --noEmit` · `npx vitest run` (711 pass) · smoke `curl localhost:3013/dashboard` (dev server 3013, `--turbopack`)
 
 ### Now
@@ -28,10 +28,12 @@ status: active
 - [x] Link integrity: /themes/* and /people NEVER existed (rail 404s); new `/reports/theme` index; People → /person; registry hrefs → real report pages (PR #222)
 - [x] `view-registry.ts` — typed saved-views registry, caveats carried on the view object
 
+- [x] Year/topic dropdowns fed by real vocabularies (PR #223): `v_vocab_financial_years` + `v_vocab_topics` (migration APPLIED by Ben 2026-08-16); `lib/vocab.ts` returns [] → dropdown absent, never invented; `themeMoney` gained `financialYear` opt; /dashboard `?topic=&fy=` validated against vocab; page revalidate → unstable_cache per loader (searchParams made it dynamic)
+- [x] Per-view pages (PR #224): `/dashboard/views/[id]` for all six registry views; `lib/view-data.ts` loaders never throw / never silently empty — every no-data outcome states WHY; registry hrefs → view pages, old targets kept as `deepHref`
+- FINDING: `justice_funding.financial_year` formats are MIXED — `2025-26` alongside `2026-2027` and multi-year `2026-2030` (32 distinct values). Dropdown shows actuals by design; normalising is a justice_funding cleaning task, not a dropdown bug.
+
 ### Next
-- [ ] Year/topic dropdowns fed by real vocabularies (`financial_year` actuals, hyphenated topic tags) — never hardcode year lists
 - [ ] Public-safe docs surface from the data map (NEEDS SAFETY PASS — the map names ACT private systems, plaintext-token tables etc.)
-- [ ] Per-view pages for remaining registry views; empty/error states that state WHY (sentinel text from the view map)
 - [ ] Possibly dark shell variant for /clarity, pending Ben's verdict
 - [ ] Older backlog still open: Slice 5 row viewer (transcripts have FIVE independent consent flags), person-influence lane (last SEVERE money-view fixes), mv_justice_proven_suppliers GRANT ALL posture question, benjamin@act.place password reset
 
