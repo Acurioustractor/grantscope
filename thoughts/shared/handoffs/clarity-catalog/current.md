@@ -1,128 +1,93 @@
 ---
-date: 2026-08-15T08:30:00Z
+date: 2026-08-16T01:00:00Z
 session_name: clarity-catalog
 branch: main
 status: active
 ---
 
-# Work Stream: clarity-catalog
+# Work Stream: clarity-catalog → clarity-console
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-15T08:30:00Z
-**Goal:** `/clarity` slice 2 — the question board. **SHIPPED** (PR #204, `0c19443`). Next goal is slice 3, unscoped.
-**Branch:** `main` — **zero open PRs**, board clear
-**Test:** `cd apps/web && npx tsc --noEmit` (0 errors on merged main) · gates: `node --env-file=.env scripts/check-graph-{completeness,referential-integrity,attribution}.mjs`
-**Pool health:** `psql ... -Atc "SELECT count(*) FILTER (WHERE state='active') FROM pg_stat_activity WHERE datname='postgres'"` — healthy is single digits. **Read 1 active / 49 idle at 08:25.**
+**Updated:** 2026-08-16T01:00:00Z
+**Goal:** The `/clarity` **console rebuild**. Issue #190 (the 26-question registry) is DONE and merged. The work stream turned over this session: two design grillings produced two plans, and three slices shipped against them.
+**Branch:** `main` at `75521d7`. PRs #215, #216, #217 all merged; board clear.
+**Test:** `cd apps/web && npx tsc --noEmit` · `npx vitest run src/app/clarity src/lib/visibility.test.ts` (50 tests, 7 files)
+**Local:** dev server on 3013 (`--turbopack`). `/clarity` needs no login locally — `admin-auth-bypass.ts` covers it. **Vercel preview does NOT bypass**, and Ben's sign-in on preview failed with "Invalid login credentials" (unresolved, see Open Questions).
 
 ### Now
-[->] **Open `/clarity` in a browser and look at it.** Everything below it is verified; the visual result is the only thing left and no agent can reach it (Vercel SSO + admin gate). Then scope slice 3.
+[->] **Slice B — theme pages at `/reports/[section]`.** In progress. Slice E merged (#217).
 
 ### This Session
-- [x] **Closed the expensive-public-route audit** — the ledger's previous blocking item. Checked all 68 pages using `getServiceSupabase()`, including the six on the firewall rule. **No second exposure bug.** `/entity/`, `/entities/`, `/grants`, `/foundations/compare`, `/person/`, `/places/` are legitimately public and fan out 1–3 queries; gating them would be wrong.
-- [x] **Cached nine public fan-out pages** (PR #206, `b7e37a5`) — `force-dynamic` → `revalidate = 3600` on pages with heavy service-role bursts and no per-request inputs. Worst were `/reports/data-health` (17 queries/hit), `/insights` (12), `/foundations/prf` (9).
-- [x] **Merged slice 2** (PR #204, `0c19443`) — built by a parallel session, found open while the ledger said the board was clear.
-- [x] **Retired slice 2's one "Not verified" claim.** Its author could not confirm the index rendered because of an 8-day PostgREST retry storm. Verified instead at the data layer: all 7 migrations applied, `v_clarity_board{,_cards}` + `v_clarity_ledger` exist as `security_invoker` with `service_role=r` and **no anon grant**; three questions `answered`/`verified`; stored headlines match the PR body exactly (85.1% · 773 · 2.8x); `clarity_object` 1,456 rows. **App read path tested through PostgREST with the service key: both views HTTP 200, first try, no retries.**
+- [x] **Merged PR #215**, closing issue #190. Registry complete at 26 questions.
+- [x] **Grilling 1 → `thoughts/shared/plans/clarity-console.md`.** 12 slices. Diagnosis: `clarity_object` carries ~60 curated fields per object and there was **no page for an object** — an encyclopedia shipped as a spreadsheet.
+- [x] **Slice 1 — `/clarity/o/[key]`, a page for every object.** Columns, link graph with seam rates, what-uses-it, questions built on it, shape, freshness, access, provenance. Renders curated markdown (467 caveats, 84 purposes contain it).
+- [x] **Slice 3 — the index becomes the front door.** All 1,479 objects on one page, terse links, six nouns. **15,052px, down from 70,614, showing 257 MORE objects.** Old ledger demoted to `/clarity/catalogue`. **Merged as PR #216 (`3c784a5`).**
+- [x] **Grilling 2 → `thoughts/shared/plans/clarity-console-part-2.md`.** Slices A–K. Triggered by Ben: *"very code tech speak… wanna see real data and how it all connects."*
+- [x] **Slice E — one visibility vocabulary.** `public → org → operator → withheld`, generalising `/atlas`. PR #217, pushed, unmerged.
+
+### The reframe from grilling 2 — the single most important thing in this ledger
+Three times I went looking for something to build and found it already built:
+
+| Looked for | Found |
+|---|---|
+| A real-data surface | **54 report dirs in 13 themes** — `qld-youth-justice`, `child-protection`, `donor-contractors`, `who-runs-australia` |
+| A way to show connection | **`/entity/[gsId]`, 958 lines, 16 parallel cross-system queries** |
+| A search | **`unified-search.tsx`, 495 lines**, already grouped by kind |
+| An ACT workspace | **62 pages under `/org/[slug]`** |
+
+**276 page routes exist. `/clarity` indexes 1,479 DB objects and zero of them.** This is a navigation and coherence problem, not a build problem. Part 2 is mostly connection and deletion.
 
 ### Next
-- [ ] **Look at `/clarity` in a browser** — dark theme, layout, search/facets, and the local admin bypass. Unreachable by any tool here.
-- [ ] **Scope slice 3.** Slices 1 and 2 are done; 7 total were planned.
-- [ ] **Enable Vercel Web Analytics.** Still off. It is the reason caller attribution failed twice; it would make the next incident diagnosable in minutes.
-- [ ] **Rethink the per-IP rate limit.** The 20/60s `ip`-keyed rule did not hold against a distributed caller. Consider a JA4 key or a lower global cap.
-- [ ] Job 13 (weekly tier, Sundays 15:00 UTC) has **never run**. Also unchecked: whether the four old `success-fallback` matviews sit in the weekly tier — if so job 13 inherits a known-flaky set unwatched. They were `mv_grant_contract_overlap`, `mv_indigenous_procurement_score`, `mv_lga_indigenous_proxy_score`, `mv_abr_name_lookup`.
-- [ ] Deferred, all diagnosed and written up: 19 unwatched edge layers · runbook steps 3 (donor sink, 47,563 misattributed edges) and 5 (opportunity self-loops)
+- [ ] **Merge #217**, or say why not.
+- [ ] **Slice B — theme pages at `/reports/[section]`.** Biggest legibility win, no new data.
+- [ ] **Slice C — real money on sector theme pages.** Topic tags already exist (`child-protection` 16,418, `youth-justice` 5,580). Aggregates + top recipients linking to entity pages. **`measure_kind = 'grant'` MANDATORY** or $46.1bn reads as $66.1bn. This is where the tech-speak ends.
+- [ ] Then D (`/search`), F (report status at links), G (themes above the noun index), H–K.
+- [ ] **From part 1, still open:** slice 2 (inline edit for the 667 stubs), slice 4 (nouns propose/confirm), slice 5 (row viewer + consent), 6b (code scanner).
+- [ ] `/insights` (323 lines) still unread, still unjudged.
 
 ### Decisions
-- **The `/foundations/backlog` bug shape splits into two problems, not one.** Exposure (a service-role review queue left public) is a gating problem and was unique to backlog. Uncached fan-out is a caching problem and was widespread. Applying the gating fix to public product surfaces would have been the wrong call. (#206)
-- **`force-dynamic` needs a per-request reason.** Nine pages carried it while reading nightly matviews and taking no `searchParams`, `cookies()` or `headers()`. It bought nothing and cost a service-role query burst per anonymous hit. `/foundations` keeps it — it genuinely reads filter searchParams.
-- A page that uses `getServiceSupabase()` belongs in `protectedPrefixes` **if it is a private surface**; if it is public, it belongs behind a cache. Backlog was the first, the nine were the second. (#205, #206)
-- **Gate, don't cache** — for the private case. Caching backlog would have left anonymous traffic pointed at a service-role page.
-- Mitigation belongs in code, not the firewall. The incident deny rule was removed once #205 was live.
-- Headline is **1,039 relations**, not 1,455; 416 routines get their own segment. (#193) Coverage denominator is relations → **78%**.
-- ACT excluded by default, count permanently on screen, **neutral not yellow** — a scope boundary, not a warning.
-- Freshness has **four states that never collapse**: a date (687), `+` blue = missing timestamp column (294), `?` yellow = too large to probe (58), `—` n/a (416). (#195)
-- Admin-gated, because the catalog enumerates our own anon-readable attack surface. (#196)
-- `catalog_object_scope` is authoritative for `act_business`, bidirectionally.
-- **A new function gets its ACL set in the same migration that creates it.** `clarity_apply_act_flag` kept PostgreSQL's default `EXECUTE` to `PUBLIC` while its four siblings were restricted. (#202)
-- Slice 2's own calls, inherited: the three-card board deleted for the searchable index; DESIGN.md's March "No dark mode" marked **superseded for `/clarity` only**; local admin bypass now requires `NODE_ENV !== 'production'` **and** no `VERCEL`, with `requireAdminApi` deliberately not bypassed.
+- **Completeness at the index layer, refusal at the claim layer.** Reconciles "see it all" with the refusal ethos. Settles every hard case.
+- **A screen may be stricter than its data, never looser.** The asymmetry is the safety property. Data declares a floor; `mostRestrictive()` makes a page inherit the worst of what it reads.
+- **Absence is always stated, never silent.** Now a rule, not three coincidences. Exception: a count of 1 in a small community is a name (`SMALL_COUNT_THRESHOLD = 5`).
+- **Findings first, plumbing last**, on every surface.
+- **Unfiled is rendered, never guessed.** 747 of 1,479. Two causes kept visibly apart (667 no-domain; ~80 sector-filed) — a tooltip is the same collapse in a costume.
+- **Key numbers on public theme pages come ONLY from registered questions.** No lifting figures from report prose; 20 reports are flagged as needing figure review.
+- **Accountability & Power review-status reports are counted, not linked.** 10 of the 20 live there and they name individuals and board seats. Same reasoning that refused ministerial-diaries.
+- **Stories link to projects, never to data.** Project-mediation is the only version that cannot re-identify.
+- **No free-text querying.** Saved parameterised queries + the row viewer. The difference is that these carry their caveats with them.
+- **ACT extends `/org/act` (62 pages).** Not a fourth front door. Admin auth until a second person needs in.
+- **The visibility vocabulary is NOT the commercial `Tier` ladder.** Paid-for vs allowed-to-see. Different axes.
+
+### Traps confirmed by query this session
+- `clarity_object.object_key` and `clarity_edge.src/tgt_object` are **bare**; `clarity_question_ingredient.object_key` is **`public.`-prefixed** and CHECK-constrained. Wrong form returns nothing rather than erroring.
+- **`refs_app`/`refs_script`/`refs_migration` are 0 on all 1,479** — scanner never ran. The orphan detector would report **1,151 false orphans**. Blocked on slice 6b.
+- `owner_app` = `'neither'` on all 1,479. `verdict` null on all 1,479. `null_pct` null on all 16,124 columns.
+- `importance` is tied at `0.0225` for **424 objects** — it cannot rank, which is why the old "RANKED" sort felt arbitrary.
+- **`history` contains `story`.** A `/story/` pattern withholds five history tables and still misses `quotes`. Consent floors are an explicit list, not a pattern.
+- **A domain-only consent rule leaks**: `story_analysis`, `transcript_analysis` (`ai_agents_pipeline`), `tour_stories` (`media_narrative`), `partner_storytellers_v` (no domain).
+- Public home `app/page.tsx` has **5 broken HTML entities inside JS string literals** (lines 175, 183, 213, 244, 246) rendering as literal `&rsquo;`. Pre-existing on main, unfixed, visible on the live home page.
 
 ### Open Questions
-- **UNCONFIRMED: does `/clarity` look right?** Data, grants and read path are all verified. The rendered page has still never been seen by a human or an agent. Vercel SSO blocks the preview even through the authenticated MCP fetch tool, and the admin gate sits behind that.
-- **LIKELY RESOLVED: who was hammering `exec_sql`?** The 8-day retry storm (~10 req/s, 94% failing) and the pool-saturation incident look like the same anonymous traffic on `/foundations/backlog`. Pool went 41 → 1 connections after #205 and reads clean now. **Not proven** — the caller was never identified, and Postgres only ever saw PostgREST's loopback.
-- OPEN, Ben's call: `person_roles` aggregates 334,152 individually-public ACNC records into one anon-readable endpoint. Each is public by law; the aggregate is a different artifact. A decision, not a defect.
-- RESOLVED 15 Aug: jobs 4 and 11 both proven by direct test. Neither has still ever fired *via pg_cron itself*; first unattended runs were 17:00 and 18:00 UTC on 15 Aug — **worth checking whether they actually fired.**
-- RESOLVED: the stale `.next/types` errors for `clarity/q/[slug]` were a parallel session's files in the working tree, not a fault. Gone since #204 merged.
+- **UNRESOLVED: Ben cannot sign in to the Vercel preview.** "Invalid login credentials" for `benjamin@act.place`, which IS in `ADMIN_EMAILS` and DOES exist in `auth.users` on `tednluwflfhxyucgwigh` (confirmed, has signed in before). Either the password, or **preview env vars point at a different Supabase project**. Vercel SSO blocked me from checking. Check Vercel → Settings → Environment Variables, Preview vs Production `NEXT_PUBLIC_SUPABASE_URL`.
+- **Consent on `transcripts` is FIVE independent flags**, not one boolean: `consent_for_ai_analysis`, `_quote_extraction`, `_theme_analysis`, `_story_creation`. `floorFor()` is binary — safe direction, but **slice 5's row viewer must read them per row, not call `floorFor()`**.
+- Whether the Accountability & Power count-only rule survives Ben seeing it applied.
+- Which of the 276 routes are genuinely dead. B–D will reveal more than guessing.
+- The commercial `Tier` ladder has not been reconciled with the visibility vocabulary. Must be before anything is sold.
+- **Six `/clarity` rendering defects remain unfixed by design** (duplicate React key on the catalogue, "1 objects moved", triplicated refusal paragraph, a leaked `▸ none + finer framing` placeholder, `NEVER RUN · RUN #0` on a refusal). Slices B–G delete most of the surfaces they live on. Fix only what survives.
+- Still open from before: `person_roles` aggregate exposure is Ben's call; the `/foundations/backlog` caller was never identified; three unexplained criticals on the change board (2026-04-02); 9,607 duplicate canonical names (sentinel now warns).
 
 ### Workflow State
-pattern: wayfinder map (issue #190, 8/8 tickets closed)
-phase: slice 2 complete
-total_phases: 7 slices
+pattern: console rebuild, two plans
+phase: part 1 slices 1+3 merged; part 2 slice E in review
 retries: 0
-max_retries: 3
 
 #### Resolved
-- goal: "slice 2 shipped and merged" — done
-- resource_allocation: balanced
+- issue #190 / the 26-question registry — **DONE**, PR #215 merged
+- "does /clarity look right" — **ANSWERED, and the answer was no.** It read as tech-speak. That feedback produced grilling 2 and part 2.
 
 #### Unknowns
-- clarity_visual_result: **UNKNOWN** — never rendered for human eyes
-- job_13_weekly_tier: UNKNOWN — never run, never exercised by hand
-- cron_first_unattended_runs: UNKNOWN — jobs 4 and 11 due 17:00/18:00 UTC 15 Aug
-- backlog_caller_identity: UNKNOWN — storm ended with the fix, caller never named
-- other_route_exposure: **RESOLVED** — 68 pages audited, no second exposure bug
-
-#### Last Failure
-(none)
-
----
-
-## Incident: shared-pool saturation, 15 Aug 2026
-
-**Symptom.** Every project on the shared Supabase instance (`tednluwflfhxyucgwigh`) intermittently unreachable. Local pool monitor at **blip #902** across 8 days. `pg_stat_activity`: **40-41 active connections, all the same `exec_sql` RPC**, sustained.
-
-**The trail, including the dead ends — they cost the most time:**
-
-1. `pg_stat_activity` identifies *what* (40 concurrent `exec_sql`) but never *who*: every `authenticator` connection reports `client_addr = ::1/128`, because PostgREST runs on the Supabase host. **Attribution is impossible at the DB layer. Go to the HTTP side first next time.**
-2. Killing the local dev server on 3013 changed nothing. Load was not local.
-3. **Vercel runtime logs grouped by `requestPath` cracked it in one call** — `/foundations/backlog` = 10,694 hits in 2h, next busiest path 320. That is the tool that works.
-4. Arithmetic tied it off: ~3.5 req/s × 8 RPCs/request ≈ the 40 observed connections.
-
-**Everything red that session traced to this one cause** — 8 `entity-dossier` integration tests failing on 30s timeouts, and the Vercel build failing on four unrelated prerendered pages (`/atlas` + 3 youth-justice recipients) blowing a 60s ceiling. Both went green on retry once the pool drained. **A saturated pool looks like unrelated flaky failures everywhere.**
-
-**The circular trap.** The fix could not deploy, because the build needed the DB and the DB was starved by the thing the fix would stop. Broken by mitigating *outside* the app: a Vercel Firewall path `deny`, which takes effect at the edge with no build.
-
-**Tooling notes worth keeping:**
-- `vercel firewall` did **not** exist in CLI 50.22.1; it does in **59.1.3**. Upgrade first.
-- `vercel api -X PATCH -d '...'` returns **415** without an explicit `Content-Type: application/json`. Prefer the native `vercel firewall rules add --condition '{...}' --action deny --yes`.
-- Firewall changes **stage as a draft**; nothing is live until `vercel firewall publish`. `vercel firewall diff` before publishing.
-- Production domain is **`civicgraph.app`**. Direct curl probes are unreliable (429 / SSO interception) — verify via Vercel runtime logs grouped by `statusCode` instead.
-
-**Timeline:** publish deny → **pool 41 → 1 active within 60s**. Build retried green in 5m. PR #205 merged `2f3e5fd`, prod deploy Ready 07:57Z. Deny rule removed and published. Post-removal logs: `/foundations/backlog` → `307` (auth redirect), 7 hits in 10 min vs ~2,100 per 10 min at peak.
-
----
-
-## Context
-
-### Where things live
-- **The map**: `thoughts/shared/data-map/README.md` → then `VERIFICATION.md` (68 claims checked, 3 blockers found). Never act on `CANONICAL-DATA-MAP.md` without it.
-- **Slice 2 source material**: `thoughts/shared/data-map/clarity/OPPORTUNITY-MAP.md` — 16 cross-sections, **9 already run for real** with numbers. Plus `BAR-CHECK.md` and `BAR-CHECK-CLOSURE.md`.
-- **The spec**: `thoughts/shared/data-map/clarity/CLARITY-SPEC.md` (1,816 lines). Its scope corrections are in the closure doc.
-- **The code**: `apps/web/src/app/clarity/` — 4 files, one client island.
-
-### Hard-won facts that will save a session
-- **The pooler drops long connections.** One operation per psql invocation; TCP keepalives (`?keepalives=1&keepalives_idle=20&...`) on anything over ~5 min. A chained psql call reports the **echo's** exit code, so a failure looks like success. There is no direct non-pooler host.
-- **`pg_stat_user_tables.n_live_tup` is broken here** — reports 0 for a 2.5M-row table.
-- **`LIMIT n` without `ORDER BY` is not a sample.** Two 20,000-row "samples" of the same dataset gave 0% and 34.2%; the exact answer was 16.9%.
-- **Use `getDirectServiceSupabase()`**, never `getServiceSupabase()` — the latter sniffs the call stack for `/app/reports/` and returns a stub resolving every query to null.
-- **PostgREST caps a page at 1,000 rows.** The catalog is 1,455. Without explicit pagination a ledger renders complete and is missing a third.
-- **Read the producer before diagnosing the product.** Six confident readings were wrong this session; every one died within two minutes of opening the code that generated the number. Two would have caused damage.
-- **Empty ≠ unused.** No drop verdict without grepping both `src` trees AND `pg_proc.prosrc`.
-- **A merge rule keyed on identifier presence must also consider entity KIND.** The shadow merge nearly merged 1,209 people into companies and would have broken two derivations that resolve entities by name.
-- **Table-level RLS auditing cannot see definer views.** That is how 1,618 bank transactions stayed public through a sweep that closed 48 policies. The re-audit query is in `migrations/2026-08-15-close-bank-statement-view-leak.sql` — run it after adding any view.
-
-### The bar slice 2 has to clear
-`BAR-CHECK.md`'s verdict on slice 1, and it still stands:
-
-> Nothing on any screen answers a question about the world today; every screen audits our estate. There is no reason to open this on a Tuesday when nothing is broken.
-
-Slice 2 is the fix. It is the half that makes `/clarity` Ben's rather than a competent data catalog anyone could buy.
+- **preview_login: BLOCKED** — see Open Questions. Ben has not yet seen any of this on a deployed URL.
+- **theme_pages: NOT STARTED** — slice B, the next thing.
+- clarity_visual_result: partially resolved. Ben saw `/clarity` locally and judged it interesting but too technical. The object page and the index have been eyeballed by me; the withheld state has been eyeballed by me.
+- http_write_paths: still UNKNOWN — the three `/api/clarity` routes have still never served a request.
