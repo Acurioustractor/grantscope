@@ -6,7 +6,11 @@
  *   config/project-codes.json     — the 74 canonical codes
  *   config/project-evidence.json  — code -> [clarity_object object_keys]
  * Writes:
- *   clarity_project_code          — all 74 codes + metadata + evidence arrays
+ *   clarity_project_code          — all 74 codes + metadata + evidence arrays, PLUS enrichment:
+ *     summary          — public one-liner from the studio's generated wiki content
+ *                        (act-regenerative-studio/src/data/wiki-projects.generated.json)
+ *     repo             — the code's declared primary codebase (wiki-side 'repos' map)
+ *     repo_last_commit — MEASURED from git at sync time, never declared
  *   clarity_object.project_codes  — the same edge from the object end, for fast filtering
  *
  * VALIDATES AND REFUSES rather than skipping silently: an unknown code or an unknown object_key
@@ -62,6 +66,41 @@ async function main() {
   const badKeys = declaredKeys.filter((k) => !known.has(k));
   if (badKeys.length) throw new Error(`declared objects not in the catalogue: ${badKeys.join(', ')}`);
 
+  // Enrichment 1: public summaries from the studio's generated wiki content. Optional input —
+  // a missing studio checkout degrades to no summaries, loudly, rather than failing the sync.
+  const summaries = new Map();
+  const studioPath = join(
+    process.env.ACT_STUDIO_DIR ?? join(homedir(), 'Code', 'act-regenerative-studio'),
+    'src', 'data', 'wiki-projects.generated.json',
+  );
+  try {
+    const wikiProjects = JSON.parse(readFileSync(studioPath, 'utf8'));
+    const entries = Array.isArray(wikiProjects) ? wikiProjects : Object.values(wikiProjects.projects ?? wikiProjects);
+    for (const p of entries) {
+      const code = p.canonicalCode ?? p.code;
+      if (code && p.summary && !summaries.has(code)) summaries.set(code, String(p.summary));
+    }
+    console.log(`summaries: ${summaries.size} from studio wiki content`);
+  } catch {
+    console.log('WARNING: studio wiki-projects.generated.json unreadable — no summaries this sync.');
+  }
+
+  // Enrichment 2: declared repo + measured freshness. The declaration is wiki-side; the date is
+  // measured here and now. A declared repo that is not on disk is an error (same refuse-not-skip
+  // rule as object keys — a silent miss would render a living project dormant).
+  const repoInfo = new Map();
+  for (const [code, repoName] of Object.entries(evidence.repos ?? {})) {
+    if (!projects[code]) throw new Error(`repos map names unknown project code: ${code}`);
+    const repoDir = join(homedir(), 'Code', repoName);
+    let date;
+    try {
+      date = execFileSync('git', ['-C', repoDir, 'log', '-1', '--format=%cs'], { encoding: 'utf8' }).trim();
+    } catch {
+      throw new Error(`declared repo for ${code} not found or not a git repo: ${repoDir}`);
+    }
+    repoInfo.set(code, { repo: repoName, lastCommit: date });
+  }
+
   // object_key -> codes (the mirrored edge, from the object end)
   const byObject = new Map();
   for (const [code, keys] of Object.entries(declarations)) {
@@ -76,7 +115,9 @@ async function main() {
     'DELETE FROM clarity_project_code;',
     ...Object.entries(projects).map(([code, p]) => {
       const ev = declarations[code] ?? [];
-      return `INSERT INTO clarity_project_code (code, name, category, tier, status, evidence_object_keys) VALUES (${sqlLit(code)}, ${sqlLit(p.name)}, ${p.category ? sqlLit(p.category) : 'NULL'}, ${p.tier ? sqlLit(p.tier) : 'NULL'}, ${p.status ? sqlLit(p.status) : 'NULL'}, ${ev.length ? sqlArr(ev.sort()) : "'{}'::text[]"});`;
+      const s = summaries.get(code);
+      const r = repoInfo.get(code);
+      return `INSERT INTO clarity_project_code (code, name, category, tier, status, evidence_object_keys, summary, repo, repo_last_commit) VALUES (${sqlLit(code)}, ${sqlLit(p.name)}, ${p.category ? sqlLit(p.category) : 'NULL'}, ${p.tier ? sqlLit(p.tier) : 'NULL'}, ${p.status ? sqlLit(p.status) : 'NULL'}, ${ev.length ? sqlArr(ev.sort()) : "'{}'::text[]"}, ${s ? sqlLit(s) : 'NULL'}, ${r ? sqlLit(r.repo) : 'NULL'}, ${r ? sqlLit(r.lastCommit) : 'NULL'});`;
     }),
     'UPDATE clarity_object SET project_codes = NULL WHERE project_codes IS NOT NULL;',
     ...[...byObject.entries()].map(

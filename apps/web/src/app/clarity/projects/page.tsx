@@ -16,7 +16,17 @@ interface CodeRow {
   tier: string | null;
   status: string | null;
   evidence_object_keys: string[];
+  summary: string | null;
+  repo: string | null;
+  repo_last_commit: string | null;
   synced_at: string;
+}
+
+/** A repo commit in the last ~6 months means the project is alive in code even if the data
+ *  cannot speak about it — that is a DECLARATION gap, not a dormant project. */
+function repoActive(r: CodeRow): boolean {
+  if (!r.repo_last_commit) return false;
+  return Date.now() - new Date(r.repo_last_commit).getTime() < 183 * 24 * 60 * 60 * 1000;
 }
 
 async function load(): Promise<CodeRow[]> {
@@ -50,6 +60,8 @@ export default async function ProjectsPage() {
   const withEvidence = rows.filter((r) => r.evidence_object_keys.length > 0);
   const zero = rows.filter((r) => r.evidence_object_keys.length === 0);
   const zeroActive = zero.filter((r) => r.status === 'active');
+  const gapAlive = zero.filter(repoActive);
+  const zeroRest = zero.filter((r) => !repoActive(r));
   const syncedAt = rows[0]?.synced_at ?? null;
 
   return (
@@ -64,7 +76,9 @@ export default async function ProjectsPage() {
               Of <strong>{rows.length}</strong> project codes,{' '}
               <strong className="text-bauhaus-red">{zero.length}</strong> have zero declared
               evidence — the data cannot currently speak about them at all.{' '}
-              <strong>{zeroActive.length}</strong> of those are active projects.
+              <strong>{zeroActive.length}</strong> of those are active projects, and{' '}
+              <strong>{gapAlive.length}</strong> have a codebase with commits in the last six
+              months — a declaration gap on a living project, not a dead one.
             </p>
             <p className="mt-2 max-w-[75ch] text-[13px] text-neutral-600">
               Declarations are made from the project side —{' '}
@@ -100,6 +114,9 @@ export default async function ProjectsPage() {
                     {r.tier ? ` · ${r.tier}` : ''}
                   </span>
                 </div>
+                {r.summary ? (
+                  <p className="mt-0.5 max-w-[85ch] text-[13px] text-neutral-600">{r.summary}</p>
+                ) : null}
                 <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
                   {r.evidence_object_keys.map((k) => (
                     <Link
@@ -117,16 +134,47 @@ export default async function ProjectsPage() {
         </section>
       ) : null}
 
-      {zero.length > 0 ? (
+      {gapAlive.length > 0 ? (
         <section className="mt-4 border-4 border-bauhaus-red bg-bauhaus-white">
           <h2 className="border-b-2 border-bauhaus-red px-4 py-2 font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
-            Zero evidence · {zero.length}
+            Declaration gap — living codebase, no declared evidence · {gapAlive.length}
+          </h2>
+          <p className="border-b border-neutral-200 px-4 py-2 text-[13px] text-neutral-600">
+            Fix by declaring in{' '}
+            <code className="bg-bauhaus-canvas px-1 font-mono text-[0.92em]">
+              act-global-infrastructure/config/project-evidence.json
+            </code>{' '}
+            and re-running the sync.
+          </p>
+          <ul>
+            {gapAlive.map((r) => (
+              <li key={r.code} className="border-b border-neutral-200 px-4 py-2 last:border-b-0">
+                <span className="font-mono text-[12px] font-black">{r.code}</span>{' '}
+                <span className="text-[14px] font-semibold">{r.name}</span>
+                <span className="ml-2 font-mono text-[10px] uppercase tracking-widest text-neutral-500">
+                  {r.repo} · last commit {r.repo_last_commit}
+                </span>
+                {r.summary ? (
+                  <p className="mt-0.5 max-w-[85ch] text-[13px] text-neutral-600">{r.summary}</p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {zeroRest.length > 0 ? (
+        <section className="mt-4 border-4 border-bauhaus-black bg-bauhaus-white">
+          <h2 className="border-b-2 border-bauhaus-black px-4 py-2 font-mono text-[11px] font-black uppercase tracking-widest">
+            Zero evidence · {zeroRest.length} · no recent codebase activity known
           </h2>
           <ul className="grid gap-x-6 gap-y-1 p-4 sm:grid-cols-2 lg:grid-cols-3">
-            {zero.map((r) => (
+            {zeroRest.map((r) => (
               <li key={r.code} className="font-mono text-[12px] leading-6">
                 <span className="font-black">{r.code}</span>{' '}
-                <span className="font-sans text-[13px]">{r.name}</span>
+                <span className="font-sans text-[13px]" title={r.summary ?? undefined}>
+                  {r.name}
+                </span>
                 <span
                   className={`ml-2 text-[10px] uppercase tracking-widest ${
                     r.status === 'active' ? 'text-bauhaus-red' : 'text-neutral-400'
