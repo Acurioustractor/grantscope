@@ -23,6 +23,13 @@ export async function requireAdminApi(): Promise<AdminApiResult> {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Same rule as requireAdminPage: the bypass covers ONLY the no-session case in local dev
+  // (never production, never Vercel), so the admin write paths are HTTP-testable on 3013 —
+  // slice 2's requirement — while a real signed-in non-admin still gets 403 below.
+  if (!user && isLocalDevBypass()) {
+    return { user: localDevAdminUser() };
+  }
+
   if (!user) {
     return {
       error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),

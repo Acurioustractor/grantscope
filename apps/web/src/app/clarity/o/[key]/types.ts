@@ -93,6 +93,8 @@ export interface ObjectRow {
   verdict_at: string | null;
   first_seen_at: string | null;
   refreshed_at: string | null;
+  curated_at: string | null;
+  curated_by: string | null;
   missing_since: string | null;
 }
 

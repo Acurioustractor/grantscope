@@ -42,7 +42,11 @@ export async function POST(request: Request) {
     .update({
       noun,
       noun_source: noun === null ? null : 'human',
-      verdict: 'confirmed',
+      // clarity_object.verdict is the enum {keep, suspect, cruft} — lifecycle adjudication, not
+      // a confirmation vocabulary (found by slice 2's HTTP verification; 'confirmed' 500s).
+      // Filing a noun IS a human looking at the object and keeping it, so it records 'keep',
+      // and the noun action itself lives in verdict_reason.
+      verdict: 'keep',
       verdict_by: auth.user.email ?? 'admin',
       verdict_at: new Date().toISOString(),
       verdict_reason: reason ?? (noun === null ? 'unfiled by human' : `filed as ${noun}`),
