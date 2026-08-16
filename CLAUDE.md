@@ -140,19 +140,64 @@ trusting these again — do not let them rot a second time:
 | `alma_evidence` | 631 | id, evidence_type, methodology, sample_size, effect_size — via `alma_intervention_evidence` junction (NO direct intervention_id) |
 | `org_profiles` | 3 | user_id, name, abn, stripe_customer_id, subscription_plan. 24 tables FK to these 3 rows. |
 
-### Two filters that are mandatory, not optional
+### Three filters that are mandatory, not optional
 
-Both of these columns exist to separate incompatible measures that share one amount column.
+These exist to separate incompatible measures that share one amount column.
 Omitting them does not produce a slightly-off number, it produces a wrong one by an order of magnitude.
 
 ```sql
--- justice_funding: 848 'expenditure_aggregate' rows are WHOLE-OF-STATE BUDGETS ($66.1bn),
--- not money to any organisation. For funding received by orgs:
+-- 1. justice_funding: 848 'expenditure_aggregate' rows are WHOLE-OF-STATE BUDGETS ($66.1bn),
+--    not money to any organisation. For funding received by orgs:
 WHERE measure_kind = 'grant'          -- 126,673 rows, $46.1bn
 
--- political_donations: 'other receipt' is 72% of rows and 85% of dollars and is NOT donations.
+-- 2. justice_funding: measure_kind='grant' does NOT exclude source-spreadsheet TOTAL rows,
+--    and does NOT imply is_aggregate=false. Both are needed; neither is a superset of the other.
+AND is_aggregate IS NOT TRUE
+AND lower(trim(recipient_name)) NOT IN
+    ('total','totals','grand total','subtotal','sub-total','various','n/a','na','unknown','tbc','other')
+                                      -- 125,300 rows, $33.98bn
+
+-- 3. political_donations: 'other receipt' is 72% of rows and 85% of dollars and is NOT donations.
 WHERE receipt_type = 'donation received'   -- 506,739 rows, $23.0bn (vs $186.7bn 'other receipt')
 ```
+
+**Filter 2 was missing until 2026-08-16 and the omission is expensive.** Measured:
+
+| filter | rows | total |
+|---|---|---|
+| `measure_kind = 'grant'` | 126,673 | **$46.10bn** |
+| …and not an aggregate-shaped recipient name | 126,627 | $38.01bn |
+| …**and `is_aggregate IS NOT TRUE`** | **125,300** | **$33.98bn** |
+
+**Together these strip $12.12bn — 26% — from the headline `grant` figure.**
+
+46 rows are aggregate-shaped names carrying $8.09bn. 35 are named literally `Total`
+($8.07bn); the rest are `Various` (3, $12.7m), `na` (2, $1.3m) and `n/a` (6, no amount recorded).
+Four are `qld-historical-grants` column totals
+worth $617.9m sitting inside the `youth-justice` topic, where they rank as the **#1 and #2
+recipients of youth justice funding in Australia**. One of them even carries an ABN, so an
+ABN-based join will not save you.
+
+**`is_aggregate` and `measure_kind` are independent — neither implies the other.** 1,358 rows are
+`measure_kind='grant'` AND `is_aggregate` ($12.06bn of grant-shaped aggregates), while 330
+`expenditure_aggregate` rows are `is_aggregate=false` ($17.39bn). Filtering on either alone leaves
+billions behind.
+
+`political_donations` was checked for the same defect and is clean — no aggregate-shaped donor
+names. Filter 2 is specific to `justice_funding`.
+
+Use `isRealRecipient()` / `themeMoney()` from `apps/web/src/lib/justice-money.ts` rather than
+rewriting the predicate. Two further traps are handled there:
+
+- **Postgres sorts NULLs FIRST in a `DESC` ordering.** A naive "top recipients by amount" query
+  returns the rows with no amount at all. Add `amount_dollars IS NOT NULL` or `NULLS LAST`.
+- **Topic tags overlap.** `youth-justice` ∩ `diversion` = 98 rows; `child-protection` ∩
+  `family-services` = 2. Querying tag by tag and concatenating double-counts them — deduplicate by
+  `id`.
+
+**Unaudited, flagged 2026-08-16:** 100 files under `apps/web/src` reference `justice_funding` and
+only 2 reference `measure_kind`. What the other 98 do has not been checked. Do not assume a figure
+from an existing surface has been through any of these filters.
 
 Topic tags use HYPHENS: `topics @> ARRAY['youth-justice']`. The underscore form returns zero rows silently.
 

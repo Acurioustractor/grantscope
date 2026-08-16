@@ -11,8 +11,12 @@ import {
   type NavSection,
   type ReportStatus,
 } from './sidebar-nav-data';
+import { allThemes, slugify } from '../theme/themes';
 
 const STORAGE_KEY = 'cg-report-sidebar-collapsed';
+
+/** Sections that have a theme page. Current Map and State Dashboards deliberately do not. */
+const THEME_SLUGS = new Set(allThemes().map((t) => t.slug));
 const RECENT_KEY = 'cg-report-recent';
 const RECENT_MAX = 5;
 
@@ -285,6 +289,16 @@ function SectionGroup({
             <div className="text-[10px] text-gray-400 italic px-3 pb-1">
               {section.description}
             </div>
+          )}
+          {/* The theme page for this section. Without this the theme pages exist and are
+              unreachable — which is the exact failure this whole work stream is correcting. */}
+          {THEME_SLUGS.has(slugify(section.title)) && (
+            <Link
+              href={`/reports/theme/${slugify(section.title)}`}
+              className="block px-3 py-1 text-[11px] font-bold text-bauhaus-blue hover:bg-gray-100"
+            >
+              Overview of {section.title} →
+            </Link>
           )}
           {section.items.map((item) => (
             <NavLink key={item.href} item={item} pathname={pathname} />
