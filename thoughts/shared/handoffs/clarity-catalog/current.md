@@ -1,7 +1,7 @@
 ---
-date: 2026-08-16T02:00:00Z
+date: 2026-08-16T03:00:00Z
 session_name: clarity-catalog
-branch: clarity-console-slice-b
+branch: main
 status: active
 ---
 
@@ -9,14 +9,14 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-16T02:00:00Z
+**Updated:** 2026-08-16T03:00:00Z
 **Goal:** The `/clarity` **console rebuild**. Issue #190 (the 26-question registry) is DONE. Two design grillings produced two plans; four slices shipped; a data audit found a $12.12bn correction.
-**Branch:** `main` at `4373211`. PRs #215–#218 all merged. Two commits unpushed (the power-index migration + its blocker).
+**Branch:** `main` at `a851a9e`, everything pushed, clean tree. PRs #215–#218 all merged. **8 migrations applied.**
 **Test:** `cd apps/web && npx tsc --noEmit` · `npx vitest run` (731 pass, 79 files) · `node --env-file=.env scripts/run-clarity-answers.mjs --dry-run` (**17/19 ok**, up from 16/19)
 **Local:** dev server on 3013 (`--turbopack`). `/clarity` needs no login locally (`admin-auth-bypass.ts`). **Vercel preview does NOT bypass** and Ben's sign-in there failed — unresolved, see Open Questions.
 
 ### Now
-[->] **The power-index fix is BLOCKED on a nine-object rebuild.** Migration `20260816070000` is written and its SQL is verified, but `mv_entity_power_index` has 8 dependents and `DROP CASCADE` takes them all — including `mv_funding_deserts` (read by the PUBLIC Atlas) and `v_goods_relationship_power` (needs GRANTs restored or Goods chips render empty). The attempt failed and **rolled back cleanly; nothing changed.** Next session: write the nine-object rebuild with a refresh window.
+[->] **The justice_funding correctness lane is CLOSED end to end** — rule, view, sentinel, both matviews, seven app queries, and the labels. Nothing is in flight. Next: either the `justice_*` DB column rename (dual-name transition, another nine-object rebuild + 33 files), or back to part 2 of the console plan (slice D, `/search`).
 
 ### The reframe — most important thing in this ledger
 Grilling 2 was triggered by Ben's verdict on the shipped console: *"very code tech speak… wanna see real data and how it all connects."* Going looking for what to build, three times the answer was **it already exists**:
@@ -66,7 +66,24 @@ Full audit: `thoughts/shared/data-map/justice-funding-filter-audit.md`
 | `20260816040000` | Exemption for the new question. |
 | `20260816050000` | `is_aggregate` added to 3 questions; 4th exempted. |
 | `20260816060000` | **`mv_entity_total_funding` rebuilt.** justice $77.08bn → **$31.59bn**, donations $77.99bn → **$12.00bn**. $111.48bn of phantom money. Both defects — the donations one (missing `receipt_type`) was found while fixing the justice one. |
-| `20260816070000` | **BLOCKED, not applied.** `mv_entity_power_index` — see Now. |
+| `20260816070000` | Superseded — correct SQL, wrong drop strategy. |
+| `20260816080000` | **Nine-object rebuild, APPLIED.** `mv_entity_power_index` + all 8 dependents. justice $83.53bn → **$32.20bn**, donations $77.99bn → **$12.00bn**, rows 188,189 → 185,265. **$117.32bn removed.** |
+
+### THE APP LAYER — traced and fixed 2026-08-16
+Every remaining "Justice Funding" label traced to its query. **None applied a topic filter; none applied the money filters.** Seven fixed:
+
+| surface | defect |
+|---|---|
+| **`api/justice/closing-the-gap`** | **A RATIO.** Indigenous funding ÷ total, denominator **$120.56bn vs an honest $34.04bn — 3.5x**. The Indigenous share of justice funding was understated by roughly that factor. A contaminated numerator is a wrong number; a contaminated denominator is a wrong ARGUMENT. |
+| `api/justice/evidence-pack` ×3 | 31 `expenditure_aggregate` rows worth **$1.72bn** are ALMA-linked — an evidence pack sent to a funder could report $1.7bn of state budget as one intervention's funding |
+| `api/justice/interventions` | same ALMA-linked contamination |
+| `places/[postcode]` | state-scoped only; QLD alone has 106 aggregate rows in scope |
+| `org/[slug]/intelligence` | summed the ENTIRE table, $120.56bn, labelled "Justice Funding". It IS a deliberate platform-wide panel (I first read it as unscoped and was wrong) — but number and label were both wrong |
+| `entity/[gsId]` | ran its OWN unfiltered queries, so after the matview fix the same page showed two contradictory figures. **A contradiction I introduced.** |
+
+**Labels renamed** where untrue: "Justice Funding" → **"Recorded Grants"**, presence chip "Justice" → "Grants", on entity page (3), compare, org-sections (2), org intelligence. Queensland Rail's public page no longer calls $4.1bn of Transport Service Contracts "Justice Funding".
+
+**`applyGrantFilters()` / `GRANT_FILTER_SQL`** added to `lib/justice-money.ts` so the next caller inherits the predicate. It deliberately applies only TWO of three filters: PostgREST's `in` is case-sensitive, so a name list would silently fail to match `'Total'` while looking like protection. Affordable because `is_aggregate` catches 31 of the 46 aggregate-named rows and **$8.03bn of their $8.09bn**; residual is 15 rows / $60.1m.
 
 **`mv_entity_power_index` does NOT derive from `mv_entity_total_funding`.** It reads the base tables directly and carries both defects independently, at FOUR sites — two dollar sums and two PRESENCE flags. `system_count` feeds `power_score`, so an unfiltered presence flag reorders a ranking 28 files read. Current: justice $83.53bn (honest ~$32.38bn), donations $77.99bn (honest ~$12.00bn).
 
@@ -77,8 +94,8 @@ Full audit: `thoughts/shared/data-map/justice-funding-filter-audit.md`
 **The sentinel caught a 40% error within minutes of being applied.** It is `block` severity and permanently tripped by design (71.81% of dollars in the table are not money to an organisation), so every question must filter or write an exemption. `youth-justice-total` went **$1,534.2m → $0.916bn**; the 21 rows carrying $618.5m were the qld-historical-grants column totals. `evidence-gap` 778→777 orgs. All four exemptions written NARROWER than the sentinel so none can justify an unscoped justice figure later.
 
 ### Next
-- [ ] **Write the nine-object rebuild** for `mv_entity_power_index` (see Now). Capture every definition, index and grant; drop cascade; recreate in dependency order; restore grants; refresh six matviews (~15 min). Fresh session, with a rollback plan.
-- [ ] **Decide the `justice_total` naming.** Queensland Rail is now #1 at $4.10bn in `mv_entity_total_funding` and is NOT fixable by filtering — its rows are genuine grants from `qgip`, a whole-of-Queensland-government register that is 81% of all grant rows and only 19.7% topic-tagged. Rename across 28 call sites, or scope by source.
+- [ ] **The `justice_*` DB COLUMN rename** — `justice_dollars`, `justice_total`, `in_justice_funding` still say "justice" in the schema. Needs a DUAL-NAME transition (add new names alongside, migrate 33 files, then drop old), because PostgREST would break the app between a flag-day migration and the deploy. Another nine-object rebuild. The COMMENTs on both matviews already state what the columns hold.
+- [ ] **Decide the `justice_total` naming** (superseded by the above, kept for the reasoning). Queensland Rail is now #1 at $4.10bn in `mv_entity_total_funding` and is NOT fixable by filtering — its rows are genuine grants from `qgip`, a whole-of-Queensland-government register that is 81% of all grant rows and only 19.7% topic-tagged. Rename across 28 call sites, or scope by source.
 - [ ] Then part 2: **D** (`/search`, reconcile the two existing components, extend 3 kinds → 8), **F** (report status at every link), **G** (themes above the noun index), **H–K**.
 - [ ] From part 1: slice 2 (inline edit for 667 stubs), 4 (nouns propose/confirm), 5 (row viewer + consent), 6b (code scanner — **prerequisite for the orphan detector**, which would otherwise report 1,151 false orphans).
 - [ ] Decide per-view whether each of the 35 unfiltered money views is wrong FOR ITS PURPOSE. A "state expenditure" view SHOULD include budget rows.
@@ -105,6 +122,8 @@ Full audit: `thoughts/shared/data-map/justice-funding-filter-audit.md`
 - `refs_app`/`refs_script`/`refs_migration` are 0 on all 1,479 — scanner never ran. `owner_app` = 'neither' on all. `null_pct` null on all 16,124 columns.
 - `importance` tied at `0.0225` for 424 objects — cannot rank.
 - **Before any `gh pr merge --delete-branch`, run `git log origin/<branch>..HEAD`** and push what it lists. A ledger commit was stranded this way and had to be recovered from a dangling commit.
+- **MATVIEW GRANTS LIVE IN `pg_class.relacl`, NOT `information_schema.role_table_grants`.** The latter returns ZERO grants for every matview and would have silently stripped `service_role` and `agent_readonly` on rebuild — a failure that surfaces only when something breaks in production.
+- **PostgREST's `in` is case-sensitive.** A name-exclusion list of lowercase values does not match `'Total'` and reads as protection while doing nothing. Use raw SQL with `lower(btrim(...))` where the exclusion must be exact.
 - **Before any `DROP MATERIALIZED VIEW`, enumerate dependents.** `BEGIN; DROP MATERIALIZED VIEW x CASCADE; ROLLBACK;` prints the full list safely. `mv_entity_total_funding` has 0 dependents; `mv_entity_power_index` has **8**. I checked the first and assumed the second — the transaction caught it, I did not.
 - **A matview definition may exist ONLY in the database.** `scripts/refresh-total-funding-mv.mjs` merely refreshes; nothing in the repo held the definition. Rebuild migrations should be written by capturing `pg_get_viewdef` and applying targeted edits programmatically, not by retyping.
 - Public home `app/page.tsx` has **5 broken HTML entities in JS string literals** (lines 175, 183, 213, 244, 246) rendering as literal `&rsquo;`. Pre-existing, unfixed, live.
