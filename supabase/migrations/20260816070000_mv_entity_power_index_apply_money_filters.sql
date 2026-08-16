@@ -1,6 +1,30 @@
 -- mv_entity_power_index: the same two mandatory money filters, at four sites.
 --
--- Apply:
+-- !! DO NOT APPLY AS WRITTEN. It fails and rolls back. See BLOCKED below. !!
+--
+-- BLOCKED — 8 dependent objects
+--
+-- Attempted 2026-08-16; the plain DROP fails because mv_entity_power_index has dependents, and
+-- DROP ... CASCADE would take all eight with it:
+--
+--   mv_funding_deserts              <- the PUBLIC Atlas reads this
+--   mv_foundation_need_alignment
+--   mv_foundation_scores
+--   mv_foundation_readiness
+--   mv_board_interlocks
+--   mv_disability_landscape
+--   v_goods_warm_intros
+--   v_goods_relationship_power      <- needs GRANT SELECT to anon/authenticated/service_role
+--                                      restored or the Goods chips render empty
+--
+-- So this needs a nine-object rebuild: capture every definition, index and grant; drop cascade;
+-- recreate in dependency order; restore grants; refresh six matviews (the full refresh set runs
+-- ~15 minutes). That is a planned operation with a rollback plan and a refresh window, not an
+-- incremental migration. The transaction protected us — nothing changed on the failed attempt.
+--
+-- The SQL body below is correct and verified; only the drop strategy is wrong.
+--
+-- Apply (ONLY after the nine-object rebuild is written):
 --   source .env && PGPASSWORD="$DATABASE_PASSWORD" psql -h aws-0-ap-southeast-2.pooler.supabase.com \
 --     -p 5432 -U "postgres.tednluwflfhxyucgwigh" -d postgres \
 --     -f supabase/migrations/20260816070000_mv_entity_power_index_apply_money_filters.sql
