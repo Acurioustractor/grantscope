@@ -139,6 +139,14 @@ Bauhaus") against a shadcn-style dashboard reference. A density/warmth variant f
   outside the shell keep full Bauhaus.
 
 ## Decisions Log
+
+- **2026-08-17 — Bauhaus-inside-shell bridge (Ben's ruling: ONE language in the admin).** ~20 admin
+  routes built in the hard-Bauhaus vocabulary render inside the soft shell. A scoped CSS bridge in
+  `.shell` (globals.css) re-reads that vocabulary softly: border-4/2 → 1px + radius, black borders
+  → --shell-line, canvas fills → shell canvas. Signal colours keep hue, lose weight; dark
+  chips/buttons stay dark as accents. Public Bauhaus untouched. This also RESOLVES
+  dark-inside-light: the Clarity black hero is gone (restyled to shell-card). Per-page typography
+  passes follow worst-first.
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-26 | Initial design system created | Codified existing Bauhaus identity, upgraded typography from system fonts to Satoshi + DM Sans + JetBrains Mono. Research showed every competitor uses government blue + system fonts — CivicGraph's Bauhaus direction is the key differentiator. |
