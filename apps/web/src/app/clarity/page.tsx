@@ -188,6 +188,7 @@ export default async function ClarityIndexPage({
               ['/clarity/owners', 'Owners'],
               ['/clarity/projects', 'Projects'],
               ['/clarity/stories', 'Stories'],
+              ['/clarity/surfaces', 'Surfaces'],
               ['/clarity/catalogue', 'The catalogue'],
               ['/clarity/seams', 'The seams'],
               ['/clarity/cross', 'Cross-sections'],
