@@ -104,6 +104,7 @@ export function ShellMenus({ events, userEmail, isAdmin }: ShellMenusProps) {
 
       {open === 'help' && (
         <Popover title="Help">
+          <MenuLink href="/dashboard/guide" label="What this is" />
           <MenuLink href="/dashboard/help" label="Why our numbers differ" />
           <MenuLink href="/dashboard/help#caveats" label="Caveats on every view" />
           <MenuLink href="/dashboard/docs" label="The data we hold" />
