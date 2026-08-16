@@ -9,13 +9,13 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-16T08:10:00Z
+**Updated:** 2026-08-16T09:00:00Z
 **Goal:** Rebuild CivicGraph's console UX as a softened-Bauhaus dashboard shell (Ben's verdict on the deployed console: works but "hard to make sense of"; direction chosen: "soften Bauhaus toward the demo", shadcn dashboard reference). Every chrome element must have a real data source.
-**Branch:** `main` at `5660801`, clean, everything pushed. **Six PRs merged this stream: #219–#222, then #223 (vocab dropdowns) + #224 (per-view pages).**
+**Branch:** `main` at `e9407cc`, clean, everything pushed. **Seven PRs merged this stream: #219–#222, then this session #223 (vocab dropdowns) + #224 (per-view pages) + #225 (public docs surface). Every buildable next-item is DONE — what remains needs Ben.**
 **Test:** `cd apps/web && npx tsc --noEmit` · `npx vitest run` (711 pass) · smoke `curl localhost:3013/dashboard` (dev server 3013, `--turbopack`)
 
 ### Now
-[->] Ben to eyeball the deployed shell (civicgraph.app/dashboard after next Vercel deploy) — esp. the `/clarity` dark-ground-inside-light-shell framing, which needs his taste verdict before any dark-shell variant is built.
+[->] Stream is code-complete pending Ben: eyeball civicgraph.app/dashboard (+ /dashboard/views/*, /dashboard/docs, the topic/year dropdowns once the hourly vocab cache turns over) and give the `/clarity` dark-inside-light verdict. No further build work queued in this stream.
 
 ### This Session
 - [x] Pencil mock "CG Dashboard Shell — Softened Bauhaus" — NOTE: it lives at the bottom of `empathy-ledger-v2/design/empathy-ledger-canonical.pen` (Pencil ignored the filePath arg); move it out when a grantscope .pen exists
@@ -30,11 +30,13 @@ status: active
 
 - [x] Year/topic dropdowns fed by real vocabularies (PR #223): `v_vocab_financial_years` + `v_vocab_topics` (migration APPLIED by Ben 2026-08-16); `lib/vocab.ts` returns [] → dropdown absent, never invented; `themeMoney` gained `financialYear` opt; /dashboard `?topic=&fy=` validated against vocab; page revalidate → unstable_cache per loader (searchParams made it dynamic)
 - [x] Per-view pages (PR #224): `/dashboard/views/[id]` for all six registry views; `lib/view-data.ts` loaders never throw / never silently empty — every no-data outcome states WHY; registry hrefs → view pages, old targets kept as `deepHref`
+- [x] Public docs surface (PR #225): `/dashboard/docs` — the safety pass is STRUCTURAL: `lib/data-docs.ts` is a hand-typed allowlist of 13 civic datasets (rule in module header forbids generating from thoughts/shared/data-map, which names ACT private systems + token tables); row counts via PostgREST `estimated` count (planner stats, verified within a few % of measured; gs_entities worst at ~8% low), hourly refresh so nothing rots; Known Limits section; linked from help menu ("The data we hold")
 - FINDING: `justice_funding.financial_year` formats are MIXED — `2025-26` alongside `2026-2027` and multi-year `2026-2030` (32 distinct values). Dropdown shows actuals by design; normalising is a justice_funding cleaning task, not a dropdown bug.
+- Vocab views live: 9 topics (child-protection 7,481 rows → prevention 313), 32 financial years. Dropdowns appear as each surface's hourly vocab cache refreshes.
 
 ### Next
-- [ ] Public-safe docs surface from the data map (NEEDS SAFETY PASS — the map names ACT private systems, plaintext-token tables etc.)
-- [ ] Possibly dark shell variant for /clarity, pending Ben's verdict
+- [ ] Ben's taste verdicts: deployed shell overall + `/clarity` dark-inside-light framing (gates the dark shell variant); also eyeball /dashboard/views/* and /dashboard/docs
+- [ ] `justice_funding.financial_year` normalisation (data-cleaning lane, see FINDING above)
 - [ ] Older backlog still open: Slice 5 row viewer (transcripts have FIVE independent consent flags), person-influence lane (last SEVERE money-view fixes), mv_justice_proven_suppliers GRANT ALL posture question, benjamin@act.place password reset
 
 ### Decisions
