@@ -90,7 +90,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     || pathname.startsWith('/org/a-curious-tractor/')
     || pathname === '/org/curious-tractor'
     || pathname.startsWith('/org/curious-tractor/');
-  const isChromeless = pathname.startsWith('/embed')
+  const isChromeless = pathname.startsWith('/dashboard')
+    || pathname.startsWith('/embed')
     || pathname.startsWith('/share')
     || pathname.startsWith('/discover')
     || pathname.startsWith('/feedback')

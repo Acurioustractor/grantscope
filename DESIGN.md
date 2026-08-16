@@ -124,11 +124,26 @@ A dark density variant scoped to `/clarity` only. Same fonts, same zero-radius, 
 **Do not extend this beyond `/clarity` without a new decision.** It is a reading instrument for
 one or two people, not a second brand.
 
+## Softened Shell Theme (.shell)
+Approved by Ben 2026-08-16 after reviewing the Pencil mock ("CG Dashboard Shell — Softened
+Bauhaus") against a shadcn-style dashboard reference. A density/warmth variant for the
+**dashboard shell surfaces** (rail + header + dashboard cards), scoped like `.ws`:
+
+- **Kept:** ink `#121212` rail and text, red/blue/yellow/green as rare signal colours,
+  display-weight condensed headings, JetBrains Mono for figures, restrained colour.
+- **Softened:** border-radius 6px (controls) / 10px (cards) — the first sanctioned break from
+  zero-radius; 1px hairline borders on `#E4E4E1`; warm-grey canvas `#F4F4F2`; white card
+  surfaces; **no hard offset shadows** inside the shell scope.
+- Scope class `.shell` on the shell layout wrapper; `bauhaus-*` utilities remap through CSS
+  variables inside it, same mechanism as `.ws` and `.clarity-dark`. Marketing/report pages
+  outside the shell keep full Bauhaus.
+
 ## Decisions Log
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-26 | Initial design system created | Codified existing Bauhaus identity, upgraded typography from system fonts to Satoshi + DM Sans + JetBrains Mono. Research showed every competitor uses government blue + system fonts — CivicGraph's Bauhaus direction is the key differentiator. |
 | 2026-03-26 | ~~No dark mode~~ **superseded 2026-08-15 for `/clarity` only** | Bauhaus aesthetic requires light canvas for shadow system. Defer until user demand. |
 | 2026-08-15 | Dark theme for `/clarity`, and only `/clarity` | Ben compared the light Bauhaus board against a dark dense prototype side by side and chose dark: *"a way better way to showcase what we have and the best overall view I have seen so far."* The original "no dark mode" rationale still holds where it was aimed — the hard-offset shadow system needs a light canvas — but `/clarity` uses no shadows at all. It is a dense internal instrument, admin-gated, read for long stretches, showing every object we hold at once. The 2026-03-26 decision deferred dark "until user demand"; this is that demand, scoped rather than global. |
+| 2026-08-16 | Softened Shell theme (`.shell`) for dashboard surfaces | Ben reviewed the rebuilt console live and found it "hard to make sense of"; chose "soften Bauhaus toward the demo" from four options after seeing a shadcn dashboard reference. Radius 6/10px, hairline borders, warm-grey canvas — scoped to the shell, identity colours and type unchanged. Zero-radius stays everywhere outside the shell scope. |
 | 2026-03-26 | Zero border-radius enforced | Global `border-radius: 0 !important` — sharp corners are the identity, not a bug. |
 | 2026-03-26 | Satoshi over system fonts | System fonts (Avenir Next / Helvetica Neue) undermined the Bauhaus commitment. Satoshi's geometric letterforms complete the vision. |

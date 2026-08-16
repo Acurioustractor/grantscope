@@ -108,8 +108,35 @@ h1, h2, h3, h4 {
 }
 
 /* Override all border-radius globally (Bauhaus pages) */
-*:not(.ws *) {
+*:not(.ws *):not(.shell *) {
   border-radius: 0 !important;
+}
+
+/* ── Softened Shell theme (dashboard shell surfaces) — DESIGN.md 2026-08-16 ──
+   Identity colours and type unchanged; radius/borders/canvas softened.
+   Scope class on the shell layout wrapper, like .ws / .clarity-dark. */
+.shell {
+  --shell-canvas: #F4F4F2;
+  --shell-surface: #FFFFFF;
+  --shell-line: #E4E4E1;
+  --shell-ink: #121212;
+  --shell-muted: #6E6E6E;
+  --shell-rail: #121212;
+  --shell-rail-text: #C9C9C9;
+  --shell-rail-hover: #2A2A2A;
+  --shell-r-sm: 6px;
+  --shell-r-md: 10px;
+  background: var(--shell-canvas);
+  color: var(--shell-ink);
+}
+.shell .shell-card {
+  background: var(--shell-surface);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--shell-r-md);
+}
+.shell .shell-control {
+  border: 1px solid var(--shell-line);
+  border-radius: var(--shell-r-sm);
 }
 
 /* ── Workspace theme (editorial style for operational tools) ── */
