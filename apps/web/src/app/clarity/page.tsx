@@ -182,6 +182,7 @@ export default async function ClarityIndexPage({
           ) : null}
           {(
             [
+              ['/clarity/findings', 'Findings'],
               ['/clarity/catalogue', 'The catalogue'],
               ['/clarity/seams', 'The seams'],
               ['/clarity/cross', 'Cross-sections'],
