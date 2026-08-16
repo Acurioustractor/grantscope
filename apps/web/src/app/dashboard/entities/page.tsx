@@ -42,6 +42,22 @@ export default async function EntitiesPage() {
   return (
     <div className="mx-auto max-w-[1100px] px-6 py-6">
       <h1 className="font-display text-[22px] font-extrabold">Entities</h1>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {[
+          ['/dashboard/browse/foundations', 'Foundations'],
+          ['/dashboard/browse/social-enterprises', 'Social enterprises'],
+          ['/dashboard/browse/charities', 'Charities'],
+        ].map(([href, label]) => (
+          <Link
+            key={href}
+            href={href}
+            className="bg-white px-3 py-1.5 text-[13px] font-semibold shell-control hover:underline"
+            style={{ color: '#1040C0' }}
+          >
+            {label} →
+          </Link>
+        ))}
+      </div>
       <p className="mt-1 text-[13.5px]" style={{ color: 'var(--shell-muted)' }}>
         {data?.count ? `~${data.count.toLocaleString('en-AU')} organisations and people on the graph. ` : ''}
         Search with ⌘K, or start from the most cross-system-present entities below. Entity pages
