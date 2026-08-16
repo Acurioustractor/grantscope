@@ -95,6 +95,7 @@ export interface ObjectRow {
   refreshed_at: string | null;
   curated_at: string | null;
   curated_by: string | null;
+  project_codes: string[] | null;
   missing_since: string | null;
 }
 
