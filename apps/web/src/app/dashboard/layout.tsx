@@ -1,7 +1,11 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { pinnedViews } from '@/lib/view-registry';
+import { getDirectServiceSupabase } from '@/lib/supabase';
+import { createSupabaseServer, hasSupabaseServerEnv } from '@/lib/supabase-server';
+import { isAdminEmail } from '@/lib/admin';
 import { ShellHeader } from './shell-header';
+import type { DataEvent } from './shell-menus';
 import {
   SquaresFour,
   MagnifyingGlass,
@@ -33,7 +37,54 @@ const VIEW_DOT: Record<string, string> = {
   ink: '#6E6E6E',
 };
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
+async function recentDataEvents(): Promise<DataEvent[]> {
+  try {
+    const supabase = getDirectServiceSupabase();
+    const { data, error } = await supabase
+      .from('agent_runs')
+      .select('id,agent_name,status,items_new,started_at')
+      .order('started_at', { ascending: false })
+      .limit(6);
+    if (error) return [];
+    return ((data ?? []) as {
+      id: string;
+      agent_name: string | null;
+      status: string | null;
+      items_new: number | null;
+      started_at: string | null;
+    }[]).map((r) => ({
+      id: r.id,
+      title: r.agent_name ?? 'agent run',
+      detail:
+        r.status === 'success' || r.status === 'completed'
+          ? `${(r.items_new ?? 0).toLocaleString()} new items`
+          : (r.status ?? 'unknown status'),
+      at: r.started_at
+        ? new Date(r.started_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })
+        : '',
+      failed: r.status !== 'success' && r.status !== 'completed' && r.status !== 'running',
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function currentUser(): Promise<{ email: string | null; isAdmin: boolean }> {
+  if (!hasSupabaseServerEnv()) return { email: null, isAdmin: false };
+  try {
+    const supabase = await createSupabaseServer();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const email = user?.email ?? null;
+    return { email, isAdmin: email ? isAdminEmail(email) : false };
+  } catch {
+    return { email: null, isAdmin: false };
+  }
+}
+
+export default async function DashboardLayout({ children }: { children: ReactNode }) {
+  const [events, user] = await Promise.all([recentDataEvents(), currentUser()]);
   return (
     <div className="shell flex min-h-screen font-sans">
       <aside
@@ -106,7 +157,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </Link>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <ShellHeader />
+        <ShellHeader events={events} userEmail={user.email} isAdmin={user.isAdmin} />
         <main className="flex-1 px-7 py-6">{children}</main>
       </div>
     </div>

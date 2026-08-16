@@ -3,13 +3,20 @@
 import { useEffect, useState } from 'react';
 import { MagnifyingGlass } from '@phosphor-icons/react/dist/ssr';
 import { GlobalSearch } from '@/app/components/global-search';
+import { ShellMenus, type DataEvent } from './shell-menus';
 
 /**
  * Shell header: page title, always-present search affordance, data-freshness pill.
  * The shell drops the global NavBar (chromeless layout), so the ⌘K listener that
  * normally lives in NavBar is re-registered here.
  */
-export function ShellHeader() {
+interface ShellHeaderProps {
+  events: DataEvent[];
+  userEmail: string | null;
+  isAdmin: boolean;
+}
+
+export function ShellHeader({ events, userEmail, isAdmin }: ShellHeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
@@ -54,6 +61,7 @@ export function ShellHeader() {
         <span className="inline-block h-[7px] w-[7px] rounded-full" style={{ background: '#059669' }} />
         <span className="text-[12.5px] font-medium">Data: nightly refresh</span>
       </div>
+      <ShellMenus events={events} userEmail={userEmail} isAdmin={isAdmin} />
       <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
     </header>
   );
