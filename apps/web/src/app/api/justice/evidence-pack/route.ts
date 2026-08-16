@@ -73,6 +73,7 @@ async function buildInterventionPack(supabase: ReturnType<typeof getServiceSupab
   const { data: funding } = await supabase
     .from('justice_funding')
     .select('recipient_name, program_name, amount_dollars, state, financial_year')
+    .eq('measure_kind', 'grant').not('is_aggregate', 'is', true)
     .eq('alma_intervention_id', id);
 
   const totalFunding = (funding || []).reduce((s, r) => s + ((r.amount_dollars as number) || 0), 0);
@@ -178,6 +179,7 @@ async function buildEntityPack(supabase: ReturnType<typeof getServiceSupabase>, 
   const { data: funding } = await supabase
     .from('justice_funding')
     .select('program_name, amount_dollars, state, financial_year, sector')
+    .eq('measure_kind', 'grant').not('is_aggregate', 'is', true)
     .eq('recipient_abn', entity.abn)
     .limit(500);
 
@@ -295,6 +297,7 @@ async function buildStatePack(supabase: ReturnType<typeof getServiceSupabase>, s
   const { data: fundingData } = await supabase
     .from('justice_funding')
     .select('program_name, amount_dollars, sector, financial_year')
+    .eq('measure_kind', 'grant').not('is_aggregate', 'is', true)
     .eq('state', state)
     .limit(5000);
 

@@ -146,7 +146,8 @@ export default async function IntelligencePage({ params }: { params: Promise<{ s
       query: `SELECT
                 (SELECT COUNT(*)::int FROM gs_entities) as entity_count,
                 (SELECT COUNT(*)::int FROM alma_interventions) as intervention_count,
-                (SELECT COALESCE(SUM(amount_dollars), 0)::bigint FROM justice_funding) as justice_funding_total,
+                (SELECT COALESCE(SUM(amount_dollars), 0)::bigint FROM justice_funding
+                   WHERE measure_kind = 'grant' AND is_aggregate IS NOT TRUE) as justice_funding_total,
                 (SELECT COUNT(*)::int FROM alma_evidence) as evidence_count,
                 (SELECT COUNT(*)::int FROM gs_relationships) as relationship_count`,
     })) as Promise<PlatformStats[] | null>,
@@ -463,7 +464,7 @@ export default async function IntelligencePage({ params }: { params: Promise<{ s
                 <p className="text-xs text-gray-400 mt-1">Evidence-based programs</p>
               </div>
               <div className={CARD}>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Justice Funding</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Recorded Grants</p>
                 <p className="text-2xl font-black mt-1 text-green-700">{money(Number(stats.justice_funding_total))}</p>
                 <p className="text-xs text-gray-400 mt-1">Tracked flows</p>
               </div>

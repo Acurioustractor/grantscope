@@ -7,6 +7,7 @@ import { getPostcodeFundingPicture } from '@/lib/services/place-intelligence';
 import { getPlaceDataLayers } from '@/lib/services/place-data-service';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { applyGrantFilters } from '@/lib/justice-money';
 
 export const dynamic = 'force-dynamic';
 
@@ -286,9 +287,9 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
   }
 
   // Fetch justice funding for this postcode
-  const { data: justiceFundingData } = await supabase
+  const { data: justiceFundingData } = await applyGrantFilters(supabase
     .from('justice_funding')
-    .select('recipient_name, amount_dollars, program_name, sector')
+    .select('recipient_name, amount_dollars, program_name, sector'))
     .eq('state', geo.state)
     .limit(100);
 

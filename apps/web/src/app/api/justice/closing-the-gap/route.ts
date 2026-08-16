@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { requireModule } from '@/lib/api-auth';
+import { applyGrantFilters } from '@/lib/justice-money';
 
 /**
  * GET /api/justice/closing-the-gap
@@ -39,8 +40,8 @@ export async function GET() {
 
     // Justice funding total for this state
     const fundingFilter = state === 'National'
-      ? supabase.from('justice_funding').select('amount_dollars')
-      : supabase.from('justice_funding').select('amount_dollars').eq('state', state);
+      ? applyGrantFilters(supabase.from('justice_funding').select('amount_dollars'))
+      : applyGrantFilters(supabase.from('justice_funding').select('amount_dollars')).eq('state', state);
     const fundingResult = await fundingFilter.limit(10000);
     const totalFunding = (fundingResult.data || []).reduce((s, r) => s + ((r.amount_dollars as number) || 0), 0);
 
@@ -48,8 +49,8 @@ export async function GET() {
     let indigenousFunding = 0;
     if (indigenousAbns.length > 0) {
       const indFundFilter = state === 'National'
-        ? supabase.from('justice_funding').select('amount_dollars').in('recipient_abn', indigenousAbns.slice(0, 500))
-        : supabase.from('justice_funding').select('amount_dollars').eq('state', state).in('recipient_abn', indigenousAbns.slice(0, 500));
+        ? applyGrantFilters(supabase.from('justice_funding').select('amount_dollars')).in('recipient_abn', indigenousAbns.slice(0, 500))
+        : applyGrantFilters(supabase.from('justice_funding').select('amount_dollars')).eq('state', state).in('recipient_abn', indigenousAbns.slice(0, 500));
       const indFundResult = await indFundFilter.limit(10000);
       indigenousFunding = (indFundResult.data || []).reduce((s, r) => s + ((r.amount_dollars as number) || 0), 0);
     }

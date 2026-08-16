@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { requireModule } from '@/lib/api-auth';
+import { applyGrantFilters } from '@/lib/justice-money';
 
 /**
  * GET /api/justice/interventions
@@ -88,9 +89,9 @@ export async function GET(request: NextRequest) {
   }
 
   // Get justice funding linked to these interventions
-  const fundingResult = await supabase
+  const fundingResult = await applyGrantFilters(supabase
     .from('justice_funding')
-    .select('alma_intervention_id, recipient_name, recipient_abn, program_name, amount_dollars, state, financial_year')
+    .select('alma_intervention_id, recipient_name, recipient_abn, program_name, amount_dollars, state, financial_year'))
     .in('alma_intervention_id', interventionIds.slice(0, 200))
     .not('alma_intervention_id', 'is', null);
 

@@ -57,6 +57,38 @@ export function isRealRecipient(name: string | null | undefined): boolean {
   return !NON_RECIPIENT_NAMES.has(normalised);
 }
 
+/**
+ * The two DB-side row filters, as a PostgREST builder step.
+ *
+ * Use this instead of retyping the predicate. Traced 2026-08-16: six surfaces summed
+ * `justice_funding` with none of these, including one that divides by the total.
+ *
+ *   applyGrantFilters(supabase.from('justice_funding').select('...')).eq('state', 'QLD')
+ *
+ * WHY ONLY TWO OF THE THREE. The recipient-name exclusion needs `lower(btrim(...))`, and
+ * PostgREST's `in` is case-sensitive — a filter listing 'total' would not match 'Total' and would
+ * read as protection while doing nothing. So it is deliberately absent here.
+ *
+ * That is affordable because `is_aggregate` already catches 31 of the 46 aggregate-named rows,
+ * carrying $8.03bn of their $8.09bn. The residual is 15 rows worth $60.1m nationally. Where a sum
+ * must be exact, filter the fetched rows through `isRealRecipient` as well, or use
+ * `GRANT_FILTER_SQL` in a raw query where all three can be expressed properly.
+ *
+ * Typed loosely on purpose: PostgREST builder generics differ between select shapes, and a precise
+ * type here would push callers into casts, which is how a filter gets dropped in the first place.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function applyGrantFilters<T extends { eq: any; not: any }>(query: T): T {
+  return query.eq('measure_kind', 'grant').not('is_aggregate', 'is', true);
+}
+
+/** The same three filters as a SQL fragment, for raw `exec_sql` call sites. */
+export const GRANT_FILTER_SQL = `measure_kind = 'grant'
+  AND is_aggregate IS NOT TRUE
+  AND lower(btrim(recipient_name)) <> ALL (ARRAY[${[...NON_RECIPIENT_NAMES]
+    .map((n) => `'${n}'`)
+    .join(',')}])`;
+
 export interface ThemeMoney {
   /** Dollars, after all three filters. A FLOOR, never a total — see coverage below. */
   total: number;
