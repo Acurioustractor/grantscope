@@ -107,6 +107,12 @@ export function ActWorkspaceShell({
       href: `/org/${slug}/explore`,
       active: pathname.startsWith(`/org/${slug}/explore`),
     },
+    {
+      label: 'Queries',
+      detail: 'Audited answers',
+      href: `/org/${slug}/queries`,
+      active: pathname.startsWith(`/org/${slug}/queries`),
+    },
   ];
 
   return (
