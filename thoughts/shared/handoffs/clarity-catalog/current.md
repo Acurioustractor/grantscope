@@ -120,6 +120,8 @@ Every remaining "Justice Funding" label traced to its query. **None applied a to
 - Polish audit pass 1 merged with #234: `docs/dashboard-shell-ux-findings.md`, 7 ranked findings (top: view-page blurb contradicts loader $915.7M vs $1.04bn; remoteness chart unscoped in scoped zone; zero-valued caveats as noise). AWAITING BEN: dark-inside-light verdict (audit input says accept) + which findings to fix.
 - [ ] Decide per-view whether each of the 35 unfiltered money views is wrong FOR ITS PURPOSE. A "state expenditure" view SHOULD include budget rows.
 
+- **CATALOGUE FULLY DESCRIBED 2026-08-17: 1,486/1,486 objects carry a plain-language purpose.** 96 trigger drafts by rule+hand, 578 by three agents reading REAL definitions (pg_get_functiondef / pg_get_viewdef / column lists; SKIP-over-guess instructed, zero skips needed). Stamped curated_by='claude (drafted from definitions; skim-confirm)' — Ben skims via the index sentences, corrects inline on object pages. Real-work-language rule lives in curated-fields.ts header + /dashboard/guide (branch real-work-language).
+
 ### Decisions
 - **Completeness at the index layer, refusal at the claim layer.**
 - **A screen may be stricter than its data, never looser.** Data declares a floor; `mostRestrictive()` makes a page inherit the worst of what it reads. Testable.
