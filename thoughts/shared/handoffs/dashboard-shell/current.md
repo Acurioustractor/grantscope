@@ -56,7 +56,9 @@ nouns feeding a per-surface data contract).
   active; TRAP: component refs can't cross the server→client boundary as props — NAV must live in
   the client file). Shell.activeHref deprecated-ignored.
 - [x] Ops tools into the shell (branch shell-ops-tools): /ops/health, /alerts, /tracker, /foundations/tracker each get a Shell layout + isChromeless entries — contained-Bauhaus-inside-shell, the accepted /clarity pattern. VERIFIED no auth regression: LAYOUT_AUTH_PREFIXES only controlled whether the old chrome fetched the user for nav display; no redirect existed, pages were never server-gated.
-- [ ] Then: clarity-driven data→surface contract (visibility floor + owner + noun per surface).
+- [x] Ops tools MERGED (#237, `a35f79f`).
+- [x] **Data→surface contract MERGED (#238, `6dd668f`): /clarity/surfaces** — scanner refs → routes → chrome family → noun + consent floor per object. First-run review list: **14 public-family surfaces mention consent-governed objects** (/reports: stories/quotes/transcripts; /org: + storytellers). Honesty rails on-page: mention ≠ render; stories/quotes over-match as English words, transcripts/storytellers are the strong signals. SHELL_PREFIXES in surfaces/page.tsx mirrors root isChromeless — update BOTH.
+- **PHASE 2 COMPLETE (#236–#238).** AWAITING BEN: walk the 14-surface review list; taste calls still open (F5 chart-as-shares, F7 clarity chips, dark-inside-light verdict, docs-in-rail IA).
 
 ### Next
 - [ ] Ben's taste verdicts: deployed shell overall + `/clarity` dark-inside-light framing (gates the dark shell variant); also eyeball /dashboard/views/* and /dashboard/docs
