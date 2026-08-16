@@ -24,12 +24,11 @@ export default async function SearchPage({
   const [{ q }, index] = await Promise.all([searchParams, buildSmallIndex()]);
 
   return (
-    <main className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
-      <h1 className="text-3xl font-black uppercase tracking-widest text-bauhaus-black mb-1">Search</h1>
-      <p className="text-sm font-medium text-bauhaus-muted mb-6">
+    <div className="max-w-4xl mx-auto">
+      <p className="text-sm font-medium mb-6" style={{ color: 'var(--shell-muted)' }}>
         Reports, questions, themes, entities, people, places, grants and data objects — one box.
       </p>
       <SearchClient index={index} initialQuery={q?.trim() ?? ''} />
-    </main>
+    </div>
   );
 }

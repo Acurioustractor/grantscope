@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { Shell } from '@/components/shell/shell';
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
+export default function SearchLayout({ children }: { children: ReactNode }) {
   return (
-    <Shell title="Dashboard" activeHref="/dashboard">
+    <Shell title="Search" activeHref="/search">
       {children}
     </Shell>
   );

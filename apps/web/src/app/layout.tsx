@@ -91,6 +91,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     || pathname === '/org/curious-tractor'
     || pathname.startsWith('/org/curious-tractor/');
   const isChromeless = pathname.startsWith('/dashboard')
+    || pathname.startsWith('/search')
+    || pathname.startsWith('/clarity')
     || pathname.startsWith('/embed')
     || pathname.startsWith('/share')
     || pathname.startsWith('/discover')

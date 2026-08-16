@@ -11,12 +11,13 @@ import { ShellMenus, type DataEvent } from './shell-menus';
  * normally lives in NavBar is re-registered here.
  */
 interface ShellHeaderProps {
+  title: string;
   events: DataEvent[];
   userEmail: string | null;
   isAdmin: boolean;
 }
 
-export function ShellHeader({ events, userEmail, isAdmin }: ShellHeaderProps) {
+export function ShellHeader({ title, events, userEmail, isAdmin }: ShellHeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
@@ -35,7 +36,7 @@ export function ShellHeader({ events, userEmail, isAdmin }: ShellHeaderProps) {
       className="flex items-center gap-4 px-7 py-3.5"
       style={{ background: 'var(--shell-surface)', borderBottom: '1px solid var(--shell-line)' }}
     >
-      <h1 className="font-display text-[19px] font-bold">Dashboard</h1>
+      <h1 className="font-display text-[19px] font-bold">{title}</h1>
       <div className="flex-1" />
       <button
         type="button"
