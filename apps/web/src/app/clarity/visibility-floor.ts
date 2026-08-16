@@ -51,6 +51,23 @@ const WITHHELD_OBJECTS: ReadonlySet<string> = new Set([
   'partner_storytellers_v',
 ]);
 
+/**
+ * Objects deliberately promoted to `public`.
+ *
+ * The default floor is `operator`, so a public surface cannot read anything until it is named
+ * here. That makes promotion a recorded act rather than a side effect, and this list is the audit
+ * trail: each entry needs a reason that would survive being read back by the people in the data.
+ *
+ * `justice_funding` — government grant records. Public by law, already rendered on public report
+ *   pages, and the money a community is entitled to see. Promoted for the theme pages (slice C).
+ * `gs_entities` — the organisation register, already the basis of the public /entity/[gsId] pages.
+ *   Needed to turn a recipient name into a link.
+ *
+ * NOTE what is NOT here: `person_roles`, `political_donations` and the ABR register. Each is
+ * arguably public too, and each is a separate decision that has not been made.
+ */
+const PUBLIC_OBJECTS: ReadonlySet<string> = new Set(['justice_funding', 'gs_entities']);
+
 export interface FloorInput {
   object_name: string;
   domain: string | null;
@@ -70,8 +87,11 @@ export interface FloorInput {
  * that becomes real; see clarity-console.md slice 5.
  */
 export function floorFor(o: FloorInput): Visibility {
+  // Withheld wins over promotion, always. If an object ever appears in both lists that is a
+  // mistake, and the mistake must resolve towards consent rather than towards publication.
   if (o.domain === WITHHELD_DOMAIN) return 'withheld';
   if (WITHHELD_OBJECTS.has(o.object_name)) return 'withheld';
+  if (PUBLIC_OBJECTS.has(o.object_name)) return 'public';
   return 'operator';
 }
 

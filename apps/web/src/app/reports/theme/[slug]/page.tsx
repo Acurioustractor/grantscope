@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getDirectServiceSupabase } from '@/lib/supabase';
 import { canRender, withheldNote, type Surface } from '@/lib/visibility';
+import { money, themeMoney, type ThemeMoney } from '@/lib/justice-money';
+import { floorFor } from '@/app/clarity/visibility-floor';
 import {
   STATUS_BADGE,
   allThemes,
@@ -12,7 +14,10 @@ import {
   type ThemeReport,
 } from '../themes';
 
-export const dynamic = 'force-dynamic';
+// Not force-dynamic: this page takes no per-request input and reads a nightly snapshot. The money
+// aggregate scans up to 16,418 rows for child-protection, and doing that per anonymous hit is the
+// exact service-role burst pattern that saturated the shared pool in August.
+export const revalidate = 3600;
 
 /**
  * A theme page — findings first, plumbing last.
@@ -117,6 +122,21 @@ export default async function ThemePage({ params }: { params: Promise<{ slug: st
   const reports = reportsForTheme(slug);
   const { shown: questions, inProgress } = await loadQuestions(theme);
 
+  // The money. Gated on the visibility floor rather than assumed: `justice_funding` is promoted to
+  // `public` explicitly in visibility-floor.ts, and if that promotion is ever revoked this panel
+  // disappears rather than leaking.
+  const moneyAllowed =
+    canRender(floorFor({ object_name: 'justice_funding', domain: 'justice_youth_detention' }), SURFACE) &&
+    theme.topicTags.length > 0;
+  let themeMoneyData: ThemeMoney | null = null;
+  if (moneyAllowed) {
+    try {
+      themeMoneyData = await themeMoney(theme.topicTags);
+    } catch {
+      themeMoneyData = null; // A failed aggregate costs a panel, not the page.
+    }
+  }
+
   // Rule 2. Accountability & Power names people; a framing-unreviewed claim about a named person
   // is a different kind of risk from a framing-unreviewed claim about a budget line.
   const countOnly = theme.reviewPolicy === 'count-only';
@@ -220,6 +240,99 @@ export default async function ThemePage({ params }: { params: Promise<{ slug: st
                   </li>
                 ))}
             </ul>
+          </Panel>
+        ) : null}
+
+        {/* THE MONEY. Real dollars, real organisations, each linking to the entity page that
+            already resolves them across seven registers. */}
+        {themeMoneyData && themeMoneyData.top.length > 0 ? (
+          <Panel
+            title="Where the money went"
+            note={`${themeMoneyData.firstYear} to ${themeMoneyData.lastYear}`}
+          >
+            <div className="flex flex-wrap items-baseline gap-x-8 gap-y-2 border-b-2 border-bauhaus-black pb-3">
+              <div>
+                <div className="font-display text-4xl font-black">
+                  {money(themeMoneyData.total)}
+                </div>
+                <div className="font-mono text-[11px] uppercase tracking-widest text-neutral-500">
+                  recorded, across {themeMoneyData.grantCount.toLocaleString('en-AU')} grants
+                </div>
+              </div>
+              <div>
+                <div className="font-display text-4xl font-black">
+                  {themeMoneyData.organisationCount.toLocaleString('en-AU')}
+                </div>
+                <div className="font-mono text-[11px] uppercase tracking-widest text-neutral-500">
+                  organisations
+                </div>
+              </div>
+            </div>
+
+            <ol className="mt-3 grid gap-1">
+              {themeMoneyData.top.map((r, i) => (
+                <li key={`${r.name}-${i}`} className="flex flex-wrap items-baseline gap-2">
+                  <span className="w-6 shrink-0 text-right font-mono text-[11px] text-neutral-400">
+                    {i + 1}
+                  </span>
+                  {r.gsId ? (
+                    <Link
+                      href={`/entity/${r.gsId}`}
+                      className="text-[14px] underline decoration-neutral-300"
+                    >
+                      {r.name}
+                    </Link>
+                  ) : (
+                    // No graph entity: the name is shown but not linked, rather than linking
+                    // somewhere plausible-looking that resolves to the wrong organisation.
+                    <span className="text-[14px] text-neutral-700">{r.name}</span>
+                  )}
+                  <span className="ml-auto shrink-0 font-mono text-[13px] font-bold">
+                    {money(r.dollars)}
+                  </span>
+                  <span className="w-16 shrink-0 text-right font-mono text-[11px] text-neutral-400">
+                    {r.grants} grant{r.grants === 1 ? '' : 's'}
+                  </span>
+                </li>
+              ))}
+            </ol>
+
+            {/* Every qualification this number carries, on the same screen as the number. */}
+            <div className="mt-4 border-t border-neutral-200 pt-3 text-[12px] leading-relaxed text-neutral-600">
+              <p>
+                <strong>This is a floor, not a total.</strong> It counts grants recorded in
+                CivicGraph and tagged to this theme. Money that was never published, never tagged,
+                or spent through a departmental budget line rather than a grant is not here.
+                Whole-of-state budget rows are excluded on purpose — they are not money to any
+                organisation.
+              </p>
+              {themeMoneyData.excludedRows > 0 ? (
+                <p className="mt-2">
+                  <strong>
+                    {themeMoneyData.excludedRows} row
+                    {themeMoneyData.excludedRows === 1 ? '' : 's'} worth{' '}
+                    {money(themeMoneyData.excludedDollars)} excluded
+                  </strong>{' '}
+                  as source-spreadsheet totals rather than recipients — rows whose recipient is
+                  literally named &ldquo;Total&rdquo; or &ldquo;Various&rdquo;. Left in, they would
+                  rank at the top of this list.
+                </p>
+              ) : null}
+              <p className="mt-2">
+                {themeMoneyData.linkedPct}% of these grants resolve to an organisation in the
+                graph. The rest are named but not linked — a name without a matched entity is shown
+                as text rather than pointed at a plausible-looking wrong organisation.
+              </p>
+            </div>
+          </Panel>
+        ) : theme.topicTags.length === 0 ? (
+          <Panel title="Where the money went">
+            <p className="text-[14px] text-neutral-700">
+              <strong>No money figure for this theme.</strong> The funding records CivicGraph holds
+              are tagged by service area — youth justice, child protection, NDIS, family services —
+              and nothing in this theme has a tag. Publishing a figure here would mean inventing a
+              boundary the data does not draw.
+            </p>
           </Panel>
         ) : null}
 
