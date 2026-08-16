@@ -67,7 +67,7 @@ export default async function RowsPage({ params }: { params: Promise<{ key: stri
       </Link>
 
       <header className="mt-3 border-4 border-bauhaus-black bg-bauhaus-white p-5">
-        <h1 className="font-mono text-2xl font-black break-words">{key} · rows</h1>
+        <h1 className="font-display text-[22px] font-extrabold break-words">{key} · rows</h1>
         {result !== 'error' && result.allowed ? (
           <p className="mt-2 font-mono text-[12px] text-neutral-600">
             first {result.rows?.length ?? 0} of{' '}
@@ -87,7 +87,7 @@ export default async function RowsPage({ params }: { params: Promise<{ key: stri
         </section>
       ) : !result.allowed ? (
         <section className="mt-4 border-4 border-bauhaus-black bg-bauhaus-white">
-          <h2 className="border-b-2 border-bauhaus-black px-4 py-2 font-mono text-[11px] font-black uppercase tracking-widest">
+          <h2 className="border-b-2 border-bauhaus-black px-4 py-2 font-display text-[14px] font-bold">
             Rows refused
           </h2>
           <div className="p-4">
@@ -98,7 +98,7 @@ export default async function RowsPage({ params }: { params: Promise<{ key: stri
 
             {result.consent_census?.length ? (
               <div className="mt-4">
-                <h3 className="font-mono text-[11px] font-black uppercase tracking-widest">
+                <h3 className="font-display text-[14px] font-bold">
                   What was actually consented to
                 </h3>
                 <p className="mt-1 text-[13px] text-neutral-600">

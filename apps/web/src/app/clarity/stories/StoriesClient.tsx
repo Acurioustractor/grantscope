@@ -61,7 +61,7 @@ export default function StoriesClient({
   return (
     <>
       <header className="border-4 border-bauhaus-black bg-bauhaus-white p-5">
-        <h1 className="font-mono text-2xl font-black">Stories</h1>
+        <h1 className="font-display text-[22px] font-extrabold">Stories</h1>
         <p className="mt-2 max-w-[75ch] text-[14px] leading-relaxed text-neutral-700">
           A story links to a <strong>project code</strong> — never to data, an organisation, or a
           place. That is the whole design: &ldquo;here is what we say about Goods, and here is what

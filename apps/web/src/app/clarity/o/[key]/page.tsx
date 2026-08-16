@@ -118,7 +118,7 @@ function Panel({
 }) {
   return (
     <section className="border-4 border-bauhaus-black bg-bauhaus-white">
-      <h2 className="flex flex-wrap items-baseline gap-x-3 border-b-2 border-bauhaus-black px-4 py-2 font-mono text-[11px] font-black uppercase tracking-widest">
+      <h2 className="flex flex-wrap items-baseline gap-x-3 border-b-2 border-bauhaus-black px-4 py-2 font-display text-[14px] font-bold">
         {title}
         {note ? <span className="font-normal normal-case text-neutral-500">{note}</span> : null}
       </h2>
@@ -198,7 +198,7 @@ export default async function ObjectPage({ params }: { params: Promise<{ key: st
       </Link>
 
       <header className="mt-3 border-4 border-bauhaus-black bg-bauhaus-white p-5">
-        <h1 className="font-mono text-2xl font-black break-words">{o.object_name}</h1>
+        <h1 className="font-display text-[22px] font-extrabold break-words">{o.object_name}</h1>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="border-2 border-bauhaus-black px-2 py-0.5 font-mono text-[10px] font-black uppercase tracking-widest">
             {o.object_kind}
