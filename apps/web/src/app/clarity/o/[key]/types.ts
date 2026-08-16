@@ -143,13 +143,15 @@ export function isStub(o: ObjectRow): boolean {
 }
 
 /**
- * `refs_app`, `refs_script` and `refs_migration` are 0 on ALL 1,479 rows — the code scanner that
- * populates them has never run. Only `refs_db_function` (328 objects) and the trigger/db_function
- * rows in `clarity_code_ref` are real.
+ * `refs_app`, `refs_script` and `refs_migration` are MEASURED as of 2026-08-16 — the slice 6b
+ * scanner (`scripts/scan-clarity-code-refs.mjs`) whole-word-greps every catalogued name over
+ * apps/web/src, scripts/ and the two migration dirs, writes per-file rows to `clarity_code_ref`
+ * and recomputes these counters for all 1,479 objects in one transaction. 0 now means
+ * measured-unused, not unmeasured. Matching is deliberately generous (a name in a comment
+ * counts) because the expensive failure is a false orphan.
  *
- * So a naive "nothing uses this" would be wrong about 1,151 objects, and wrong in the most
- * expensive direction: it would read as evidence of an orphan when it is only evidence of an
- * unrun scanner. Until the scanner ships, these three report UNMEASURED.
+ * Rot direction: the scanner is run-on-demand, not scheduled. `clarity_code_ref.scanned_at`
+ * dates the measurement; re-run the script before trusting these for an orphan verdict.
  */
 export function usageMeasurement(o: ObjectRow): {
   app: Measured<number>;
@@ -157,14 +159,10 @@ export function usageMeasurement(o: ObjectRow): {
   migration: Measured<number>;
   dbFunction: Measured<number>;
 } {
-  const never = (what: string): Measured<number> => ({
-    state: 'unmeasured',
-    why: `the ${what} scanner has never run — 0 here means unknown, not unused`,
-  });
   return {
-    app: never('app'),
-    script: never('script'),
-    migration: never('migration'),
+    app: { state: 'measured', value: o.refs_app ?? 0 },
+    script: { state: 'measured', value: o.refs_script ?? 0 },
+    migration: { state: 'measured', value: o.refs_migration ?? 0 },
     dbFunction: { state: 'measured', value: o.refs_db_function ?? 0 },
   };
 }
