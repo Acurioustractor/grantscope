@@ -551,6 +551,13 @@ export default async function ObjectPage({ params }: { params: Promise<{ key: st
                   </span>
                 )}
               </Field>
+              <Field label="Projects">
+                {o.project_codes?.length ? (
+                  o.project_codes.join(' · ')
+                ) : (
+                  <span className="text-neutral-400">none declared</span>
+                )}
+              </Field>
               <Field label="ACT business">
                 {o.act_business ? 'yes' : 'no'}
                 {o.act_business_source ? (
