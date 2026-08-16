@@ -117,7 +117,7 @@ trusting these again — do not let them rot a second time:
 | `gs_entities` | 609K | gs_id, canonical_name, abn, entity_type, sector, postcode, state, remoteness, seifa_irsd_decile, is_community_controlled, lga_name, lga_code |
 | `acnc_ais` | 360K | ACNC Annual Information Statements (charity financials by year) |
 | `mv_charity_network` | 351K | charity↔charity links via shared directors. Refreshed nightly, read by NO app code. |
-| `person_roles` | 340K | person_name, person_name_normalised, role_type, entity_id, company_acn, confidence, is_nominee_block |
+| `person_roles` | 340K | person_name, person_name_normalised, role_type, entity_id, company_acn, confidence. NO is_nominee_block — that flag lives on `person_identities` (join by person_name_normalised); the wrong claim here failed a migration 2026-08-16 |
 | `grantconnect_awards` | 291K | awarded Commonwealth grants. NOT empty — an old memory note claiming that is wrong. |
 | `person_identities` | 230K | resolved person identities |
 | `state_tenders` | 200K | **owned and scraped by JusticeHub**, read by GrantScope report pages |
