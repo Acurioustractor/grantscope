@@ -49,6 +49,15 @@ const REPOS = [
     ],
   },
   {
+    repo: 'empathy-ledger',
+    root: `${process.env.HOME}/Code/empathy-ledger-v2`,
+    sets: [
+      { refClass: 'app', dirs: ['src'] },
+      { refClass: 'script', dirs: ['scripts'] },
+      { refClass: 'migration', dirs: ['supabase/migrations'] },
+    ],
+  },
+  {
     repo: 'justicehub',
     root: `${process.env.HOME}/Code/JusticeHub`,
     sets: [
@@ -165,7 +174,7 @@ async function main() {
       if (files > 0) repoSeen = true;
       console.log(`${repo}/${refClass}: ${tally.size} names referenced across ${files} file entries`);
     }
-    if (!repoSeen && repo === 'justicehub') {
+    if (!repoSeen && repo !== 'civicgraph') {
       console.log('WARNING: no JusticeHub matches — checkout missing? owner_app proposals from this run are one-eyed.');
     }
   }
