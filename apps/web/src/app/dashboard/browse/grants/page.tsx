@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { unstable_cache } from 'next/cache';
 import { getDirectServiceSupabase } from '@/lib/supabase';
+import { retryRpc } from '@/lib/rpc-retry';
 import GrantBrowser, { type RecipientRow } from './GrantBrowser';
 
 export const dynamic = 'force-dynamic';
@@ -45,13 +46,15 @@ export default async function GrantsBrowsePage({
   let why: string | null = null;
   try {
     const [{ data, error }, s] = await Promise.all([
-      supabase.rpc('grant_recipient_browse', {
-        p_q: q || null,
-        p_state: state || null,
-        p_topic: topic || null,
-        p_sort: sort,
-        p_limit: 200,
-      }),
+      retryRpc(() =>
+        supabase.rpc('grant_recipient_browse', {
+          p_q: q || null,
+          p_state: state || null,
+          p_topic: topic || null,
+          p_sort: sort,
+          p_limit: 200,
+        }),
+      ),
       stats(),
     ]);
     if (error) throw new Error(error.message);
@@ -71,11 +74,14 @@ export default async function GrantsBrowsePage({
       grants: r.grant_count,
       dollars: r.total_dollars,
       states: r.states,
+      // UX audit pass 2, F9: financial years already contain a dash ("2008-09"), so joining them
+      // with another one produced "2008-09-2024-25", which reads as one long number. An arrow
+      // separates the two years unambiguously.
       span:
         r.first_year && r.last_year
           ? r.first_year === r.last_year
             ? r.first_year
-            : `${r.first_year}–${r.last_year}`
+            : `${r.first_year} → ${r.last_year}`
           : '—',
     }));
     if (s) {

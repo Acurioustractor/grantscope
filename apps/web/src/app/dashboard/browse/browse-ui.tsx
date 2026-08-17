@@ -13,7 +13,10 @@ export function money(n: number | null | undefined): string {
   if (!n || n <= 0) return '—';
   if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}bn`;
   if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}m`;
-  return `$${Math.round(n / 1e3)}k`;
+  // UX audit pass 2, F8: rounding to thousands rendered anything under $500 as "$0k", which reads
+  // as "no money" when it is in fact a small amount. Below $1k, show the actual dollars.
+  if (n >= 1e3) return `$${Math.round(n / 1e3)}k`;
+  return `$${Math.round(n).toLocaleString('en-AU')}`;
 }
 
 export function L({ children }: { children: React.ReactNode }) {

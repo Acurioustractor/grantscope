@@ -110,19 +110,28 @@ user.
 
 ## P3 — polish
 
-- **F8.** `$0k` renders for zero and near-zero dollars (social enterprises, charities). Should be
-  `—` or `$0`.
-- **F9.** Grant year ranges render run-together: `2008-09-2024-25`, `2015-16-2024-25`. Needs a
-  separator.
-- **F10.** The people table's `INFLUENCE …` column header is truncated in the header row itself.
-- **F11.** A transient DB timeout leaves a browse page with nothing — no retry, no stale
-  fallback. Observed while the name-key materialized views were building and saturating the
-  pooler; the page recovered on reload. The fragility is real even though that particular trigger
-  was self-inflicted.
-- **F12.** Name casing is inconsistent within a single grants column (`QUEENSLAND RAIL LTD` next
-  to `Legal Aid Queensland`). The whitespace-collapsing `display()` helper added to
-  `ContractSideBrowser` in the name-normalisation work could extend to casing, carefully — some
-  all-caps names are correct.
+- **F8.** ~~`$0k` renders for zero and near-zero dollars~~ **FIXED** — below $1k the actual dollars
+  are shown. Both copies of the formatter (`browse-ui.tsx` and `FoundationsBrowser.tsx`) were
+  patched; they had drifted into duplicates.
+- **F9.** ~~Grant year ranges render run-together~~ **FIXED** — now `2008-09 → 2024-25`. Financial
+  years already contain a dash, so joining them with another one made one long number.
+- **F10.** ~~The people table's `INFLUENCE …` header is truncated~~ **FIXED** — column widened.
+  Note: widening it revealed that the F4 label `Boards (max 10)` then truncated to `BOARDS (MAX …`,
+  so it is now `Boards ≤10` with the full explanation on hover. Fixing a truncation by widening one
+  column just moves the problem along the row.
+- **F11.** ~~A transient DB timeout leaves a browse page with nothing~~ **PARTLY FIXED.**
+  `lib/rpc-retry.ts` retries **once**, after 400ms, and only for errors that look transient — a
+  missing column or a permission failure is never retried, because it will fail identically
+  forever. One retry, not three: a genuinely slow query should be fixed in the query, as
+  charity_browse was, not papered over by making the user wait three times as long for the same
+  error. Wired into the four heaviest browse pages (charities, social enterprises, grants, people).
+  **The other browse pages still have no retry** — each call site has to be wrapped by hand and
+  there is no shared data layer to do it in one place. Covered by 8 unit tests.
+- **F12.** **NOT FIXED, deliberately.** Name casing is inconsistent within a single grants column
+  (`QUEENSLAND RAIL LTD` next to `Legal Aid Queensland`). The people browser already solves this
+  narrowly — `displayName()` title-cases only names that are *entirely* lowercase, on Ben's call
+  (SH-11), and leaves mixed-case names exactly as recorded. Extending that to all-caps names is a
+  different and riskier claim: some all-caps names are correct as registered. Left for a decision.
 
 ---
 

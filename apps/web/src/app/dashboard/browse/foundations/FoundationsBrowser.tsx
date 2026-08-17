@@ -37,7 +37,9 @@ function money(n: number | null): string {
   if (!n) return '—';
   if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}bn`;
   if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}m`;
-  return `$${Math.round(n / 1e3)}k`;
+  // See browse-ui.tsx: "$0k" for a real amount under $500 is worse than the extra digits.
+  if (n >= 1e3) return `$${Math.round(n / 1e3)}k`;
+  return `$${Math.round(n).toLocaleString('en-AU')}`;
 }
 
 interface DrawerData {

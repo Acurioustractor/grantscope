@@ -80,11 +80,11 @@ export default function PersonBrowser({
       <div className="mt-4 shell-card">
         <div className="flex items-baseline gap-3 px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest" style={{ borderBottom: '1px solid var(--shell-line)', color: 'var(--shell-muted)' }}>
           <SortHeader label="Name" sortKey="name" current={sort} qs={qs} />
-          <SortHeader label="Influence" sortKey="influence" current={sort} qs={qs} width="w-[76px]" align="right" title="boards × attributed money, the default order" />
+          <SortHeader label="Influence" sortKey="influence" current={sort} qs={qs} width="w-[92px]" align="right" title="boards × attributed money, the default order" />
           {/* The 10 is a ceiling, not a measurement (person_browse: board_count <= 10). The
               exclusion note says so, but it sits below 200 rows — by the time a reader has
               scrolled past a column of identical 10s they have already read them as counts. */}
-          <SortHeader label="Boards (max 10)" sortKey="boards" current={sort} qs={qs} width="w-[96px]" align="right" />
+          <SortHeader label="Boards ≤10" sortKey="boards" current={sort} qs={qs} width="w-[96px]" align="right" title="a ceiling, not a count: identities credited with more than 10 boards are excluded, because above that a shared name usually means several people" />
           <SortHeader label="Systems" sortKey="systems" current={sort} qs={qs} width="w-[64px]" align="right" />
           <SortHeader label="Contracts $" sortKey="procurement" current={sort} qs={qs} width="w-[92px]" align="right" />
           <SortHeader label="Grants $" sortKey="justice" current={sort} qs={qs} width="w-[92px]" align="right" />
@@ -100,7 +100,7 @@ export default function PersonBrowser({
                 </span>
               ) : null}
             </span>
-            <span className="w-[76px] shrink-0 text-right font-mono text-[12.5px]">{r.influence != null ? Math.round(r.influence).toLocaleString('en-AU') : '—'}</span>
+            <span className="w-[92px] shrink-0 text-right font-mono text-[12.5px]">{r.influence != null ? Math.round(r.influence).toLocaleString('en-AU') : '—'}</span>
             <span className="w-[96px] shrink-0 text-right font-mono text-[12.5px]">{r.boards}</span>
             <span className="w-[64px] shrink-0 text-right font-mono text-[12.5px]">{r.systems ?? '—'}</span>
             <span className="w-[92px] shrink-0 text-right font-mono text-[12.5px]">{money(r.procurement)}</span>
