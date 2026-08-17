@@ -393,7 +393,9 @@ export function HealthClient() {
         <div>
           <h1 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight">Pipeline Health</h1>
           <p className="text-xs text-bauhaus-muted mt-1">
-            {totalRecords ? `${totalRecords.toLocaleString()} total records across ${dataFreshness.length} datasets` : 'Comprehensive view of data quality, enrichment gaps, and pipeline status'}
+            {/* A9: this reads as "the size of the graph". It is not — it is the pipeline-tracked
+                subset. The database holds ~52.3M rows across 724 populated relations. */}
+            {totalRecords ? `${totalRecords.toLocaleString()} records across the ${dataFreshness.length} datasets this pipeline tracks — not the whole graph` : 'Comprehensive view of data quality, enrichment gaps, and pipeline status'}
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -429,7 +431,18 @@ export function HealthClient() {
             </div>
           </div>
           <div className="flex-1">
-            <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted mb-3">Composite Health Score</h2>
+            <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted mb-1">Composite Health Score</h2>
+            {/* A8: the colour already encodes a threshold (>=80 green, >=50 amber, else red) but
+                only the code knew them, so "63" was a number with no scale. Say the bands. */}
+            <div className="text-xs text-bauhaus-muted mb-3 font-mono">
+              {healthScore >= 80
+                ? 'Healthy'
+                : healthScore >= 50
+                  ? 'Needs attention'
+                  : 'Poor'}{' '}
+              — weighted across the five measures below. 80+ healthy · 50-79 needs attention ·
+              under 50 poor.
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 text-xs">
               <div>
                 <div className="font-black uppercase tracking-wider text-bauhaus-muted mb-1">Data Completeness (30%)</div>

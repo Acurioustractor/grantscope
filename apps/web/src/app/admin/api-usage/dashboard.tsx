@@ -45,8 +45,20 @@ export function ApiUsageDashboard() {
   useEffect(() => {
     fetch('/api/admin/api-usage')
       .then(r => {
-        if (r.status === 403) throw new Error('Admin access required');
-        if (!r.ok) throw new Error('Failed to load');
+        // A10: "Admin access required" alone left the reader with no idea WHICH problem they had
+        // or what to do. The commonest case by far is local dev: requireAdminPage honours the
+        // local-dev bypass so the PAGE renders, while requireAdminApi deliberately does not, so
+        // the fetch 403s. That is by design (an open admin page is a convenience, an open admin
+        // API is a different blast radius) — but the screen should say so rather than look broken.
+        if (r.status === 403) {
+          throw new Error(
+            'Admin access required — this page loaded, but the admin API refused the request. ' +
+              'In local dev that is expected: the page honours the local-dev bypass and the API ' +
+              'deliberately does not. Sign in with an admin account to see real usage data.',
+          );
+        }
+        if (r.status === 401) throw new Error('Not signed in — sign in with an admin account.');
+        if (!r.ok) throw new Error(`Failed to load usage data (HTTP ${r.status}).`);
         return r.json();
       })
       .then(d => setData(d))

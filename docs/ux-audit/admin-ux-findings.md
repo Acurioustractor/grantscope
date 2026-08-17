@@ -59,7 +59,7 @@ Same denominator, different numerator. At least one is wrong, or they mean diffe
 neither says which. On the screens whose whole job is telling Ben whether the data is healthy, a
 disagreement between two health numbers is the worst possible defect.
 
-## A4 — ops pages are navigational dead ends (M)
+## A4 — ops pages are navigational dead ends (M) **[FIXED — local-dev only, I overstated it]**
 
 **Clarity — dead-end disease.** The rail renders its Ops section only when `user.isAdmin`, which
 was false in this session even though the ops routes themselves admitted me. Result: from `/ops`
@@ -85,20 +85,20 @@ does not explain the queue.
 **Ben's rage-trigger.** `A Curious Tractor` + `SOCIAL ENTERPRISE` + `ECOSYSTEM`, three labels
 restating one thing, wrapping onto a second line and breaking the row rhythm.
 
-## A8 — the composite health score is a number with no scale (S)
+## A8 — the composite health score is a number with no scale (S) **[FIXED]**
 
 **Meaning.** `/ops/health` leads with **63** in an amber circle. No target, no threshold, no trend,
 no legend. Is 63 good? Better than last week? The five weighted components underneath are genuinely
 informative — the headline number is the least useful thing on an otherwise strong screen.
 
-## A9 — "9,650,215 total records across 21 datasets" has an unstated basis (S)
+## A9 — "9,650,215 total records across 21 datasets" has an unstated basis (S) **[FIXED]**
 
 **Meaning.** The database holds ~52.3M rows across 724 populated relations (CLAUDE.md, measured
 2026-08-14). This says 9.65M across 21 datasets. Both can be true — "datasets" is clearly a curated
 subset — but nothing says which 21 or why, so the headline reads as "the size of the graph" when it
 is not.
 
-## A10 — `/admin/api-usage` denies access with no reason and no way forward (S)
+## A10 — `/admin/api-usage` denies access with no reason and no way forward (S) **[FIXED — the 403 itself is by design]**
 
 **Friction.** A bare red box: `ADMIN ACCESS REQUIRED`. It does not say whether the problem is being
 logged out, not being an admin, or an expired session, and offers no action.
@@ -263,3 +263,40 @@ ecosystem`, wrapping onto a second line. Fixed with `whitespace-nowrap`, not by 
 - **The orchestrator itself still times out.** `persist()` is hardened, which removes the cause I
   could prove, but the next nightly run is the test. If it still times out, the remaining suspect is
   a different step in the chain.
+
+
+---
+
+## Second fix pass, 2026-08-18
+
+**A4 — fixed, and my finding was overstated.** `requireAdminPage` honours the local-dev bypass;
+the shell's `currentUser()` called `getUser()` directly and did not. So in local dev the ops
+ROUTES admitted you while the rail hid its Ops section. **Production was never affected** — a real
+admin session satisfies both paths. The rail now uses the same helper, so a local review of the
+admin surface sees what production sees.
+
+**A8 —** the colour already encoded thresholds (>=80 green, >=50 amber) but only the code knew
+them. The score now reads "Needs attention — 80+ healthy · 50-79 needs attention · under 50 poor."
+
+**A9 —** now "9,650,215 records across the 21 datasets this pipeline tracks — not the whole graph".
+
+**A10 — fixed, and the underlying 403 is deliberate, not a bug.** `admin-auth-bypass.ts` says so
+explicitly: "pages only. requireAdminApi is deliberately NOT bypassed — an open admin page in local
+dev is a convenience, an open admin API is a different blast radius." So the page rendering while
+its API refuses is by design in local dev. The message now explains exactly that, and 401 is
+distinguished from 403.
+
+## A13 — a timed-out count renders as a confident zero (M) **[FOUND, NOT FIXED]**
+
+Caught by accident: `/ops/health` showed **HAVE WEBSITE 0 (0.0%)** while the database holds 5,903.
+Nothing was broken — `safe()` returns `{ count: null }` when a query exceeds its timeout, and every
+consumer does `count ?? 0`, so **a query that failed to answer is displayed as a real measurement of
+zero**. There are 7 such sites in `api/ops/health/route.ts` alone.
+
+It reproduced because my own background verification job was saturating the shared pooler at the
+time — which is precisely when an ops health screen most needs to be trustworthy.
+
+This is the same disease as A1 and A11, at a third layer: **the surface cannot tell "I measured
+zero" from "I could not measure".** Fix direction: pass null through instead of coercing, and have
+StatCard render "—" with an "unavailable" note. Not started — interrupted mid-change, nothing left
+half-applied.
