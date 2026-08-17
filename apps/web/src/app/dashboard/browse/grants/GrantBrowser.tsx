@@ -38,6 +38,8 @@ export default function GrantBrowser({
   topic,
   sort,
   statsLine,
+  coverageLine,
+  topicLine,
   caveat,
 }: {
   rows: RecipientRow[];
@@ -46,6 +48,10 @@ export default function GrantBrowser({
   topic: string;
   sort: string;
   statsLine: string;
+  /** Coverage skew — stated up front, not buried in the caveat. UX audit pass 2, F1. */
+  coverageLine?: string;
+  /** Share of the money carrying no topic tag. UX audit pass 2, F2. */
+  topicLine?: string;
   caveat: string;
 }) {
   const drawer = useDrawer<RecipientDetail>();
@@ -58,6 +64,15 @@ export default function GrantBrowser({
       <p className="mt-1 font-mono text-[11.5px]" style={{ color: 'var(--shell-muted)' }}>
         {statsLine}
       </p>
+      {(coverageLine || topicLine) && (
+        <div
+          className="mt-2 flex flex-col gap-1 px-3 py-2 text-[11.5px]"
+          style={{ borderLeft: '3px solid #D02020', background: '#FFF8F8' }}
+        >
+          {coverageLine ? <p>{coverageLine}</p> : null}
+          {topicLine ? <p>{topicLine}</p> : null}
+        </div>
+      )}
       <form className="mt-3" action="/dashboard/browse/grants">
         <input
           name="q"

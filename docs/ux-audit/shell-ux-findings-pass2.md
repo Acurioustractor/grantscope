@@ -15,7 +15,7 @@ verified in data, it says so.
 
 ## P1 — the page says something the data does not support
 
-### F1. The grants browser reads as national. It is 92% Queensland.
+### F1. The grants browser reads as national. It is 92% Queensland. **[FIXED]**
 
 `justice_funding`, grant rows, aggregates excluded:
 
@@ -38,7 +38,7 @@ someone.
 **Fix direction:** state the coverage skew in the stats line, or show a per-state coverage strip.
 Do not let a state comparison render without it.
 
-### F2. Over half the money on that screen has no topic tag, and the #1 recipient is a railway.
+### F2. Over half the money on that screen has no topic tag, and the #1 recipient is a railway. **[FIXED]**
 
 Same filter set:
 
@@ -57,7 +57,7 @@ nothing on the page says the list is unfiltered by topic.
 **Fix direction:** either default the browser to tagged rows, or label the untagged share
 honestly in the stats line. Leaning to the second — hiding $18.7bn is its own dishonesty.
 
-### F3. The charities browser's default view is broken.
+### F3. The charities browser's default view is broken. **[FIXED]**
 
 `charity_browse(NULL,NULL,NULL,'total',200)` takes **10.4s**, over the statement timeout, so the
 unfiltered landing renders "The list could not be read: canceling statement due to statement
@@ -133,3 +133,23 @@ user.
   repeats, rather than by merging entities the data says are distinct.
 - The dashboard remoteness chart no longer disclaims the topic filter; it now reconciles exactly
   with the money tiles.
+
+---
+
+## Fixes applied 2026-08-18
+
+**F3.** `mv_charity_browse` precomputes the two LATERAL enrichments for all 66,023 charities;
+`charity_browse` became filter + order + limit over it. **10.4s to 92ms.** Registered for the
+nightly refresh. `migrations/2026-08-18-charity-browse-mv.sql`.
+
+**F1 + F2.** `grant_browse_stats()` now also returns per-state rows/dollars and the untagged
+share, and the browser states both above the table. The numbers are computed in the RPC rather
+than written into copy, so they cannot rot. `migrations/2026-08-18-grant-coverage-stats.sql`.
+
+Live values: 91% of rows are QLD ($27.3bn of $33.7bn) against Victoria's $125m; 55% of the money
+($18.7bn across 99,891 grants) carries no topic tag.
+
+One trap worth remembering: adding fields to a value wrapped in `unstable_cache` does nothing
+until the key changes. The old cached object had no `states`, so the disclosure silently did not
+render — and in production it would have stayed invisible for an hour with no error anywhere. The
+cache key is now versioned.
