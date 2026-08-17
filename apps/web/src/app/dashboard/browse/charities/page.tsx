@@ -1,125 +1,85 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { unstable_cache } from 'next/cache';
 import { getDirectServiceSupabase } from '@/lib/supabase';
+import OrgBrowser, { type OrgRow } from '../OrgBrowser';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Charities — CivicGraph' };
 
-/**
- * The simple list (Ben, 2026-08-17): every charity, searchable, with its cross-system presence
- * counted — click one for its atlas page holding the money, people and network we know.
- * "Systems" = how many public registers the organisation appears in (contracts, grants,
- * donations, charity register, and so on), from the power index.
- */
+const stats = unstable_cache(
+  async () => {
+    const supabase = getDirectServiceSupabase();
+    const { data } = await supabase.rpc('browse_enrichment_stats');
+    return data as Record<string, Record<string, number>> | null;
+  },
+  ['browse-stats'],
+  { revalidate: 3600 },
+);
 
-function money(n: number | null): string {
-  if (!n) return '—';
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}bn`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}m`;
-  return `$${Math.round(n / 1e3)}k`;
-}
-
-async function load(q: string | null) {
-  const supabase = getDirectServiceSupabase();
-  let query = supabase.from('acnc_charities').select('abn,name,charity_size,state,is_foundation').order('name').limit(200);
-  if (q) query = query.ilike('name', `%${q}%`);
-  const { data: rows, error } = await query;
-  if (error) throw new Error(error.message);
-  const abns = [...new Set((rows ?? []).map((r) => r.abn).filter(Boolean))] as string[];
-  const power = new Map<string, { gs_id: string; system_count: number; total_dollar_flow: number }>();
-  for (let i = 0; i < abns.length; i += 100) {
-    const { data } = await supabase
-      .from('mv_entity_power_index')
-      .select('abn,gs_id,system_count,total_dollar_flow')
-      .in('abn', abns.slice(i, i + 100));
-    for (const p of (data ?? []) as { abn: string; gs_id: string; system_count: number; total_dollar_flow: number }[]) {
-      if (!power.has(p.abn)) power.set(p.abn, p);
-    }
-  }
-  const { count } = await supabase.from('acnc_charities').select('*', { count: 'exact', head: true });
-  return { rows: rows ?? [], power, total: count ?? 0 };
-}
-
-export default async function ListPage({
+export default async function CharityList({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
-  const q = typeof sp.q === 'string' && sp.q.trim() ? sp.q.trim() : null;
-  let data: Awaited<ReturnType<typeof load>> | null = null;
+  const q = typeof sp.q === 'string' ? sp.q.trim() : '';
+  const state = typeof sp.state === 'string' ? sp.state : '';
+  const size = typeof sp.size === 'string' ? sp.size : '';
+  const sort = typeof sp.sort === 'string' && sp.sort ? sp.sort : 'known';
+
+  const supabase = getDirectServiceSupabase();
+  let rows: OrgRow[] = [];
+  let statsLine = '';
   let why: string | null = null;
   try {
-    data = await load(q);
+    const [{ data, error }, s] = await Promise.all([
+      supabase.rpc('charity_browse', { p_q: q || null, p_state: state || null, p_size: size || null, p_sort: sort, p_limit: 200 }),
+      stats(),
+    ]);
+    if (error) throw new Error(error.message);
+    rows = ((data ?? []) as { abn: string; name: string; charity_size: string | null; state: string | null; is_foundation: boolean | null; gs_id: string | null; system_count: number | null; visible_dollars: number | null; ais_year: number | null; total_assets: number | null; known: number }[]).map((r) => ({
+      key: r.abn,
+      name: r.name,
+      abn: r.abn,
+      meta: `${r.charity_size ?? '—'} · ${r.state ?? '—'}${r.is_foundation ? ' · foundation' : ''}${r.ais_year ? ` · AIS ${r.ais_year}` : ''}`,
+      gs_id: r.gs_id,
+      system_count: r.system_count,
+      visible_dollars: r.visible_dollars,
+      known: r.known,
+    }));
+    const c = s?.charity;
+    statsLine = c
+      ? `${c.total.toLocaleString('en-AU')} on the ACNC register · all matched to the graph · ${c.with_ais.toLocaleString('en-AU')} with financial returns on file`
+      : '';
   } catch (e) {
     why = e instanceof Error ? e.message : String(e);
   }
 
   return (
-    <div className="mx-auto max-w-[1100px] px-6 py-6">
+    <div className="mx-auto max-w-[1180px] px-6 py-6">
       <h1 className="font-display text-[22px] font-extrabold">Charities</h1>
-      <p className="mt-1 text-[13.5px]" style={{ color: 'var(--shell-muted)' }}>
-        {data ? `${data.total.toLocaleString('en-AU')} on the register. ` : ''}The ACNC register. Click through for the money, people and network each one touches.
-      </p>
-      <form className="mt-4" action="/dashboard/browse/charities">
-        <input
-          name="q"
-          defaultValue={q ?? ''}
-          placeholder="Search by name…"
-          className="w-full max-w-[440px] bg-white px-3 py-2 font-mono text-[13px] shell-control"
-        />
-      </form>
       {why ? (
         <p className="mt-4 text-[13px]" style={{ color: '#D02020' }}>The list could not be read: {why}</p>
       ) : (
-        <div className="mt-4 shell-card">
-          <div
-            className="flex items-baseline gap-3 px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest"
-            style={{ borderBottom: '1px solid var(--shell-line)', color: 'var(--shell-muted)' }}
-          >
-            <span className="flex-1">Name</span>
-            <span className="w-[110px]">Size · state</span>
-            <span className="w-[70px] text-right">Systems</span>
-            <span className="w-[100px] text-right">Visible $</span>
-          </div>
-          {(data?.rows ?? []).map((r, i) => {
-            const p = r.abn ? data!.power.get(r.abn) : undefined;
-            const inner = (
-              <>
-                <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold" style={{ color: p ? '#1040C0' : undefined }}>
-                  {r.name}
-                </span>
-                <span className="w-[110px] shrink-0 font-mono text-[11.5px]" style={{ color: 'var(--shell-muted)' }}>
-                  {`${r.charity_size ?? '—'} · ${r.state ?? '—'}${r.is_foundation ? ' · foundation' : ''}`}
-                </span>
-                <span className="w-[70px] shrink-0 text-right font-mono text-[12.5px]">{p?.system_count ?? '—'}</span>
-                <span className="w-[100px] shrink-0 text-right font-mono text-[12.5px]">
-                  {p ? money(Number(p.total_dollar_flow)) : '—'}
-                </span>
-              </>
-            );
-            return p ? (
-              <Link
-                key={i}
-                href={`/entity/${p.gs_id}`}
-                className="flex items-baseline gap-3 px-4 py-2 hover:bg-[#FAFAF8]"
-                style={{ borderBottom: '1px solid var(--shell-line)' }}
-              >
-                {inner}
-              </Link>
-            ) : (
-              <div key={i} className="flex items-baseline gap-3 px-4 py-2" style={{ borderBottom: '1px solid var(--shell-line)' }}>
-                {inner}
-              </div>
-            );
-          })}
-        </div>
+        <OrgBrowser
+          rows={rows}
+          cfg={{
+            kind: 'charity',
+            basePath: '/dashboard/browse/charities',
+            knownMax: 5,
+            knownLegend: 'facts held: size, state, graph match, financial return, visible money',
+            stateFacets: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'],
+            sizeFacets: ['Small', 'Medium', 'Large'],
+            moneyCaveat:
+              'Known = facts we hold (size, state, graph match, financial return, visible money) — a short bar is our gap, not theirs.',
+          }}
+          q={q}
+          state={state}
+          size={size}
+          sort={sort}
+          statsLine={statsLine}
+        />
       )}
-      {data && !q ? (
-        <p className="mt-2 font-mono text-[11px]" style={{ color: 'var(--shell-muted)' }}>
-          showing 200 A–Z — search reaches all {data.total.toLocaleString('en-AU')} · a grey row has no graph match yet
-        </p>
-      ) : null}
     </div>
   );
 }
