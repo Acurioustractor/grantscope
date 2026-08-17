@@ -15,6 +15,9 @@ export interface OrgRow {
   name: string;
   abn: string | null;
   meta: string; // sector·state or size·state
+  /** Small qualifier shown beside the name, e.g. "5 listings" when rows were collapsed by ABN.
+   *  Kept out of `meta` because that column truncates and this must stay readable. */
+  badge?: string;
   gs_id: string | null;
   system_count: number | null;
   visible_dollars: number | null;
@@ -164,8 +167,15 @@ export default function OrgBrowser({
         {rows.map((r) => {
           const inner = (
             <>
-              <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold" style={{ color: r.abn ? '#1040C0' : undefined }}>
-                {r.name}
+              <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                <span className="min-w-0 truncate text-[13.5px] font-semibold" style={{ color: r.abn ? '#1040C0' : undefined }}>
+                  {r.name}
+                </span>
+                {r.badge ? (
+                  <span className="shrink-0 font-mono text-[10.5px]" style={{ color: 'var(--shell-muted)' }}>
+                    {r.badge}
+                  </span>
+                ) : null}
               </span>
               <span className="w-[190px] shrink-0 truncate font-mono text-[11px]" style={{ color: 'var(--shell-muted)' }}>
                 {r.meta}

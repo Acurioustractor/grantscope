@@ -183,7 +183,7 @@ matched grant record or a matched director).
 
 ## New finding from the fix pass
 
-### F13. The social enterprises "Visible $" column double-counts, badly. **[NOT FIXED]**
+### F13. The social enterprises "Visible $" column double-counts, badly. **[FIXED — collapsed by ABN]**
 
 Sorting by dollars shows five rows carrying the identical $7.64bn:
 
@@ -203,5 +203,17 @@ inherits the whole national figure. The same pattern repeats for genU ($887.5m t
 This is the same class as the donations Pratt problem, inverted: there, one organisation was split
 across many rows; here, many rows each claim one organisation's whole total.
 
-**Fix direction:** either attribute at the ABN level and collapse branches into one row, or label
-the figure as belonging to the ABN rather than the branch. Needs a decision, so it is left open.
+**Fixed 2026-08-18 by collapsing.** `se_browse` now groups by ABN, so one ABN is one row and the
+money is counted once. Choices worth knowing:
+
+- **Display name** comes from `gs_entities.canonical_name` for the ABN — the registered entity
+  ("Australian Red Cross Society"), not whichever branch sorted first. Falls back to the shortest
+  register name so the pick stays deterministic.
+- **Search still matches any branch.** Searching "Ballarat Red Cross" returns the collapsed row;
+  the filter runs across every entry in the group, not just the displayed name.
+- **The register's shape stays visible.** `entries` is returned and rendered beside the name as
+  "5 listings", so the collapse is disclosed rather than hidden.
+- **Rows with no ABN (1,793) are untouched** — nothing to group them by, so they stand alone.
+- **State** shows blank where a group spans several states rather than picking one.
+
+Cost: the dollars sort went from 0.8s to 2.2s. `migrations/2026-08-18-se-collapse-by-abn.sql`.
