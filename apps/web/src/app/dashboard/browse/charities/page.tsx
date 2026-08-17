@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { unstable_cache } from 'next/cache';
 import { getDirectServiceSupabase } from '@/lib/supabase';
+import { retryRpc } from '@/lib/rpc-retry';
 import OrgBrowser, { type OrgRow } from '../OrgBrowser';
 
 export const dynamic = 'force-dynamic';
@@ -33,7 +34,7 @@ export default async function CharityList({
   let why: string | null = null;
   try {
     const [{ data, error }, s] = await Promise.all([
-      supabase.rpc('charity_browse', { p_q: q || null, p_state: state || null, p_size: size || null, p_sort: sort, p_limit: 200 }),
+      retryRpc(() => supabase.rpc('charity_browse', { p_q: q || null, p_state: state || null, p_size: size || null, p_sort: sort, p_limit: 200 })),
       stats(),
     ]);
     if (error) throw new Error(error.message);

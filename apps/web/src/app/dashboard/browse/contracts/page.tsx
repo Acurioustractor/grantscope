@@ -75,7 +75,7 @@ export default async function ContractsBrowsePage({
           fromYear={String(from)}
           sort={sort}
           statsLine={statsLine}
-          caveat="AusTender: Commonwealth contracts only — state contracts live in their own registers. Suppliers are grouped by ABN where recorded, else by name. The since-year floor is applied in the query; contracts with junk start dates are excluded by it."
+          caveat="AusTender: Commonwealth contracts only — state contracts live in their own registers. Suppliers are grouped by ABN where recorded, else by a normalised name — case, punctuation and the company suffix (PTY LTD / PTY LIMITED / P/L) are treated as the same word. The since-year floor is applied in the query; contracts with junk start dates are excluded by it."
         />
       )}
     </div>

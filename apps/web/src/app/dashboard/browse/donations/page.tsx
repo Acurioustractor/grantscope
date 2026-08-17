@@ -85,7 +85,7 @@ export default async function DonationsBrowsePage({
           fromYear={from}
           sort={sortParam}
           statsLine={statsLine}
-          caveat="AEC declared receipts, 'donation received' only — the far larger 'other receipt' category (investment returns, transfers between branches) is excluded in the query. Donors are grouped by ABN where declared, else by name; the same donor under two spellings appears twice. In the drawer's donation list the small line shows the financial year."
+          caveat="AEC declared receipts, 'donation received' only — the far larger 'other receipt' category (investment returns, transfers between branches) is excluded in the query. Donors are grouped by ABN where declared, else by a normalised name — case, punctuation and the company suffix (PTY LTD / PTY LIMITED / P/L / PROPRIETARY LIMITED) are treated as the same word, so one declarer is one row. Two genuinely different spellings of a name that never declares an ABN still appear twice. In the drawer's donation list the small line shows the financial year."
         />
       )}
     </div>

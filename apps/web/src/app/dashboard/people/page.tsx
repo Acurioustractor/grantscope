@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { unstable_cache } from 'next/cache';
 import { getDirectServiceSupabase } from '@/lib/supabase';
+import { retryRpc } from '@/lib/rpc-retry';
 import PersonBrowser, { type PersonRow } from './PersonBrowser';
 
 export const dynamic = 'force-dynamic';
@@ -37,7 +38,7 @@ export default async function PeoplePage({
   let why: string | null = null;
   try {
     const [{ data, error }, s] = await Promise.all([
-      supabase.rpc('person_browse', { p_q: q || null, p_sort: sort, p_limit: 200 }),
+      retryRpc(() => supabase.rpc('person_browse', { p_q: q || null, p_sort: sort, p_limit: 200 })),
       stats(),
     ]);
     if (error) throw new Error(error.message);

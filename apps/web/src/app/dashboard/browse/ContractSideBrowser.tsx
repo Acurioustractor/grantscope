@@ -65,6 +65,13 @@ export default function ContractSideBrowser({
   const open = (key: string) =>
     drawer.open(key, `${cfg.detailApi}?key=${encodeURIComponent(key)}&from=${encodeURIComponent(fromYear || '2020')}`);
   const qs = makeQs(cfg.basePath, { q, from: fromYear, sort });
+  /** Name normalisation folds spellings together, but one name can still be several declared
+   *  ABNs — three Pratt Holdings Pty Ltd rows, three real ABNs. Where the name alone cannot
+   *  tell two rows apart, show the ABN that does. */
+  const display = (n: string) => n.replace(/\s+/g, ' ').trim();
+  const sharedNames = new Set(
+    rows.map((r) => display(r.name)).filter((n, i, all) => all.indexOf(n) !== i),
+  );
 
   return (
     <>
@@ -100,7 +107,14 @@ export default function ContractSideBrowser({
         </div>
         {rows.map((r) => (
           <button key={r.key} onClick={() => open(r.key)} className="flex w-full items-baseline gap-3 px-4 py-2 text-left hover:bg-[#FAFAF8]" style={{ borderBottom: '1px solid var(--shell-line)' }}>
-            <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold" style={{ color: '#1040C0' }}>{r.name}</span>
+            <span className="flex min-w-0 flex-1 items-baseline gap-2">
+              <span className="min-w-0 truncate text-[13.5px] font-semibold" style={{ color: '#1040C0' }}>{display(r.name)}</span>
+              {sharedNames.has(display(r.name)) && r.abn ? (
+                <span className="shrink-0 font-mono text-[10.5px]" style={{ color: 'var(--shell-muted)' }}>
+                  ABN {r.abn}
+                </span>
+              ) : null}
+            </span>
             <span className="w-[220px] shrink-0 truncate font-mono text-[11px]" style={{ color: 'var(--shell-muted)' }}>{r.topCounterparty ?? '—'}</span>
             <span className="w-[72px] shrink-0 text-right font-mono text-[12.5px]">{r.counterparties}</span>
             <span className="w-[76px] shrink-0 text-right font-mono text-[12.5px]">{r.contracts.toLocaleString('en-AU')}</span>

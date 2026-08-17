@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { unstable_cache } from 'next/cache';
 import { getDirectServiceSupabase } from '@/lib/supabase';
+import { retryRpc } from '@/lib/rpc-retry';
 import OrgBrowser, { type OrgRow } from '../OrgBrowser';
 
 export const dynamic = 'force-dynamic';
@@ -32,15 +33,18 @@ export default async function SEList({
   let why: string | null = null;
   try {
     const [{ data, error }, s] = await Promise.all([
-      supabase.rpc('se_browse', { p_q: q || null, p_state: state || null, p_sort: sort, p_limit: 200 }),
+      retryRpc(() => supabase.rpc('se_browse', { p_q: q || null, p_state: state || null, p_sort: sort, p_limit: 200 })),
       stats(),
     ]);
     if (error) throw new Error(error.message);
-    rows = ((data ?? []) as { id: string; name: string; abn: string | null; sector: string | null; state: string | null; gs_id: string | null; system_count: number | null; visible_dollars: number | null; known: number }[]).map((r) => ({
+    rows = ((data ?? []) as { id: string; name: string; abn: string | null; sector: string | null; state: string | null; gs_id: string | null; system_count: number | null; visible_dollars: number | null; known: number; entries: number | null }[]).map((r) => ({
       key: r.id,
       name: r.name,
       abn: r.abn,
-      meta: `${(r.sector ?? '—').split(',').slice(0, 2).join(', ')} · ${r.state ?? '—'}`,
+      meta: `${(r.sector ?? '—').split(',').slice(0, 2).join(', ')} · ${r.state ?? 'multiple'}`,
+      // `entries` > 1 means several register listings share this ABN and were collapsed into one
+      // row. Shown beside the name, not in meta, because meta truncates at 190px.
+      badge: (r.entries ?? 1) > 1 ? `${r.entries} listings` : undefined,
       gs_id: r.gs_id,
       system_count: r.system_count,
       visible_dollars: r.visible_dollars,
@@ -48,7 +52,7 @@ export default async function SEList({
     }));
     const se = s?.se;
     statsLine = se
-      ? `${se.total.toLocaleString('en-AU')} on the register · ${se.with_abn.toLocaleString('en-AU')} with an ABN we can join on · ${se.on_graph.toLocaleString('en-AU')} matched to the graph · the rest are the finding queue (sort by Least known)`
+      ? `${se.total.toLocaleString('en-AU')} on the register · ${se.with_abn.toLocaleString('en-AU')} with an ABN we can join on · ${se.on_graph.toLocaleString('en-AU')} matched to the graph · the rest are the finding queue (sort by Least known) · listings sharing one ABN are shown as a single organisation, so the dollars are counted once rather than repeated per branch`
       : '';
   } catch (e) {
     why = e instanceof Error ? e.message : String(e);
