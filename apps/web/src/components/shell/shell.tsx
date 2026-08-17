@@ -123,6 +123,8 @@ export async function Shell({ title, children }: ShellProps) {
           ['/dashboard/browse/social-enterprises', 'Social enterprises'],
           ['/dashboard/browse/charities', 'Charities'],
           ['/dashboard/browse/grants', 'Grant recipients'],
+          ['/dashboard/browse/contracts', 'Contract suppliers'],
+          ['/dashboard/browse/buyers', 'Government buyers'],
         ].map(([href, label]) => (
           <Link
             key={href}
