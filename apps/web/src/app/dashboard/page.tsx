@@ -27,35 +27,41 @@ const REMOTENESS_ORDER: [string, string][] = [
   ['remote', 'Remote'],
 ];
 
-async function fundingByRemoteness(): Promise<{ buckets: RemotenessBucket[]; unmapped: number }> {
+async function fundingByRemoteness(
+  topic: string,
+  fy: string,
+): Promise<{ buckets: RemotenessBucket[]; unplacedDollars: number; unplacedGrants: number }> {
   const supabase = getDirectServiceSupabase();
-  const PAGE = 1000;
+  const { data, error } = await supabase.rpc('funding_remoteness_by_topic', {
+    p_topic: topic,
+    p_fy: fy === '' ? null : fy,
+  });
+  if (error) throw new Error(`remoteness query failed: ${error.message}`);
+  const rows = (data ?? []) as { remoteness: string; dollars: number | null; grants: number | null }[];
+
+  let unplacedDollars = 0;
+  let unplacedGrants = 0;
   const byLabel = new Map<string, RemotenessBucket>();
-  let unmapped = 0;
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await supabase
-      .from('mv_funding_by_postcode')
-      .select('remoteness,entity_count,total_funding')
-      .range(from, from + PAGE - 1);
-    if (error) throw new Error(`remoteness query failed: ${error.message}`);
-    const page = (data ?? []) as { remoteness: string | null; entity_count: number | null; total_funding: number | null }[];
-    for (const row of page) {
-      const raw = (row.remoteness ?? '').toLowerCase();
-      // 'remote' is a substring of 'very remote' — REMOTENESS_ORDER lists the longer match first.
-      const hit = REMOTENESS_ORDER.find(([needle]) => raw.includes(needle));
-      if (!hit) {
-        unmapped += 1;
-        continue;
-      }
-      const bucket = byLabel.get(hit[1]) ?? { label: hit[1], dollars: 0, entities: 0 };
-      bucket.dollars += row.total_funding ?? 0;
-      bucket.entities += row.entity_count ?? 0;
-      byLabel.set(hit[1], bucket);
+  for (const row of rows) {
+    const raw = (row.remoteness ?? '').toLowerCase();
+    // 'remote' is a substring of 'very remote' — REMOTENESS_ORDER lists the longer match first.
+    const hit = REMOTENESS_ORDER.find(([needle]) => raw.includes(needle));
+    if (!hit) {
+      unplacedDollars += Number(row.dollars ?? 0);
+      unplacedGrants += Number(row.grants ?? 0);
+      continue;
     }
-    if (page.length < PAGE) break;
+    const bucket = byLabel.get(hit[1]) ?? { label: hit[1], dollars: 0, entities: 0 };
+    bucket.dollars += Number(row.dollars ?? 0);
+    bucket.entities += Number(row.grants ?? 0);
+    byLabel.set(hit[1], bucket);
   }
   const display = ['Major cities', 'Inner regional', 'Outer regional', 'Remote', 'Very remote'];
-  return { buckets: display.map((l) => byLabel.get(l)).filter((b): b is RemotenessBucket => Boolean(b)), unmapped };
+  return {
+    buckets: display.map((l) => byLabel.get(l)).filter((b): b is RemotenessBucket => Boolean(b)),
+    unplacedDollars,
+    unplacedGrants,
+  };
 }
 
 async function count(table: string): Promise<number | null> {
@@ -95,7 +101,7 @@ export default async function DashboardPage({
 
   const [selected, remoteness, entityCount, contractCount] = await Promise.all([
     cachedThemeMoney(topic, fy ?? ''),
-    cachedRemoteness(),
+    cachedRemoteness(topic, fy ?? ''),
     cachedCount('gs_entities'),
     cachedCount('austender_contracts'),
   ]);
@@ -140,10 +146,13 @@ export default async function DashboardPage({
       <div className="flex flex-col gap-4 xl:flex-row">
         <section className="shell-card flex min-w-0 flex-1 flex-col gap-4 px-5 py-4">
           <div className="flex items-center gap-3">
-            <h2 className="font-display text-[15px] font-bold">Where ALL money sits — by remoteness</h2>
+            <h2 className="font-display text-[15px] font-bold">
+              Where {topicName.toLowerCase()} money sits — by remoteness
+              {fy ? ` · ${fy}` : ''}
+            </h2>
             <div className="flex-1" />
             <span className="text-xs" style={{ color: 'var(--shell-muted)' }}>
-              Every dollar on the graph, all topics and years — the filters above do not scope this chart
+              Same basis as the tiles — grants only, aggregates and total-rows removed
             </span>
           </div>
           {/* Shares, not raw bars (Ben's call, SH-2): a linear dollar scale made every bucket
@@ -174,12 +183,14 @@ export default async function DashboardPage({
             })}
           </div>
           <p className="text-[11px]" style={{ color: 'var(--shell-muted)' }}>
-            Shares of every classified dollar. The red bars are the whole story: everywhere outside the
-            major cities shares {(100 - (remoteness.buckets[0] ? (remoteness.buckets[0].dollars / remotenessTotal) * 100 : 0)).toFixed(0)}% of the money.
+            Shares of the {topicName.toLowerCase()} money that could be placed. The red bars are the whole
+            story: everywhere outside the major cities shares {(100 - (remoteness.buckets[0] ? (remoteness.buckets[0].dollars / remotenessTotal) * 100 : 0)).toFixed(0)}% of it.
           </p>
-          {remoteness.unmapped > 0 && (
+          {remoteness.unplacedDollars > 0 && (
             <p className="text-[11px]" style={{ color: 'var(--shell-muted)' }}>
-              {remoteness.unmapped.toLocaleString()} postcode rows had no remoteness classification and are not shown.
+              A further {money(remoteness.unplacedDollars)} across {remoteness.unplacedGrants.toLocaleString()} grants
+              is not shown: the grant is not linked to an entity, or the entity has no remoteness. The shares
+              above are of the placed money only.
             </p>
           )}
         </section>
