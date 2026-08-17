@@ -61,9 +61,24 @@ export async function GET() {
       donorContractorStats,
       entityCoverageResult,
     ] = await Promise.all([
-      // Fast RPCs (fetch estimated counts dynamically as get_table_counts has visibility issues)
+      // Estimated counts for exactly the tables this page reads. The unfiltered pg_class scan
+      // silently lost most app tables to PostgREST's 1,000-row cap (pg_class holds ~4K relations),
+      // which zeroed every count on /ops/health.
       safe(db.rpc('exec_sql', {
-        query: `SELECT relname, coalesce(reltuples, 0) as count FROM pg_class`
+        query: `
+          SELECT c.relname, greatest(coalesce(c.reltuples, 0), 0) AS count
+          FROM pg_class c
+          JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public'
+            AND c.relkind IN ('r', 'p', 'm')
+            AND c.relname IN (
+              'grant_opportunities','foundations','foundation_programs','acnc_charities',
+              'community_orgs','social_enterprises','oric_corporations','austender_contracts',
+              'political_donations','gs_entities','gs_relationships','asic_companies',
+              'ato_tax_transparency','rogs_justice_spending','asx_companies','money_flows',
+              'seifa_2021','justice_funding','alma_interventions','alma_outcomes','alma_evidence'
+            )
+        `
       }), 8000),
       safe(db.rpc('get_table_freshness'), 12000),
       // Filtered counts — each wrapped in safe() so pool saturation doesn't block response
