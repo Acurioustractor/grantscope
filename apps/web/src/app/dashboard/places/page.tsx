@@ -76,7 +76,7 @@ export default async function PlacesPage({
           state={state}
           sort={sort}
           statsLine={statsLine}
-          caveat="Funding attaches to an organisation's address, so head-office council areas collect their branches' figures. SEIFA decile 1 = most disadvantaged. Desert score compares disadvantage with money reaching the area."
+          caveat="Funding attaches to an organisation's address, so head-office council areas collect their branches' figures. SEIFA decile 1 = most disadvantaged. Desert score compares disadvantage with money reaching the area — higher means more disadvantage and less money; metro councils sit around 50–70, and the extreme tail runs past 150."
         />
       )}
     </div>

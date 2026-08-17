@@ -46,6 +46,9 @@ export const NON_RECIPIENT_NAMES: ReadonlySet<string> = new Set([
   'unknown',
   'tbc',
   'other',
+  // Source spreadsheets export empty cells as the literal string "(blank)" — 286 rows carrying
+  // $265M ranked #9 on the grants browser before this was caught (UX audit SH-1, 2026-08-18).
+  '(blank)',
 ]);
 
 export function isRealRecipient(name: string | null | undefined): boolean {

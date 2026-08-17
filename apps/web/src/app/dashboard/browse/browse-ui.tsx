@@ -67,13 +67,21 @@ export function Drawer({
   children: React.ReactNode;
 }) {
   return (
-    <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-[460px] overflow-y-auto border-l bg-white p-5" style={{ borderColor: 'var(--shell-line)', boxShadow: '-8px 0 24px rgba(0,0,0,0.08)' }}>
+    <>
+      <div
+        className="fixed inset-0 z-30"
+        style={{ background: 'rgba(18,18,18,0.18)' }}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-[460px] overflow-y-auto border-l bg-white p-5" style={{ borderColor: 'var(--shell-line)', boxShadow: '-8px 0 24px rgba(0,0,0,0.08)' }}>
       <div className="flex items-start justify-between gap-3">
         <h2 className="font-display text-[17px] font-extrabold">{title}</h2>
         <button onClick={onClose} aria-label="close" className="shrink-0 px-2 py-0.5 font-mono text-[11px] font-black shell-control">✕</button>
       </div>
-      {err ? <p className="mt-3 text-[13px]" style={{ color: '#D02020' }}>Could not load: {err}</p> : null}
-      {children}
-    </aside>
+        {err ? <p className="mt-3 text-[13px]" style={{ color: '#D02020' }}>Could not load: {err}</p> : null}
+        {children}
+      </aside>
+    </>
   );
 }

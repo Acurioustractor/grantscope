@@ -6,7 +6,7 @@ import { createSupabaseServer, hasSupabaseServerEnv } from '@/lib/supabase-serve
 import { isAdminEmail } from '@/lib/admin';
 import { unstable_cache } from 'next/cache';
 import { ShellHeader } from './shell-header';
-import { RailNav } from './rail-nav';
+import { RailNav, RailGroupLink } from './rail-nav';
 import type { DataEvent } from './shell-menus';
 import { Database } from '@phosphor-icons/react/dist/ssr';
 
@@ -127,14 +127,14 @@ export async function Shell({ title, children }: ShellProps) {
           ['/dashboard/browse/buyers', 'Government buyers'],
           ['/dashboard/browse/donations', 'Political donors'],
         ].map(([href, label]) => (
-          <Link
+          <RailGroupLink
             key={href}
             href={href}
             className="flex items-center px-2.5 py-1.5 text-[13px]"
             style={{ borderRadius: 'var(--shell-r-sm)', color: 'var(--shell-rail-text)' }}
           >
             {label}
-          </Link>
+          </RailGroupLink>
         ))}
         <div className="h-4" />
         <div className="px-2.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#7A7A7A]">
@@ -155,13 +155,14 @@ export async function Shell({ title, children }: ShellProps) {
             {v.name}
           </Link>
         ))}
-        <Link
+        <RailGroupLink
           href="/dashboard/views"
+          exact
           className="flex items-center px-2.5 py-1.5 text-[12px]"
           style={{ borderRadius: 'var(--shell-r-sm)', color: '#7A7A7A' }}
         >
           All views
-        </Link>
+        </RailGroupLink>
         {user.isAdmin && (
           <>
             <div className="h-4" />
@@ -175,18 +176,21 @@ export async function Shell({ title, children }: ShellProps) {
               ['/ops/grant-recommendations', 'Grant recommendations'],
               ['/admin/api-usage', 'API usage'],
             ].map(([href, label]) => (
-              <Link
+              <RailGroupLink
                 key={href}
                 href={href}
+                exact={href === '/ops'}
                 className="flex items-center px-2.5 py-1.5 text-[13px]"
                 style={{ borderRadius: 'var(--shell-r-sm)', color: 'var(--shell-rail-text)' }}
               >
                 {label}
-              </Link>
+              </RailGroupLink>
             ))}
           </>
         )}
         <div className="flex-1" />
+        {/* SH-9: clearance so the floating avatar/feedback bubble stops covering the last rail entry */}
+        <div className="h-12" />
         <Link
           href="/clarity"
           className="flex items-center gap-2.5 px-2.5 py-2"

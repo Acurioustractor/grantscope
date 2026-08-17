@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { MagnifyingGlass } from '@phosphor-icons/react/dist/ssr';
 import { GlobalSearch } from '@/app/components/global-search';
 import { ShellMenus, type DataEvent } from './shell-menus';
@@ -17,7 +18,38 @@ interface ShellHeaderProps {
   isAdmin: boolean;
 }
 
+/** Longest-prefix page titles; the layout prop is the fallback. The layout can't know the
+ *  page (SH-4: every dashboard page said "Dashboard"), the pathname can. */
+const TITLES: [string, string][] = [
+  ['/dashboard/browse/foundations', 'Foundations'],
+  ['/dashboard/browse/social-enterprises', 'Social enterprises'],
+  ['/dashboard/browse/charities', 'Charities'],
+  ['/dashboard/browse/grants', 'Grant recipients'],
+  ['/dashboard/browse/contracts', 'Contract suppliers'],
+  ['/dashboard/browse/buyers', 'Government buyers'],
+  ['/dashboard/browse/donations', 'Political donors'],
+  ['/dashboard/people', 'People'],
+  ['/dashboard/places', 'Places'],
+  ['/dashboard/entities', 'Entities'],
+  ['/dashboard/themes', 'Themes'],
+  ['/dashboard/reports', 'Reports'],
+  ['/dashboard/views', 'Views'],
+  ['/dashboard/docs', 'The data'],
+  ['/dashboard/guide', 'What this is'],
+  ['/dashboard/help', 'Help'],
+  ['/ops/health', 'Data health'],
+  ['/ops/claims', 'Claims'],
+  ['/ops/grant-recommendations', 'Grant recommendations'],
+  ['/ops', 'Ops'],
+  ['/admin/api-usage', 'API usage'],
+];
+
 export function ShellHeader({ title, events, userEmail, isAdmin }: ShellHeaderProps) {
+  const pathname = usePathname() ?? '';
+  const derived = TITLES
+    .filter(([p]) => pathname === p || pathname.startsWith(`${p}/`))
+    .sort((a, b) => b[0].length - a[0].length)[0]?.[1];
+  title = derived ?? title;
   const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {

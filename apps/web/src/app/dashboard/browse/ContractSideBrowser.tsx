@@ -39,9 +39,9 @@ interface SideDetail {
   contracts: { title: string | null; counterparty: string | null; value: number | null; start: string | null; end: string | null }[];
 }
 
-const SORTS: [string, string][] = [
+const sortsFor = (itemLabel: string): [string, string][] => [
   ['total', 'Total $'],
-  ['contracts', 'Contracts'],
+  ['contracts', itemLabel === 'donation' ? 'Donations' : 'Contracts'],
   ['name', 'A–Z'],
 ];
 const DEFAULT_YEARS = ['2015', '2020', '2023'];
@@ -92,7 +92,7 @@ export default function ContractSideBrowser({
           </Link>
         ))}
         <span className="ml-auto flex items-center gap-1.5">
-          {SORTS.map(([v, label]) => (
+          {sortsFor(cfg.itemLabel ?? 'contract').map(([v, label]) => (
             <Link key={v} href={qs({ sort: v })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={(sort || 'total') === v ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
               {label}
             </Link>

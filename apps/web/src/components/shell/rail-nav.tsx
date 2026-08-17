@@ -32,15 +32,58 @@ const NAV = [
 ];
 
 /**
+ * Pathname-aware link for the rail's plain groups (Browse, Ops, views). Same longest-prefix
+ * idea as RailNav, per-link: lights up when the pathname is at or under its href.
+ */
+export function RailGroupLink({
+  href,
+  children,
+  className,
+  style,
+  exact,
+}: {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+  /** Match only the exact path — for group-overview links whose href prefixes their siblings. */
+  exact?: boolean;
+}) {
+  const pathname = usePathname() ?? '';
+  const isActive = pathname === href || (!exact && pathname.startsWith(`${href}/`));
+  return (
+    <Link
+      href={href}
+      className={className}
+      style={{
+        ...style,
+        background: isActive ? 'var(--shell-rail-hover)' : undefined,
+        color: isActive ? '#FFFFFF' : style?.color,
+        fontWeight: isActive ? 600 : undefined,
+      }}
+    >
+      {children}
+    </Link>
+  );
+}
+
+/**
  * Pathname-aware active state: the LONGEST matching prefix wins, so /dashboard/people lights
  * People (not Dashboard) and /clarity/o/x lights Clarity. Replaced the static activeHref prop,
  * which could not know where the reader actually was.
  */
 export function RailNav() {
   const pathname = usePathname() ?? '';
-  const active = NAV
-    .filter((e) => pathname === e.href || pathname.startsWith(`${e.href}/`))
-    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+  // Browse/Ops/views pages live under /dashboard but belong to their own rail groups —
+  // without this, "Dashboard" lights up on every browse page (SH-3).
+  const foreign = ['/dashboard/browse', '/dashboard/views', '/ops', '/admin'].some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
+  const active = foreign
+    ? undefined
+    : NAV
+        .filter((e) => pathname === e.href || pathname.startsWith(`${e.href}/`))
+        .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
     <>

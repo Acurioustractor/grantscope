@@ -103,7 +103,7 @@ export default async function DashboardPage({
   const topicName = topicLabel(topic);
   const theme = allThemes().find((t) => t.topicTags.includes(topic));
   const tiles = buildTiles(selected, entityCount, contractCount, topicName, fy);
-  const maxDollars = Math.max(...remoteness.buckets.map((b) => b.dollars), 1);
+  const remotenessTotal = Math.max(remoteness.buckets.reduce((s, b) => s + b.dollars, 0), 1);
 
   return (
     <div className="flex flex-col gap-5">
@@ -146,26 +146,37 @@ export default async function DashboardPage({
               Every dollar on the graph, all topics and years — the filters above do not scope this chart
             </span>
           </div>
-          <div className="flex h-64 items-end gap-6 px-2">
-            {remoteness.buckets.map((b) => (
-              <div key={b.label} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
-                <span className="font-mono text-[11.5px]" style={{ color: 'var(--shell-muted)' }}>
-                  {money(b.dollars)}
-                </span>
-                <div
-                  className="w-full"
-                  style={{
-                    height: `${Math.max((b.dollars / maxDollars) * 100, 2)}%`,
-                    background: 'var(--shell-ink)',
-                    borderRadius: '4px 4px 0 0',
-                  }}
-                />
-                <span className="text-xs font-medium" style={{ color: 'var(--shell-muted)' }}>
-                  {b.label}
-                </span>
-              </div>
-            ))}
+          {/* Shares, not raw bars (Ben's call, SH-2): a linear dollar scale made every bucket
+              except Major cities invisible — the exact inequity the chart exists to show. */}
+          <div className="flex flex-col gap-3 px-2 py-1">
+            {remoteness.buckets.map((b) => {
+              const share = (b.dollars / remotenessTotal) * 100;
+              return (
+                <div key={b.label} className="flex items-center gap-3">
+                  <span className="w-[104px] shrink-0 text-xs font-medium" style={{ color: 'var(--shell-muted)' }}>
+                    {b.label}
+                  </span>
+                  <div className="h-4 min-w-0 flex-1" style={{ background: 'var(--shell-line)', borderRadius: 3 }}>
+                    <div
+                      className="h-full"
+                      style={{
+                        width: `${Math.max(share, 0.5)}%`,
+                        background: share >= 50 ? 'var(--shell-ink)' : '#D02020',
+                        borderRadius: 3,
+                      }}
+                    />
+                  </div>
+                  <span className="w-[130px] shrink-0 text-right font-mono text-[11.5px]" style={{ color: 'var(--shell-muted)' }}>
+                    {share >= 1 ? share.toFixed(0) : share.toFixed(1)}% · {money(b.dollars)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
+          <p className="text-[11px]" style={{ color: 'var(--shell-muted)' }}>
+            Shares of every classified dollar. The red bars are the whole story: everywhere outside the
+            major cities shares {(100 - (remoteness.buckets[0] ? (remoteness.buckets[0].dollars / remotenessTotal) * 100 : 0)).toFixed(0)}% of the money.
+          </p>
           {remoteness.unmapped > 0 && (
             <p className="text-[11px]" style={{ color: 'var(--shell-muted)' }}>
               {remoteness.unmapped.toLocaleString()} postcode rows had no remoteness classification and are not shown.
@@ -210,7 +221,7 @@ export default async function DashboardPage({
                     <span className="block truncate text-[13.5px] font-semibold">{r.name}</span>
                   )}
                   <span className="text-[11.5px]" style={{ color: 'var(--shell-muted)' }}>
-                    {r.grants.toLocaleString()} grants
+                    {r.grants.toLocaleString()} grant{r.grants === 1 ? '' : 's'}
                   </span>
                 </div>
                 <span className="font-mono text-[13px]">{money(r.dollars)}</span>
