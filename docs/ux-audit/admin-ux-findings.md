@@ -286,7 +286,7 @@ dev is a convenience, an open admin API is a different blast radius." So the pag
 its API refuses is by design in local dev. The message now explains exactly that, and 401 is
 distinguished from 403.
 
-## A13 — a timed-out count renders as a confident zero (M) **[FOUND, NOT FIXED]**
+## A13 — a timed-out count renders as a confident zero (M) **[FIXED]**
 
 Caught by accident: `/ops/health` showed **HAVE WEBSITE 0 (0.0%)** while the database holds 5,903.
 Nothing was broken — `safe()` returns `{ count: null }` when a query exceeds its timeout, and every
@@ -297,6 +297,23 @@ It reproduced because my own background verification job was saturating the shar
 time — which is precisely when an ops health screen most needs to be trustworthy.
 
 This is the same disease as A1 and A11, at a third layer: **the surface cannot tell "I measured
-zero" from "I could not measure".** Fix direction: pass null through instead of coercing, and have
-StatCard render "—" with an "unavailable" note. Not started — interrupted mid-change, nothing left
-half-applied.
+zero" from "I could not measure".**
+
+**Fixed 2026-08-18.** null now travels from `safe()` all the way to the UI instead of being coerced:
+
+- the API passes `count ?? null` for the six counts that can time out, and the client types them
+  `number | null`, so a future `?? 0` fails the typecheck rather than silently returning;
+- `StatCard` renders unknown as "— not measured, query timed out" in muted chrome, visibly different
+  from a real zero;
+- **the composite score admits it too.** The score is built from these counts and `pctNum` treats
+  unknown as 0, so a pooler hiccup used to look like a data-quality drop. It still renders — a
+  partial signal beats none — but now says "Partial score — X could not be measured … the real score
+  is higher than N".
+
+Five guard tests in `apps/web/src/lib/health-unknown-counts.test.ts` fail the build if `count ?? 0`
+returns, if the nullable types are widened back, or if the not-measured rendering disappears. The
+first version of that test failed correctly and for the wrong reason — it matched the fix's own
+explanatory comment quoting the defect — so it now strips comments before scanning.
+
+Verified: the healthy path renders unchanged (all counts answered). The unknown-state rendering is
+covered by tests, not by eye — forcing a live timeout was not attempted.

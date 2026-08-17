@@ -362,23 +362,28 @@ export async function GET() {
 
     const response = NextResponse.json({
       stats: {
+        // Admin audit A13: these were `count ?? 0`. safe() returns count:null when a query blows
+        // its timeout, so a question we FAILED TO ASK rendered as a confident measurement of zero
+        // — /ops/health showed "HAVE WEBSITE 0" while the table held 5,903, because the pooler was
+        // busy. On the one screen whose job is saying whether the data is healthy, that is the
+        // worst possible failure mode. null now travels to the UI, which renders it as unknown.
         grants: {
           total: tcount('grant_opportunities'),
-          withDescription: grantsWithDesc.count ?? 0,
-          enriched: grantsEnriched.count ?? 0,
-          embedded: grantsEmbedded.count ?? 0,
-          open: grantsOpen.count ?? 0,
+          withDescription: grantsWithDesc.count ?? null,
+          enriched: grantsEnriched.count ?? null,
+          embedded: grantsEmbedded.count ?? null,
+          open: grantsOpen.count ?? null,
         },
         foundations: {
           total: tcount('foundations'),
-          profiled: foundationsProfiled.count ?? 0,
-          withWebsite: foundationsWithWebsite.count ?? 0,
+          profiled: foundationsProfiled.count ?? null,
+          withWebsite: foundationsWithWebsite.count ?? null,
           programs: tcount('foundation_programs'),
         },
         community: { orgs: tcount('community_orgs') },
         socialEnterprises: {
           total: tcount('social_enterprises'),
-          enriched: seEnriched.count ?? 0,
+          enriched: seEnriched.count ?? null,
         },
       },
       grantSemantics,

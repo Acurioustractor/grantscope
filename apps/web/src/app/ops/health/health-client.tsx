@@ -12,10 +12,11 @@ function tableToSlug(table: string): string {
 
 interface HealthData {
   stats: {
-    grants: { total: number; withDescription: number; enriched: number; embedded: number; open: number };
-    foundations: { total: number; profiled: number; withWebsite: number; programs: number };
+    // A13: null means the count timed out and was never measured — NOT that it is zero.
+    grants: { total: number; withDescription: number | null; enriched: number | null; embedded: number | null; open: number | null };
+    foundations: { total: number; profiled: number | null; withWebsite: number | null; programs: number };
     community: { orgs: number };
-    socialEnterprises: { total: number; enriched: number };
+    socialEnterprises: { total: number; enriched: number | null };
   };
   grantSemantics: {
     statusNull: number;
@@ -119,13 +120,15 @@ interface HealthData {
   lastUpdated: string;
 }
 
-function pct(n: number, total: number): string {
+function pct(n: number | null, total: number): string {
+  if (n === null) return '?';
   if (total === 0) return '0';
   return ((n / total) * 100).toFixed(1);
 }
 
-function pctNum(n: number, total: number): number {
-  if (total === 0) return 0;
+/** Unknown scores as 0 for the composite, and `scoreIsPartial` below says so out loud. */
+function pctNum(n: number | null, total: number): number {
+  if (n === null || total === 0) return 0;
   return (n / total) * 100;
 }
 
@@ -195,6 +198,20 @@ function sourceHealthPill(status: SourceHealth['status']): string {
     case 'healthy': return 'bg-green-600 text-white';
     default: return 'bg-gray-300 text-bauhaus-black';
   }
+}
+
+/** A13: the composite is built from counts that may have timed out. pctNum treats unknown as 0,
+ *  which drags the score DOWN silently — a pooler hiccup would look like a data-quality problem.
+ *  The score still renders (a partial signal beats none) but it must say it is partial. */
+function unmeasuredInputs(data: HealthData): string[] {
+  const { stats } = data;
+  const missing: string[] = [];
+  if (stats.grants.embedded === null) missing.push('grants embedded');
+  if (stats.grants.enriched === null) missing.push('grants enriched');
+  if (stats.foundations.profiled === null) missing.push('foundations profiled');
+  if (stats.foundations.withWebsite === null) missing.push('foundations with website');
+  if (stats.socialEnterprises.enriched === null) missing.push('social enterprises enriched');
+  return missing;
 }
 
 function computeHealthScore(data: HealthData): number {
@@ -379,6 +396,7 @@ export function HealthClient() {
   const pipelineHealth = data.pipelineHealth;
   const confMap = Object.fromEntries(confidenceBreakdown.map(c => [c.confidence, c.total]));
   const healthScore = computeHealthScore(data);
+  const unmeasured = unmeasuredInputs(data);
 
   const copyToClipboard = (cmd: string) => {
     navigator.clipboard.writeText(cmd);
@@ -443,6 +461,12 @@ export function HealthClient() {
               — weighted across the five measures below. 80+ healthy · 50-79 needs attention ·
               under 50 poor.
             </div>
+            {unmeasured.length > 0 && (
+              <div className="text-xs mb-3 font-mono text-bauhaus-red">
+                Partial score — {unmeasured.join(', ')} could not be measured (query timed out), and
+                counts as 0 in the weighting. The real score is higher than {healthScore}.
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 text-xs">
               <div>
                 <div className="font-black uppercase tracking-wider text-bauhaus-muted mb-1">Data Completeness (30%)</div>
@@ -1134,17 +1158,29 @@ export function HealthClient() {
   );
 }
 
-function StatCard({ label, value, total, thresholds, customValue, href }: { label: string; value: number; total?: number; thresholds?: [number, number]; customValue?: string; href?: string }) {
+function StatCard({ label, value, total, thresholds, customValue, href }: { label: string; value: number | null; total?: number; thresholds?: [number, number]; customValue?: string; href?: string }) {
+  // A13: a count that timed out is unknown, not zero. Saying "—  not measured" is the whole point:
+  // a zero here used to be indistinguishable from a real measurement of nothing.
+  if (customValue === undefined && value === null) {
+    return (
+      <div className="border-4 border-bauhaus-black/30 p-4">
+        <div className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-1">{label}</div>
+        <div className="text-2xl font-black text-bauhaus-muted">&mdash;</div>
+        <div className="text-xs text-bauhaus-muted mt-1">not measured — query timed out</div>
+      </div>
+    );
+  }
+  const safeValue = value ?? 0;
   const inner = (
     <>
       <div className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-1">{label}</div>
-      <div className="text-2xl font-black text-bauhaus-black">{customValue ?? value.toLocaleString()}</div>
+      <div className="text-2xl font-black text-bauhaus-black">{customValue ?? safeValue.toLocaleString()}</div>
       {total !== undefined && (
         <>
           <div className="text-xs text-bauhaus-muted mt-1">
-            of {total.toLocaleString()} (<StatusColor value={value} total={total} thresholds={thresholds} />)
+            of {total.toLocaleString()} (<StatusColor value={safeValue} total={total} thresholds={thresholds} />)
           </div>
-          <BarFill value={value} total={total} thresholds={thresholds} />
+          <BarFill value={safeValue} total={total} thresholds={thresholds} />
         </>
       )}
     </>
