@@ -1,5 +1,5 @@
 ---
-date: 2026-08-16T07:20:00Z
+date: 2026-08-18T21:00:00Z
 session_name: dashboard-shell
 branch: main
 status: active
@@ -9,57 +9,102 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-18T00:00:00Z
-**Goal:** CivicGraph as one legible system — one shell over all data, every kind browsable and sortable; grantee-ingest waves filling the funder→grantee graph.
-**Branch:** `main` through `8877b9de` (#256). This arc merged: #252 shell sweep + /ops/health fix · #253 seven kind browsers · #254 review follow-ups · #255 UX polish (13 findings) · #256 sortable headers everywhere. Prod (civicgraph.app) verified READY through #255; #256 deploying on merge.
-**Test:** `cd apps/web && npx tsc --noEmit` · `npx vitest run` (726 pass) · dev 3013
+**Updated:** 2026-08-18T21:00:00Z
+**Goal:** CivicGraph as one legible system — one shell over all data, and every number on a screen
+meaning what the screen says it means.
+**Branch:** `main` through `6e6a01f6` (#257 squash-merged, branch deleted, tree clean). Main CI
+green (run 32068531139, 3m45s).
+**Test:** `cd apps/web && npx tsc --noEmit` · `npx vitest run` (734 pass) · dev 3013
 
 ### Now
-[->] Continue the UI/UX pass with Ben live (polish loop, pass 2), or resume the grantee-ingest wave (see memory: grantee-ingest-pipeline). Both lanes clean.
+[->] Both lanes clean. Either UX pass 3, the two open decisions below, or resume grantee-ingest
+wave 1 remainder (see memory: grantee-ingest-pipeline).
 
-### This Session (2026-08-17→18)
-- [x] "One shell, all data" phase: grill → spec (thoughts/shared/plans/one-shell-all-data.md) → issues #244–#251 → built → two-axis code review → all merged. Browsers: People (attributed _v2 $, stated exclusions), Places (LGA grain + lga_source provenance; deserts dollars suppressed — non-unique grain), Grants ($33.96bn canonical basis in RPC SQL), Contracts+Buyers (shared component, year floor), Donors ('donation received' only), Entities = search+jump-off. /ops+/admin in shell; /ops/health zeros fixed (unfiltered pg_class × PostgREST 1,000-cap).
-- [x] Grantee wave 1: Telethon 115/$75.4M · HMST 2,873/$99.2M · Lotterywest 345/$141.2M — all from the funders' own registers, judge-adjudicated fuzzy bands, reversible dataset keys. 12 foundations scouted; 6 parked ready; 5-name opacity list verified.
-- [x] UX audit pass 1 (14 findings, docs/ux-audit/shell-ux-findings.md + shots) → #255 fixed 13: shares chart (Ben's call — 93% vs red 7% story), '(blank)' recipient purge, rail/header active states, donor ABN-collapse dedupe, drawer scrim, vocab humanized.
-- [x] #256: every column sorts via its header on all nine browse tables (People gained visible Influence column); RPC sort keys added (systems/acco/recent); chips removed.
-- [x] Memories written: grantee-ingest-pipeline, browse-shell-conventions.
+### This Session (2026-08-18)
+UI/UX pass 2. Pass 1 was how the shell looked; pass 2 was whether the numbers are honest.
+- [x] **Name normalisation** — `entity_name_key()` folds PTY LTD/PTY LIMITED/P/L/PROPRIETARY
+      LIMITED, case, punctuation, whitespace. Pratt Holdings 8 rows -> 1. ABN borrowing now needs
+      the name to map to EXACTLY ONE ABN (old `min(abn)` picked one of several; 86 names had
+      multiple). Fixed a drawer/row mismatch the earlier SH-5 fix had introduced.
+- [x] **Charities browser was broken** — `charity_browse` unfiltered was 10.4s, over the statement
+      timeout, so every FIRST-TIME visitor got the error state; any state filter hid it. Now 92ms
+      via `mv_charity_browse`.
+- [x] **Grants coverage disclosed** — 91% QLD ($27.3bn of $33.7bn) vs Victoria $125m; 55% of the
+      money ($18.7bn / 99,891 grants) carries NO topic tag and the top recipient is a state rail
+      operator. Numbers come from the RPC, not copy, so they cannot rot.
+- [x] **Remoteness chart follows the topic filter** on the tiles' basis. The dashboard now
+      reconciles: youth justice $825.3m placed + $90.4m unplaced = $915.7m = the tile, exactly.
+- [x] **SE: one ABN, one row** — five Red Cross listings each showed the whole $7.64bn. Collapsed,
+      registered name from `gs_entities.canonical_name`, "5 listings" badge, branch search still
+      matches.
+- [x] P2/P3: foundation type per row, sector array literals, `$0k`, year ranges, headers, one-shot
+      RPC retry (`lib/rpc-retry.ts`, 8 tests).
+- [x] Audit doc with every finding's disposition: `docs/ux-audit/shell-ux-findings-pass2.md`.
 
 ### Next
-- [ ] UX pass 2 with Ben (open items: floating avatar bubble overlaps rail bottom — move to header?; Pratt Pty-Limited/LTD donor dupe = name-normalisation lane; chart could accept topic filter)
-- [ ] Grantee wave 1 remainder (~4-5h): Ian Potter scraper, Myer PDFs, Buckland PDFs, VFFF prose, Perron/PRF names-only
-- [ ] Catalogue retire-or-keep (Ben) · docs-in-rail IA (Ben) · 475 unfiled round 2
-- [ ] Telethon 45 held-out names; HMST 816; Lotterywest 65 — resolution round 2 when entity lanes improve
+- [ ] **F12 name casing (Ben's call)** — `QUEENSLAND RAIL LTD` beside `Legal Aid Queensland`.
+      `displayName()` in PersonBrowser does the safe half already (title-case ONLY fully-lowercase
+      names, SH-11). All-caps is riskier: some are correct as registered.
+- [ ] **F11 retry is partial** — only charities, social enterprises, grants, people. The other
+      browse pages have none; each call site needs wrapping by hand, no shared data layer.
+- [ ] Foundations: `GIVING/YR` == `GRANTED` exactly on some rows, 90x apart on others. Footer says
+      "Giving can mix grantmaking with program spend" — is that the whole explanation?
+- [ ] Grantee wave 1 remainder (~4-5h): Ian Potter scraper, Myer PDFs, Buckland PDFs, VFFF prose.
+- [ ] Catalogue retire-or-keep (Ben) · docs-in-rail IA (Ben) · 475 unfiled round 2.
+
+### Migrations applied this session (ALL already run against prod DB)
+`2026-08-18-entity-name-key.sql` · `-entity-name-key-views.sql` · `-charity-browse-mv.sql` ·
+`-grant-coverage-stats.sql` · `-remoteness-by-topic.sql` · `-se-sector-display.sql` ·
+`-se-collapse-by-abn.sql`
+New MVs, all registered in `mv_refresh_registry` (nightly): `donor_name_keys`, `donor_key_abn`,
+`supplier_name_keys`, `supplier_key_abn`, `mv_charity_browse`.
 
 ### Key traps (this arc, will bite again)
-- Missing service_role GRANT = PostgREST silently empty (FIVE instances; check relacl FIRST on any new view/MV read)
-- PostgREST 1,000-row cap silently truncates pull-and-compute (power-concentration bug; compute in DB)
-- Function object_keys carry full signatures — bare-name IN-lists miss them
-- exec_sql ~8s timeout; long MV rebuilds via BACKGROUND psql (foreground 10-min kill ORPHANS the server-side txn — needed Ben's pg_terminate)
-- 'history' contains 'story'; generated database.types.ts matches every table name
-- Sandbox blocks api.anthropic.com directly (extract-foundation-grantees script) — extract in-session; PDF download + pdftotext work fine
-- cd apps/web persists across Bash calls — repo-root paths break next call
+- **A parameterised SQL function gets a GENERIC plan.** Identical SQL ran 2.8s ad-hoc with literals
+  and >60s inside the function. Do not benchmark a query body and assume the RPC matches it.
+- **Precompute regex/lateral work into indexed MVs.** Inline `entity_name_key()` = 3 regexes x
+  2.55M rows x 4 call sites. `charity_browse` = 132,000 index lookups per page view.
+- **Adding a field to an `unstable_cache`'d value does NOTHING until the key changes.** The old
+  cached object had no `states`, so the disclosure silently did not render — in prod it would have
+  stayed invisible for an hour with no error anywhere. Version the key.
+- **`CREATE OR REPLACE FUNCTION` cannot change the return type.** Read
+  `pg_get_function_result(oid)` FIRST — se_browse had five has_*/on_graph booleans I would have
+  silently dropped. Adding a column needs DROP+CREATE in ONE transaction.
+- **Audit the page, not the viewport.** Two P2 findings were wrong because the disclosure sat below
+  a 200-row table. Scroll before claiming something is undisclosed.
+- **Fixing a truncation by widening a column moves it along the row** — widening Influence made the
+  Boards label truncate instead.
+- My own MV builds saturated the shared pooler and made an unrelated page time out mid-audit. When
+  a page fails right after heavy DDL, suspect yourself before the page.
+- Auto-mode blocks psql DDL until Ben gives an explicit verb; `gsql.mjs` has ~8s timeout, and its
+  `-c` mangles `$$`.
 
 ### Decisions
-- Softened Shell (`.shell`) scoped like `.ws` — first sanctioned radius break; identity colours/type unchanged; Bauhaus untouched outside scope. Logged in DESIGN.md Decisions Log 2026-08-16.
-- No chrome without a data source (`thoughts/shared/plans/dashboard-shell-buildout.md`) — notifications = data events from agent_runs, help centre = provenance docs.
-- Saved views = typed code registry first (`apps/web/src/lib/view-registry.ts`), user persistence later.
-- ACCO share denominator = LINKED dollars only (unlinked can't be classified); tile states the basis. Live value 11.6% vs report's 11.5% — different denominator, both honest.
-- Views must query source tables, not gs_relationships (drill-through 100% broken until edge rebuild).
+- **Disclose, do not hide.** $18.7bn of untagged grant money stays listed and labelled rather than
+  filtered away by default; the QLD skew is stated rather than corrected. Hiding it is its own
+  dishonesty. Reversible if Ben prefers a tagged-only default.
+- **Do not merge what the data says is distinct.** Three `Pratt Holdings Pty Ltd` rows are three
+  real ABNs — the table prints the ABN beside a repeated name instead of merging. Conversely five
+  Red Cross listings ARE one ABN, so they collapse.
+- ABN borrowing requires a single-ABN name; a suffixed name may borrow its unsuffixed root's ABN,
+  never the reverse, so a person never merges into a namesake company.
+- Retry once, not three times. Slowness belongs in the query.
 
 ### Open Questions
+- F12 casing, and whether foundations should keep listing universities/service-delivery orgs at all
+  (they are labelled now, but the page still promises "every giving organisation").
 - UNCONFIRMED: /clarity dark-inside-light framing acceptable to Ben?
-- UNCONFIRMED: does the Vercel prod deploy of /dashboard render with data (chromeless path skips auth; service key must be present in prod env — expected fine, unverified).
-- Repo does NOT allow gh auto-merge queueing (`enablePullRequestAutoMerge` off) — merge via background wait-for-green loop instead.
+- Repo does NOT allow gh auto-merge queueing — merge via a background wait-for-green loop.
 
 ### Workflow State
-pattern: ship-per-slice (branch → build → tsc+vitest → smoke 3013 → PR → merge-on-green)
-phase: 5
+pattern: ship-per-slice (branch -> build -> tsc+vitest -> smoke 3013 -> PR -> merge-on-green)
+phase: 6
 total_phases: open-ended
 retries: 0
 max_retries: 3
 
 #### Resolved
-- goal: "dashboard shell UX rebuild, shadcn structure in softened Bauhaus skin"
+- goal: "UX pass 2 — make the browse surfaces honest"
 - resource_allocation: balanced
 
 #### Unknowns
