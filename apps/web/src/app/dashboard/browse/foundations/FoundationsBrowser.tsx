@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { SortHeader } from '../browse-ui';
 import Link from 'next/link';
 
 /**
@@ -30,13 +31,6 @@ const TYPES: [string, string][] = [
   ['trust', 'Trusts'],
   ['corporate_foundation', 'Corporate foundations'],
   ['philanthropic_foundation', 'Philanthropic foundations'],
-];
-const SORTS: [string, string][] = [
-  ['giving', 'Giving'],
-  ['granted', 'Granted (ACNC)'],
-  ['assets', 'Assets'],
-  ['grantees', 'Grantees'],
-  ['board', 'Board links'],
 ];
 
 function money(n: number | null): string {
@@ -145,21 +139,6 @@ export default function FoundationsBrowser({
             {label}
           </Link>
         ))}
-        <span className="ml-auto flex items-center gap-1.5">
-          <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--shell-muted)' }}>
-            sort
-          </span>
-          {SORTS.map(([v, label]) => (
-            <Link
-              key={v}
-              href={qs({ sort: v })}
-              className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control"
-              style={sort === v ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}
-            >
-              {label}
-            </Link>
-          ))}
-        </span>
       </div>
 
       <div className="mt-4 shell-card">
@@ -167,12 +146,12 @@ export default function FoundationsBrowser({
           className="flex items-baseline gap-3 px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest"
           style={{ borderBottom: '1px solid var(--shell-line)', color: 'var(--shell-muted)' }}
         >
-          <span className="flex-1">Foundation</span>
-          <span className="w-[92px] text-right">Giving / yr</span>
-          <span className="w-[100px] text-right" title="grants + donations made, latest ACNC return">Granted</span>
-          <span className="w-[92px] text-right" title="total assets, latest ACNC return">Assets</span>
-          <span className="w-[74px] text-right">Grantees</span>
-          <span className="w-[70px] text-right">Board</span>
+          <SortHeader label="Foundation" sortKey="name" current={sort} qs={qs} />
+          <SortHeader label="Giving / yr" sortKey="giving" current={sort} qs={qs} width="w-[92px]" align="right" />
+          <SortHeader label="Granted" sortKey="granted" current={sort} qs={qs} width="w-[100px]" align="right" title="grants + donations made, latest ACNC return" />
+          <SortHeader label="Assets" sortKey="assets" current={sort} qs={qs} width="w-[92px]" align="right" title="total assets, latest ACNC return" />
+          <SortHeader label="Grantees" sortKey="grantees" current={sort} qs={qs} width="w-[74px]" align="right" />
+          <SortHeader label="Board" sortKey="board" current={sort} qs={qs} width="w-[70px]" align="right" />
         </div>
         {rows.map((r) => (
           <button
