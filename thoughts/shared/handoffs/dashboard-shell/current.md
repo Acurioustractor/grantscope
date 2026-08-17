@@ -9,92 +9,39 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-17 (admin-at-100% arc MERGED #243 `20049ed8`)
-**Goal:** Rebuild CivicGraph's console UX as a softened-Bauhaus dashboard shell (Ben's verdict on the deployed console: works but "hard to make sense of"; direction chosen: "soften Bauhaus toward the demo", shadcn dashboard reference). Every chrome element must have a real data source.
-**Branch:** `main` at `e9407cc`, clean, everything pushed. **Seven PRs merged this stream: #219–#222, then this session #223 (vocab dropdowns) + #224 (per-view pages) + #225 (public docs surface). Every buildable next-item is DONE — what remains needs Ben.**
-**Test:** `cd apps/web && npx tsc --noEmit` · `npx vitest run` (711 pass) · smoke `curl localhost:3013/dashboard` (dev server 3013, `--turbopack`)
+**Updated:** 2026-08-17T03:00:00Z
+**Goal:** CivicGraph as one legible system: soft-shell admin at 100%, plain language everywhere, Browse (list → thing → links) for every kind, and the enrichment loop (find → resolve → ingest → show) running.
+**Branch:** `main` (everything pushed through `8b9809ec`). Merged this arc: #226–#243 + direct-to-main data commits.
+**Test:** `cd apps/web && npx tsc --noEmit` · `npx vitest run` (726 pass) · dev server 3013 (restart: `cd apps/web && npx next dev --turbopack -p 3013`; it DIED once this session)
 
 ### Now
-[->] Stream is code-complete pending Ben: eyeball civicgraph.app/dashboard (+ /dashboard/views/*, /dashboard/docs, the topic/year dropdowns once the hourly vocab cache turns over) and give the `/clarity` dark-inside-light verdict. No further build work queued in this stream.
+[->] Fresh session: continue the grantee-ingest queue (Telethon Trust, Stan Perron, RCH Foundation, Peter Mac — each likely publishes beneficiary lists; pattern proven on McKinnon: their own documents → dry ABN resolution → flagged confidence → reversible dataset key), or whichever lane Ben picks below.
 
-### This Session
-- [x] Pencil mock "CG Dashboard Shell — Softened Bauhaus" — NOTE: it lives at the bottom of `empathy-ledger-v2/design/empathy-ledger-canonical.pen` (Pencil ignored the filePath arg); move it out when a grantscope .pen exists
-- [x] `DASHBOARD-VIEW-MAP.md` (thoughts/shared/data-map/) — 4 spines, rail→data table, 9 verified views, guardrail block
-- [x] `.shell` scoped theme in globals.css (radius 6/10px, hairline `#E4E4E1`, canvas `#F4F4F2`); radius-0 selector now `*:not(.ws *):not(.shell *)`; DESIGN.md + brand alignment map (act-global-infrastructure) both record the decision
-- [x] `/dashboard` chromeless route: rail + header + 4 live tiles + remoteness chart + top yj recipients (PR #219)
-- [x] Shell chrome: notifications bell fed by `agent_runs` (red dot only on failure), profile menu, help menu, `/dashboard/help` (PR #219)
-- [x] Shell promoted to `src/components/shell/shell.tsx` ({title, activeHref}); /search + /clarity adopted; routes added to root layout's isChromeless list (PR #220)
-- [x] ⌘K jump-to-view: GlobalSearch surfaces registry views (pinned on empty query); themeMoney extended with accoDollars/linkedDollars/accoPctOfLinked; ACCO tile live at 11.6% (PR #221)
-- [x] Link integrity: /themes/* and /people NEVER existed (rail 404s); new `/reports/theme` index; People → /person; registry hrefs → real report pages (PR #222)
-- [x] `view-registry.ts` — typed saved-views registry, caveats carried on the view object
-
-- [x] Year/topic dropdowns fed by real vocabularies (PR #223): `v_vocab_financial_years` + `v_vocab_topics` (migration APPLIED by Ben 2026-08-16); `lib/vocab.ts` returns [] → dropdown absent, never invented; `themeMoney` gained `financialYear` opt; /dashboard `?topic=&fy=` validated against vocab; page revalidate → unstable_cache per loader (searchParams made it dynamic)
-- [x] Per-view pages (PR #224): `/dashboard/views/[id]` for all six registry views; `lib/view-data.ts` loaders never throw / never silently empty — every no-data outcome states WHY; registry hrefs → view pages, old targets kept as `deepHref`
-- [x] Public docs surface (PR #225): `/dashboard/docs` — the safety pass is STRUCTURAL: `lib/data-docs.ts` is a hand-typed allowlist of 13 civic datasets (rule in module header forbids generating from thoughts/shared/data-map, which names ACT private systems + token tables); row counts via PostgREST `estimated` count (planner stats, verified within a few % of measured; gs_entities worst at ~8% low), hourly refresh so nothing rots; Known Limits section; linked from help menu ("The data we hold")
-- FINDING (RESOLVED 2026-08-16): `justice_funding.financial_year` formats were MIXED — see next entry.
-- [x] `justice_funding.financial_year` normalisation APPLIED (migration `migrations/2026-08-16-justice-fy-normalise.sql`): the mess was not formatting — 41 rows were multi-year spans / `YYYY-ongoing` / bare `2024`, incl. `2021-25` = a 2021→2025 PRF span that LOOKS canonical. New parsed cols `fy_start`/`fy_end`/`fy_open_ended` on all 157,116 rows (zero unparsed), maintained by trigger `trg_justice_funding_parse_fy`; raw strings kept as provenance except `2026-2027`→`2026-27` (2 rows, single-FY either way); `v_vocab_financial_years` now requires `fy_end = fy_start + 1` → dropdown is 19 clean FYs (2008-09…2026-27). Filter by `fy_*`, never by string shape.
-- Vocab views live: 9 topics (child-protection 7,481 rows → prevention 313), 19 financial years. Dropdowns appear as each surface's hourly vocab cache refreshes.
-
-### Phase 3 (2026-08-17, MERGED #243): the admin at 100%
-One language everywhere (dark suite token-flip, type pass, shadow bridge, de-hardcoded rows chip
-51.9M via RPC) · Clarity overview drawer + consequence layer (screens judged by what feeds them;
-needs-attention names influences) · **Browse**: rail section, foundations (foundation_browse RPC,
-holds-vs-granted columns, drawer with 6yr ACNC financials; FRRR-0-grantees bug = silent count join
-+ FIFTH missing-service_role-grant instance on mv_foundation_grantees) · SE + charities (shared
-OrgBrowser, known-ness dots, Least-known = the enrichment queue, corpus stats). **The finding
-frontier, stated on-screen: 27 of 11,159 foundations have grantee links.**
-GRANTEE-LINK LANE SCOPED 2026-08-17: the "971 foundations with grant edges" was an illusion —
-6,672 'grant' edges were SELF-LOOPS from grant_opportunities (foundation OFFERS grants; no
-recipient in that dataset; both ends resolved to the funder). Re-typed to
-'offers_grant_program' (migration 2026-08-17-retype-offer-selfloops.sql, applied; CHECK
-widened), so 'grant' now means money moved between two parties everywhere. **The honest
-frontier stands at 27 foundations with real grantee links, and every one came from
-per-foundation ingest** (scraped grant DBs: ian_potter 1,716 / frrr 3,588 / hms_trust 3,591;
-annual reports: snow, myer, gandel, tfff, minderoo; curated lists). The machinery exists:
-scripts/extract-foundation-grantees-pdf.mjs + scrape-ian-potter-grants.mjs. **The scale lane
-= run that pipeline foundation-by-foundation, queued by ACNC granted-dollars descending
-(browse list, sort Granted, zero grantee links = the queue). External scraping = day-shift.**
-FIRST INGEST RUN LANDED 2026-08-17: Susan McKinnon group (SMF + SMCF + Oh-Rule/SMRC) from their
-own published Consolidated Program Expenditure Report 2025 — 24 edges, ~$12.7M, 23/26 grantees
-ABN-resolved (3 held out: It's Philanthropy, Orchestra Victoria, SAWA-Australia; WELA match
-medium-confidence, flagged inline). Migration 2026-08-17-mckinnon-grantees-ingest.sql, reversible
-by dataset key. MV refreshed: 27→30 foundations with grantee links. RECON NOTES for the queue:
-GBRF's financial-report PDF names no grantees (grantees live on per-project web pages — crawl
-job); Judith Neilson publishes NO grants list (the opacity finding, cite-able). Pipeline gotcha:
-scripts/extract-foundation-grantees-pdf.mjs's direct Anthropic API call is ECONNREFUSED from the
-sandbox — extract in-session instead (the PDF download + pdftotext halves work fine).
-OPEN LANES: continue ingest runs down the ACNC-granted queue (Telethon Trust, Stan Perron, RCH
-Foundation, Peter Mac each likely publish beneficiary lists) · /ops/health query repair · catalogue
-retire-or-keep · power-dynamics-live branch parked (rebased, awaiting Ben) · 475 unfiled round 2.
-
-### Phase 2 directive (Ben, 2026-08-17)
-"See any screen we've got on this new dashboard and make sure it aligns to the new design system;
-searchable queries; keep thinking about which parts of the data go where. Make sure the dashboard
-and all links go to the right style UX/UI, then make sure all the data is linked the right way, and
-use the clarity tool to understand what data goes into which user's experience."
-Work order: 1) chrome crawl from /dashboard (pattern-collapsed) → map every reachable screen's
-visual family vs intent (root layout isChromeless list is the code's intent, layout.tsx:93) →
-convert stragglers to shell; 2) data→surface mapping via clarity (visibility floor + owner_app +
-nouns feeding a per-surface data contract).
-- [x] CRAWL DONE 2026-08-17: 47 screens, ZERO broken chrome — clean two-family split (shell:
-  dashboard+views+docs+search+18 clarity surfaces; public Bauhaus: everything else). One 404
-  (/ask footer link, removed). Ben's rulings: shell-native noun pages (rail never exits the
-  shell) + ops tools (/ops/health /alerts /tracker /foundations/tracker) move into the shell.
-- [x] Five shell-native noun pages BUILT (branch shell-native-noun-pages): /dashboard/{themes,
-  reports,entities,people,places} reusing themes registry / reportSections / mv_entity_power_index
-  / mv_board_interlocks (**MAX_PLAUSIBLE_BOARDS cap applied read-side — unfiltered top "person"
-  sits on 745 estate trusts**) / mv_funding_by_postcode. Detail pages still open the public atlas,
-  stated on every page. Rail is now pathname-aware (`rail-nav.tsx` client component, longest-prefix
-  active; TRAP: component refs can't cross the server→client boundary as props — NAV must live in
-  the client file). Shell.activeHref deprecated-ignored.
-- [x] Ops tools into the shell (branch shell-ops-tools): /ops/health, /alerts, /tracker, /foundations/tracker each get a Shell layout + isChromeless entries — contained-Bauhaus-inside-shell, the accepted /clarity pattern. VERIFIED no auth regression: LAYOUT_AUTH_PREFIXES only controlled whether the old chrome fetched the user for nav display; no redirect existed, pages were never server-gated.
-- [x] Ops tools MERGED (#237, `a35f79f`).
-- [x] **Data→surface contract MERGED (#238, `6dd668f`): /clarity/surfaces** — scanner refs → routes → chrome family → noun + consent floor per object. First-run review list: **14 public-family surfaces mention consent-governed objects** (/reports: stories/quotes/transcripts; /org: + storytellers). Honesty rails on-page: mention ≠ render; stories/quotes over-match as English words, transcripts/storytellers are the strong signals. SHELL_PREFIXES in surfaces/page.tsx mirrors root isChromeless — update BOTH.
-- **PHASE 2 COMPLETE (#236–#238).** AWAITING BEN: walk the 14-surface review list; taste calls still open (F5 chart-as-shares, F7 clarity chips, dark-inside-light verdict, docs-in-rail IA).
+### This Session (2026-08-16→17, the whole arc)
+- [x] Clarity console COMPLETE (slices 0–10): row viewer + consent census, code scanner (3 repos), findings stream, nouns, inline edit (caught 2 shipped bugs via real HTTP), owner_app, project codes (wiki-declared), story↔project links (Ben's 3 rulings), surfaces (data→surface contract)
+- [x] All 1,486 catalogue objects described in plain language (96 by hand+rule, 578 by agents reading real definitions); /dashboard/guide "What this is"; writing rule embedded in curated-fields.ts
+- [x] Admin at 100% (#243): Bauhaus bridge + dark-suite token flip + type pass; overview drawer; consequence layer ("How the system is doing, screen by screen" + needs-attention with influences); Browse rail (Foundations/SEs/Charities) with RPC lists, known-ness dots, filters/sorts, drawers w/ 6yr ACNC financials
+- [x] Person-trio money filters + de-collide (last SEVERE); proven_suppliers grant revoked; consent gate on public place pages (status='published' NEVER EXISTED; fallback rendered every transcript — fixed with quote_sharing_consent basis)
+- [x] Power-dynamics page rebuilt live-only — **PARKED on branch `power-dynamics-live` (rebased, tsc-clean), Ben verb to ship**
+- [x] Grantee lane: 6,672 offer-self-loops retyped (971-foundations illusion → honest 27); McKinnon ingest from their own register (24 edges $12.7M, 27→30 foundations linked)
+- [x] Adjudications (Ben-delegated): 839 owners, ~1,011 nouns (+66 corrections; 475 remain, no proposals), findings 144 confirmed/119 dismissed
 
 ### Next
-- [ ] Ben's taste verdicts: deployed shell overall + `/clarity` dark-inside-light framing (gates the dark shell variant); also eyeball /dashboard/views/* and /dashboard/docs
-- [ ] Older backlog still open: Slice 5 row viewer (transcripts have FIVE independent consent flags), person-influence lane (last SEVERE money-view fixes), mv_justice_proven_suppliers GRANT ALL posture question, benjamin@act.place password reset
+- [ ] Grantee-ingest queue (day-shift, Ben-in-loop per batch): Telethon, Stan Perron, RCH Fdn, Peter Mac; GBRF = project-page crawl; Judith Neilson publishes NOTHING (cite as the opacity example)
+- [ ] Ship `power-dynamics-live` (Ben verb)
+- [ ] /ops/health query repair (data rotted: zeros everywhere, health score 26)
+- [ ] Catalogue retire-or-keep (Ben call); docs-in-rail IA (Ben call); F5 chart-as-shares + F7 clarity chips (taste)
+- [ ] 475 unfiled round 2 (widened heuristics then bulk-adjudicate)
+- [ ] Vercel prod eyeball of the whole shell (localhost-verified only)
+
+### Key traps (this arc, will bite again)
+- Missing service_role GRANT = PostgREST silently empty (FIVE instances; check relacl FIRST on any new view/MV read)
+- PostgREST 1,000-row cap silently truncates pull-and-compute (power-concentration bug; compute in DB)
+- Function object_keys carry full signatures — bare-name IN-lists miss them
+- exec_sql ~8s timeout; long MV rebuilds via BACKGROUND psql (foreground 10-min kill ORPHANS the server-side txn — needed Ben's pg_terminate)
+- 'history' contains 'story'; generated database.types.ts matches every table name
+- Sandbox blocks api.anthropic.com directly (extract-foundation-grantees script) — extract in-session; PDF download + pdftotext work fine
+- cd apps/web persists across Bash calls — repo-root paths break next call
 
 ### Decisions
 - Softened Shell (`.shell`) scoped like `.ws` — first sanctioned radius break; identity colours/type unchanged; Bauhaus untouched outside scope. Logged in DESIGN.md Decisions Log 2026-08-16.
