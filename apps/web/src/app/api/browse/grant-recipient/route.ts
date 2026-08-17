@@ -9,6 +9,8 @@ export async function GET(req: NextRequest) {
   const supabase = getDirectServiceSupabase();
   const { data, error } = await supabase.rpc('grant_recipient_detail', { p_key: key });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!data) return NextResponse.json({ error: 'no record for that recipient' }, { status: 404 });
+  if (!data || !(data as Record<string, unknown>).recipient_name) {
+    return NextResponse.json({ error: 'no record for that recipient' }, { status: 404 });
+  }
   return NextResponse.json(data);
 }

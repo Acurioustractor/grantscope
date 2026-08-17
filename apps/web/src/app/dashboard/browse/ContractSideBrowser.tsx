@@ -20,10 +20,14 @@ export interface SideRow {
 }
 
 export interface SideConfig {
-  side: 'supplier' | 'buyer';
+  side: 'supplier' | 'buyer' | 'donor';
   basePath: string;
-  counterpartyLabel: string; // 'Buyers' | 'Suppliers'
+  counterpartyLabel: string; // 'Buyers' | 'Suppliers' | 'Recipients'
   detailApi: string;
+  /** What one row in the drawer's list is: 'contract' (default) or 'donation'. */
+  itemLabel?: string;
+  /** Since-floor chips; calendar years for contracts, financial years for donations. */
+  yearOptions?: string[];
 }
 
 interface SideDetail {
@@ -47,7 +51,7 @@ const SORTS: [string, string][] = [
   ['contracts', 'Contracts'],
   ['name', 'A–Z'],
 ];
-const YEARS = ['2015', '2020', '2023'];
+const DEFAULT_YEARS = ['2015', '2020', '2023'];
 
 function L({ children }: { children: React.ReactNode }) {
   return (
@@ -115,8 +119,8 @@ export default function ContractSideBrowser({
       </form>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--shell-muted)' }}>since</span>
-        {YEARS.map((y) => (
-          <Link key={y} href={qs({ from: y })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={(fromYear || '2020') === y ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
+        {(cfg.yearOptions ?? DEFAULT_YEARS).map((y) => (
+          <Link key={y} href={qs({ from: y })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={(fromYear || (cfg.yearOptions ?? DEFAULT_YEARS)[1]) === y ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
             {y}
           </Link>
         ))}
@@ -134,7 +138,7 @@ export default function ContractSideBrowser({
           <span className="flex-1">Name</span>
           <span className="w-[220px]">Top {cfg.counterpartyLabel.toLowerCase().replace(/s$/, '')}</span>
           <span className="w-[72px] text-right">{cfg.counterpartyLabel}</span>
-          <span className="w-[76px] text-right">Contracts</span>
+          <span className="w-[76px] text-right">{(cfg.itemLabel ?? 'contract') === 'donation' ? 'Donations' : 'Contracts'}</span>
           <span className="w-[92px] text-right">Total $</span>
         </div>
         {rows.map((r) => (
@@ -162,7 +166,7 @@ export default function ContractSideBrowser({
             <>
               <p className="mt-1 text-[12.5px]" style={{ color: 'var(--shell-muted)' }}>
                 {detail.abn ? `ABN ${detail.abn} · ` : ''}
-                {detail.contract_count.toLocaleString('en-AU')} contracts since {fromYear || '2020'} · {money(detail.total_value)}
+                {detail.contract_count.toLocaleString('en-AU')} {(cfg.itemLabel ?? 'contract')}s since {fromYear || (cfg.yearOptions ?? DEFAULT_YEARS)[1]} · {money(detail.total_value)}
               </p>
 
               {detail.counterparties.length > 0 ? (
@@ -184,7 +188,7 @@ export default function ContractSideBrowser({
 
               {detail.contracts.length > 0 ? (
                 <>
-                  <L>Largest contracts</L>
+                  <L>Largest {(cfg.itemLabel ?? 'contract') + 's'}</L>
                   <div className="flex flex-col gap-1.5">
                     {detail.contracts.slice(0, 25).map((g, i) => (
                       <div key={i} className="text-[12px]" style={{ borderTop: i ? '1px solid var(--shell-line)' : undefined, paddingTop: i ? 6 : 0 }}>

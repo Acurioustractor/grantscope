@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ error: 'no record for that buyer' }, { status: 404 });
   const d = data as Record<string, unknown>;
+  if (!d.buyer_name) return NextResponse.json({ error: 'no record for that buyer' }, { status: 404 });
   return NextResponse.json({
     name: d.buyer_name,
     abn: null,
