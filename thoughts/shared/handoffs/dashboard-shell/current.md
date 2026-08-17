@@ -43,7 +43,18 @@ holds-vs-granted columns, drawer with 6yr ACNC financials; FRRR-0-grantees bug =
 + FIFTH missing-service_role-grant instance on mv_foundation_grantees) · SE + charities (shared
 OrgBrowser, known-ness dots, Least-known = the enrichment queue, corpus stats). **The finding
 frontier, stated on-screen: 27 of 11,159 foundations have grantee links.**
-OPEN LANES: grantee-link enrichment (the 27/11,159 gap) · /ops/health query repair · catalogue
+GRANTEE-LINK LANE SCOPED 2026-08-17: the "971 foundations with grant edges" was an illusion —
+6,672 'grant' edges were SELF-LOOPS from grant_opportunities (foundation OFFERS grants; no
+recipient in that dataset; both ends resolved to the funder). Re-typed to
+'offers_grant_program' (migration 2026-08-17-retype-offer-selfloops.sql, applied; CHECK
+widened), so 'grant' now means money moved between two parties everywhere. **The honest
+frontier stands at 27 foundations with real grantee links, and every one came from
+per-foundation ingest** (scraped grant DBs: ian_potter 1,716 / frrr 3,588 / hms_trust 3,591;
+annual reports: snow, myer, gandel, tfff, minderoo; curated lists). The machinery exists:
+scripts/extract-foundation-grantees-pdf.mjs + scrape-ian-potter-grants.mjs. **The scale lane
+= run that pipeline foundation-by-foundation, queued by ACNC granted-dollars descending
+(browse list, sort Granted, zero grantee links = the queue). External scraping = day-shift.**
+OPEN LANES: grantee-link ingest runs (above) · /ops/health query repair · catalogue
 retire-or-keep · power-dynamics-live branch parked (rebased, awaiting Ben) · 475 unfiled round 2.
 
 ### Phase 2 directive (Ben, 2026-08-17)
