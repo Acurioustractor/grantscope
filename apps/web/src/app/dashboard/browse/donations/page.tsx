@@ -77,6 +77,7 @@ export default async function DonationsBrowsePage({
             basePath: '/dashboard/browse/donations',
             counterpartyLabel: 'Recipients',
             detailApi: '/api/browse/donor',
+            counterpartySortKey: 'recipients',
             itemLabel: 'donation',
             yearOptions: FY_OPTIONS,
           }}

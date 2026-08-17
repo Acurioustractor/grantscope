@@ -70,7 +70,7 @@ export default async function ContractsBrowsePage({
       ) : (
         <ContractSideBrowser
           rows={rows}
-          cfg={{ side: 'supplier', basePath: '/dashboard/browse/contracts', counterpartyLabel: 'Buyers', detailApi: '/api/browse/contract-supplier' }}
+          cfg={{ side: 'supplier', basePath: '/dashboard/browse/contracts', counterpartyLabel: 'Buyers', detailApi: '/api/browse/contract-supplier', counterpartySortKey: 'buyers' }}
           q={q}
           fromYear={String(from)}
           sort={sort}

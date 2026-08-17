@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { money, L, makeQs, useDrawer, Drawer } from '../browse/browse-ui';
+import { money, L, makeQs, useDrawer, Drawer, SortHeader } from '../browse/browse-ui';
 
 /**
  * Places browser at LGA grain. The drawer's provenance block shows HOW each entity was placed
@@ -34,14 +34,6 @@ interface PlaceDetail {
   postcodes: { postcode: string; entity_count: number | null; total_funding: number | null; remoteness: string | null }[];
   placement: Record<string, number>;
 }
-
-const SORTS: [string, string][] = [
-  ['funding', 'Funding $'],
-  ['desert', 'Desert score'],
-  ['entities', 'Entities'],
-  ['disadvantage', 'Most disadvantaged'],
-  ['name', 'A–Z'],
-];
 
 const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'];
 
@@ -104,24 +96,17 @@ export default function PlaceBrowser({
             {s}
           </Link>
         ))}
-        <span className="ml-auto flex items-center gap-1.5">
-          {SORTS.map(([v, label]) => (
-            <Link key={v} href={qs({ sort: v })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={(sort || 'funding') === v ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
-              {label}
-            </Link>
-          ))}
-        </span>
       </div>
 
       <div className="mt-4 shell-card">
         <div className="flex items-baseline gap-3 px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest" style={{ borderBottom: '1px solid var(--shell-line)', color: 'var(--shell-muted)' }}>
-          <span className="flex-1">Council area</span>
-          <span className="w-[52px]">State</span>
-          <span className="w-[72px] text-right">Entities</span>
-          <span className="w-[64px] text-right" title="community-controlled organisations">ACCO</span>
-          <span className="w-[92px] text-right">Funding $</span>
-          <span className="w-[56px] text-right" title="average SEIFA disadvantage decile, 1 = most disadvantaged">SEIFA</span>
-          <span className="w-[64px] text-right" title="funding-desert score: disadvantage vs money reaching the area">Desert</span>
+          <SortHeader label="Council area" sortKey="name" current={sort} qs={qs} />
+          <span className="w-[52px] shrink-0">State</span>
+          <SortHeader label="Entities" sortKey="entities" current={sort} qs={qs} width="w-[72px]" align="right" />
+          <SortHeader label="ACCO" sortKey="acco" current={sort} qs={qs} width="w-[64px]" align="right" title="community-controlled organisations" />
+          <SortHeader label="Funding $" sortKey="funding" current={sort} qs={qs} width="w-[92px]" align="right" />
+          <SortHeader label="SEIFA" sortKey="disadvantage" current={sort} qs={qs} width="w-[56px]" align="right" title="average SEIFA disadvantage decile, 1 = most disadvantaged; sorts most-disadvantaged first" />
+          <SortHeader label="Desert" sortKey="desert" current={sort} qs={qs} width="w-[64px]" align="right" title="funding-desert score: disadvantage vs money reaching the area" />
         </div>
         {rows.map((r) => (
           <button key={r.key} onClick={() => open(r)} className="flex w-full items-baseline gap-3 px-4 py-2 text-left hover:bg-[#FAFAF8]" style={{ borderBottom: '1px solid var(--shell-line)' }}>
