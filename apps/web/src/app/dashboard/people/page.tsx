@@ -1,82 +1,82 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { unstable_cache } from 'next/cache';
 import { getDirectServiceSupabase } from '@/lib/supabase';
+import PersonBrowser, { type PersonRow } from './PersonBrowser';
 
+export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'People — CivicGraph' };
 
-const load = unstable_cache(
+const stats = unstable_cache(
   async () => {
     const supabase = getDirectServiceSupabase();
-    // MAX_PLAUSIBLE_BOARDS: rows above 10 boards are professional-trustee/nominee blocks
-    // (the top unfiltered "person" sits on 745 estate trusts) — the person-disambiguation cap
-    // is a standing decision (2026-06-19, CAP STAYS), applied here as a read-side filter.
-    const { data, error } = await supabase
-      .from('mv_board_interlocks')
-      .select('person_name_display,board_count,organisations,interlock_score')
-      .lte('board_count', 10)
-      .order('interlock_score', { ascending: false })
-      .limit(15);
-    if (error) throw new Error(error.message);
-    return data ?? [];
+    const { data } = await supabase.rpc('person_browse_stats');
+    return data as { total: number; listable: number; nominee_blocked: number; over_cap: number } | null;
   },
-  ['dash-people'],
+  ['person-browse-stats'],
   { revalidate: 3600 },
 );
 
 /**
- * Shell-native People index off the board-interlocks matview. KNOWN LIMIT, stated on screen:
- * names are string-normalised, so common names can collapse several real people into one row —
- * the identity lane's job, not this page's.
+ * People browser off the de-collided identity matview. KNOWN LIMIT, stated on screen: names are
+ * string-normalised, so a common name can collapse several real people into one row — the
+ * identity lane's job, not this page's. The nominee/board-cap exclusions are stated, not silent.
  */
-export default async function PeoplePage() {
-  let rows: Awaited<ReturnType<typeof load>> = [];
+export default async function PeoplePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const q = typeof sp.q === 'string' ? sp.q.trim() : '';
+  const sort = typeof sp.sort === 'string' && sp.sort ? sp.sort : 'influence';
+
+  const supabase = getDirectServiceSupabase();
+  let rows: PersonRow[] = [];
+  let statsLine = '';
+  let exclusionNote = '';
   let why: string | null = null;
   try {
-    rows = await load();
+    const [{ data, error }, s] = await Promise.all([
+      supabase.rpc('person_browse', { p_q: q || null, p_sort: sort, p_limit: 200 }),
+      stats(),
+    ]);
+    if (error) throw new Error(error.message);
+    rows = ((data ?? []) as {
+      identity_key: string;
+      person_name: string;
+      person_name_normalised: string;
+      board_count: number;
+      acco_boards: number;
+      attributed_procurement: number | null;
+      attributed_justice: number | null;
+      attributed_donations: number | null;
+      financial_system_count: number | null;
+    }[]).map((r) => ({
+      key: r.identity_key,
+      name: r.person_name,
+      norm: r.person_name_normalised,
+      boards: r.board_count,
+      accoBoards: r.acco_boards,
+      procurement: r.attributed_procurement,
+      justice: r.attributed_justice,
+      donations: r.attributed_donations,
+      systems: r.financial_system_count,
+    }));
+    if (s) {
+      statsLine = `${s.listable.toLocaleString('en-AU')} people on the graph · showing the top 200 for this search and sort`;
+      exclusionNote = `${(s.nominee_blocked + s.over_cap).toLocaleString('en-AU')} identities are excluded on purpose: ${s.nominee_blocked.toLocaleString('en-AU')} professional-trustee/nominee blocks and ${s.over_cap.toLocaleString('en-AU')} with more than 10 boards (the standing cap — above it, "one person" is usually a nominee service). Names are matched by string, so a common name can be several real people; treat rows as leads, not facts. Dollars are attributed: money at shared boards is split between the people on them.`;
+    }
   } catch (e) {
     why = e instanceof Error ? e.message : String(e);
   }
 
   return (
-    <div className="mx-auto max-w-[1100px] px-6 py-6">
+    <div className="mx-auto max-w-[1180px] px-6 py-6">
       <h1 className="font-display text-[22px] font-extrabold">People</h1>
-      <p className="mt-1 text-[13.5px]" style={{ color: 'var(--shell-muted)' }}>
-        People on multiple boards (2–10; more than that is a professional trustee block, excluded), ranked by interlock. Names are matched by string — a common name
-        can be several real people; treat high board counts as a lead, not a fact. Person pages
-        open on the public atlas.
-      </p>
       {why ? (
-        <p className="mt-4 text-[13px]" style={{ color: '#D02020' }}>
-          Board interlocks could not be read: {why}
-        </p>
+        <p className="mt-4 text-[13px]" style={{ color: '#D02020' }}>The list could not be read: {why}</p>
       ) : (
-        <div
-          className="mt-5 bg-white p-4"
-          style={{ borderRadius: 'var(--shell-r)', border: '1px solid var(--shell-line)' }}
-        >
-          {rows.map((p, i) => (
-            <div
-              key={p.person_name_display ?? i}
-              className="flex items-baseline gap-3 py-2"
-              style={{ borderTop: i === 0 ? undefined : '1px solid var(--shell-line)' }}
-            >
-              <Link
-                href={`/person/${encodeURIComponent((p.person_name_display ?? '').replace(/\s+/g, '-'))}`}
-                className="min-w-0 flex-1 truncate text-[13.5px] font-semibold hover:underline"
-                style={{ color: '#1040C0' }}
-              >
-                {p.person_name_display}
-              </Link>
-              <span className="shrink-0 text-[11.5px]" style={{ color: 'var(--shell-muted)' }}>
-                {p.board_count} boards
-              </span>
-              <span className="shrink-0 truncate font-mono text-[11px]" style={{ color: 'var(--shell-muted)', maxWidth: 340 }}>
-                {(p.organisations ?? []).slice(0, 3).join(' · ')}
-              </span>
-            </div>
-          ))}
-        </div>
+        <PersonBrowser rows={rows} q={q} sort={sort} statsLine={statsLine} exclusionNote={exclusionNote} />
       )}
     </div>
   );
