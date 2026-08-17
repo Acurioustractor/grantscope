@@ -160,8 +160,18 @@ export default function FoundationsBrowser({
             className="flex w-full items-baseline gap-3 px-4 py-2 text-left hover:bg-[#FAFAF8]"
             style={{ borderBottom: '1px solid var(--shell-line)' }}
           >
-            <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold" style={{ color: '#1040C0' }}>
-              {r.name}
+            <span className="flex min-w-0 flex-1 items-baseline gap-2">
+              <span className="min-w-0 truncate text-[13.5px] font-semibold" style={{ color: '#1040C0' }}>
+                {r.name}
+              </span>
+              {/* UX audit pass 2, F5: the list is 'every giving organisation', which includes 37
+                  universities, service-delivery charities and peak bodies. Saying so per row beats
+                  quietly filing Monash University under Foundations. */}
+              {r.type ? (
+                <span className="shrink-0 font-mono text-[10.5px]" style={{ color: 'var(--shell-muted)' }}>
+                  {r.type.replace(/_/g, ' ')}
+                </span>
+              ) : null}
             </span>
             <span className="w-[92px] shrink-0 text-right font-mono text-[12.5px]">{money(r.giving)}</span>
             <span className="w-[100px] shrink-0 text-right font-mono text-[12.5px]">{money(r.granted)}</span>
@@ -179,7 +189,10 @@ export default function FoundationsBrowser({
       <p className="mt-2 font-mono text-[11px]" style={{ color: 'var(--shell-muted)' }}>
         {rows.length} shown of {total.toLocaleString('en-AU')} · &ldquo;Granted&rdquo; and
         &ldquo;Assets&rdquo; are the latest ACNC return; &ldquo;Giving&rdquo; can mix grantmaking
-        with program spend
+        with program spend · the type beside each name is the organisation&rsquo;s own kind, and
+        this list deliberately includes givers that are not foundations (universities, service
+        delivery, peak bodies) · Grantees and Board are sparse by nature: they need a matched grant
+        record or a matched director, which exist for only a handful of funders so far
       </p>
 
       {openId ? (

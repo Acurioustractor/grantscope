@@ -73,7 +73,7 @@ indexed structures, not in a per-request scan. A default state or size filter wo
 
 ## P2 — undisclosed limits and wrong-looking data
 
-### F4. The people browser silently drops anyone with more than 10 boards.
+### F4. The people browser silently drops anyone with more than 10 boards. **[PARTLY WRONG — see correction]**
 
 `person_browse` carries `AND v.board_count <= 10`. `mv_board_interlocks` holds people with up to
 **745** boards. The cap is deliberate and correct — above ~10 is mostly name-collision noise, and
@@ -84,7 +84,7 @@ all read exactly `10`, which reads as a measurement rather than a ceiling.
 **Fix direction:** say it. "People credited with more than 10 boards are excluded — above that,
 shared names outnumber real directors."
 
-### F5. The foundations browser lists organisations that are not foundations.
+### F5. The foundations browser lists organisations that are not foundations. **[FIXED, and partly wrong]**
 
 The page promises "Every giving organisation we can see". The first screen includes The
 University of Sydney, Monash University, Catholic Education Centre, Ecumenical Schools Australia,
@@ -95,12 +95,12 @@ Catholic Education $281.5m, Ecumenical $245.4m) while World Vision shows $514.1m
 $5.7m granted — a 90x gap. What the two columns mean relative to each other is not stated and is
 not self-evident. **Needs a data check before fixing.**
 
-### F6. Two of the six foundations columns are empty.
+### F6. Two of the six foundations columns are empty. **[FIXED — sparse, not empty]**
 
 `GRANTEES` and `BOARD` are `—` for effectively every row (one row showed a board count of 1).
 Columns that never carry data are chrome — either populate them or drop them.
 
-### F7. Raw Postgres array syntax is leaking into the social enterprises table.
+### F7. Raw Postgres array syntax is leaking into the social enterprises table. **[FIXED]**
 
 The Detail column renders `{education, indigenous}`, `{"Community & Social Servic…`,
 `{"Food & Beverage Products"…` — array literals with braces and quotes, straight through to the
@@ -153,3 +153,55 @@ One trap worth remembering: adding fields to a value wrapped in `unstable_cache`
 until the key changes. The old cached object had no `states`, so the disclosure silently did not
 render — and in production it would have stayed invisible for an hour with no error anywhere. The
 cache key is now versioned.
+
+
+---
+
+## Corrections to this document, 2026-08-18
+
+Two P2 findings were overstated because I read the viewport and not the page.
+
+**F4 was wrong about the cap being invisible.** `exclusionNote` already says it, in full: how many
+identities are excluded, that the threshold is 10 boards, and why ("above it, 'one person' is
+usually a nominee service"). What is true is placement: the note sits below a 200-row table, so a
+reader scanning a column of identical `10`s has no signal nearby. The only change made was
+labelling the column header `Boards (max 10)`. The note was already doing its job.
+
+**F5 was half wrong.** The giving-versus-granted confusion I flagged as needing a data check is
+already disclosed in the footer: "'Giving' can mix grantmaking with program spend". That covers
+World Vision's $514.1m giving against $5.7m granted. The real half stands: `foundations.type`
+carries `university`, `service_delivery`, `religious_organisation`, `peak_body` and 20 more kinds,
+the type chips exposed only six of them, and nothing on the row said Monash University was a
+university. Fixed by printing the type beside every name.
+
+**F6 was "empty", which is too strong.** Of the top 500 foundations, 6 have grantees and 31 have
+board links. Sparse, not absent — and the few that are populated carry real signal, so dropping
+the columns would lose it. Fixed by stating in the footer why they are sparse (each needs a
+matched grant record or a matched director).
+
+---
+
+## New finding from the fix pass
+
+### F13. The social enterprises "Visible $" column double-counts, badly. **[NOT FIXED]**
+
+Sorting by dollars shows five rows carrying the identical $7.64bn:
+
+| name | abn | visible_dollars |
+|---|---|---|
+| Australian Red Cross | 50169561394 | $7,639,609,921 |
+| Australian Red Cross Family Store | 50169561394 | $7,639,609,921 |
+| Ballarat Red Cross | 50169561394 | $7,639,609,921 |
+| Horsham Red Cross | 50169561394 | $7,639,609,921 |
+| Red Cross | 50169561394 | $7,639,609,921 |
+
+Five register entries share one ABN, `se_browse` joins the power index on ABN, and each branch
+inherits the whole national figure. The same pattern repeats for genU ($887.5m twice) and SSI
+($1.0bn twice). The column is not additive and the page does not say so — summing it, or reading
+"Ballarat Red Cross moves $7.6bn", is wrong by orders of magnitude.
+
+This is the same class as the donations Pratt problem, inverted: there, one organisation was split
+across many rows; here, many rows each claim one organisation's whole total.
+
+**Fix direction:** either attribute at the ABN level and collapse branches into one row, or label
+the figure as belonging to the ABN rather than the branch. Needs a decision, so it is left open.
