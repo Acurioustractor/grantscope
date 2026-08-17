@@ -123,6 +123,74 @@ solved there with rail clearance rather than by moving the widget.
 
 ---
 
+## Answers (investigated 2026-08-18, Ben asked me to determine these)
+
+### A1 — the feed is stuck, not bad. One job stopped and took the screen with it.
+
+`act_funding_opportunity_current_status` quarantines an opportunity if it fails ANY of six
+requirements. Measured across all 2,592 `open_grant` rows:
+
+| requirement | failing |
+|---|---|
+| **stale_verification** (`verified_at` older than 7 days) | **2,592 — all of them** |
+| missing_application_url | 348 |
+| missing_official_source | 279 |
+| past_deadline | 235 |
+| not_verified | 184 |
+| missing_verification_timestamp | 0 |
+
+**Every single row fails the same requirement.** The newest `verified_at` in the table is
+**2026-08-07** — eleven days ago. The 7-day freshness window expired on **14 August** and the
+entire feed flipped to quarantined on that date, in one step. 2,408 of the 2,592 are still marked
+`verification_status = 'verified'`; they are just not *recently* verified.
+
+Meanwhile the ingest is alive: the `GrantConnect Open Opportunities` agent ran successfully on
+2026-08-17 (123 items) and 2026-08-16 (121). So rows keep arriving, and nothing re-stamps
+`verified_at`.
+
+**1,957 opportunities would qualify the moment verification runs again** (verified, with both URLs,
+deadline not past). That is the recovery number.
+
+**Verdict: stuck pipeline.** Two things to fix, and they are separate:
+1. Whatever refreshes `verified_at` stopped on 7 Aug — find it and restart it.
+2. **A 7-day hard cliff with no warning is a fragile design.** One missed weekly job silently
+   zeroes the entire screen. Consider a warn band (stale >7d shows with a "verification is N days
+   old" flag) before the hard quarantine, so the failure is visible while it is still small.
+
+### A3 — the zeros are real, but they do not mean "no users". They mean no telemetry.
+
+`product_events` contains **exactly one event, ever**: a single `upgrade_prompt_viewed` on
+**2026-04-20**, from one user. Nothing in the four months since. The funnel window is 30 days, so
+0 is arithmetically correct.
+
+The screen is not measuring a quiet month — it is measuring an **empty instrumentation table**.
+Reporting "PROFILE READY 0 / FIRST SHORTLIST 0 / ACTIVATED 0" implies user behaviour was observed
+and was zero. It was not observed at all.
+
+**Recommendation:** say that. "No product events recorded since 20 Apr 2026 — instrumentation
+appears inactive" is true and useful; eight zeros are neither. Then decide separately whether
+product analytics is a thing you want working.
+
+### A4 — both numbers are real; they count different things, and only one matches its label.
+
+| screen | predicate | count |
+|---|---|---|
+| `/ops` — "AI-profiled" | `last_scraped_at IS NOT NULL` | **598** |
+| `/ops/health` — "PROFILED" | `description IS NOT NULL` | **919** |
+
+Of 11,177 foundations: 598 scraped, 919 with a description, and **597 with both**. So 321
+foundations carry a description that did not come from the profiler (imported from another source),
+and exactly one was scraped without producing a description.
+
+**`/ops` is the one that matches its label.** "AI-profiled" means the profiler ran, which is
+`last_scraped_at` — 598. `/ops/health` labels 919 as "PROFILED" while actually counting "has a
+description from anywhere".
+
+**Recommendation:** `/ops/health` switches to `last_scraped_at` so both screens say 598, and if the
+919 is worth keeping it becomes its own tile with an honest label ("has a description").
+
+---
+
 ## Decisions only Ben can make
 
 1. **A1 — the quarantine.** Is 100% of the opportunity feed being quarantined correct, or is the
