@@ -151,6 +151,37 @@ export async function Shell({ title, children }: ShellProps) {
             {v.name}
           </Link>
         ))}
+        <Link
+          href="/dashboard/views"
+          className="flex items-center px-2.5 py-1.5 text-[12px]"
+          style={{ borderRadius: 'var(--shell-r-sm)', color: '#7A7A7A' }}
+        >
+          All views
+        </Link>
+        {user.isAdmin && (
+          <>
+            <div className="h-4" />
+            <div className="px-2.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#7A7A7A]">
+              Ops
+            </div>
+            {[
+              ['/ops', 'Overview'],
+              ['/ops/health', 'Data health'],
+              ['/ops/claims', 'Claims'],
+              ['/ops/grant-recommendations', 'Grant recommendations'],
+              ['/admin/api-usage', 'API usage'],
+            ].map(([href, label]) => (
+              <Link
+                key={href}
+                href={href}
+                className="flex items-center px-2.5 py-1.5 text-[13px]"
+                style={{ borderRadius: 'var(--shell-r-sm)', color: 'var(--shell-rail-text)' }}
+              >
+                {label}
+              </Link>
+            ))}
+          </>
+        )}
         <div className="flex-1" />
         <Link
           href="/clarity"
