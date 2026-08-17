@@ -90,8 +90,12 @@ export async function GET() {
         .not('embedding', 'is', null), 10000),
       safe(db.from('grant_opportunities').select('*', { count: 'exact', head: true })
         .gt('closes_at', new Date().toISOString()), 10000),
+      // Admin audit A4: this counted `description IS NOT NULL` (919) and labelled it PROFILED,
+      // while /ops counted `last_scraped_at IS NOT NULL` (598) under the same word. Only 597 have
+      // both, so 321 descriptions never came from the profiler at all. "Profiled" means the
+      // profiler ran, which is last_scraped_at — so this now agrees with /ops.
       safe(db.from('foundations').select('*', { count: 'exact', head: true })
-        .not('description', 'is', null), 10000),
+        .not('last_scraped_at', 'is', null), 10000),
       safe(db.from('foundations').select('*', { count: 'exact', head: true })
         .not('website', 'is', null), 10000),
       safe(db.from('social_enterprises').select('*', { count: 'exact', head: true })

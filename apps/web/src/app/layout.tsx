@@ -102,7 +102,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     || pathname.startsWith('/changes')
     || pathname.startsWith('/account')
     // Phase-2 ruling (2026-08-17): operator tools live in the shell beside /clarity.
-    || pathname.startsWith('/ops/health')
+    // Admin audit A2 (2026-08-18): this listed '/ops/health' ALONE, so every other ops screen —
+    // and all of /admin — rendered the public marketing nav, LOGIN and START FREE buttons included,
+    // stacked on top of the shell you were already authenticated into. Ben's call: full-bleed, like
+    // health. The whole group goes chromeless, not one sub-route of it.
+    || pathname.startsWith('/ops')
+    || pathname.startsWith('/admin')
     || pathname.startsWith('/alerts')
     || pathname.startsWith('/tracker')
     || pathname.startsWith('/foundations/tracker')

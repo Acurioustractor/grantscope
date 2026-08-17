@@ -247,6 +247,7 @@ export async function GET() {
       validationReviews,
       recentRuns,
       recentProductEvents,
+      productEventsAllTime,
     ] = await Promise.all([
       db.from('grant_opportunities').select('*', { count: 'exact', head: true }),
       db.from('grant_opportunities').select('*', { count: 'exact', head: true }).not('embedding', 'is', null),
@@ -292,6 +293,14 @@ export async function GET() {
       db.from('product_events')
         .select('event_type, user_id, created_at, metadata')
         .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+      // Admin audit A3: the funnel showed eight zeros, which reads as "we measured user behaviour
+      // and there was none". In fact product_events held ONE event ever (2026-04-20). An empty
+      // instrumentation table and a quiet month are not the same claim, so the UI needs to tell
+      // them apart — this probe is all-time, not windowed.
+      db.from('product_events')
+        .select('created_at', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .limit(1),
     ]);
 
     const productEventRows = recentProductEvents.data ?? [];
@@ -305,6 +314,11 @@ export async function GET() {
         .filter((row: { created_at: string }) => new Date(row.created_at).getTime() >= Date.now() - 7 * 24 * 60 * 60 * 1000)
         .map((row: { user_id: string }) => row.user_id)
     );
+
+    const telemetry = {
+      totalEventsAllTime: productEventsAllTime.count ?? 0,
+      lastEventAt: productEventsAllTime.data?.[0]?.created_at ?? null,
+    };
 
     const productFunnel = {
       windowDays: 30,
@@ -633,6 +647,7 @@ export async function GET() {
         reviewIsStale,
       },
       productFunnel,
+      telemetry,
       pilotSummary,
       pilotBenchmarks,
       pilotDecision: {

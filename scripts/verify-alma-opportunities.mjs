@@ -73,23 +73,49 @@ async function run() {
   }
 
   let verified = 0, stale = 0, unchanged = 0, skipped = 0;
+  let persistFailures = 0;
   const concurrencyArg = process.argv.find((arg) => arg.startsWith('--concurrency='));
   const concurrency = Math.max(1, Number.parseInt(concurrencyArg?.split('=')[1] || '10', 10));
   const maxAgeArg = process.argv.find((arg) => arg.startsWith('--max-age-hours='));
   const maxAgeHours = Math.max(0, Number.parseInt(maxAgeArg?.split('=')[1] || '24', 10));
 
+  // A single transient write failure used to abort the ENTIRE run: one `TypeError: fetch failed`
+  // against a saturated shared pooler threw out of persist(), out of the worker, and killed the
+  // whole verification pass. That is how the feed went stale — the nightly pipeline last succeeded
+  // 2026-08-07 and timed out every night after, so nothing re-stamped verified_at, and on
+  // 2026-08-14 all 2,592 opportunities quarantined at once and /ops/grant-recommendations went to
+  // zeros. Retry the write, and if it still fails, skip THAT row rather than the other 2,591.
   async function persist(row, verificationStatus, reason) {
     if (DRY_RUN) return;
     const checkedAt = new Date().toISOString();
-    const { error: updateError } = await supabase
-      .from('alma_funding_opportunities')
-      .update({
-        verification_status: verificationStatus,
-        verified_at: checkedAt,
-        verification_notes: `Auto-check: ${reason} at ${checkedAt}`,
-      })
-      .eq('id', row.id);
-    if (updateError) throw new Error(`Update failed for ${row.id}: ${updateError.message}`);
+    const payload = {
+      verification_status: verificationStatus,
+      verified_at: checkedAt,
+      verification_notes: `Auto-check: ${reason} at ${checkedAt}`,
+    };
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const { error: updateError } = await supabase
+          .from('alma_funding_opportunities')
+          .update(payload)
+          .eq('id', row.id);
+        if (!updateError) return;
+        if (attempt === 3) {
+          persistFailures++;
+          console.warn(`  persist_failed  ${row.id}: ${updateError.message}`);
+          return;
+        }
+      } catch (err) {
+        // Network-level throw (fetch failed / socket hang up) — the case that killed the run.
+        if (attempt === 3) {
+          persistFailures++;
+          console.warn(`  persist_failed  ${row.id}: ${err instanceof Error ? err.message : String(err)}`);
+          return;
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, attempt * 750));
+    }
   }
 
   async function verifyRow(row) {

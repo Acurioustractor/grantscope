@@ -37,7 +37,7 @@ of the feed, and **89 real decisions are rendering as zeros** with nothing on sc
 That answer decides whether the fix is "unstick the feed" or "say on screen that the feed is
 quarantined, and show the 89 decisions anyway".
 
-## A2 — the marketing site header renders on top of the app shell (S)
+## A2 — the marketing site header renders on top of the app shell (S) **[FIXED]**
 
 **Aesthetic / Clarity.** `/ops`, `/ops/claims`, `/ops/grant-recommendations` and
 `/admin/api-usage` all render the public nav bar — SEARCH · FUNDING · DATA · POWER · REPORTS ·
@@ -48,7 +48,7 @@ instead of full-bleed. On an authenticated admin page, offering LOGIN and START 
 of these layouts is right and the others inherit something they should not. That is the fix's
 starting point.
 
-## A3 — the same metric reports two different numbers on two admin screens (S)
+## A3 — the same metric reports two different numbers on two admin screens (S) **[FIXED]**
 
 **Meaning / honesty.** Foundations profiled:
 
@@ -69,18 +69,18 @@ ops screen and have no way to reach its siblings without typing URLs.
 Worth checking whether the rail's admin test and the route guard's admin test are the same test.
 If they can disagree, the rail will keep lying about what exists.
 
-## A5 — `/ops/claims` has an ACTIONS column that never contains an action (S)
+## A5 — `/ops/claims` has an ACTIONS column that never contains an action (S) **[NOT A BUG — I was wrong]**
 
 **Clarity.** The table header promises `ACTIONS`; every cell is empty. The screen's entire purpose
 is approving or rejecting claims, and there is nothing to click.
 
-## A6 — `/ops/claims` has no empty state (S)
+## A6 — `/ops/claims` has no empty state (S) **[FIXED]**
 
 **Friction.** It reads `0 pending` above two already-verified rows, and says nothing about what a
 pending claim is, where claims come from, or what Ben would do when one arrives. The queue screen
 does not explain the queue.
 
-## A7 — label stack on the claims rows (S)
+## A7 — label stack on the claims rows (S) **[FIXED — and it was one chip, not a stack]**
 
 **Ben's rage-trigger.** `A Curious Tractor` + `SOCIAL ENTERPRISE` + `ECOSYSTEM`, three labels
 restating one thing, wrapping onto a second line and breaking the row rhythm.
@@ -108,7 +108,7 @@ Underneath: `GET /api/admin/api-usage` returns **403** while the page's layout l
 guard disagree only because dev skips the former. Verify against production with a real admin
 session before treating the 403 itself as a bug. The empty failure message is a finding either way.
 
-## A11 — `/ops` activation funnel is eight zeros with no empty state (S)
+## A11 — `/ops` activation funnel is eight zeros with no empty state (S) **[FIXED]**
 
 **Clarity.** `PROFILE READY 0 · FIRST SHORTLIST 0 · PIPELINE STARTED 0 · FIRST ALERT CREATED 0`,
 then four more. If that is real (no activated users yet) the screen should say so; as rendered it is
@@ -200,3 +200,66 @@ description from anywhere".
 3. **A11 — are the activation zeros real?** If there genuinely are no activated users, the funnel
    should say that rather than show eight zeros.
 4. **A3 — which foundations-profiled number is true**, 598 or 919, and what each was counting.
+
+
+---
+
+## Fix pass, 2026-08-18
+
+**A1 — unstuck, and made unable to fail this silently again.**
+
+Root cause, traced to the run: the `Nightly grant pipeline orchestrator` last succeeded
+**2026-08-07** (570s) and has timed out on every run since, three times a day. Its step 6 stamps
+`verified_at`. The dates line up exactly with the newest `verified_at` in the table.
+
+*Why* it times out: a single transient write failure aborted the whole pass. Running the verify
+step by hand reproduced it — `TypeError: fetch failed` on one Supabase update threw out of
+`persist()`, out of the worker, and killed the run after ~10 rows. Against the shared pooler that
+is close to inevitable nightly. `persist()` now retries three times with backoff and, if the row
+still will not write, **skips that row rather than the other 2,591**.
+
+Two-part outcome:
+- `act_grant_recommendations_current`: **0 → 7,821 rows**. The screen shows 1,000 recommendations
+  across 317 funders again.
+- The warn band (`migrations/2026-08-18-opportunity-staleness-warn-band.sql`) means staleness alone
+  no longer quarantines: 7-21 days is now `stale_warning`, still usable and flagged, and only past
+  21 days is a hard quarantine. Live distribution right after the change: 1,452 `stale_warning`,
+  726 `quarantined`, 346 `rolling`, 68 `apply_now`. `days_since_verified` is exposed so the UI can
+  say how old a check is instead of leaving the reader to guess.
+
+**A2 — full-bleed, Ben's call.** The chromeless list in `app/layout.tsx` contained
+`'/ops/health'` *alone* — added when ops moved into the shell (comment dated 2026-08-17), so every
+other ops screen and all of `/admin` kept the public marketing nav. Now `/ops` and `/admin` as
+groups.
+
+**A3 — `/ops/health` now counts `last_scraped_at`**, agreeing with `/ops` at 598. "Profiled" means
+the profiler ran. The 919 was "has a description from anywhere", 321 of which never came from the
+profiler.
+
+**A11 — the funnel says what it actually knows.** `/api/ops` now carries an all-time telemetry
+probe, and the screen leads with "Instrumentation looks inactive — last product event 20 Apr 2026,
+1 recorded in total, ever. Treat the zeros below as 'nothing is reporting', not as user behaviour."
+
+**A6 / A7 — claims.** An empty state that explains the queue ("Nothing waiting — ... a new claim
+appears here with Approve and Reject buttons in the Actions column"), and the org-type chip no
+longer wraps mid-phrase.
+
+### Corrections to my own findings
+
+**A5 was wrong.** The Actions column is not permanently empty — it renders Approve and Reject
+buttons for `status === 'pending'` claims. There are none, so it looked broken. The real defect was
+the missing empty state (A6), which is now fixed. No change was made to the column.
+
+**A7 was overstated.** It is not a stack of three labels: it is *one* chip, `social enterprise
+ecosystem`, wrapping onto a second line. Fixed with `whitespace-nowrap`, not by removing anything.
+
+### Not done
+
+- **A4** (ops pages are navigational dead ends — the rail hides its Ops section when `isAdmin` is
+  false even though the route admitted you). Needs the rail's admin test and the route guard's
+  admin test reconciled; left because it touches auth, not chrome.
+- **A8, A9, A10, A12** — health-score scale, the "21 datasets" basis, the access-denied message,
+  floating widgets. All S, none load-bearing.
+- **The orchestrator itself still times out.** `persist()` is hardened, which removes the cause I
+  could prove, but the next nightly run is the test. If it still times out, the remaining suspect is
+  a different step in the chain.
