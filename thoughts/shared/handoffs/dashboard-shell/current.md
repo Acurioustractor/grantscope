@@ -15,7 +15,13 @@ status: active
 **Test:** `cd apps/web && npx tsc --noEmit` · `npx vitest run` (726 pass) · dev 3013
 
 ### Now
-[->] Grantee-ingest queue, Telethon Trust first (day-shift, Ben-in-loop; pattern proven on McKinnon: their own documents → dry ABN resolution → flagged confidence → reversible dataset key).
+[->] UI/UX/style pass on the shell + new Browse surfaces (Ben's pick 2026-08-18).
+
+### Grantee-ingest pipeline (PARKED 2026-08-18, resume in a fresh session)
+Wave 1 DONE: Telethon 115/$75.4M · HMST 2,873/$99.2M · Lotterywest 345/$141.2M = 3,333 edges/$315.8M, all reversible by dataset key; source_record_id=name|year|rownum pattern REQUIRED (unique index rejects bare repeats).
+Wave 1 REMAINING (~4-5h, scouts' URLs in session scratchpad + migration headers): Ian Potter (grants DB w/ amounts 1964-2026, needs scraper), Myer/SMF (PDF tables FY13-25), Wm Buckland (4 PDFs 2020-23, column-aware parse), VFFF (27 prose posts w/ amounts), Perron (names only), PRF (names only).
+Publish NOTHING (opacity list, verified): RCH Fdn, Minderoo, GBRF, Peter Mac (internal only), Judith Neilson.
+Method proven: register → dry resolve (trigram % operator, index-assisted; similarity() alone times out) → exact/high/review tiers → judge-agent adjudicates 0.60-0.80 band w/ false-friend rules (locality/state/federation/org-vs-own-foundation) → spot-check high tier for interstate traps → one Ben checkpoint → reversible migration + committed TSV.
 
 ### This Session (2026-08-17, "One shell, all data" phase)
 - [x] Grilled → spec → issues #244–#251 → built → reviewed → merged, all in one day
