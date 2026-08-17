@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { money, L, makeQs, useDrawer, Drawer } from '../browse-ui';
+import { money, L, makeQs, useDrawer, Drawer, SortHeader } from '../browse-ui';
 
 /**
  * Grants browser: recipients of justice_funding as entity-shaped rollups, the individual grants
@@ -28,11 +28,6 @@ interface RecipientDetail {
   grants: { program: string | null; year: string | null; amount: number | null; state: string | null; topics: string[] | null }[];
 }
 
-const SORTS: [string, string][] = [
-  ['total', 'Total $'],
-  ['grants', 'Grant count'],
-  ['name', 'A–Z'],
-];
 const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT', 'FED'];
 const TOPICS = ['child-protection', 'family-services', 'youth-justice', 'indigenous', 'community-led', 'diversion'];
 
@@ -90,22 +85,15 @@ export default function GrantBrowser({
             {t.replace(/-/g, ' ')}
           </Link>
         ))}
-        <span className="ml-auto flex items-center gap-1.5">
-          {SORTS.map(([v, label]) => (
-            <Link key={v} href={qs({ sort: v })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={(sort || 'total') === v ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
-              {label}
-            </Link>
-          ))}
-        </span>
       </div>
 
       <div className="mt-4 shell-card">
         <div className="flex items-baseline gap-3 px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest" style={{ borderBottom: '1px solid var(--shell-line)', color: 'var(--shell-muted)' }}>
-          <span className="flex-1">Recipient</span>
-          <span className="w-[110px]">States</span>
-          <span className="w-[120px]">Years</span>
-          <span className="w-[64px] text-right">Grants</span>
-          <span className="w-[92px] text-right">Total $</span>
+          <SortHeader label="Recipient" sortKey="name" current={sort} qs={qs} />
+          <span className="w-[110px] shrink-0">States</span>
+          <SortHeader label="Years" sortKey="recent" current={sort} qs={qs} width="w-[120px]" title="most recent grant year first" />
+          <SortHeader label="Grants" sortKey="grants" current={sort} qs={qs} width="w-[64px]" align="right" />
+          <SortHeader label="Total $" sortKey="total" current={sort} qs={qs} width="w-[92px]" align="right" />
         </div>
         {rows.map((r) => (
           <button key={r.key} onClick={() => open(r.key)} className="flex w-full items-baseline gap-3 px-4 py-2 text-left hover:bg-[#FAFAF8]" style={{ borderBottom: '1px solid var(--shell-line)' }}>

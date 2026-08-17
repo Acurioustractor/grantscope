@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { SortHeader } from './browse-ui';
 
 /**
  * Shared browser for SE and charity lists: known-ness dots per row (facts we hold — a low score
@@ -36,13 +37,6 @@ function money(n: number | null): string {
   return `$${Math.round(n / 1e3)}k`;
 }
 
-const SORTS: [string, string][] = [
-  ['known', 'Most known'],
-  ['least', 'Least known'],
-  ['dollars', 'Visible $'],
-  ['systems', 'Systems'],
-  ['name', 'A–Z'],
-];
 
 function Dots({ n, max }: { n: number; max: number }) {
   return (
@@ -150,22 +144,22 @@ export default function OrgBrowser({
             ))}
           </>
         ) : null}
-        <span className="ml-auto flex items-center gap-1.5">
-          {SORTS.map(([v, label]) => (
-            <Link key={v} href={qs({ sort: v })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={(sort || 'known') === v ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
-              {label}
-            </Link>
-          ))}
-        </span>
       </div>
 
       <div className="mt-4 shell-card">
         <div className="flex items-baseline gap-3 px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest" style={{ borderBottom: '1px solid var(--shell-line)', color: 'var(--shell-muted)' }}>
-          <span className="flex-1">Name</span>
-          <span className="w-[190px]">Detail</span>
-          <span className="w-[70px]" title={cfg.knownLegend}>Known</span>
-          <span className="w-[64px] text-right">Systems</span>
-          <span className="w-[92px] text-right">Visible $</span>
+          <SortHeader label="Name" sortKey="name" current={sort} qs={qs} />
+          <span className="w-[190px] shrink-0">Detail</span>
+          <Link
+            href={qs({ sort: (sort || 'known') === 'known' ? 'least' : 'known' })}
+            title={`${cfg.knownLegend} — click to flip most/least known`}
+            className="w-[70px] shrink-0 truncate hover:underline"
+            style={{ color: sort === 'least' || (sort || 'known') === 'known' ? '#121212' : undefined }}
+          >
+            {sort === 'least' ? 'Least known ▾' : 'Known ▾'}
+          </Link>
+          <SortHeader label="Systems" sortKey="systems" current={sort} qs={qs} width="w-[64px]" align="right" />
+          <SortHeader label="Visible $" sortKey="dollars" current={sort} qs={qs} width="w-[92px]" align="right" />
         </div>
         {rows.map((r) => {
           const inner = (

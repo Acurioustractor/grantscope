@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { money, L, makeQs, useDrawer, Drawer } from './browse-ui';
+import { money, L, makeQs, useDrawer, Drawer, SortHeader } from './browse-ui';
 
 /**
  * Shared browser for the two sides of AusTender: suppliers (who wins contracts) and buyers
@@ -28,6 +28,8 @@ export interface SideConfig {
   itemLabel?: string;
   /** Since-floor chips; calendar years for contracts, financial years for donations. */
   yearOptions?: string[];
+  /** RPC sort key for the counterparty-count column ('buyers' | 'suppliers' | 'recipients'). */
+  counterpartySortKey: string;
 }
 
 interface SideDetail {
@@ -39,11 +41,6 @@ interface SideDetail {
   contracts: { title: string | null; counterparty: string | null; value: number | null; start: string | null; end: string | null }[];
 }
 
-const sortsFor = (itemLabel: string): [string, string][] => [
-  ['total', 'Total $'],
-  ['contracts', itemLabel === 'donation' ? 'Donations' : 'Contracts'],
-  ['name', 'A–Z'],
-];
 const DEFAULT_YEARS = ['2015', '2020', '2023'];
 
 export default function ContractSideBrowser({
@@ -91,22 +88,15 @@ export default function ContractSideBrowser({
             {y}
           </Link>
         ))}
-        <span className="ml-auto flex items-center gap-1.5">
-          {sortsFor(cfg.itemLabel ?? 'contract').map(([v, label]) => (
-            <Link key={v} href={qs({ sort: v })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={(sort || 'total') === v ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
-              {label}
-            </Link>
-          ))}
-        </span>
       </div>
 
       <div className="mt-4 shell-card">
         <div className="flex items-baseline gap-3 px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest" style={{ borderBottom: '1px solid var(--shell-line)', color: 'var(--shell-muted)' }}>
-          <span className="flex-1">Name</span>
-          <span className="w-[220px]">Top {cfg.counterpartyLabel.toLowerCase().replace(/s$/, '')}</span>
-          <span className="w-[72px] text-right">{cfg.counterpartyLabel}</span>
-          <span className="w-[76px] text-right">{(cfg.itemLabel ?? 'contract') === 'donation' ? 'Donations' : 'Contracts'}</span>
-          <span className="w-[92px] text-right">Total $</span>
+          <SortHeader label="Name" sortKey="name" current={sort} qs={qs} />
+          <span className="w-[220px] shrink-0">Top {cfg.counterpartyLabel.toLowerCase().replace(/s$/, '')}</span>
+          <SortHeader label={cfg.counterpartyLabel} sortKey={cfg.counterpartySortKey} current={sort} qs={qs} width="w-[72px]" align="right" />
+          <SortHeader label={(cfg.itemLabel ?? 'contract') === 'donation' ? 'Donations' : 'Contracts'} sortKey="contracts" current={sort} qs={qs} width="w-[76px]" align="right" />
+          <SortHeader label="Total $" sortKey="total" current={sort} qs={qs} width="w-[92px]" align="right" />
         </div>
         {rows.map((r) => (
           <button key={r.key} onClick={() => open(r.key)} className="flex w-full items-baseline gap-3 px-4 py-2 text-left hover:bg-[#FAFAF8]" style={{ borderBottom: '1px solid var(--shell-line)' }}>

@@ -51,10 +51,12 @@ export default async function PeoplePage({
       attributed_justice: number | null;
       attributed_donations: number | null;
       financial_system_count: number | null;
+      influence_score: number | null;
     }[]).map((r) => ({
       key: r.identity_key,
       name: r.person_name,
       norm: r.person_name_normalised,
+      influence: r.influence_score,
       boards: r.board_count,
       accoBoards: r.acco_boards,
       procurement: r.attributed_procurement,

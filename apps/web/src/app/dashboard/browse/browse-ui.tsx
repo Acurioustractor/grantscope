@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 /**
  * Shared scaffolding for every kind browser: the money formatter, the drawer label, the
@@ -31,6 +32,44 @@ export function makeQs(basePath: string, params: Record<string, string>) {
     const s = p.toString();
     return `${basePath}${s ? `?${s}` : ''}`;
   };
+}
+
+/**
+ * Sortable column header: every column on every browse table sorts by clicking its header
+ * (Ben's ruling 2026-08-18 — sorting lives on the columns, not in chip rows that cover some
+ * of them). Each column sorts its natural direction (money/counts high-first, names A–Z);
+ * the active column shows a ▾.
+ */
+export function SortHeader({
+  label,
+  sortKey,
+  current,
+  qs,
+  width,
+  align,
+  title,
+}: {
+  label: string;
+  sortKey: string;
+  current: string;
+  qs: (over: Record<string, string>) => string;
+  /** Tailwind width class, e.g. 'w-[92px]'; omit for flex-1. */
+  width?: string;
+  align?: 'right';
+  title?: string;
+}) {
+  const active = current === sortKey;
+  return (
+    <Link
+      href={qs({ sort: sortKey })}
+      title={title}
+      className={`${width ?? 'min-w-0 flex-1'} ${align === 'right' ? 'text-right' : ''} shrink-0 truncate hover:underline`}
+      style={{ color: active ? '#121212' : undefined }}
+    >
+      {label}
+      {active ? ' ▾' : ''}
+    </Link>
+  );
 }
 
 /** Drawer state: open(key, url) fetches url and lands it in detail; errors land in err. */

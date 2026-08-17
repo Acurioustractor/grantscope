@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { money, L, makeQs, useDrawer, Drawer } from '../browse/browse-ui';
+import { money, L, makeQs, useDrawer, Drawer, SortHeader } from '../browse/browse-ui';
 
 /**
  * People browser: board interlocks + de-collided money footprint. The list excludes nominee
@@ -13,6 +13,7 @@ export interface PersonRow {
   key: string;
   name: string;
   norm: string;
+  influence: number | null;
   boards: number;
   accoBoards: number;
   procurement: number | null;
@@ -43,14 +44,6 @@ function displayName(n: string): string {
   return n.replace(/\b\p{L}/gu, (c) => c.toUpperCase());
 }
 
-const SORTS: [string, string][] = [
-  ['influence', 'Influence'],
-  ['boards', 'Boards'],
-  ['procurement', 'Contracts $'],
-  ['justice', 'Grants $'],
-  ['donations', 'Donations $'],
-  ['name', 'A–Z'],
-];
 
 export default function PersonBrowser({
   rows,
@@ -84,24 +77,15 @@ export default function PersonBrowser({
         />
         {sort ? <input type="hidden" name="sort" value={sort} /> : null}
       </form>
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <span className="ml-auto flex items-center gap-1.5">
-          {SORTS.map(([v, label]) => (
-            <Link key={v} href={qs({ sort: v })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={(sort || 'influence') === v ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
-              {label}
-            </Link>
-          ))}
-        </span>
-      </div>
-
       <div className="mt-4 shell-card">
         <div className="flex items-baseline gap-3 px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest" style={{ borderBottom: '1px solid var(--shell-line)', color: 'var(--shell-muted)' }}>
-          <span className="flex-1">Name</span>
-          <span className="w-[64px] text-right">Boards</span>
-          <span className="w-[64px] text-right">Systems</span>
-          <span className="w-[92px] text-right">Contracts $</span>
-          <span className="w-[92px] text-right">Grants $</span>
-          <span className="w-[92px] text-right">Donations $</span>
+          <SortHeader label="Name" sortKey="name" current={sort} qs={qs} />
+          <SortHeader label="Influence" sortKey="influence" current={sort} qs={qs} width="w-[76px]" align="right" title="boards × attributed money, the default order" />
+          <SortHeader label="Boards" sortKey="boards" current={sort} qs={qs} width="w-[64px]" align="right" />
+          <SortHeader label="Systems" sortKey="systems" current={sort} qs={qs} width="w-[64px]" align="right" />
+          <SortHeader label="Contracts $" sortKey="procurement" current={sort} qs={qs} width="w-[92px]" align="right" />
+          <SortHeader label="Grants $" sortKey="justice" current={sort} qs={qs} width="w-[92px]" align="right" />
+          <SortHeader label="Donations $" sortKey="donations" current={sort} qs={qs} width="w-[92px]" align="right" />
         </div>
         {rows.map((r) => (
           <button key={r.key} onClick={() => open(r.norm)} className="flex w-full items-baseline gap-3 px-4 py-2 text-left hover:bg-[#FAFAF8]" style={{ borderBottom: '1px solid var(--shell-line)' }}>
@@ -113,6 +97,7 @@ export default function PersonBrowser({
                 </span>
               ) : null}
             </span>
+            <span className="w-[76px] shrink-0 text-right font-mono text-[12.5px]">{r.influence != null ? Math.round(r.influence).toLocaleString('en-AU') : '—'}</span>
             <span className="w-[64px] shrink-0 text-right font-mono text-[12.5px]">{r.boards}</span>
             <span className="w-[64px] shrink-0 text-right font-mono text-[12.5px]">{r.systems ?? '—'}</span>
             <span className="w-[92px] shrink-0 text-right font-mono text-[12.5px]">{money(r.procurement)}</span>
