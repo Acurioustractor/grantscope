@@ -9,7 +9,7 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-16T09:00:00Z
+**Updated:** 2026-08-17 (admin-at-100% arc MERGED #243 `20049ed8`)
 **Goal:** Rebuild CivicGraph's console UX as a softened-Bauhaus dashboard shell (Ben's verdict on the deployed console: works but "hard to make sense of"; direction chosen: "soften Bauhaus toward the demo", shadcn dashboard reference). Every chrome element must have a real data source.
 **Branch:** `main` at `e9407cc`, clean, everything pushed. **Seven PRs merged this stream: #219–#222, then this session #223 (vocab dropdowns) + #224 (per-view pages) + #225 (public docs surface). Every buildable next-item is DONE — what remains needs Ben.**
 **Test:** `cd apps/web && npx tsc --noEmit` · `npx vitest run` (711 pass) · smoke `curl localhost:3013/dashboard` (dev server 3013, `--turbopack`)
@@ -34,6 +34,17 @@ status: active
 - FINDING (RESOLVED 2026-08-16): `justice_funding.financial_year` formats were MIXED — see next entry.
 - [x] `justice_funding.financial_year` normalisation APPLIED (migration `migrations/2026-08-16-justice-fy-normalise.sql`): the mess was not formatting — 41 rows were multi-year spans / `YYYY-ongoing` / bare `2024`, incl. `2021-25` = a 2021→2025 PRF span that LOOKS canonical. New parsed cols `fy_start`/`fy_end`/`fy_open_ended` on all 157,116 rows (zero unparsed), maintained by trigger `trg_justice_funding_parse_fy`; raw strings kept as provenance except `2026-2027`→`2026-27` (2 rows, single-FY either way); `v_vocab_financial_years` now requires `fy_end = fy_start + 1` → dropdown is 19 clean FYs (2008-09…2026-27). Filter by `fy_*`, never by string shape.
 - Vocab views live: 9 topics (child-protection 7,481 rows → prevention 313), 19 financial years. Dropdowns appear as each surface's hourly vocab cache refreshes.
+
+### Phase 3 (2026-08-17, MERGED #243): the admin at 100%
+One language everywhere (dark suite token-flip, type pass, shadow bridge, de-hardcoded rows chip
+51.9M via RPC) · Clarity overview drawer + consequence layer (screens judged by what feeds them;
+needs-attention names influences) · **Browse**: rail section, foundations (foundation_browse RPC,
+holds-vs-granted columns, drawer with 6yr ACNC financials; FRRR-0-grantees bug = silent count join
++ FIFTH missing-service_role-grant instance on mv_foundation_grantees) · SE + charities (shared
+OrgBrowser, known-ness dots, Least-known = the enrichment queue, corpus stats). **The finding
+frontier, stated on-screen: 27 of 11,159 foundations have grantee links.**
+OPEN LANES: grantee-link enrichment (the 27/11,159 gap) · /ops/health query repair · catalogue
+retire-or-keep · power-dynamics-live branch parked (rebased, awaiting Ben) · 475 unfiled round 2.
 
 ### Phase 2 directive (Ben, 2026-08-17)
 "See any screen we've got on this new dashboard and make sure it aligns to the new design system;
