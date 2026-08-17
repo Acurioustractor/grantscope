@@ -36,6 +36,13 @@ interface PersonDetail {
   } | null;
 }
 
+/** Source data carries some names fully lowercase ("catherine taylor") — title-case ONLY those
+ *  (SH-11, Ben's call): mixed-case names are left exactly as recorded. */
+function displayName(n: string): string {
+  if (n !== n.toLowerCase()) return n;
+  return n.replace(/\b\p{L}/gu, (c) => c.toUpperCase());
+}
+
 const SORTS: [string, string][] = [
   ['influence', 'Influence'],
   ['boards', 'Boards'],
@@ -99,7 +106,7 @@ export default function PersonBrowser({
         {rows.map((r) => (
           <button key={r.key} onClick={() => open(r.norm)} className="flex w-full items-baseline gap-3 px-4 py-2 text-left hover:bg-[#FAFAF8]" style={{ borderBottom: '1px solid var(--shell-line)' }}>
             <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold" style={{ color: '#1040C0' }}>
-              {r.name}
+              {displayName(r.name)}
               {r.accoBoards > 0 ? (
                 <span className="ml-2 font-mono text-[10px] uppercase tracking-wider" style={{ color: '#059669' }} title="sits on at least one community-controlled board">
                   acco
@@ -124,7 +131,7 @@ export default function PersonBrowser({
             <>
               <p className="mt-1 text-[12.5px]" style={{ color: 'var(--shell-muted)' }}>
                 {detail.board_count} boards on record
-                {detail.role_types?.length ? ` · ${detail.role_types.join(', ')}` : ''}
+                {detail.role_types?.length ? ` · ${detail.role_types.map((t) => t.replace(/_/g, ' ')).join(', ')}` : ''}
                 {detail.connects_community_controlled ? ' · connects community-controlled orgs' : ''}
               </p>
 

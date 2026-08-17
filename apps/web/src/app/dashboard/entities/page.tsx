@@ -42,6 +42,26 @@ interface Hit {
   state: string | null;
 }
 
+/** Some source names carry raw HTML escapes ("&amp;") — decode for display only. */
+function displayText(s: string): string {
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+/** Best matches first: exact, then starts-with, then earliest occurrence, then shortest. */
+function relevance(name: string, q: string): number {
+  const n = name.toLowerCase();
+  const needle = q.toLowerCase();
+  if (n === needle) return 0;
+  if (n.startsWith(needle)) return 1;
+  const at = n.indexOf(needle);
+  return 2 + (at < 0 ? 999 : at / 100) + n.length / 10000;
+}
+
 export default async function EntitiesPage({
   searchParams,
 }: {
@@ -60,9 +80,11 @@ export default async function EntitiesPage({
         .from('gs_entities')
         .select('gs_id,canonical_name,abn,entity_type,state')
         .ilike('canonical_name', `%${q}%`)
-        .limit(20);
+        .limit(40);
       if (error) throw new Error(error.message);
-      hits = (data ?? []) as Hit[];
+      hits = ((data ?? []) as Hit[])
+        .sort((a, b) => relevance(a.canonical_name, q) - relevance(b.canonical_name, q))
+        .slice(0, 20);
     } catch (e) {
       why = e instanceof Error ? e.message : String(e);
     }
@@ -97,10 +119,10 @@ export default async function EntitiesPage({
             {hits.map((h) => (
               <div key={h.gs_id} className="flex items-baseline gap-3 px-4 py-2" style={{ borderBottom: '1px solid var(--shell-line)' }}>
                 <Link href={`/entity/${h.gs_id}`} className="min-w-0 flex-1 truncate text-[13.5px] font-semibold hover:underline" style={{ color: '#1040C0' }}>
-                  {h.canonical_name}
+                  {displayText(h.canonical_name)}
                 </Link>
                 <span className="shrink-0 font-mono text-[11px]" style={{ color: 'var(--shell-muted)' }}>
-                  {[h.entity_type, h.state, h.abn ? `ABN ${h.abn}` : null].filter(Boolean).join(' · ')}
+                  {[h.entity_type?.replace(/_/g, ' '), h.state, h.abn ? `ABN ${h.abn}` : null].filter(Boolean).join(' · ')}
                 </span>
               </div>
             ))}
