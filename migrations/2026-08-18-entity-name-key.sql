@@ -12,6 +12,13 @@
 --   borrowing key must itself carry a company suffix. A bare personal name never merges into a
 --   namesake company, and the borrow is always ABN-backed, never a blind name match.
 --
+-- Shape note: these RPCs join the precomputed key lookups from
+--   2026-08-18-entity-name-key-views.sql (donor_name_keys / donor_key_abn and the supplier pair)
+--   and never call entity_name_key() at query time. Computing it inline cost three regexes per
+--   row, and inside a parameterised function the planner takes a generic plan that pushed the
+--   donor rollup past a minute — the identical SQL ad-hoc with literals ran in 2.8s. Apply the
+--   views migration FIRST; do not inline the key back into these functions.
+--
 -- Also fixed here: the drawer/row mismatch SH-5 introduced. Browse keys a name-only row onto an
 --   ABN borrowed from elsewhere in the data, but the detail RPCs still matched on the row's OWN
 --   abn-or-name — so the drawer's totals were lower than the row the user clicked. Detail now
@@ -53,15 +60,8 @@ RETURNS TABLE (
 )
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
-  WITH name_abn AS (
-    SELECT entity_name_key(donor_name) AS n, min(NULLIF(donor_abn, '')) AS abn
-    FROM political_donations
-    WHERE receipt_type = 'donation received' AND NULLIF(donor_abn, '') IS NOT NULL
-    GROUP BY 1
-    HAVING count(DISTINCT NULLIF(donor_abn, '')) = 1
-  )
   SELECT
-    COALESCE(NULLIF(d.donor_abn, ''), m.abn, root.abn, entity_name_key(d.donor_name)) AS donor_key,
+    COALESCE(NULLIF(d.donor_abn, ''), m.abn, root.abn, n.nk) AS donor_key,
     mode() WITHIN GROUP (ORDER BY d.donor_name) AS donor_name,
     max(COALESCE(NULLIF(d.donor_abn, ''), m.abn, root.abn)) AS donor_abn,
     count(*) AS donation_count,
@@ -69,14 +69,14 @@ AS $$
     count(DISTINCT d.donation_to) AS recipient_count,
     (array_agg(d.donation_to ORDER BY d.amount DESC NULLS LAST))[1] AS top_recipient
   FROM political_donations d
-  LEFT JOIN name_abn m ON m.n = entity_name_key(d.donor_name)
-  LEFT JOIN name_abn root ON entity_name_key(d.donor_name) LIKE '% pty ltd'
-        AND root.n = regexp_replace(entity_name_key(d.donor_name), ' pty ltd$', '')
+  JOIN donor_name_keys n ON n.donor_name = d.donor_name
+  LEFT JOIN donor_key_abn m ON m.n = n.nk
+  LEFT JOIN donor_key_abn root ON n.nk LIKE '% pty ltd'
+        AND root.n = regexp_replace(n.nk, ' pty ltd$', '')
   WHERE d.receipt_type = 'donation received'
-    AND d.donor_name IS NOT NULL AND btrim(d.donor_name) <> ''
     AND d.financial_year >= COALESCE(NULLIF(p_from_fy, ''), '2014-15')
     AND (p_q IS NULL OR d.donor_name ILIKE '%' || p_q || '%')
-  GROUP BY COALESCE(NULLIF(d.donor_abn, ''), m.abn, root.abn, entity_name_key(d.donor_name))
+  GROUP BY COALESCE(NULLIF(d.donor_abn, ''), m.abn, root.abn, n.nk)
   ORDER BY
     CASE WHEN p_sort = 'donations' THEN count(*) END DESC NULLS LAST,
     CASE WHEN p_sort = 'recipients' THEN count(DISTINCT d.donation_to) END DESC NULLS LAST,
@@ -91,20 +91,15 @@ CREATE OR REPLACE FUNCTION donation_donor_detail(p_key text, p_from_fy text DEFA
 RETURNS jsonb
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
-  WITH name_abn AS (
-    SELECT entity_name_key(donor_name) AS n, min(NULLIF(donor_abn, '')) AS abn
-    FROM political_donations
-    WHERE receipt_type = 'donation received' AND NULLIF(donor_abn, '') IS NOT NULL
-    GROUP BY 1
-    HAVING count(DISTINCT NULLIF(donor_abn, '')) = 1
-  ), rows AS (
+  WITH rows AS (
     SELECT d.donor_name, d.donor_abn, d.donation_to, d.amount, d.financial_year
     FROM political_donations d
-    LEFT JOIN name_abn m ON m.n = entity_name_key(d.donor_name)
-    LEFT JOIN name_abn root ON entity_name_key(d.donor_name) LIKE '% pty ltd'
-          AND root.n = regexp_replace(entity_name_key(d.donor_name), ' pty ltd$', '')
+    JOIN donor_name_keys n ON n.donor_name = d.donor_name
+    LEFT JOIN donor_key_abn m ON m.n = n.nk
+    LEFT JOIN donor_key_abn root ON n.nk LIKE '% pty ltd'
+          AND root.n = regexp_replace(n.nk, ' pty ltd$', '')
     WHERE d.receipt_type = 'donation received'
-      AND COALESCE(NULLIF(d.donor_abn, ''), m.abn, root.abn, entity_name_key(d.donor_name)) = p_key
+      AND COALESCE(NULLIF(d.donor_abn, ''), m.abn, root.abn, n.nk) = p_key
       AND d.financial_year >= COALESCE(NULLIF(p_from_fy, ''), '2014-15')
   )
   SELECT jsonb_build_object(
@@ -149,16 +144,8 @@ RETURNS TABLE (
 )
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
-  WITH name_abn AS (
-    SELECT entity_name_key(supplier_name) AS n, min(NULLIF(supplier_abn, '')) AS abn
-    FROM austender_contracts
-    WHERE NULLIF(supplier_abn, '') IS NOT NULL
-      AND contract_start >= make_date(2000, 1, 1) AND contract_start < make_date(2031, 1, 1)
-    GROUP BY 1
-    HAVING count(DISTINCT NULLIF(supplier_abn, '')) = 1
-  )
   SELECT
-    COALESCE(NULLIF(c.supplier_abn, ''), m.abn, root.abn, entity_name_key(c.supplier_name)) AS supplier_key,
+    COALESCE(NULLIF(c.supplier_abn, ''), m.abn, root.abn, n.nk) AS supplier_key,
     mode() WITHIN GROUP (ORDER BY c.supplier_name) AS supplier_name,
     max(COALESCE(NULLIF(c.supplier_abn, ''), m.abn, root.abn)) AS supplier_abn,
     count(*) AS contract_count,
@@ -166,14 +153,14 @@ AS $$
     count(DISTINCT c.buyer_name) AS buyer_count,
     (array_agg(c.buyer_name ORDER BY c.contract_value DESC NULLS LAST))[1] AS top_buyer
   FROM austender_contracts c
-  LEFT JOIN name_abn m ON m.n = entity_name_key(c.supplier_name)
-  LEFT JOIN name_abn root ON entity_name_key(c.supplier_name) LIKE '% pty ltd'
-        AND root.n = regexp_replace(entity_name_key(c.supplier_name), ' pty ltd$', '')
-  WHERE c.supplier_name IS NOT NULL AND btrim(c.supplier_name) <> ''
-    AND c.contract_start >= make_date(GREATEST(COALESCE(p_from_year, 2020), 2000), 1, 1)
+  JOIN supplier_name_keys n ON n.supplier_name = c.supplier_name
+  LEFT JOIN donor_key_abn m ON m.n = n.nk
+  LEFT JOIN donor_key_abn root ON n.nk LIKE '% pty ltd'
+        AND root.n = regexp_replace(n.nk, ' pty ltd$', '')
+  WHERE c.contract_start >= make_date(GREATEST(COALESCE(p_from_year, 2020), 2000), 1, 1)
     AND c.contract_start < make_date(2031, 1, 1)
     AND (p_q IS NULL OR c.supplier_name ILIKE '%' || p_q || '%')
-  GROUP BY COALESCE(NULLIF(c.supplier_abn, ''), m.abn, root.abn, entity_name_key(c.supplier_name))
+  GROUP BY COALESCE(NULLIF(c.supplier_abn, ''), m.abn, root.abn, n.nk)
   ORDER BY
     CASE WHEN p_sort = 'contracts' THEN count(*) END DESC NULLS LAST,
     CASE WHEN p_sort = 'buyers' THEN count(DISTINCT c.buyer_name) END DESC NULLS LAST,
@@ -188,20 +175,14 @@ CREATE OR REPLACE FUNCTION contract_supplier_detail(p_key text, p_from_year int 
 RETURNS jsonb
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
-  WITH name_abn AS (
-    SELECT entity_name_key(supplier_name) AS n, min(NULLIF(supplier_abn, '')) AS abn
-    FROM austender_contracts
-    WHERE NULLIF(supplier_abn, '') IS NOT NULL
-      AND contract_start >= make_date(2000, 1, 1) AND contract_start < make_date(2031, 1, 1)
-    GROUP BY 1
-    HAVING count(DISTINCT NULLIF(supplier_abn, '')) = 1
-  ), rows AS (
+  WITH rows AS (
     SELECT c.title, c.buyer_name, c.contract_value, c.contract_start, c.contract_end, c.supplier_name, c.supplier_abn
     FROM austender_contracts c
-    LEFT JOIN name_abn m ON m.n = entity_name_key(c.supplier_name)
-    LEFT JOIN name_abn root ON entity_name_key(c.supplier_name) LIKE '% pty ltd'
-          AND root.n = regexp_replace(entity_name_key(c.supplier_name), ' pty ltd$', '')
-    WHERE COALESCE(NULLIF(c.supplier_abn, ''), m.abn, root.abn, entity_name_key(c.supplier_name)) = p_key
+    JOIN supplier_name_keys n ON n.supplier_name = c.supplier_name
+    LEFT JOIN donor_key_abn m ON m.n = n.nk
+    LEFT JOIN donor_key_abn root ON n.nk LIKE '% pty ltd'
+          AND root.n = regexp_replace(n.nk, ' pty ltd$', '')
+    WHERE COALESCE(NULLIF(c.supplier_abn, ''), m.abn, root.abn, n.nk) = p_key
       AND c.contract_start >= make_date(GREATEST(COALESCE(p_from_year, 2020), 2000), 1, 1)
       AND c.contract_start < make_date(2031, 1, 1)
   )
