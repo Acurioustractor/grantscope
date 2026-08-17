@@ -54,7 +54,17 @@ annual reports: snow, myer, gandel, tfff, minderoo; curated lists). The machiner
 scripts/extract-foundation-grantees-pdf.mjs + scrape-ian-potter-grants.mjs. **The scale lane
 = run that pipeline foundation-by-foundation, queued by ACNC granted-dollars descending
 (browse list, sort Granted, zero grantee links = the queue). External scraping = day-shift.**
-OPEN LANES: grantee-link ingest runs (above) · /ops/health query repair · catalogue
+FIRST INGEST RUN LANDED 2026-08-17: Susan McKinnon group (SMF + SMCF + Oh-Rule/SMRC) from their
+own published Consolidated Program Expenditure Report 2025 — 24 edges, ~$12.7M, 23/26 grantees
+ABN-resolved (3 held out: It's Philanthropy, Orchestra Victoria, SAWA-Australia; WELA match
+medium-confidence, flagged inline). Migration 2026-08-17-mckinnon-grantees-ingest.sql, reversible
+by dataset key. MV refreshed: 27→30 foundations with grantee links. RECON NOTES for the queue:
+GBRF's financial-report PDF names no grantees (grantees live on per-project web pages — crawl
+job); Judith Neilson publishes NO grants list (the opacity finding, cite-able). Pipeline gotcha:
+scripts/extract-foundation-grantees-pdf.mjs's direct Anthropic API call is ECONNREFUSED from the
+sandbox — extract in-session instead (the PDF download + pdftotext halves work fine).
+OPEN LANES: continue ingest runs down the ACNC-granted queue (Telethon Trust, Stan Perron, RCH
+Foundation, Peter Mac each likely publish beneficiary lists) · /ops/health query repair · catalogue
 retire-or-keep · power-dynamics-live branch parked (rebased, awaiting Ben) · 475 unfiled round 2.
 
 ### Phase 2 directive (Ben, 2026-08-17)

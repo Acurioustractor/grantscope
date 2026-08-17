@@ -33,6 +33,17 @@ function log(msg) { console.log(`[${new Date().toISOString()}] ${msg}`); }
 // ─── Foundation Configs ──────────────────────────────────────────────────────
 
 const FOUNDATIONS = {
+  gbrf: {
+    name: 'Great Barrier Reef Foundation',
+    abn: '82090616443',
+    pdfs: [
+      {
+        url: 'https://www.barrierreef.org/uploads/23-GBRF-Annual-Report-Signed-.pdf',
+        year: 2023,
+        label: 'GBRF Annual Report FY23 (signed)',
+      },
+    ],
+  },
   myer: {
     name: 'The Myer Foundation',
     abn: '46100632395',
