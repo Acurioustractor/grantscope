@@ -52,3 +52,40 @@ export async function PATCH(request: Request) {
   if (!data?.length) return NextResponse.json({ error: 'no such object' }, { status: 404 });
   return NextResponse.json({ ok: true, value: norm.value });
 }
+
+/**
+ * GET /api/clarity/object?key=… — everything the index drawer needs in one call: the object,
+ * its edges (linked data), and its confirmed findings. Admin-gated like the PATCH; reads only.
+ */
+export async function GET(request: Request) {
+  const auth = await requireAdminApi();
+  if (auth.error) return auth.error;
+
+  const url = new URL(request.url);
+  const key = url.searchParams.get('key');
+  if (!key) return NextResponse.json({ error: 'key required' }, { status: 400 });
+
+  const supabase = getDirectServiceSupabase();
+  const [{ data: objs, error }, { data: edges }, { data: findings }] = await Promise.all([
+    supabase
+      .from('clarity_object')
+      .select(
+        'object_key,object_name,object_kind,domain,noun,purpose,caveat,grain,join_keys,row_count,row_count_is_estimate,bytes,last_write_at,freshness_probe,refs_app,refs_script,refs_migration,refs_db_function,owner_app,project_codes,act_business,curated_by,curated_at',
+      )
+      .eq('object_key', key)
+      .limit(1),
+    supabase
+      .from('clarity_edge')
+      .select('src_object,src_column,tgt_object,tgt_column,match_rate,declared')
+      .or(`src_object.eq.${key},tgt_object.eq.${key}`)
+      .limit(14),
+    supabase
+      .from('clarity_finding')
+      .select('detector,column_name,title,verdict')
+      .eq('subject_object_key', key)
+      .eq('verdict', 'confirmed'),
+  ]);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!objs?.length) return NextResponse.json({ error: 'no such object' }, { status: 404 });
+  return NextResponse.json({ object: objs[0], edges: edges ?? [], findings: findings ?? [] });
+}

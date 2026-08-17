@@ -58,7 +58,7 @@ export default function UnfiledClient({ initial, total }: { initial: UnfiledRow[
   return (
     <>
       <header className="border-4 border-bauhaus-black bg-bauhaus-white p-5">
-        <h1 className="font-mono text-2xl font-black">The unfiled</h1>
+        <h1 className="font-display text-[22px] font-extrabold">The unfiled</h1>
         <p className="mt-2 max-w-[75ch] text-[14px] leading-relaxed text-neutral-700">
           {rows.length.toLocaleString('en-AU')} of {total.toLocaleString('en-AU')} objects have no
           confirmed noun. Rules propose ({proposedCount} carry a highlighted guess from the name

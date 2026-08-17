@@ -78,7 +78,7 @@ export default function FindingsClient({ initial }: { initial: FindingRow[] }) {
     <>
       <header className="border-4 border-bauhaus-black bg-bauhaus-white p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <h1 className="font-mono text-2xl font-black">Findings</h1>
+          <h1 className="font-display text-[22px] font-extrabold">Findings</h1>
           <button
             onClick={runDetectors}
             className="border-2 border-bauhaus-black px-3 py-1 font-mono text-[11px] font-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-bauhaus-canvas"
@@ -112,7 +112,7 @@ export default function FindingsClient({ initial }: { initial: FindingRow[] }) {
       ).map(([bucket, label]) =>
         buckets[bucket].length === 0 ? null : (
           <section key={bucket} className="mt-4 border-4 border-bauhaus-black bg-bauhaus-white">
-            <h2 className="border-b-2 border-bauhaus-black px-4 py-2 font-mono text-[11px] font-black uppercase tracking-widest">
+            <h2 className="border-b-2 border-bauhaus-black px-4 py-2 font-display text-[14px] font-bold">
               {label} · {buckets[bucket].length}
             </h2>
             <ul>

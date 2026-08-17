@@ -4,6 +4,7 @@ import { pinnedViews } from '@/lib/view-registry';
 import { getDirectServiceSupabase } from '@/lib/supabase';
 import { createSupabaseServer, hasSupabaseServerEnv } from '@/lib/supabase-server';
 import { isAdminEmail } from '@/lib/admin';
+import { unstable_cache } from 'next/cache';
 import { ShellHeader } from './shell-header';
 import { RailNav } from './rail-nav';
 import type { DataEvent } from './shell-menus';
@@ -73,8 +74,28 @@ export interface ShellProps {
 }
 
 /** The softened-Bauhaus app shell: dark rail + header. DESIGN.md `.shell` theme, 2026-08-16. */
+/** The rail's row-count chip was hardcoded '52.3M' — chrome without a data source, and it rots.
+ *  Now summed daily from the catalogue's per-object row counts; absent on failure, never stale-guessed. */
+const graphRows = unstable_cache(
+  async () => {
+    try {
+      const supabase = getDirectServiceSupabase();
+      const { data } = await supabase.rpc('clarity_graph_row_total');
+      return typeof data === 'number' ? data : null;
+    } catch {
+      return null;
+    }
+  },
+  ['shell-graph-rows'],
+  { revalidate: 86400 },
+);
+
 export async function Shell({ title, children }: ShellProps) {
-  const [events, user] = await Promise.all([recentDataEvents(), currentUser()]);
+  const [events, user, totalRows] = await Promise.all([
+    recentDataEvents(),
+    currentUser(),
+    graphRows(),
+  ]);
 
   return (
     <div className="shell flex min-h-screen font-sans">
@@ -94,6 +115,24 @@ export async function Shell({ title, children }: ShellProps) {
         <div className="h-5" />
         <RailNav />
         <div className="h-6" />
+        <div className="px-2.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#7A7A7A]">
+          Browse
+        </div>
+        {[
+          ['/dashboard/browse/foundations', 'Foundations'],
+          ['/dashboard/browse/social-enterprises', 'Social enterprises'],
+          ['/dashboard/browse/charities', 'Charities'],
+        ].map(([href, label]) => (
+          <Link
+            key={href}
+            href={href}
+            className="flex items-center px-2.5 py-1.5 text-[13px]"
+            style={{ borderRadius: 'var(--shell-r-sm)', color: 'var(--shell-rail-text)' }}
+          >
+            {label}
+          </Link>
+        ))}
+        <div className="h-4" />
         <div className="px-2.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#7A7A7A]">
           Saved views
         </div>
@@ -123,7 +162,9 @@ export async function Shell({ title, children }: ShellProps) {
           }}
         >
           <Database size={15} weight="bold" />
-          <span className="font-mono text-[11.5px]">52.3M rows on the graph</span>
+          <span className="font-mono text-[11.5px]">
+            {totalRows ? `${(totalRows / 1e6).toFixed(1)}M rows on the graph` : 'The engine room'}
+          </span>
         </Link>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">

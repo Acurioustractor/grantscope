@@ -97,3 +97,29 @@ consent_given + expiry gate. The API brief route and the PDF reuse the same serv
   reads of the PUBLISHED-status stories table (its own gate). Spot-checked, none render
   consent-governed rows.
 - `photos` on /goods-on-country: Goods' own photo assets, not storyteller photos.
+
+
+## Admin one-language sweep (2026-08-17, Ben's ruling: all soft shell, worst-first)
+
+Census: 10 dashboard routes spoke shell; ~20 admin routes were hard Bauhaus inside the shell;
+the old ledger suite was a third, DARK language. Repairs, all structural:
+
+1. **Bauhaus bridge** (merged as its own PR): border/radius/canvas vocabulary reads soft inside
+   `.shell`. Converted ~15 routes at once.
+2. **Dark suite token flip**: `.shell .clarity-dark` re-reads the dark tokens light — catalogue,
+   seams, cross-sections, want list, what-changed all converted by one rule. Verified on seams.
+3. **Typography pass** over 9 clarity surfaces: page titles and section headers to display type;
+   chips/micro-labels stay mono uppercase (the dashboard's own accent grammar).
+4. **Hard offset shadows** soften via bridge (search box was the tell).
+5. **Rows chip de-hardcoded**: '52.3M' had rotted (truth 51.9M); now an RPC summed daily.
+
+Verified unified by eye: clarity index, object page, seams (ex-dark), findings, search, ops/health.
+Trackers self-gate to /login when signed out (correct; eyeball them signed in).
+
+### Found by the sweep, needs its own fix
+- **/ops/health data is rotted**: Total grants 0, Foundations 0, Community orgs 0, 'entity graph:
+  empty', denominators of zero, health score 26. The page is style-unified but its queries are
+  measuring a schema that has moved. Repair is a data job, not a style job.
+- **/clarity/catalogue vs the new index**: the demoted dark ledger now duplicates most of the
+  index's job (search, facets). DECISION FOR BEN: retire it, or keep as the power-user deep table.
+- /alerts unverified signed-in (self-gated).

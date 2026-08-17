@@ -141,7 +141,7 @@ export default async function SurfacesPage() {
   return (
     <main className="mx-auto max-w-[1180px] px-4 py-8">
       <header className="border-4 border-bauhaus-black bg-bauhaus-white p-5">
-        <h1 className="font-mono text-2xl font-black">Surfaces</h1>
+        <h1 className="font-display text-[22px] font-extrabold">Surfaces</h1>
         <p className="mt-2 max-w-[78ch] text-[14px] leading-relaxed text-neutral-700">
           What data feeds which user experience — measured from the scanner&rsquo;s code
           references, joined to each object&rsquo;s noun and consent floor.{' '}
@@ -155,7 +155,7 @@ export default async function SurfacesPage() {
 
       {reviewList.length > 0 ? (
         <section className="mt-4 border-4 border-bauhaus-red bg-bauhaus-white">
-          <h2 className="border-b-2 border-bauhaus-red px-4 py-2 font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
+          <h2 className="border-b-2 border-bauhaus-red px-4 py-2 font-display text-[14px] font-bold text-bauhaus-red">
             Review — consent-governed objects mentioned by public-family code · {reviewList.length} surfaces
           </h2>
           <p className="border-b border-neutral-200 px-4 py-2 text-[13px] text-neutral-600">
@@ -194,7 +194,7 @@ export default async function SurfacesPage() {
 
       {(['shell', 'public'] as const).map((family) => (
         <section key={family} className="mt-4 border-4 border-bauhaus-black bg-bauhaus-white">
-          <h2 className="border-b-2 border-bauhaus-black px-4 py-2 font-mono text-[11px] font-black uppercase tracking-widest">
+          <h2 className="border-b-2 border-bauhaus-black px-4 py-2 font-display text-[14px] font-bold">
             {family === 'shell' ? 'App shell surfaces' : 'Public atlas surfaces'} ·{' '}
             {rows.filter(([, v]) => v.family === family).length}
           </h2>

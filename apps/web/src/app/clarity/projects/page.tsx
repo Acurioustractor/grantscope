@@ -136,7 +136,7 @@ export default async function ProjectsPage() {
   return (
     <main className="mx-auto max-w-[1180px] px-4 py-8">
       <header className="border-4 border-bauhaus-black bg-bauhaus-white p-5">
-        <h1 className="font-mono text-2xl font-black">Projects</h1>
+        <h1 className="font-display text-[22px] font-extrabold">Projects</h1>
         {error ? (
           <p className="mt-2 font-mono text-[13px] text-bauhaus-red">Failed to load: {error}</p>
         ) : (
@@ -167,7 +167,7 @@ export default async function ProjectsPage() {
 
       {withEvidence.length > 0 ? (
         <section className="mt-4 border-4 border-bauhaus-black bg-bauhaus-white">
-          <h2 className="border-b-2 border-bauhaus-black px-4 py-2 font-mono text-[11px] font-black uppercase tracking-widest">
+          <h2 className="border-b-2 border-bauhaus-black px-4 py-2 font-display text-[14px] font-bold">
             Evidenced · {withEvidence.length}
           </h2>
           <ul>
@@ -206,7 +206,7 @@ export default async function ProjectsPage() {
 
       {gapAlive.length > 0 ? (
         <section className="mt-4 border-4 border-bauhaus-red bg-bauhaus-white">
-          <h2 className="border-b-2 border-bauhaus-red px-4 py-2 font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
+          <h2 className="border-b-2 border-bauhaus-red px-4 py-2 font-display text-[14px] font-bold text-bauhaus-red">
             Declaration gap — living codebase, no declared evidence · {gapAlive.length}
           </h2>
           <p className="border-b border-neutral-200 px-4 py-2 text-[13px] text-neutral-600">
@@ -236,7 +236,7 @@ export default async function ProjectsPage() {
 
       {zeroRest.length > 0 ? (
         <section className="mt-4 border-4 border-bauhaus-black bg-bauhaus-white">
-          <h2 className="border-b-2 border-bauhaus-black px-4 py-2 font-mono text-[11px] font-black uppercase tracking-widest">
+          <h2 className="border-b-2 border-bauhaus-black px-4 py-2 font-display text-[14px] font-bold">
             Zero evidence · {zeroRest.length} · no recent codebase activity known
           </h2>
           <ul className="grid gap-x-6 gap-y-1 p-4 sm:grid-cols-2 lg:grid-cols-3">

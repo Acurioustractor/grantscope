@@ -74,7 +74,7 @@ export default function OwnersClient({ initial }: { initial: OwnerRow[] }) {
   return (
     <>
       <header className="border-4 border-bauhaus-black bg-bauhaus-white p-5">
-        <h1 className="font-mono text-2xl font-black">Owners</h1>
+        <h1 className="font-display text-[22px] font-extrabold">Owners</h1>
         <p className="mt-2 max-w-[75ch] text-[14px] leading-relaxed text-neutral-700">
           Which product owns each object. The proposal is measured — which repos&rsquo; app and
           script code reference it (migrations deliberately excluded: custody of the shared schema
@@ -127,7 +127,7 @@ export default function OwnersClient({ initial }: { initial: OwnerRow[] }) {
 
       {groups.noEvidence.length > 0 ? (
         <section className="mt-4 border-4 border-bauhaus-black bg-bauhaus-white">
-          <h2 className="border-b-2 border-bauhaus-black px-4 py-2 font-mono text-[11px] font-black uppercase tracking-widest">
+          <h2 className="border-b-2 border-bauhaus-black px-4 py-2 font-display text-[14px] font-bold">
             No reference evidence · {groups.noEvidence.length} · stays Neither
           </h2>
           <p className="px-4 py-2 text-[13px] text-neutral-600">

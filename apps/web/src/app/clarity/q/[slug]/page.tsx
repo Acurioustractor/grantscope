@@ -94,7 +94,7 @@ async function load(
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="border-4 border-bauhaus-black bg-bauhaus-white">
-      <h2 className="border-b-2 border-bauhaus-black px-4 py-2 font-mono text-[11px] font-black uppercase tracking-widest">
+      <h2 className="border-b-2 border-bauhaus-black px-4 py-2 font-display text-[14px] font-bold">
         {title}
       </h2>
       <div className="p-4">{children}</div>
@@ -188,7 +188,7 @@ export default async function WorkedAnswerPage({ params }: { params: Promise<{ s
                * directly under why we will not show this.
                */
               <section className="border-4 border-bauhaus-red bg-bauhaus-white">
-                <h2 className="border-b-2 border-bauhaus-red bg-bauhaus-red px-4 py-2 font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-canvas">
+                <h2 className="border-b-2 border-bauhaus-red bg-bauhaus-red px-4 py-2 font-display text-[14px] font-bold text-bauhaus-canvas">
                   This view refuses to render
                 </h2>
                 <div className="space-y-4 p-5">
@@ -196,7 +196,7 @@ export default async function WorkedAnswerPage({ params }: { params: Promise<{ s
                     {card.refuses_when}
                   </p>
                   <div>
-                    <h3 className="font-mono text-[11px] font-black uppercase tracking-widest text-bauhaus-black">
+                    <h3 className="font-display text-[14px] font-bold text-bauhaus-black">
                       What we can honestly show instead
                     </h3>
                     <ul className="mt-2 space-y-1.5 text-sm text-bauhaus-black">

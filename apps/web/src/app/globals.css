@@ -179,6 +179,24 @@ h1, h2, h3, h4 {
 .shell .bg-bauhaus-white {
   background-color: var(--shell-surface);
 }
+/* Hard offset shadows are the strongest Bauhaus tell; inside the shell they become a soft lift. */
+.shell [class*='rgba(0,0,0,1)]'] {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+/* The old dark ledger suite (catalogue, seams, cross-sections, want list, what-changed) is
+   token-based, so inside the shell its tokens simply read light. Same page, one language.
+   Yellow darkens because warning text on white needs contrast the dark theme never did. */
+.shell .clarity-dark {
+  --cd-bg: var(--shell-canvas);
+  --cd-surface: var(--shell-surface);
+  --cd-surface-2: #ECECEA;
+  --cd-border: var(--shell-line);
+  --cd-text: var(--shell-ink);
+  --cd-muted: var(--shell-muted);
+  --cd-red: #D02020;
+  --cd-blue: #1040C0;
+  --cd-yellow: #8A6A00;
+}
 
 /* ── Workspace theme (editorial style for operational tools) ── */
 .ws {
