@@ -1,82 +1,83 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { unstable_cache } from 'next/cache';
 import { getDirectServiceSupabase } from '@/lib/supabase';
+import PlaceBrowser, { type PlaceRow } from './PlaceBrowser';
 
+export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Places — CivicGraph' };
 
-function money(n: number): string {
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}bn`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}m`;
-  return `$${Math.round(n / 1e3)}k`;
-}
-
-const load = unstable_cache(
+const stats = unstable_cache(
   async () => {
     const supabase = getDirectServiceSupabase();
-    const { data, error } = await supabase
-      .from('mv_funding_by_postcode')
-      .select('postcode,state,remoteness,entity_count,total_funding')
-      .order('total_funding', { ascending: false })
-      .limit(15);
-    if (error) throw new Error(error.message);
-    return data ?? [];
+    const { data } = await supabase.rpc('place_browse_stats');
+    return data as { lgas: number; entities_placed: number; unplaced_with_postcode: number; no_postcode: number } | null;
   },
-  ['dash-places'],
+  ['place-browse-stats'],
   { revalidate: 3600 },
 );
 
-/** Shell-native Places index. The Atlas (public) stays the deep place experience. */
-export default async function PlacesIndexPage() {
-  let rows: Awaited<ReturnType<typeof load>> = [];
+/** Places browser at LGA (council area) grain, with placement provenance in the drawer. */
+export default async function PlacesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const q = typeof sp.q === 'string' ? sp.q.trim() : '';
+  const state = typeof sp.state === 'string' ? sp.state : '';
+  const sort = typeof sp.sort === 'string' && sp.sort ? sp.sort : 'funding';
+
+  const supabase = getDirectServiceSupabase();
+  let rows: PlaceRow[] = [];
+  let statsLine = '';
   let why: string | null = null;
   try {
-    rows = await load();
+    const [{ data, error }, s] = await Promise.all([
+      supabase.rpc('place_browse', { p_q: q || null, p_state: state || null, p_sort: sort, p_limit: 200 }),
+      stats(),
+    ]);
+    if (error) throw new Error(error.message);
+    rows = ((data ?? []) as {
+      lga_name: string;
+      state: string;
+      entity_count: number;
+      community_controlled_count: number;
+      total_funding: number | null;
+      avg_seifa_decile: number | null;
+      remoteness: string | null;
+      desert_score: number | null;
+    }[]).map((r) => ({
+      key: `${r.lga_name}|${r.state}`,
+      lga: r.lga_name,
+      state: r.state,
+      entities: r.entity_count,
+      acco: r.community_controlled_count,
+      funding: r.total_funding,
+      seifa: r.avg_seifa_decile,
+      remoteness: r.remoteness,
+      desert: r.desert_score,
+    }));
+    if (s) {
+      statsLine = `${s.lgas.toLocaleString('en-AU')} council areas · ${s.entities_placed.toLocaleString('en-AU')} organisations placed · ${s.unplaced_with_postcode.toLocaleString('en-AU')} deliberately unplaced with a reason code · ${s.no_postcode.toLocaleString('en-AU')} with no postcode on record`;
+    }
   } catch (e) {
     why = e instanceof Error ? e.message : String(e);
   }
 
   return (
-    <div className="mx-auto max-w-[1100px] px-6 py-6">
+    <div className="mx-auto max-w-[1180px] px-6 py-6">
       <h1 className="font-display text-[22px] font-extrabold">Places</h1>
-      <p className="mt-1 text-[13.5px]" style={{ color: 'var(--shell-muted)' }}>
-        Where the money lands, by postcode. Place pages and the full Atlas open on the public site.
-      </p>
       {why ? (
-        <p className="mt-4 text-[13px]" style={{ color: '#D02020' }}>
-          Funding by postcode could not be read: {why}
-        </p>
+        <p className="mt-4 text-[13px]" style={{ color: '#D02020' }}>The list could not be read: {why}</p>
       ) : (
-        <div
-          className="mt-5 bg-white p-4"
-          style={{ borderRadius: 'var(--shell-r)', border: '1px solid var(--shell-line)' }}
-        >
-          <h2 className="font-display text-[14px] font-bold">
-            Highest-funded postcodes
-            <Link href="/atlas" className="ml-3 text-[12px] font-semibold hover:underline" style={{ color: '#1040C0' }}>
-              open the Atlas →
-            </Link>
-          </h2>
-          {rows.map((r, i) => (
-            <div
-              key={`${r.postcode}-${i}`}
-              className="flex items-baseline gap-3 py-2"
-              style={{ borderTop: i === 0 ? undefined : '1px solid var(--shell-line)' }}
-            >
-              <Link
-                href={`/places/${r.postcode}`}
-                className="shrink-0 font-mono text-[13.5px] font-semibold hover:underline"
-                style={{ color: '#1040C0' }}
-              >
-                {r.postcode}
-              </Link>
-              <span className="min-w-0 flex-1 truncate text-[12.5px]" style={{ color: 'var(--shell-muted)' }}>
-                {r.state ?? '—'} · {r.remoteness ?? 'remoteness unknown'} · {r.entity_count ?? 0} organisations
-              </span>
-              <span className="shrink-0 font-mono text-[13px]">{money(Number(r.total_funding ?? 0))}</span>
-            </div>
-          ))}
-        </div>
+        <PlaceBrowser
+          rows={rows}
+          q={q}
+          state={state}
+          sort={sort}
+          statsLine={statsLine}
+          caveat="Funding attaches to an organisation's address, so head-office council areas collect their branches' figures. SEIFA decile 1 = most disadvantaged. Desert score compares disadvantage with money reaching the area."
+        />
       )}
     </div>
   );

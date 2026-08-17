@@ -3,102 +3,124 @@ import Link from 'next/link';
 import { unstable_cache } from 'next/cache';
 import { getDirectServiceSupabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Entities — CivicGraph' };
 
-function money(n: number): string {
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}bn`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}m`;
-  return `$${Math.round(n / 1e3)}k`;
-}
+/**
+ * Entities is the union of the other kinds, so this page is a search and jump-off, not another
+ * browser: find any organisation on the graph, then land in the kind browser or atlas page
+ * that actually holds its story.
+ */
 
-const load = unstable_cache(
+const KINDS: { href: string; label: string; blurb: string }[] = [
+  { href: '/dashboard/browse/foundations', label: 'Foundations', blurb: 'who gives, and to whom' },
+  { href: '/dashboard/browse/social-enterprises', label: 'Social enterprises', blurb: 'the register and what we know' },
+  { href: '/dashboard/browse/charities', label: 'Charities', blurb: 'ACNC register with six years of returns' },
+  { href: '/dashboard/browse/grants', label: 'Grant recipients', blurb: 'who receives justice-system grants' },
+  { href: '/dashboard/browse/contracts', label: 'Contract suppliers', blurb: 'who wins Commonwealth contracts' },
+  { href: '/dashboard/browse/buyers', label: 'Government buyers', blurb: 'which agencies let them' },
+  { href: '/dashboard/browse/donations', label: 'Political donors', blurb: 'declared donations only' },
+  { href: '/dashboard/people', label: 'People', blurb: 'boards and the money past them' },
+  { href: '/dashboard/places', label: 'Places', blurb: 'council areas: money vs disadvantage' },
+];
+
+const countEntities = unstable_cache(
   async () => {
     const supabase = getDirectServiceSupabase();
-    const [{ count }, { data: top, error }] = await Promise.all([
-      supabase.from('gs_entities').select('id', { count: 'estimated', head: true }),
-      supabase
-        .from('mv_entity_power_index')
-        .select('gs_id,canonical_name,entity_type,system_count,total_dollar_flow,power_score')
-        .order('power_score', { ascending: false })
-        .limit(15),
-    ]);
-    if (error) throw new Error(error.message);
-    return { count: count ?? null, top: top ?? [] };
+    const { count } = await supabase.from('gs_entities').select('id', { count: 'estimated', head: true });
+    return count ?? null;
   },
-  ['dash-entities'],
-  { revalidate: 3600 },
+  ['dash-entities-count'],
+  { revalidate: 86400 },
 );
 
-/** Shell-native Entities index. Entity detail pages remain the public atlas for now. */
-export default async function EntitiesPage() {
-  let data: Awaited<ReturnType<typeof load>> | null = null;
+interface Hit {
+  gs_id: string;
+  canonical_name: string;
+  abn: string | null;
+  entity_type: string | null;
+  state: string | null;
+}
+
+export default async function EntitiesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const q = typeof sp.q === 'string' ? sp.q.trim() : '';
+
+  let hits: Hit[] = [];
   let why: string | null = null;
-  try {
-    data = await load();
-  } catch (e) {
-    why = e instanceof Error ? e.message : String(e);
+  const total = await countEntities().catch(() => null);
+  if (q.length >= 2) {
+    try {
+      const supabase = getDirectServiceSupabase();
+      const { data, error } = await supabase
+        .from('gs_entities')
+        .select('gs_id,canonical_name,abn,entity_type,state')
+        .ilike('canonical_name', `%${q}%`)
+        .limit(20);
+      if (error) throw new Error(error.message);
+      hits = (data ?? []) as Hit[];
+    } catch (e) {
+      why = e instanceof Error ? e.message : String(e);
+    }
   }
 
   return (
     <div className="mx-auto max-w-[1100px] px-6 py-6">
       <h1 className="font-display text-[22px] font-extrabold">Entities</h1>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {[
-          ['/dashboard/browse/foundations', 'Foundations'],
-          ['/dashboard/browse/social-enterprises', 'Social enterprises'],
-          ['/dashboard/browse/charities', 'Charities'],
-        ].map(([href, label]) => (
+      <p className="mt-1 text-[13.5px]" style={{ color: 'var(--shell-muted)' }}>
+        {total ? `${total.toLocaleString('en-AU')} organisations on the graph. ` : ''}
+        Search anything, or start from a kind — each kind browser knows its own story.
+      </p>
+
+      <form className="mt-4" action="/dashboard/entities">
+        <input
+          name="q"
+          defaultValue={q}
+          placeholder="Search any organisation…"
+          className="w-full max-w-[420px] bg-white px-3 py-2 font-mono text-[13px] shell-control"
+        />
+      </form>
+
+      {why ? (
+        <p className="mt-4 text-[13px]" style={{ color: '#D02020' }}>The search could not run: {why}</p>
+      ) : q.length >= 2 ? (
+        hits.length === 0 ? (
+          <p className="mt-4 text-[13px]" style={{ color: 'var(--shell-muted)' }}>
+            Nothing on the graph matches &ldquo;{q}&rdquo; — try fewer words, or a different spelling.
+          </p>
+        ) : (
+          <div className="mt-4 shell-card">
+            {hits.map((h) => (
+              <div key={h.gs_id} className="flex items-baseline gap-3 px-4 py-2" style={{ borderBottom: '1px solid var(--shell-line)' }}>
+                <Link href={`/entity/${h.gs_id}`} className="min-w-0 flex-1 truncate text-[13.5px] font-semibold hover:underline" style={{ color: '#1040C0' }}>
+                  {h.canonical_name}
+                </Link>
+                <span className="shrink-0 font-mono text-[11px]" style={{ color: 'var(--shell-muted)' }}>
+                  {[h.entity_type, h.state, h.abn ? `ABN ${h.abn}` : null].filter(Boolean).join(' · ')}
+                </span>
+              </div>
+            ))}
+          </div>
+        )
+      ) : null}
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {KINDS.map((k) => (
           <Link
-            key={href}
-            href={href}
-            className="bg-white px-3 py-1.5 text-[13px] font-semibold shell-control hover:underline"
-            style={{ color: '#1040C0' }}
+            key={k.href}
+            href={k.href}
+            className="block bg-white p-4"
+            style={{ borderRadius: 'var(--shell-r)', border: '1px solid var(--shell-line)' }}
           >
-            {label} →
+            <div className="font-display text-[15px] font-bold">{k.label}</div>
+            <p className="mt-1 text-[12.5px]" style={{ color: 'var(--shell-muted)' }}>{k.blurb}</p>
           </Link>
         ))}
       </div>
-      <p className="mt-1 text-[13.5px]" style={{ color: 'var(--shell-muted)' }}>
-        {data?.count ? `~${data.count.toLocaleString('en-AU')} organisations and people on the graph. ` : ''}
-        Search with ⌘K, or start from the most cross-system-present entities below. Entity pages
-        open on the public atlas.
-      </p>
-      {why ? (
-        <p className="mt-4 text-[13px]" style={{ color: '#D02020' }}>
-          The power index could not be read: {why}
-        </p>
-      ) : (
-        <div
-          className="mt-5 bg-white p-4"
-          style={{ borderRadius: 'var(--shell-r)', border: '1px solid var(--shell-line)' }}
-        >
-          <h2 className="font-display text-[14px] font-bold">
-            Most present across systems
-            <span className="ml-2 font-mono text-[10px] font-normal uppercase" style={{ color: 'var(--shell-muted)' }}>
-              power index · grants filtered clean
-            </span>
-          </h2>
-          {(data?.top ?? []).map((e, i) => (
-            <div
-              key={e.gs_id ?? i}
-              className="flex items-baseline gap-3 py-2"
-              style={{ borderTop: i === 0 ? undefined : '1px solid var(--shell-line)' }}
-            >
-              <Link
-                href={`/entity/${e.gs_id}`}
-                className="min-w-0 flex-1 truncate text-[13.5px] font-semibold hover:underline"
-                style={{ color: '#1040C0' }}
-              >
-                {e.canonical_name}
-              </Link>
-              <span className="shrink-0 text-[11.5px]" style={{ color: 'var(--shell-muted)' }}>
-                {e.entity_type ?? '—'} · {e.system_count} systems
-              </span>
-              <span className="shrink-0 font-mono text-[13px]">{money(Number(e.total_dollar_flow ?? 0))}</span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
