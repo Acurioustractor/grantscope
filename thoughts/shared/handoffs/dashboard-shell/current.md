@@ -9,30 +9,28 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-17T03:00:00Z
-**Goal:** CivicGraph as one legible system: soft-shell admin at 100%, plain language everywhere, Browse (list → thing → links) for every kind, and the enrichment loop (find → resolve → ingest → show) running.
-**Branch:** `main` (everything pushed through `8b9809ec`). Merged this arc: #226–#243 + direct-to-main data commits.
-**Test:** `cd apps/web && npx tsc --noEmit` · `npx vitest run` (726 pass) · dev server 3013 (restart: `cd apps/web && npx next dev --turbopack -p 3013`; it DIED once this session)
+**Updated:** 2026-08-17T09:00:00Z
+**Goal:** CivicGraph as one legible system: one shell over ALL data — every populated kind has a rich, honest Browse surface; enrichment loop (find → resolve → ingest → show) running.
+**Branch:** `main` through `f7837258`. Merged this arc: #252 (shell sweep + /ops/health fix), #253 (browsers for people/places/grants/contracts/buyers/donors + entities jump-off), #254 (review follow-ups). Spec: `thoughts/shared/plans/one-shell-all-data.md`; issues #244–#251 all closed.
+**Test:** `cd apps/web && npx tsc --noEmit` · `npx vitest run` (726 pass) · dev 3013
 
 ### Now
-[->] Fresh session: continue the grantee-ingest queue (Telethon Trust, Stan Perron, RCH Foundation, Peter Mac — each likely publishes beneficiary lists; pattern proven on McKinnon: their own documents → dry ABN resolution → flagged confidence → reversible dataset key), or whichever lane Ben picks below.
+[->] Grantee-ingest queue, Telethon Trust first (day-shift, Ben-in-loop; pattern proven on McKinnon: their own documents → dry ABN resolution → flagged confidence → reversible dataset key).
 
-### This Session (2026-08-16→17, the whole arc)
-- [x] Clarity console COMPLETE (slices 0–10): row viewer + consent census, code scanner (3 repos), findings stream, nouns, inline edit (caught 2 shipped bugs via real HTTP), owner_app, project codes (wiki-declared), story↔project links (Ben's 3 rulings), surfaces (data→surface contract)
-- [x] All 1,486 catalogue objects described in plain language (96 by hand+rule, 578 by agents reading real definitions); /dashboard/guide "What this is"; writing rule embedded in curated-fields.ts
-- [x] Admin at 100% (#243): Bauhaus bridge + dark-suite token flip + type pass; overview drawer; consequence layer ("How the system is doing, screen by screen" + needs-attention with influences); Browse rail (Foundations/SEs/Charities) with RPC lists, known-ness dots, filters/sorts, drawers w/ 6yr ACNC financials
-- [x] Person-trio money filters + de-collide (last SEVERE); proven_suppliers grant revoked; consent gate on public place pages (status='published' NEVER EXISTED; fallback rendered every transcript — fixed with quote_sharing_consent basis)
-- [x] Power-dynamics page rebuilt live-only — **PARKED on branch `power-dynamics-live` (rebased, tsc-clean), Ben verb to ship**
-- [x] Grantee lane: 6,672 offer-self-loops retyped (971-foundations illusion → honest 27); McKinnon ingest from their own register (24 edges $12.7M, 27→30 foundations linked)
-- [x] Adjudications (Ben-delegated): 839 owners, ~1,011 nouns (+66 corrections; 475 remain, no proposals), findings 144 confirmed/119 dismissed
+### This Session (2026-08-17, "One shell, all data" phase)
+- [x] Grilled → spec → issues #244–#251 → built → reviewed → merged, all in one day
+- [x] S1 (#252): /ops/* + /admin/api-usage wrapped in shell (Ops rail group, admin-only); /ops/health ZEROS FIXED — unfiltered pg_class scan lost app tables to the PostgREST 1,000-row cap; now targeted 21-table query, real numbers verified; Views index page
+- [x] S2–S8 (#253): browsers for People (attributed _v2 money, exclusions stated on screen), Places (LGA grain, lga_source provenance drawer; deserts DOLLARS suppressed — non-unique grain summed Brisbane to $2.5tn), Grants ($33.96bn matches canonical basis, filters in RPC SQL), Contracts+Buyers (shared component, since-year floor doubles as junk-date hygiene, hourly cache for ~3s rollups), Donors ('donation received' only, excluded billions named), Entities → search+jump-off. 7 migrations applied w/ GRANTs (Ben blanket-authorized read-only browse RPCs)
+- [x] Two-axis code review + follow-ups (#254): browse-ui.tsx shared scaffolding (money/L/makeQs/useDrawer/Drawer), GIN trigram index on gs_entities.canonical_name, Views index lists kind browsers (registry stays question-shaped — ruling recorded in page docstring)
+- [x] power-dynamics-live: ledger claim was STALE — work already byte-identical in main; stale local branch left in place
+- [x] Local main had an unpushed spec commit that diverged after squash merges — rebase dropped it as already-upstream (watch for this after every squash-merge cycle)
 
 ### Next
-- [ ] Grantee-ingest queue (day-shift, Ben-in-loop per batch): Telethon, Stan Perron, RCH Fdn, Peter Mac; GBRF = project-page crawl; Judith Neilson publishes NOTHING (cite as the opacity example)
-- [ ] Ship `power-dynamics-live` (Ben verb)
-- [ ] /ops/health query repair (data rotted: zeros everywhere, health score 26)
+- [ ] **Vercel prod eyeball of the whole shell (Ben; phase exit — only localhost-verified)**
+- [ ] Grantee-ingest queue: Telethon, Stan Perron, RCH Fdn, Peter Mac; GBRF = project-page crawl; Judith Neilson publishes NOTHING (cite as the opacity example)
 - [ ] Catalogue retire-or-keep (Ben call); docs-in-rail IA (Ben call); F5 chart-as-shares + F7 clarity chips (taste)
 - [ ] 475 unfiled round 2 (widened heuristics then bulk-adjudicate)
-- [ ] Vercel prod eyeball of the whole shell (localhost-verified only)
+- [ ] Name-grain dupes: grants/donors browse group by name where ABN missing — same org under two spellings appears twice (stated in UI caveats; entity-resolution lane)
 
 ### Key traps (this arc, will bite again)
 - Missing service_role GRANT = PostgREST silently empty (FIVE instances; check relacl FIRST on any new view/MV read)
