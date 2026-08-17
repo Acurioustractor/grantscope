@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
+import { money, L, makeQs, useDrawer, Drawer } from '../browse-ui';
 
 /**
  * Grants browser: recipients of justice_funding as entity-shaped rollups, the individual grants
@@ -28,13 +28,6 @@ interface RecipientDetail {
   grants: { program: string | null; year: string | null; amount: number | null; state: string | null; topics: string[] | null }[];
 }
 
-function money(n: number | null | undefined): string {
-  if (!n || n <= 0) return '—';
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}bn`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}m`;
-  return `$${Math.round(n / 1e3)}k`;
-}
-
 const SORTS: [string, string][] = [
   ['total', 'Total $'],
   ['grants', 'Grant count'],
@@ -42,14 +35,6 @@ const SORTS: [string, string][] = [
 ];
 const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT', 'FED'];
 const TOPICS = ['child-protection', 'family-services', 'youth-justice', 'indigenous', 'community-led', 'diversion'];
-
-function L({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mt-4 mb-1 font-mono text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--shell-muted)' }}>
-      {children}
-    </div>
-  );
-}
 
 export default function GrantBrowser({
   rows,
@@ -68,29 +53,10 @@ export default function GrantBrowser({
   statsLine: string;
   caveat: string;
 }) {
-  const [openKey, setOpenKey] = useState<string | null>(null);
-  const [detail, setDetail] = useState<RecipientDetail | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-
-  function open(key: string) {
-    setOpenKey(key);
-    setDetail(null);
-    setErr(null);
-    fetch(`/api/browse/grant-recipient?key=${encodeURIComponent(key)}`)
-      .then(async (r) => {
-        if (!r.ok) throw new Error((await r.json())?.error ?? `HTTP ${r.status}`);
-        return r.json() as Promise<RecipientDetail>;
-      })
-      .then(setDetail)
-      .catch((e) => setErr(e instanceof Error ? e.message : String(e)));
-  }
-
-  const qs = (over: Record<string, string>) => {
-    const p = new URLSearchParams();
-    for (const [k, v] of Object.entries({ q, state, topic, sort, ...over })) if (v) p.set(k, v);
-    const s = p.toString();
-    return `/dashboard/browse/grants${s ? `?${s}` : ''}`;
-  };
+  const drawer = useDrawer<RecipientDetail>();
+  const detail = drawer.detail;
+  const open = (key: string) => drawer.open(key, `/api/browse/grant-recipient?key=${encodeURIComponent(key)}`);
+  const qs = makeQs('/dashboard/browse/grants', { q, state, topic, sort });
 
   return (
     <>
@@ -155,13 +121,8 @@ export default function GrantBrowser({
         {caveat}
       </p>
 
-      {openKey ? (
-        <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-[460px] overflow-y-auto border-l bg-white p-5" style={{ borderColor: 'var(--shell-line)', boxShadow: '-8px 0 24px rgba(0,0,0,0.08)' }}>
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="font-display text-[17px] font-extrabold">{detail?.recipient_name ?? 'loading…'}</h2>
-            <button onClick={() => setOpenKey(null)} aria-label="close" className="shrink-0 px-2 py-0.5 font-mono text-[11px] font-black shell-control">✕</button>
-          </div>
-          {err ? <p className="mt-3 text-[13px]" style={{ color: '#D02020' }}>Could not load: {err}</p> : null}
+      {drawer.openKey ? (
+        <Drawer title={detail?.recipient_name ?? 'loading…'} err={drawer.err} onClose={drawer.close}>
           {detail ? (
             <>
               <p className="mt-1 text-[12.5px]" style={{ color: 'var(--shell-muted)' }}>
@@ -206,7 +167,7 @@ export default function GrantBrowser({
               ) : null}
             </>
           ) : null}
-        </aside>
+        </Drawer>
       ) : null}
     </>
   );

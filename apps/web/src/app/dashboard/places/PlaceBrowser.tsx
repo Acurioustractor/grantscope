@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
+import { money, L, makeQs, useDrawer, Drawer } from '../browse/browse-ui';
 
 /**
  * Places browser at LGA grain. The drawer's provenance block shows HOW each entity was placed
@@ -35,13 +35,6 @@ interface PlaceDetail {
   placement: Record<string, number>;
 }
 
-function money(n: number | null | undefined): string {
-  if (!n || n <= 0) return '—';
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}bn`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}m`;
-  return `$${Math.round(n / 1e3)}k`;
-}
-
 const SORTS: [string, string][] = [
   ['funding', 'Funding $'],
   ['desert', 'Desert score'],
@@ -66,14 +59,6 @@ const PLACEMENT_LABEL: Record<string, string> = {
   'acnc_street_line+sal_ratio_dominant': 'charity register street address',
 };
 
-function L({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mt-4 mb-1 font-mono text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--shell-muted)' }}>
-      {children}
-    </div>
-  );
-}
-
 export default function PlaceBrowser({
   rows,
   q,
@@ -89,29 +74,11 @@ export default function PlaceBrowser({
   statsLine: string;
   caveat: string;
 }) {
-  const [openKey, setOpenKey] = useState<string | null>(null);
-  const [detail, setDetail] = useState<PlaceDetail | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-
-  function open(row: PlaceRow) {
-    setOpenKey(row.key);
-    setDetail(null);
-    setErr(null);
-    fetch(`/api/browse/place?lga=${encodeURIComponent(row.lga)}&state=${encodeURIComponent(row.state)}`)
-      .then(async (r) => {
-        if (!r.ok) throw new Error((await r.json())?.error ?? `HTTP ${r.status}`);
-        return r.json() as Promise<PlaceDetail>;
-      })
-      .then(setDetail)
-      .catch((e) => setErr(e instanceof Error ? e.message : String(e)));
-  }
-
-  const qs = (over: Record<string, string>) => {
-    const p = new URLSearchParams();
-    for (const [k, v] of Object.entries({ q, state, sort, ...over })) if (v) p.set(k, v);
-    const s = p.toString();
-    return `/dashboard/places${s ? `?${s}` : ''}`;
-  };
+  const drawer = useDrawer<PlaceDetail>();
+  const detail = drawer.detail;
+  const open = (row: PlaceRow) =>
+    drawer.open(row.key, `/api/browse/place?lga=${encodeURIComponent(row.lga)}&state=${encodeURIComponent(row.state)}`);
+  const qs = makeQs('/dashboard/places', { q, state, sort });
 
   return (
     <>
@@ -172,13 +139,8 @@ export default function PlaceBrowser({
         {caveat}
       </p>
 
-      {openKey ? (
-        <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-[460px] overflow-y-auto border-l bg-white p-5" style={{ borderColor: 'var(--shell-line)', boxShadow: '-8px 0 24px rgba(0,0,0,0.08)' }}>
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="font-display text-[17px] font-extrabold">{detail ? `${detail.lga_name} (${detail.state})` : 'loading…'}</h2>
-            <button onClick={() => setOpenKey(null)} aria-label="close" className="shrink-0 px-2 py-0.5 font-mono text-[11px] font-black shell-control">✕</button>
-          </div>
-          {err ? <p className="mt-3 text-[13px]" style={{ color: '#D02020' }}>Could not load: {err}</p> : null}
+      {drawer.openKey ? (
+        <Drawer title={detail ? `${detail.lga_name} (${detail.state})` : 'loading…'} err={drawer.err} onClose={drawer.close}>
           {detail ? (
             <>
               <p className="mt-1 text-[12.5px]" style={{ color: 'var(--shell-muted)' }}>
@@ -245,7 +207,7 @@ export default function PlaceBrowser({
               ) : null}
             </>
           ) : null}
-        </aside>
+        </Drawer>
       ) : null}
     </>
   );

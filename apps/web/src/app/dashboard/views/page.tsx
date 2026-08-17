@@ -13,15 +13,30 @@ const VIEW_DOT: Record<string, string> = {
 };
 
 /**
- * The complete views index. The rail pins a curated few; this page lists every registered view,
- * so nothing in the registry is reachable only by knowing its URL.
+ * The complete index of ways to look at the graph: every curated view in the registry, then
+ * every kind browser. Nothing on either list is reachable only by knowing its URL. The registry
+ * stays scoped to question-shaped views; browsers are nouns, listed separately (ruling from the
+ * 2026-08-17 code-review pass).
  */
+const KIND_BROWSERS: { href: string; label: string; blurb: string }[] = [
+  { href: '/dashboard/browse/foundations', label: 'Foundations', blurb: 'who gives, and to whom' },
+  { href: '/dashboard/browse/social-enterprises', label: 'Social enterprises', blurb: 'the register and what we know' },
+  { href: '/dashboard/browse/charities', label: 'Charities', blurb: 'ACNC register with six years of returns' },
+  { href: '/dashboard/browse/grants', label: 'Grant recipients', blurb: 'who receives justice-system grants' },
+  { href: '/dashboard/browse/contracts', label: 'Contract suppliers', blurb: 'who wins Commonwealth contracts' },
+  { href: '/dashboard/browse/buyers', label: 'Government buyers', blurb: 'which agencies let them' },
+  { href: '/dashboard/browse/donations', label: 'Political donors', blurb: 'declared donations only' },
+  { href: '/dashboard/people', label: 'People', blurb: 'boards and the money past them' },
+  { href: '/dashboard/places', label: 'Places', blurb: 'council areas: money vs disadvantage' },
+];
+
 export default function ViewsIndexPage() {
   return (
     <div className="mx-auto max-w-[1100px] px-6 py-6">
       <h1 className="font-display text-[22px] font-extrabold">Views</h1>
       <p className="mt-1 text-[13.5px]" style={{ color: 'var(--shell-muted)' }}>
-        Every saved view on the graph. Pinned views also sit in the rail; the rest live only here.
+        Curated views answer one question each; kind browsers below let you walk a whole kind of
+        thing. Pinned views also sit in the rail.
       </p>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         {VIEW_REGISTRY.map((v) => (
@@ -54,6 +69,21 @@ export default function ViewsIndexPage() {
                 {v.caveat}
               </p>
             )}
+          </Link>
+        ))}
+      </div>
+
+      <h2 className="mt-8 font-display text-[16px] font-extrabold">Kind browsers</h2>
+      <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {KIND_BROWSERS.map((k) => (
+          <Link
+            key={k.href}
+            href={k.href}
+            className="block bg-white p-4"
+            style={{ borderRadius: 'var(--shell-r)', border: '1px solid var(--shell-line)' }}
+          >
+            <div className="font-display text-[14px] font-bold">{k.label}</div>
+            <p className="mt-1 text-[12.5px]" style={{ color: 'var(--shell-muted)' }}>{k.blurb}</p>
           </Link>
         ))}
       </div>
