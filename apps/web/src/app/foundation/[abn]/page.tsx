@@ -225,6 +225,10 @@ export default async function FoundationDetailPage({ params }: { params: Promise
 
   // Aggregate grantee stats
   const uniqueGrantees = new Set(grantees.map(g => g.grantee_abn || g.grantee_name)).size;
+  // Disclose rather than hide: a grantee link with no dollar figure is a real relationship the
+  // funder published, but counting it silently alongside funded ones overstates what we know.
+  // Policy: issues/285. A $0 row adds nothing to any total here — only to the count.
+  const granteesNoAmount = grantees.filter(g => !g.grant_amount).length;
   const ccGrantees = grantees.filter(g => g.grantee_community_controlled).length;
   const stateDistribution = new Map<string, number>();
   for (const g of grantees) {
@@ -378,7 +382,8 @@ export default async function FoundationDetailPage({ params }: { params: Promise
         <section className="mb-12">
           <h2 className="text-xl font-black text-bauhaus-black mb-2 uppercase tracking-widest">Grantees</h2>
           <p className="text-sm text-bauhaus-muted mb-4">
-            {uniqueGrantees} traceable grantees across {sortedStates.length} states.
+            {uniqueGrantees} traceable grantees across {sortedStates.length} states
+            {granteesNoAmount > 0 ? `, ${granteesNoAmount} of them with no amount on record` : ''}.
             {ccGrantees > 0 && ` ${ccGrantees} community-controlled.`}
           </p>
 
