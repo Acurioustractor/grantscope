@@ -103,6 +103,7 @@ async function getData(abn: string) {
   const [
     scoreResult,
     granteesResult,
+    granteesNoAmountResult,
     trendsResult,
     trusteeResult,
     regrantResult,
@@ -122,6 +123,15 @@ async function getData(abn: string) {
       .eq('foundation_abn', abn)
       .order('grant_amount', { ascending: false, nullsFirst: false })
       .limit(100),
+    // How many grantees carry no dollar figure — counted across ALL of them, not the 100
+    // fetched above. Those are ordered amount-desc with nulls last, so every dollar-less row
+    // falls outside the window and counting the sample would always report zero (FRRR: 464
+    // of them, none in the first 100). Head-only count, no rows transferred.
+    supabase
+      .from('mv_foundation_grantees')
+      .select('grantee_gs_id', { count: 'exact', head: true })
+      .eq('foundation_abn', abn)
+      .or('grant_amount.is.null,grant_amount.eq.0'),
     // Trends
     supabase
       .from('mv_foundation_trends')
@@ -163,6 +173,7 @@ async function getData(abn: string) {
   return {
     score: scoreResult.data as FoundationScore,
     grantees: (granteesResult.data || []) as Grantee[],
+    granteesNoAmount: granteesNoAmountResult.count ?? 0,
     trends: (trendsResult.data || []) as TrendYear[],
     trusteeOverlaps: (trusteeResult.data || []) as TrusteeOverlap[],
     regranting: (regrantResult.data || []) as RegrантChain[],
@@ -221,14 +232,13 @@ export default async function FoundationDetailPage({ params }: { params: Promise
   const data = await getData(abn);
   if (!data) notFound();
 
-  const { score: s, grantees, trends, trusteeOverlaps, regranting, evidence, peers } = data;
+  const { score: s, grantees, granteesNoAmount, trends, trusteeOverlaps, regranting, evidence, peers } = data;
 
   // Aggregate grantee stats
   const uniqueGrantees = new Set(grantees.map(g => g.grantee_abn || g.grantee_name)).size;
-  // Disclose rather than hide: a grantee link with no dollar figure is a real relationship the
-  // funder published, but counting it silently alongside funded ones overstates what we know.
-  // Policy: issues/285. A $0 row adds nothing to any total here — only to the count.
-  const granteesNoAmount = grantees.filter(g => !g.grant_amount).length;
+  // Disclose rather than hide (policy: issues/285). Counted across ALL grantees by the query,
+  // not over the 100 fetched — those are ordered amount-desc with nulls last, so every
+  // dollar-less row sits outside the window and the sample would always say zero.
   const ccGrantees = grantees.filter(g => g.grantee_community_controlled).length;
   const stateDistribution = new Map<string, number>();
   for (const g of grantees) {
