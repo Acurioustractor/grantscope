@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { getLiveReportSupabase } from '@/lib/report-supabase';
@@ -903,12 +904,16 @@ function classifyStatement(s: { headline: string; portfolio: string | null }): '
 
 /* ─── Dashboard ─────────────────────────────────────────────────────── */
 
+/** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
+ *  its query. The report's underlying data changes nightly at most. */
+const getReportCached = unstable_cache(getReport, ['reports-youth-justice-qld-sector'], { revalidate: 3600 });
+
 export default async function QldYjSectorPage() {
  const hdrs = await headers();
  const isShare = (hdrs.get('x-pathname') ?? '').startsWith('/share/');
  const dashboardPath = isShare ? '/share/qld-youth-justice' : '/reports/youth-justice/qld/sector';
  const longReadPath = isShare ? '/share/qld-youth-justice/long-read' : '/reports/youth-justice/qld/sector/long-read';
- const r = await getReport();
+ const r = await getReportCached();
 
  const ws = r.latest;
  const fnPctChild = ws && ws.total_children > 0 ? Math.round((ws.child_first_nations / ws.total_children) * 100) : 0;

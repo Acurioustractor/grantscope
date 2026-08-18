@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import { ReportCTA } from '../_components/report-cta';
@@ -116,8 +117,12 @@ async function getReport() {
   };
 }
 
+/** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
+ *  its query. The report's underlying data changes nightly at most. */
+const getReportCached = unstable_cache(getReport, ['reports-child-protection'], { revalidate: 3600 });
+
 export default async function ChildProtectionReportPage() {
-  const report = await getReport();
+  const report = await getReportCached();
 
   return (
     <div>

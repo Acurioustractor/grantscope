@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import { money, fmt } from '@/lib/format';
 
@@ -80,8 +81,12 @@ async function getData() {
   };
 }
 
+/** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
+ *  its query. The report's underlying data changes nightly at most. */
+const getDataCached = unstable_cache(getData, ['reports-cross-reference'], { revalidate: 3600 });
+
 export default async function CrossReferencePage() {
-  const d = await getData();
+  const d = await getDataCached();
 
   const totalValue = Number(d.stats.total_value) || 0;
   const totalContracts = Number(d.stats.total_contracts) || 0;

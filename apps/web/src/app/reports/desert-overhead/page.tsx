@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import { ReportCTA } from '../_components/report-cta';
@@ -399,8 +400,12 @@ const REMOTENESS_BAR_COLORS: Record<string, string> = {
 
 /* ---------- page ---------- */
 
+/** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
+ *  its query. The report's underlying data changes nightly at most. */
+const getDataCached = unstable_cache(getData, ['reports-desert-overhead'], { revalidate: 3600 });
+
 export default async function DesertOverheadReport() {
-  const d = await getData();
+  const d = await getDataCached();
 
   const maxOverhead = d.byRemoteness.length > 0
     ? Math.max(...d.byRemoteness.map((r) => r.avgOverhead))

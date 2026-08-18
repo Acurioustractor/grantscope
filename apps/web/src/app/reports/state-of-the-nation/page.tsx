@@ -1,3 +1,5 @@
+import { unstable_cache } from 'next/cache';
+
 export const dynamic = 'force-dynamic';
 
 const SNAPSHOT_LABEL = 'April 2026 data snapshot';
@@ -42,8 +44,12 @@ function fmtDollar(n: number | null) {
   return `$${n.toLocaleString()}`;
 }
 
+/** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
+ *  its query. The report's underlying data changes nightly at most. */
+const getStatsCached = unstable_cache(getStats, ['reports-state-of-the-nation'], { revalidate: 3600 });
+
 export default async function StateOfTheNationPage() {
-  const s = await getStats();
+  const s = await getStatsCached();
 
   return (
     <div>

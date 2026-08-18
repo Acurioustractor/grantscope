@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { getServiceSupabase } from '@/lib/report-supabase';
 
 export const dynamic = 'force-dynamic';
@@ -63,8 +64,12 @@ async function getData() {
   };
 }
 
+/** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
+ *  its query. The report's underlying data changes nightly at most. */
+const getDataCached = unstable_cache(getData, ['reports-data-quality'], { revalidate: 3600 });
+
 export default async function DataQualityPage() {
-  const { quality, crossref } = await getData();
+  const { quality, crossref } = await getDataCached();
 
   // Calculate overall score (average of non-null percentages across all datasets)
   const allPcts = quality.flatMap(q => [q.pct_name, q.pct_description, q.pct_website, q.pct_abn, q.pct_amount, q.pct_geo].filter(p => p !== null)) as number[];

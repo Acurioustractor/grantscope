@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { getLiveReportSupabase } from '@/lib/report-supabase';
@@ -265,13 +266,17 @@ async function getNumbers() {
  };
 }
 
+/** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
+ *  its query. The report's underlying data changes nightly at most. */
+const getNumbersCached = unstable_cache(getNumbers, ['reports-youth-justice-qld-sector-long-read'], { revalidate: 3600 });
+
 export default async function QldYjLongRead() {
  const hdrs = await headers();
  const isShare = (hdrs.get('x-pathname') ?? '').startsWith('/share/');
  const dashboardHref = isShare ? '/share/qld-youth-justice' : '/reports/youth-justice/qld/sector';
  const longReadHref = isShare ? '/share/qld-youth-justice/long-read' : '/reports/youth-justice/qld/sector/long-read';
 
- const r = await getNumbers();
+ const r = await getNumbersCached();
  const fnPctChild = r.l && r.l.total_children > 0 ? Math.round((r.l.child_first_nations / r.l.total_children) * 100) : 0;
  const fnPctAdult = r.l && r.l.total_adults > 0 ? Math.round((r.l.adult_first_nations / r.l.total_adults) * 100) : 0;
  const childOver2 = r.l ? r.l.child_3_7_days + r.l.child_over_7_days : 0;

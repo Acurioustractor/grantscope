@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import { buildSankeyData } from '@grant-engine/reports/money-flow';
 import { MoneyFlowCharts } from './charts';
@@ -60,8 +61,12 @@ async function getReport() {
   }
 }
 
+/** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
+ *  its query. The report's underlying data changes nightly at most. */
+const getReportCached = unstable_cache(getReport, ['reports-money-flow'], { revalidate: 3600 });
+
 export default async function MoneyFlowPage() {
-  const report = await getReport();
+  const report = await getReportCached();
 
   return (
     <div>

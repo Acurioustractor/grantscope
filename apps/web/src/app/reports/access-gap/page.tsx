@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import { estimateAdminBurden } from '@grant-engine/foundations/community-profiler';
 import { AccessGapCharts } from './charts';
@@ -101,8 +102,12 @@ function buildFallbackReport() {
   };
 }
 
+/** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
+ *  its query. The report's underlying data changes nightly at most. */
+const getReportCached = unstable_cache(getReport, ['reports-access-gap'], { revalidate: 3600 });
+
 export default async function AccessGapPage() {
-  const report = await getReport();
+  const report = await getReportCached();
 
   return (
     <div>

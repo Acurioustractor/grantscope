@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 import { getLiveReportSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
@@ -469,8 +470,12 @@ async function getData() {
   };
 }
 
+/** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
+ *  its query. The report's underlying data changes nightly at most. */
+const getDataCached = unstable_cache(getData, ['reports-grant-frontier'], { revalidate: 3600 });
+
 export default async function GrantFrontierPage() {
-  const { grantSummary, grantSources, frontierKinds, frontierQueue, automations, snapshots, failures, foundationSummary, longTailFounders, longTailDiscoveries, pipelineFunnel } = await getData();
+  const { grantSummary, grantSources, frontierKinds, frontierQueue, automations, snapshots, failures, foundationSummary, longTailFounders, longTailDiscoveries, pipelineFunnel } = await getDataCached();
   const totalFrontierRows = frontierKinds.reduce((sum, row) => sum + Number(row.rows || 0), 0);
   const totalDueNow = frontierKinds.reduce((sum, row) => sum + Number(row.due_now || 0), 0);
   const totalNeverSucceeded = frontierKinds.reduce((sum, row) => sum + Number(row.never_succeeded || 0), 0);

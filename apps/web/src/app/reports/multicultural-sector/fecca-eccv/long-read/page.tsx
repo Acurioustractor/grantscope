@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 import { getLiveReportSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
@@ -61,9 +62,13 @@ async function getNumbers() {
   return { fecca, eccvAisArr, eccvLatest, eccvPrior, totals: totalsRow, ames: amesRow, topics };
 }
 
+/** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
+ *  its query. The report's underlying data changes nightly at most. */
+const getNumbersCached = unstable_cache(getNumbers, ['reports-multicultural-sector-fecca-eccv-long-read'], { revalidate: 3600 });
+
 export default async function FeccaEccvLongRead({ mode = 'full' }: { mode?: 'full' | 'share' } = {}) {
   const isShare = mode === 'share';
-  const r = await getNumbers();
+  const r = await getNumbersCached();
   const eccvDropPct = r.eccvLatest && r.eccvPrior && r.eccvPrior.rev > 0
     ? (((r.eccvLatest.rev - r.eccvPrior.rev) / r.eccvPrior.rev) * 100)
     : 0;
