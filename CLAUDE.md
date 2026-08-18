@@ -299,6 +299,25 @@ SaaS code cleanly. Nothing else moved. For **four months** afterwards:
 **The tell:** any screen showing a confident zero. Of the four-month debris above, three surfaced as
 zeros on a dashboard, and every one of them was mistaken for a measurement.
 
+## The API-key surface is dormant by decision (2026-08-19)
+
+`api_keys` holds 0 rows **on purpose** and has never held one — `api_usage`'s 25 rows are a single
+two-hour smoke test on 2026-03-21, all with a NULL `key_id`. Every path by which a key could be
+issued or displayed was deleted; `/api/v1/exposure`, `authenticateApiKey` and the table were kept,
+because the dossier logic is the expensive half and key CRUD is a day's work.
+
+**So an empty `api_keys` is not debris and the 401 from `/api/v1/exposure` is not a bug.** Both are
+the decision. Do not sweep them.
+
+Two traps for anyone touching this:
+- **`/api/data` and `/api/agent` are anonymous-capable.** The key only raises a rate limit
+  (20/min → 120/min on agent). They are live, free surfaces — `/api/data` is the Giving Data Commons
+  API and Empathy Ledger consumes `/api/data/entity/{abn}` per `docs/integrations/`.
+- **`api_usage` is live instrumentation**, not a dead log: `/api/agent` writes to it on every call,
+  keyed or not. It is the only signal that would tell you the API started being used.
+
+Reasoning: https://github.com/Acurioustractor/grantscope/issues/283
+
 ## Landing Policy (decided 2026-08-18)
 
 **Standing authorization. This repo only — it does not loosen the global tier rules elsewhere.**

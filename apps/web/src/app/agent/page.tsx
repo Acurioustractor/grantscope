@@ -1,6 +1,5 @@
 import { Metadata } from 'next';
 import { AgentPlayground } from './playground';
-import { ApiKeyManager, UsageDashboard } from './api-keys';
 
 export const metadata: Metadata = {
   title: 'Agent API — CivicGraph',
@@ -114,16 +113,10 @@ Authorization: Bearer cg_live_...
           <div className="mt-4 text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-2">Or discover capabilities:</div>
           <pre className="text-sm font-mono text-bauhaus-black">{`GET /api/agent`}</pre>
           <div className="mt-3 text-xs text-bauhaus-muted font-medium">
-            API key optional during beta. Anonymous: 20 req/min. With key: 60+ req/min.
+            No key needed. 20 requests/minute, free.
           </div>
         </div>
       </section>
-
-      {/* API Keys */}
-      <ApiKeyManager />
-
-      {/* Usage Dashboard */}
-      <UsageDashboard />
 
       {/* Live Playground */}
       <AgentPlayground />
@@ -205,7 +198,7 @@ Authorization: Bearer cg_live_...
       {/* Pricing */}
       <section className="mb-12">
         <h2 className="text-xl font-black text-bauhaus-black mb-4">Pricing</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="border-4 border-bauhaus-black p-6">
             <div className="text-xs font-black text-bauhaus-muted uppercase tracking-[0.3em] mb-1">Explorer</div>
             <div className="text-3xl font-black text-bauhaus-black mb-1">Free</div>
@@ -218,21 +211,6 @@ Authorization: Bearer cg_live_...
             </ul>
             <a href="/api/agent" className="block text-center px-4 py-2.5 bg-bauhaus-black text-white font-black text-xs uppercase tracking-widest hover:bg-bauhaus-blue transition-colors">
               Start Now
-            </a>
-          </div>
-          <div className="border-4 border-bauhaus-blue p-6 bg-bauhaus-blue/5 relative">
-            <div className="absolute -top-3 right-4 bg-bauhaus-blue text-white text-[10px] font-black uppercase tracking-widest px-3 py-1">Beta</div>
-            <div className="text-xs font-black text-bauhaus-blue uppercase tracking-[0.3em] mb-1">Builder</div>
-            <div className="text-3xl font-black text-bauhaus-black mb-1">Free</div>
-            <div className="text-xs text-bauhaus-muted font-medium mb-3">API key required</div>
-            <ul className="text-sm text-bauhaus-muted font-medium space-y-1.5 mb-4">
-              <li>60 requests/minute</li>
-              <li>Usage dashboard + analytics</li>
-              <li>NL→SQL queries</li>
-              <li>Up to 5 API keys</li>
-            </ul>
-            <a href="#api-keys" className="block text-center px-4 py-2.5 bg-bauhaus-blue text-white font-black text-xs uppercase tracking-widest hover:bg-bauhaus-black transition-colors">
-              Get API Key
             </a>
           </div>
           <div className="border-4 border-bauhaus-black p-6 bg-bauhaus-canvas">

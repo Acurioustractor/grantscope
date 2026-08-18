@@ -9,7 +9,7 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-19T02:00:00Z
+**Updated:** 2026-08-19T08:00:00Z
 **Goal:** CivicGraph as one legible system — every number on a screen means what the screen says,
 and landing the work stops costing more than the work.
 **Branch:** `main` through `2e817b71`. **Zero open PRs**, tree clean, all local branches deleted.
@@ -18,8 +18,51 @@ harness · #260 dedupe · #261 Vercel build-skip · #262 report caching.
 **Test:** `scripts/precheck.sh` (tsc + 734 vitest) · dev 3013
 
 ### Now
-[->] **Run `scripts/wizard-pm2-startup.sh`** (2 min, needs Ben's password) — it is the last gap in
-the orchestrator outage. Then: the two cron decisions, or Lever 2 proven on one page.
+[->] **Back to real GrantScope work.** The pm2/cron detour is CLOSED (see below) — do not reopen it.
+Pick up: the two cron decisions (`usage-alerts`, `deliver-notifications`), or Lever 2
+(`force-dynamic` -> `revalidate`) proven on ONE page first, or the 129 uncached pages.
+
+### pm2 startup — CLOSED 2026-08-19. The detour, and what it cost.
+The wizard could not be driven from Claude Code (`!` gives no interactive TTY — it hangs at the
+first prompt). It also **did not need to be run**: the sudo half had already been done 2026-08-18.
+It wrote `~/Library/LaunchAgents/pm2.benknight.plist` and then failed to load it, because pm2 under
+sudo tries to load a *user* LaunchAgent from the *root* domain. The wizard's own text warns about
+exactly this and the earlier run still printed success.
+
+- Fix was one no-password command: `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/pm2.benknight.plist`
+- Verified: `launchctl list` -> `23718  0  com.PM2`; orchestrator still online; 44 procs (6 online).
+- **A reboot now runs `pm2 resurrect` automatically.** This was the last gap in the outage.
+
+**The 38 "stopped" pm2 jobs are NOT broken.** All 38 are `cron_restart` + `autorestart=off` —
+one-shot scheduled jobs whose correct resting state IS stopped. Every one's last-run age matches
+its own cron (weekly Mon jobs ~32h, Saturday job 3.4d, monthly 17.4d = Aug 1, 6-hourly 4.9h).
+Do not "fix" this again — it reads as 38 dead jobs and is 38 healthy ones.
+
+**5 exited non-zero. Two of those are working as designed — do not fix them:**
+- `el-rebuild-rollups` — consent guard: "Global analysis rollup is disabled until source audience,
+  purpose and withdrawal provenance are retained". Making it exit 0 = disabling a consent control.
+- `wiki-lint` — exits 1 because it FOUND 877 missing reciprocal wiki links. A linter reporting.
+
+**Fixed + pushed** (repo `act-global-infrastructure`, branch `fix/cron-log-paths-and-e2k-service-role`,
+commit `c6a95bd`, **PR not opened** — Tier 3, needs Ben's verb):
+- `email-to-knowledge` — pm2's env already had `SUPABASE_SERVICE_ROLE_KEY`; the script only looked
+  for `SUPABASE_ANON_KEY`. The anon key would not have worked either: `project_knowledge` RLS
+  refuses it, so it connects, processes, saves ZERO. Verified after fix: exit 0, 8 saved.
+- `/tmp` log paths — the ecosystem sent all cron logs to `/tmp`; macOS purges it, so any job that
+  failed before a reboot lost its diagnostics (this is why `wiki-lint`'s cause was unrecoverable).
+  pm2-logrotate only manages `~/.pm2/logs`. **Live only after those procs are restarted from an
+  env-loaded shell** — recreating them from a bare shell STRIPS the inherited secrets and re-breaks
+  them (my shell had none of them; direnv installed but not loaded).
+
+**Still broken, both need Ben:**
+- `xero-bank-balances` — Xero OAuth token expired 2026-08-17 15:00 (401). Browser reauth.
+- `el-analyze-consented` — real drift: `production_schema_20260111.sql` declares
+  `transcripts.ai_processing_consent` (+ a `sync_transcript_consent_from_profile` trigger) but the
+  live DB lacks it. Fix = ALTER TABLE on empathy-ledger-v2 PRODUCTION, on a consent column. Tier 3.
+
+**Note:** `act-global-infrastructure` is sitting on `main` with **91 uncommitted files** from
+another session, last commit 2 days old. I committed on a branch and put HEAD back on main. Untangle
+that before it gets lost to a reset.
 
 ### Orchestrator outage — CLOSED 2026-08-18 (after the close-out above)
 The pm2 orchestrator daemon was found **stopped, down ~2 days**. On restart it logged "Recovered 1
@@ -31,8 +74,8 @@ nothing scheduled the work regardless. Both were needed.
   2026-08-07 had been `timed_out` with duration 0.
 - Feed recovered: `apply_now`+`rolling` **1,449** (was 0), quarantined 822 (was 2,592).
 - `pm2 save` done — 43 processes; old dump backed up at `~/.pm2/dump.pm2.bak-20260818`.
-- **Still open:** `pm2 startup` needs a sudo line only Ben can run → `scripts/wizard-pm2-startup.sh`
-  (#264). Until then a reboot takes the orchestrator down silently again.
+- ~~**Still open:** `pm2 startup` needs a sudo line only Ben can run~~ **DONE 2026-08-19** — see the
+  "pm2 startup — CLOSED" section above. It needed no password in the end.
 - Alarm shipped (#263): `/ops/health` leads with a red banner when no agent has run in 6 hours.
   Also fixed a **false SAFE** in `classify-changes.sh` — it compared committed history only, so
   running it before a commit answered "no changes -> SAFE", and SAFE is what auto-merges.

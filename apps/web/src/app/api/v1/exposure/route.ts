@@ -6,6 +6,22 @@ import * as EntityService from '@/lib/services/entity-service';
 import * as ContractService from '@/lib/services/contract-service';
 
 /**
+ * DORMANT BY DECISION — 2026-08-19. Do not "clean this up".
+ *
+ * `api_keys` is empty on purpose and has never held a key. Every path by which one could be
+ * ISSUED or DISPLAYED was deleted (the /api/keys CRUD, /api/agent/keys, /home/api-keys, the
+ * /settings section, the /agent key manager, the admin usage screen and its hourly cron).
+ * This route and `authenticateApiKey` were KEPT deliberately: the dossier logic below is the
+ * expensive part and rebuilding it is real work, whereas key CRUD is a day.
+ *
+ * So a keyless caller gets a clean 401, which is the correct answer. That 401 is not a bug and
+ * an empty `api_keys` is not debris — both are the decision. If an API product returns, issue a
+ * key straight into the table and this route works; then rebuild the CRUD.
+ *
+ * Full reasoning: github.com/Acurioustractor/grantscope/issues/283
+ */
+
+/**
  * Enterprise Exposure API — /api/v1/exposure
  *
  * Full entity dossier: entity profile, contracts, political donations,

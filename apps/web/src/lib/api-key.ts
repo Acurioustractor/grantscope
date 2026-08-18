@@ -39,6 +39,9 @@ function extractKey(req: Request): string | null {
   return null;
 }
 
+const keyCache = new Map<string, { info: ApiKeyInfo; expiresAt: number }>();
+const CACHE_TTL = 60_000; // 1 minute
+
 /** SHA-256 hash a key (Web Crypto API — works in Edge Runtime) */
 async function hashKey(raw: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -48,33 +51,6 @@ async function hashKey(raw: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Generate a new API key (returns raw key — show once, never stored) */
-export async function generateApiKey(orgId: string | null, name: string): Promise<{ raw: string; id: string; prefix: string }> {
-  // Generate 32 random hex chars
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-  const raw = `${KEY_PREFIX}${hex}`;
-  const prefix = raw.slice(0, 12);
-  const keyHash = await hashKey(raw);
-
-  const supabase = getServiceSupabase();
-  const { data, error } = await supabase
-    .from('api_keys')
-    .insert({ org_id: orgId, name, key_prefix: prefix, key_hash: keyHash })
-    .select('id')
-    .single();
-
-  if (error) throw new Error(`Failed to create API key: ${error.message}`);
-
-  return { raw, id: data.id, prefix };
-}
-
-// Simple in-memory cache for validated keys (avoid DB hit every request)
-const keyCache = new Map<string, { info: ApiKeyInfo; expiresAt: number }>();
-const CACHE_TTL = 60_000; // 1 minute
-
-/** Validate API key from request. Returns null for anonymous requests, throws on invalid key. */
 export async function validateApiKey(req: Request): Promise<ApiKeyInfo | null> {
   const raw = extractKey(req);
   if (!raw) return null; // Anonymous request — allowed
