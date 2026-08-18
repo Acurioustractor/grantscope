@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { getServiceSupabase } from '@/lib/report-supabase';
 
 export const dynamic = 'force-dynamic';
@@ -47,8 +48,12 @@ async function getStats() {
 
 function fmt(n: number) { return n.toLocaleString(); }
 
+/** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
+ *  its query. The report's underlying data changes nightly at most. */
+const getStatsCached = unstable_cache(getStats, ['reports-power-map'], { revalidate: 3600 });
+
 export default async function PowerMapPage() {
-  const s = await getStats();
+  const s = await getStatsCached();
 
   return (
     <div>

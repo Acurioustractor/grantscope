@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 import { getServiceSupabase } from '@/lib/report-supabase';
 
@@ -225,8 +226,12 @@ async function getReport() {
   };
 }
 
+/** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
+ *  its query. The report's underlying data changes nightly at most. */
+const getReportCached = unstable_cache(getReport, ['reports-ndis-market'], { revalidate: 3600 });
+
 export default async function NdisMarketPage() {
-  const report = await getReport();
+  const report = await getReportCached();
 
   return (
     <div>

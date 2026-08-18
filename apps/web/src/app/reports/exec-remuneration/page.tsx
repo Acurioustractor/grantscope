@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import Link from 'next/link';
@@ -290,6 +291,10 @@ async function getData() {
 
 /* ---------- page ---------- */
 
+/** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
+ *  its query. The report's underlying data changes nightly at most. */
+const getDataCached = unstable_cache(getData, ['reports-exec-remuneration'], { revalidate: 3600 });
+
 export default async function ExecRemunerationReport() {
   const {
     totalCharities,
@@ -301,7 +306,7 @@ export default async function ExecRemunerationReport() {
     top20Pay,
     top20Overhead,
     govFunded,
-  } = await getData();
+  } = await getDataCached();
 
   return (
     <div>

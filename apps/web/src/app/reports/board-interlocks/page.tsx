@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
@@ -292,8 +293,12 @@ function computeReport(
 
 /* ── page ── */
 
+/** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
+ *  its query. The report's underlying data changes nightly at most. */
+const getDataCached = unstable_cache(getData, ['reports-board-interlocks'], { revalidate: 3600 });
+
 export default async function BoardInterlocksReport() {
-  const { personRoles, aisRecords, accoAbns } = await getData();
+  const { personRoles, aisRecords, accoAbns } = await getDataCached();
   const r = computeReport(personRoles, aisRecords, accoAbns);
 
   return (

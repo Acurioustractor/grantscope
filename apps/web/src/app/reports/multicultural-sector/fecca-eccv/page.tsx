@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { getLiveReportSupabase } from '@/lib/report-supabase';
@@ -789,12 +790,16 @@ function MoneyAndStaffCard({ row, label }: { row: AisFinancialsRow | null; label
   );
 }
 
+/** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
+ *  its query. The report's underlying data changes nightly at most. */
+const getReportCached = unstable_cache(getReport, ['reports-multicultural-sector-fecca-eccv'], { revalidate: 3600 });
+
 export default async function FeccaEccvPage() {
   const hdrs = await headers();
   const isShare = (hdrs.get('x-pathname') ?? '').startsWith('/share/');
   const dashboardPath = isShare ? '/share/fecca-eccv' : '/reports/multicultural-sector/fecca-eccv';
   const longReadPath = isShare ? '/share/fecca-eccv/long-read' : '/reports/multicultural-sector/fecca-eccv/long-read';
-  const r = await getReport();
+  const r = await getReportCached();
 
   // ECCV revenue trajectory — render as horizontal bars normalised to peak
   const eccvPeak = Math.max(...r.eccv_ais.map(a => a.total || 0), 1);
