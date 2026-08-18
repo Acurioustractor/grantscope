@@ -16,40 +16,49 @@ Three rules, each from something that went wrong this week:
 
 ## Do — in this order
 
-### 1. The two hourly crons · Ben · 1 line each
-`usage-alerts` and `deliver-notifications` run hourly — ~1,440 invocations/month between them.
-4-hourly cuts that 75%. The only cost is notification latency, which is a product decision.
-**Kill-criterion:** if either genuinely needs to be hourly, say so and it stays hourly forever.
+**Every item carries the date its facts were last checked.** An item older than its evidence is a
+guess wearing a plan's clothes — re-scout before acting on anything not checked this week, and move
+the date when you do.
 
-### 2. Lever 2 — BLOCKED, and not where we thought · proven 2026-08-18
-Tried exactly as specified: `/reports/desert-overhead` (static route, every query already wrapped in
-`safe()` with a fallback, so a build-time query failure cannot break the build — the ideal candidate).
-`force-dynamic` -> `revalidate = 3600`. Build passed. **The route stayed `ƒ` Dynamic.**
+### 1. `/api/cron/usage-alerts` — delete it, don't reschedule it · scouted 2026-08-18
+This item used to read "the two hourly crons, `usage-alerts` and `deliver-notifications`, ~1,440
+invocations/month; 4-hourly cuts that 75%." **Both halves were wrong within a day of being written:**
 
-**Cause:** `apps/web/src/app/layout.tsx:85` awaits `headers()` unconditionally to read the
-`x-pathname` that `middleware.ts:41` sets, then branches on it to pick chromeless vs marketing
-chrome. A root layout that reads `headers()`/`cookies()` makes **every route under it** dynamic, so
-no page-level `revalidate` can ever produce a static or ISR route. Measured on that build:
-**519 dynamic routes, 5 static, 11 SSG.**
+- `deliver-notifications` **no longer exists** — #267 deleted it the same day, along with `run-due`.
+  `vercel.json` now has 11 crons and only one hourly. So the figure is ~720/month, not ~1,440.
+- Rescheduling is the wrong verb. The route reads `api_keys` to alert on keys over 80% of their rate
+  limit. **`api_keys` holds 0 rows** (measured 2026-08-18). It has alerted on nothing since the April
+  scope cut removed the product it serves.
 
-So Lever 2 is not 28 mechanical page edits. It is one structural change first: move the chrome
-decision out of root-layout pathname sniffing and into route-group layouts, so the root layout stops
-touching request headers. Only then does `revalidate` on a page do anything.
+So this is the same class as #267, not a tuning question: delete the cron, and decide whether
+`/api/cron/usage-alerts` and the `api_keys` table go with it.
+**Kill-criterion:** if API keys are coming back as a product, it stays and this item is cut instead.
 
-**Kill-criterion:** if the route-group split is not worth its blast radius (it touches the layout
-every public page renders), Lever 2 is cut and Vercel invocations stay where they are — the
-build-skip and report caching were the affordable wins.
+### 2. Lever 2 — one decision, not 28 edits · proven 2026-08-18
+`/reports/desert-overhead` was switched `force-dynamic` -> `revalidate = 3600` on the ideal
+candidate (every query already `safe()`-wrapped). Build passed; **the route stayed `ƒ` Dynamic**.
 
-### 3. Cache the ~14 high-traffic PUBLIC pages · 1 hour
-`/`, `/home`, `/suppliers`, `/grants`, `/grants/[id]`, `/charities/[abn]`, `/charities/insights`,
-`/places/[postcode]`, `/giving`, `/giving/quality`, `/pipeline`, `/opportunities/ecosystem`,
-`/embed/entity/[identifier]`, `/changes`. Same `unstable_cache` shape proven on the 22 report pages.
-**Why these and not the other 67:** these are the ones a stranger can hit.
+`apps/web/src/app/layout.tsx:85` awaits `headers()` unconditionally to read middleware's
+`x-pathname`, which makes **every** route under it dynamic — 519 dynamic, 5 static, 11 SSG. No
+page-level `revalidate` can take effect until the chrome decision moves into route-group layouts.
 
-### 4. Grantee gaps — only the two worth it · harness makes each ~1h
-- **Myer FY13-23 + FY25** — real volume; we hold 2024 only.
-- **VFFF amounts** — its 7 edges all carry $0, so the data is currently inert. Either get amounts or
-  delete the 7 rows; a funder→grantee edge with no dollars earns nothing in a money graph.
+**The decision is Ben's:** restructure the root layout (touching the layout every public page
+renders), or cut Lever 2 and accept that Vercel invocations stay where they are.
+**Kill-criterion:** if the restructure is not worth its blast radius, cut it — the build-skip and
+the report caching were the affordable wins, and they are already banked.
+
+### 3. Grantee gaps — the two that carry dollars · scouted 2026-08-18, re-measured 2026-08-18
+- **Myer FY13-23 + FY25** — confirmed: 39 rows, `grant_year` 2024 only, 12 of them with no amount.
+- **VFFF amounts** — confirmed exactly as written: 7 rows, **all 7 carry no dollars**. Either get
+  amounts or delete the rows.
+
+**But the framing is too narrow, and this is new.** `foundation_grantees` holds **6,001 rows across
+181 funders, of which 1,065 (17.7%) carry no dollars**. The queue singles out VFFF's 7 and Perron
+while **Paul Ramsay alone has 159 zero-amount rows of 161** — twenty times VFFF. Gandel 51 of 51,
+Tim Fairfax 19 of 19, CBA 14 of 14, ACF 12 of 12, Lord Mayor's 11 of 11.
+
+If "an edge with no dollars earns nothing in a money graph" is the rule, it is a **policy question
+about 1,065 rows**, not an errand about 7. Decide the policy before doing either.
 
 ---
 
@@ -77,6 +86,10 @@ build-skip and report caching were the affordable wins.
   `api/`, `ops/`, `admin/`, docs. No permission round-trip.
 - **VISIBLE work stops for Ben** — anything a visitor renders, including shared chrome.
 - **Every item states its kill-criterion.** If it cannot be stated, the item is grooming.
+- **Every item carries the date its facts were last checked**, and the date moves only when someone
+  re-checks them. Two of the four items here were wrong within 24 hours of being written — one named
+  a cron that had already been deleted, the other aimed at 7 rows when the real question covers 1,065.
+  An undated item cannot announce that it has gone stale, so it gets obeyed instead of questioned.
 - **Re-scout before starting anything data-shaped.** The graph is the source of truth about what
   exists, not this file.
 
