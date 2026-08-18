@@ -9,14 +9,6 @@
   ],
   "crons": [
     {
-      "path": "/api/tender-intelligence/automation/run-due",
-      "schedule": "0 21 * * *"
-    },
-    {
-      "path": "/api/tender-intelligence/automation/deliver-notifications",
-      "schedule": "5 * * * *"
-    },
-    {
       "path": "/api/civicscope/cron?mode=statements",
       "schedule": "0 3 * * *"
     },
