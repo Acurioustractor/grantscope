@@ -272,6 +272,33 @@ SELECT remoteness, COUNT(*) FROM gs_entities WHERE is_community_controlled = tru
 3. **Ship:** Run `/ship-merge` — do NOT hand-roll push/PR/merge (see Landing Policy below)
 4. **Close:** Run `/close` to verify, commit, and update handoff
 
+## Cutting scope: sweep the periphery (learned the hard way, 2026-08-18)
+
+On **2026-04-24** the commit *"scope cut to portfolio mode — kill SaaS-shaped surfaces"* removed the
+SaaS code cleanly. Nothing else moved. For **four months** afterwards:
+
+- two Vercel crons kept calling `tender-intelligence` routes that no longer existed — hourly 404s;
+- `/api/cron/usage-alerts` kept checking API-key rate limits against `api_keys`, which holds 0 rows;
+- the ops dashboard kept showing an activation funnel for a product that was cut — `product_events`
+  holds exactly one row, dated 2026-04-20;
+- a duplicate ingest written that same week put **$304M of double-counted grant money** into every
+  foundation figure, unnoticed until 2026-08-18.
+
+**Deleting code does not propagate.** When a surface is cut, the code is the easy half. Sweep:
+
+- [ ] **Crons** — `vercel.json` and pg_cron. A cron pointing at a deleted route 404s forever, silently.
+      (Now guarded: `apps/web/src/lib/vercel-config.test.ts` fails the build if a cron path has no route.)
+- [ ] **Scheduled agents** — `scripts/lib/agent-registry.mjs`, `agent_schedules`.
+- [ ] **Datasets** — does an ingest still write rows nothing reads? Does it duplicate another
+      `dataset` key? Check `gs_relationships` by `dataset` before assuming.
+- [ ] **Instrumentation** — events still emitted for a dead flow, or a table that stopped receiving
+      and nobody noticed.
+- [ ] **Dashboard tiles** — a tile whose source is now empty reads as "zero", not as "gone".
+- [ ] **The issue tracker** — close what the cut made moot.
+
+**The tell:** any screen showing a confident zero. Of the four-month debris above, three surfaced as
+zeros on a dashboard, and every one of them was mistaken for a measurement.
+
 ## Landing Policy (decided 2026-08-18)
 
 **Standing authorization. This repo only — it does not loosen the global tier rules elsewhere.**
