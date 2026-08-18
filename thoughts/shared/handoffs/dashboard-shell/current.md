@@ -1,5 +1,5 @@
 ---
-date: 2026-08-18T21:00:00Z
+date: 2026-08-19T02:00:00Z
 session_name: dashboard-shell
 branch: main
 status: active
@@ -9,114 +9,90 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-18T21:00:00Z
-**Goal:** CivicGraph as one legible system — one shell over all data, and every number on a screen
-meaning what the screen says it means.
-**Branch:** `main` through `6e6a01f6` (#257 squash-merged, branch deleted, tree clean). Main CI
-green (run 32068531139, 3m45s).
-**Test:** `cd apps/web && npx tsc --noEmit` · `npx vitest run` (734 pass) · dev 3013
+**Updated:** 2026-08-19T02:00:00Z
+**Goal:** CivicGraph as one legible system — every number on a screen means what the screen says,
+and landing the work stops costing more than the work.
+**Branch:** `main` through `2e817b71`. **Zero open PRs**, tree clean, all local branches deleted.
+Merged this session: #257 name normalisation · #258 admin audit + landing policy · #259 grantee
+harness · #260 dedupe · #261 Vercel build-skip · #262 report caching.
+**Test:** `scripts/precheck.sh` (tsc + 734 vitest) · dev 3013
 
 ### Now
-[->] Both lanes clean. Either UX pass 3, the two open decisions below, or resume grantee-ingest
-wave 1 remainder (see memory: grantee-ingest-pipeline).
+[->] Nothing blocking. Three decisions are Ben's (crons, Lever 2, F12 casing); the biggest
+open work is the 129 uncached pages and the grantee coverage gaps.
 
-### This Session (2026-08-18)
-UI/UX pass 2. Pass 1 was how the shell looked; pass 2 was whether the numbers are honest.
-- [x] **Name normalisation** — `entity_name_key()` folds PTY LTD/PTY LIMITED/P/L/PROPRIETARY
-      LIMITED, case, punctuation, whitespace. Pratt Holdings 8 rows -> 1. ABN borrowing now needs
-      the name to map to EXACTLY ONE ABN (old `min(abn)` picked one of several; 86 names had
-      multiple). Fixed a drawer/row mismatch the earlier SH-5 fix had introduced.
-- [x] **Charities browser was broken** — `charity_browse` unfiltered was 10.4s, over the statement
-      timeout, so every FIRST-TIME visitor got the error state; any state filter hid it. Now 92ms
-      via `mv_charity_browse`.
-- [x] **Grants coverage disclosed** — 91% QLD ($27.3bn of $33.7bn) vs Victoria $125m; 55% of the
-      money ($18.7bn / 99,891 grants) carries NO topic tag and the top recipient is a state rail
-      operator. Numbers come from the RPC, not copy, so they cannot rot.
-- [x] **Remoteness chart follows the topic filter** on the tiles' basis. The dashboard now
-      reconciles: youth justice $825.3m placed + $90.4m unplaced = $915.7m = the tile, exactly.
-- [x] **SE: one ABN, one row** — five Red Cross listings each showed the whole $7.64bn. Collapsed,
-      registered name from `gs_entities.canonical_name`, "5 listings" badge, branch search still
-      matches.
-- [x] P2/P3: foundation type per row, sector array literals, `$0k`, year ranges, headers, one-shot
-      RPC retry (`lib/rpc-retry.ts`, 8 tests).
-- [x] Audit doc with every finding's disposition: `docs/ux-audit/shell-ux-findings-pass2.md`.
+### This Session (2026-08-18→19)
+Started as "continue UX", became a data-honesty and cost session.
 
-### Next
-- [ ] **F12 name casing (Ben's call)** — `QUEENSLAND RAIL LTD` beside `Legal Aid Queensland`.
-      `displayName()` in PersonBrowser does the safe half already (title-case ONLY fully-lowercase
-      names, SH-11). All-caps is riskier: some are correct as registered.
-- [ ] **F11 retry is partial** — only charities, social enterprises, grants, people. The other
-      browse pages have none; each call site needs wrapping by hand, no shared data layer.
-- [ ] Foundations: `GIVING/YR` == `GRANTED` exactly on some rows, 90x apart on others. Footer says
-      "Giving can mix grantmaking with program spend" — is that the whole explanation?
-- [ ] **Grantee wave 1 remainder — PARKED, and the approach changed.** Do NOT do the 4-5h of
-      bespoke extraction. 29 foundation/grantee scripts already exist; each funder has been adding
-      another and re-implementing the expensive half (tiering, judge rules, source_record_id,
-      reversible dataset key, provenance TSV) that is identical every time. Build ONE staging table
-      + one shared resolve/tier/judge/apply path first, against Ian Potter (structured DB, amounts,
-      1964-2026 — the highest-value source, previously queued behind smaller ones), then Myer,
-      Buckland, VFFF. Perron/PRF are names-only with no amounts: lowest value, decide with Ben
-      whether dollar-less edges are worth having at all. Detail in memory:
-      grantee-ingest-pipeline.
-- [ ] Catalogue retire-or-keep (Ben) · docs-in-rail IA (Ben) · 475 unfiled round 2.
+- [x] **UX pass 2 shipped (#257)** — `entity_name_key()` folds PTY LTD/LIMITED/P/L variants; Pratt
+      Holdings 8 rows -> 1; fixed a drawer/row mismatch; ABN borrowing now needs a name to map to
+      exactly ONE ABN. Remoteness chart follows the topic filter and the dashboard reconciles.
+- [x] **Admin audit + fixes (#258)** — 12 findings, `docs/ux-audit/admin-ux-findings.md`.
+      **A1: the opportunity feed was stuck, not bad.** The nightly orchestrator last succeeded
+      2026-08-07 and timed out 3x daily since; one transient `fetch failed` on a single Supabase
+      write killed the whole pass after ~10 rows. `persist()` now retries and skips the bad row —
+      **proven: 5,546 rows, 0 failures**. `act_grant_recommendations_current` 0 -> 7,241.
+      A staleness **warn band** (7-21d = `stale_warning`, >21d hard) means one missed job can no
+      longer silently zero the screen.
+- [x] **$304.4M of double-counting removed (#260)** — found by checking the graph before writing an
+      Ian Potter scraper: he was already ingested, and ingested TWICE. 5,481 of `foundation_grantees`'
+      5,577 grant rows were duplicates of `ian_potter_grants_db`/`frrr_grants`/`myer_annual_report_2024`.
+      Backed up in `_backup_foundation_grantees_dupes_20260818` + committed TSV.
+- [x] **Grantee harness (#259)** — `grantee-resolve.mjs` + `grantee-migration.mjs` replace the
+      per-funder hand-work. Verified 322/322 against known-good HMST rows.
+- [x] **Landing policy + adapters (#258)** — we were burning sessions on push/PR/merge ceremony.
+      `precheck.sh`, `classify-changes.sh`, `ship-watch.mjs` + a repo-scoped standing authorization
+      in CLAUDE.md. SAFE changes land on green unattended; VISIBLE stop for Ben.
+- [x] **Vercel cost (#261, #262)** — 20 deployments in 8.9h, most for commits that touched no app
+      code. Ignored Build Step skips 62% of builds. 22 report pages moved off per-request queries.
 
-### Migrations applied this session (ALL already run against prod DB)
-`2026-08-18-entity-name-key.sql` · `-entity-name-key-views.sql` · `-charity-browse-mv.sql` ·
-`-grant-coverage-stats.sql` · `-remoteness-by-topic.sql` · `-se-sector-display.sql` ·
-`-se-collapse-by-abn.sql`
-New MVs, all registered in `mv_refresh_registry` (nightly): `donor_name_keys`, `donor_key_abn`,
-`supplier_name_keys`, `supplier_key_abn`, `mv_charity_browse`.
+### Next on resume
+- [ ] **Ben's calls:** the two hourly crons (`usage-alerts`, `deliver-notifications`, ~1,440
+      invocations/month); Lever 2 (`force-dynamic` -> `revalidate`, proven on ONE page first —
+      it makes builds query Supabase); F12 name casing.
+- [ ] **129 uncached pages** remain (mostly `/org` 47, `/clarity` 16). Same `unstable_cache` shape
+      as the reports.
+- [ ] **Grantee gaps, re-scouted** — the parked list was stale, every source is part-done:
+      Buckland 2023 · Myer FY13-23 + FY25 · VFFF amounts (7 edges carry $0) · Perron is the only
+      genuinely absent one. Paul Ramsay (108 edges) was never on the list.
+- [ ] 96 leftover `foundation_grantees` rows · A12 floating widgets · `classify-changes.sh` does
+      not list `data/`, so it calls a data-only change VISIBLE.
 
 ### Key traps (this arc, will bite again)
-- **A parameterised SQL function gets a GENERIC plan.** Identical SQL ran 2.8s ad-hoc with literals
-  and >60s inside the function. Do not benchmark a query body and assume the RPC matches it.
-- **Precompute regex/lateral work into indexed MVs.** Inline `entity_name_key()` = 3 regexes x
-  2.55M rows x 4 call sites. `charity_browse` = 132,000 index lookups per page view.
-- **Adding a field to an `unstable_cache`'d value does NOTHING until the key changes.** The old
-  cached object had no `states`, so the disclosure silently did not render — in prod it would have
-  stayed invisible for an hour with no error anywhere. Version the key.
-- **`CREATE OR REPLACE FUNCTION` cannot change the return type.** Read
-  `pg_get_function_result(oid)` FIRST — se_browse had five has_*/on_graph booleans I would have
-  silently dropped. Adding a column needs DROP+CREATE in ONE transaction.
-- **Audit the page, not the viewport.** Two P2 findings were wrong because the disclosure sat below
-  a 200-row table. Scroll before claiming something is undisclosed.
-- **Fixing a truncation by widening a column moves it along the row** — widening Influence made the
-  Boards label truncate instead.
-- My own MV builds saturated the shared pooler and made an unrelated page time out mid-audit. When
-  a page fails right after heavy DDL, suspect yourself before the page.
-- Auto-mode blocks psql DDL until Ben gives an explicit verb; `gsql.mjs` has ~8s timeout, and its
-  `-c` mangles `$$`.
+- **A parameterised SQL function gets a GENERIC plan.** Same SQL: 2.8s with literals, >60s inside
+  the function. Never benchmark a query body and assume the RPC matches.
+- **`unstable_cache` serves the OLD value shape until the KEY changes** — a new field silently does
+  not render, for an hour, with no error.
+- **`CREATE OR REPLACE FUNCTION` cannot change the return type or column order.** Read
+  `pg_get_function_result(oid)` first — se_browse had 5 boolean columns a rewrite would have dropped.
+- **A timed-out count rendered as a confident zero** (`count ?? 0`). Three separate layers this
+  session could not tell "I measured zero" from "I could not measure".
+- **Audit the page, not the viewport** — two P2 findings were wrong because the disclosure sat below
+  a 200-row table.
+- `git reset --hard` discards uncommitted TRACKED edits while leaving untracked files alone.
+- Vercel's ignore step is INVERTED: exit 0 skips, exit 1 builds.
 
 ### Decisions
-- **Disclose, do not hide.** $18.7bn of untagged grant money stays listed and labelled rather than
-  filtered away by default; the QLD skew is stated rather than corrected. Hiding it is its own
-  dishonesty. Reversible if Ben prefers a tagged-only default.
-- **Do not merge what the data says is distinct.** Three `Pratt Holdings Pty Ltd` rows are three
-  real ABNs — the table prints the ABN beside a repeated name instead of merging. Conversely five
-  Red Cross listings ARE one ABN, so they collapse.
-- ABN borrowing requires a single-ABN name; a suffixed name may borrow its unsuffixed root's ABN,
-  never the reverse, so a person never merges into a namesake company.
-- Retry once, not three times. Slowness belongs in the query.
-
-### Open Questions
-- F12 casing, and whether foundations should keep listing universities/service-delivery orgs at all
-  (they are labelled now, but the page still promises "every giving organisation").
-- UNCONFIRMED: /clarity dark-inside-light framing acceptable to Ben?
-- Repo does NOT allow gh auto-merge queueing — merge via a background wait-for-green loop.
+- **Disclose, do not hide.** The grants browser states its 91%-QLD skew and 55%-untagged share
+  rather than filtering them away. Merge on identifiers, disclose on names.
+- **Never commit to `main`.** Branch always; SAFE lands unattended, VISIBLE waits for Ben.
+- Keep funder-specific dataset keys over the generic bucket — they carry provenance and reverse
+  individually.
+- Caching before ISR: `unstable_cache` cuts DB load with no build-time risk.
 
 ### Workflow State
-pattern: ship-per-slice (branch -> build -> tsc+vitest -> smoke 3013 -> PR -> merge-on-green)
-phase: 6
+pattern: ship-per-slice via /ship-merge (branch -> precheck -> classify -> PR -> watch -> merge)
+phase: 7
 total_phases: open-ended
 retries: 0
 max_retries: 3
 
 #### Resolved
-- goal: "UX pass 2 — make the browse surfaces honest"
+- goal: "UX pass 2, admin audit, and stop the landing tax"
 - resource_allocation: balanced
 
 #### Unknowns
-- (see Open Questions)
+- Tonight's nightly orchestrator run is the outstanding test of the persist() fix.
 
 #### Last Failure
 (none)
