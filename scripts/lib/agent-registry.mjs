@@ -1069,7 +1069,11 @@ export const AGENTS = {
     dependencies: ['scout-grants-for-profiles'],
   },
   'send-billing-reminders': {
-    command: ['npx', 'tsx', '--tsconfig', 'apps/web/tsconfig.json', 'scripts/send-billing-reminders.ts'],
+    // --dry-run is NOT optional here. This mails real people as "CivicGraph Billing" about a
+    // subscription product cut 2026-04-24. Its schedule is disabled (2026-08-18-disarm-periphery.sql);
+    // this flag is the second latch, so re-enabling the schedule alone cannot send. Remove it only
+    // when billing is a live product again.
+    command: ['npx', 'tsx', '--tsconfig', 'apps/web/tsconfig.json', 'scripts/send-billing-reminders.ts', '--dry-run'],
     displayName: 'Send Billing Reminders',
     category: 'intelligence',
     defaultPriority: 3,
