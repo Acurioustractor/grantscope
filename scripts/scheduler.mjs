@@ -96,10 +96,12 @@ async function getDueAgents() {
 
   const now = Date.now();
   let due = (data || []).filter(schedule => {
-    if (!schedule.last_run_at) return true; // never run
-    const lastRun = new Date(schedule.last_run_at).getTime();
+    // Gate on the last ATTEMPT, not the last success — that is what stops retry thrash.
+    // last_run_at means "work succeeded" and must not be used for this.
+    if (!schedule.last_scheduled_at) return true; // never attempted
+    const lastAttempt = new Date(schedule.last_scheduled_at).getTime();
     const intervalMs = (schedule.interval_hours || 24) * 3600000;
-    return now - lastRun >= intervalMs;
+    return now - lastAttempt >= intervalMs;
   });
 
   if (ONLY_AGENTS?.length) {
@@ -158,13 +160,22 @@ async function runAgent(schedule) {
   }
 }
 
-async function updateLastRun(agentId) {
+/**
+ * Two stamps, two meanings. last_scheduled_at records the attempt and drives the interval
+ * gate (so a failing agent still cannot thrash); last_run_at records SUCCESS and is what
+ * any freshness reading should trust. Writing one value for both is what let four schedules
+ * claim they had run this week when agent_runs said June.
+ */
+async function updateStamps(agentId, succeeded) {
+  const patch = { last_scheduled_at: new Date().toISOString() };
+  if (succeeded) patch.last_run_at = patch.last_scheduled_at;
+
   const { error } = await supabase
     .from('agent_schedules')
-    .update({ last_run_at: new Date().toISOString() })
+    .update(patch)
     .eq('agent_id', agentId);
 
-  if (error) log(`  Failed to update last_run_at: ${error.message}`);
+  if (error) log(`  Failed to update schedule stamps: ${error.message}`);
 }
 
 async function cleanupStaleRuns() {
@@ -213,8 +224,8 @@ async function main() {
     }
 
     const ok = await runAgent(schedule);
-    await updateLastRun(schedule.agent_id);
-    if (!ok) log(`  Marked last_run_at despite failure to avoid retry thrash.`);
+    await updateStamps(schedule.agent_id, ok);
+    if (!ok) log(`  Marked last_scheduled_at (not last_run_at) to avoid retry thrash.`);
   }
 
   log(`\nScheduler complete`);

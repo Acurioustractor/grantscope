@@ -243,6 +243,13 @@ async function executeTask(task) {
           })
           .eq('id', task.id);
 
+        // The honest freshness signal: work succeeded, so the schedule may say it ran.
+        // Nothing else writes this column.
+        await supabase
+          .from('agent_schedules')
+          .update({ last_run_at: new Date().toISOString() })
+          .eq('agent_id', task.agent_id);
+
         // Parse stats from stdout if available (look for JSON on last line)
         let stats = {};
         try {
@@ -309,8 +316,10 @@ async function runScheduler() {
 
     for (const schedule of schedules) {
       const thresholdMs = schedule.interval_hours * 3600_000;
-      const lastRun = schedule.last_run_at ? new Date(schedule.last_run_at).getTime() : 0;
-      const elapsed = Date.now() - lastRun;
+      // Gate on when we last SCHEDULED, not when work last succeeded. Those are different
+      // questions and conflating them is what made last_run_at lie: see the fix below.
+      const lastScheduled = schedule.last_scheduled_at ? new Date(schedule.last_scheduled_at).getTime() : 0;
+      const elapsed = Date.now() - lastScheduled;
 
       if (elapsed < thresholdMs) continue;
 
@@ -338,10 +347,12 @@ async function runScheduler() {
         continue;
       }
 
-      // Update last_run_at
+      // Stamp the SCHEDULING, not the run. last_run_at is written only when the work actually
+      // succeeds (see executeTask), so a schedule can no longer report a freshness the run log
+      // contradicts — four schedules read "ran this week" while agent_runs said June, or never.
       await supabase
         .from('agent_schedules')
-        .update({ last_run_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .update({ last_scheduled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
         .eq('id', schedule.id);
 
       console.log(`[${timestamp()}] Scheduler created task: ${schedule.agent_id}`);
