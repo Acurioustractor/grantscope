@@ -41,7 +41,6 @@ const TITLES: [string, string][] = [
   ['/ops/claims', 'Claims'],
   ['/ops/grant-recommendations', 'Grant recommendations'],
   ['/ops', 'Ops'],
-  ['/admin/api-usage', 'API usage'],
 ];
 
 export function ShellHeader({ title, events, userEmail, isAdmin }: ShellHeaderProps) {

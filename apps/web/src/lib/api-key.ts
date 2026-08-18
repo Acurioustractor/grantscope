@@ -39,6 +39,9 @@ function extractKey(req: Request): string | null {
   return null;
 }
 
+const keyCache = new Map<string, { info: ApiKeyInfo; expiresAt: number }>();
+const CACHE_TTL = 60_000; // 1 minute
+
 /** SHA-256 hash a key (Web Crypto API — works in Edge Runtime) */
 async function hashKey(raw: string): Promise<string> {
   const encoder = new TextEncoder();

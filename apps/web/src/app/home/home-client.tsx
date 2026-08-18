@@ -467,7 +467,6 @@ export function HomeClient(props: HomeClientProps) {
     { href: '/insights', label: 'Data clarity' },
     { href: '/reports', label: 'Reports' },
     { href: '/home/watchlist', label: 'Watchlist' },
-    { href: '/home/api-keys', label: 'API keys' },
   ] as const;
   const preSweepLanes = [
     {
