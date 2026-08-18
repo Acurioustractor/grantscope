@@ -269,7 +269,54 @@ SELECT remoteness, COUNT(*) FROM gs_entities WHERE is_community_controlled = tru
 
 1. **Start:** Run `/preflight` to check database, env, git, and types
 2. **Work:** Build features, fix bugs, run agents
-3. **Close:** Run `/close` to verify, commit, and update handoff
+3. **Ship:** Run `/ship-merge` — do NOT hand-roll push/PR/merge (see Landing Policy below)
+4. **Close:** Run `/close` to verify, commit, and update handoff
+
+## Landing Policy (decided 2026-08-18)
+
+**Standing authorization. This repo only — it does not loosen the global tier rules elsewhere.**
+
+Landing work ate a large share of a whole session: many small commits, an essay per commit message,
+and a "may I push?" round-trip at each step. Worse, `/ship-merge` — which automates exactly this —
+existed the entire time and went uninvoked, and would only have half-worked because its adapters
+were written for another repo. Both are fixed. The rule now:
+
+**Never hand-roll the landing.** Use `/ship-merge`. If it fails, fix the adapter rather than doing
+it by hand — every manual landing is the tax being paid again.
+
+### What runs without asking
+
+- **Never commit directly to `main`.** Branch first, always. This is what turned routine pushes into
+  Tier 3 during the 2026-08-18 session.
+- **SAFE changes** — `scripts/`, `migrations/`, `docs/`, `thoughts/`, `apps/web/src/lib/`,
+  `app/api/`, `app/ops/`, `app/admin/`, tests, config: **branch → push → PR → watch CI → squash-merge
+  on green, no permission needed.** Report the merged SHA afterwards.
+- **VISIBLE changes** — anything else under `apps/web/src`, i.e. anything a visitor or buyer can
+  render, INCLUDING shared chrome like `app/layout.tsx` and `components/shell/*`: **push and open the
+  PR, then STOP.** Ben eyeballs the Vercel preview and says merge. Never auto-merge a public surface.
+- `scripts/classify-changes.sh` decides which, and **fails toward VISIBLE** — an unrecognised path is
+  treated as public. Being asked about a safe change costs one message; auto-merging a broken public
+  page costs trust.
+
+### Still Tier 3, still needs Ben's explicit verb
+
+Force-push · deleting branches · `git rm` of tracked files · pushing straight to `main` · reverting
+a merged PR · anything touching an external system of record (Xero, GHL, Notion, sent messages).
+
+### The adapters
+
+| script | what it is |
+|---|---|
+| `scripts/precheck.sh` | the health stack in one command (`tsc --noEmit` + `vitest run`); `--fast` for typecheck only, never for a push |
+| `scripts/classify-changes.sh` | VISIBLE vs SAFE against `origin/main` |
+| `scripts/ship-watch.mjs` | one background watcher: CI → merge → curl the live route. `--merge` only for SAFE |
+
+**Batch before shipping.** Each PR costs a fixed few minutes of pipeline regardless of size. Related
+fixes to one surface belong in ONE branch as separate commits, not a PR each. Split only when a
+change needs independent revert, or when one part is VISIBLE and the rest SAFE.
+
+**Commit messages: shorter.** A subject line plus the why, and the non-obvious trap if there is one.
+The reasoning belongs in the findings doc or the migration header, where it is findable later.
 
 ## Agent skills
 

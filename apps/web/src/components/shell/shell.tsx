@@ -4,6 +4,7 @@ import { pinnedViews } from '@/lib/view-registry';
 import { getDirectServiceSupabase } from '@/lib/supabase';
 import { createSupabaseServer, hasSupabaseServerEnv } from '@/lib/supabase-server';
 import { isAdminEmail } from '@/lib/admin';
+import { isLocalDevBypass, localDevAdminUser } from '@/lib/admin-auth-bypass';
 import { unstable_cache } from 'next/cache';
 import { ShellHeader } from './shell-header';
 import { RailNav, RailGroupLink } from './rail-nav';
@@ -58,6 +59,17 @@ async function currentUser(): Promise<{ email: string | null; isAdmin: boolean }
     const {
       data: { user },
     } = await supabase.auth.getUser();
+
+    // Admin audit A4: requireAdminPage honours the local-dev bypass and this did not, so in local
+    // dev the ops ROUTES admitted you while the rail hid its Ops section — every ops screen became
+    // a navigational dead end with no way to reach its siblings. Production was never affected
+    // (a real admin session satisfies both paths), but a local review of the admin surface hit a
+    // shell that disagreed with the page it was wrapping. Same helper, same answer.
+    if (!user && isLocalDevBypass()) {
+      const bypassUser = localDevAdminUser();
+      return { email: bypassUser.email ?? null, isAdmin: true };
+    }
+
     const email = user?.email ?? null;
     return { email, isAdmin: email ? isAdminEmail(email) : false };
   } catch {

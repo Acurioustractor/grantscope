@@ -39,6 +39,12 @@ interface OpsData {
     benchmarkTotal: number;
     reviewIsStale: boolean;
   };
+  /** All-time telemetry probe. Distinguishes "no users did this" from "nothing is recording".
+   *  Admin audit A3 — the funnel read as measured-zero when it was never measured. */
+  telemetry?: {
+    totalEventsAllTime: number;
+    lastEventAt: string | null;
+  };
   productFunnel: {
     windowDays: number;
     profileReadyUsers: number;
@@ -518,6 +524,38 @@ export function OpsClient() {
         <h2 className="text-sm font-black uppercase tracking-widest text-bauhaus-muted mb-4 border-b-2 border-bauhaus-black pb-2">
           Activation Funnel ({funnel.windowDays} Days)
         </h2>
+        {/* A3: eight zeros read as "we watched and nobody did anything". If nothing is recording,
+            say THAT instead — the two are completely different problems. */}
+        {data.telemetry && data.telemetry.totalEventsAllTime === 0 ? (
+          <div className="border-4 border-bauhaus-red p-4 mb-4">
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-1">
+              Not measured
+            </div>
+            <div className="text-sm">
+              No product events have ever been recorded. The zeros below are the absence of
+              instrumentation, not the absence of users.
+            </div>
+          </div>
+        ) : data.telemetry && data.telemetry.lastEventAt &&
+          Date.now() - new Date(data.telemetry.lastEventAt).getTime() >
+            funnel.windowDays * 24 * 60 * 60 * 1000 ? (
+          <div className="border-4 border-bauhaus-red p-4 mb-4">
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-1">
+              Instrumentation looks inactive
+            </div>
+            <div className="text-sm">
+              Last product event{' '}
+              {new Date(data.telemetry.lastEventAt).toLocaleDateString('en-AU', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })}
+              , outside this {funnel.windowDays}-day window — {data.telemetry.totalEventsAllTime}{' '}
+              recorded in total, ever. Treat the zeros below as "nothing is reporting", not as user
+              behaviour.
+            </div>
+          </div>
+        ) : null}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <div className="border-4 border-bauhaus-black p-5">
             <div className="text-xs font-black uppercase tracking-widest text-bauhaus-muted mb-2">Profile Ready</div>

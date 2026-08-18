@@ -161,6 +161,19 @@ export default function ClaimsAdminPage() {
               </tr>
             </thead>
             <tbody>
+              {pending.length === 0 && (
+                <tr className="border-t-2 border-bauhaus-black/10">
+                  <td colSpan={6} className="px-4 py-4 text-sm text-bauhaus-muted">
+                    <span className="font-black uppercase tracking-widest text-xs text-bauhaus-black">
+                      Nothing waiting
+                    </span>
+                    {' — '}
+                    no claims are pending review. Organisations claim their profile from their own
+                    page; a new claim appears here with Approve and Reject buttons in the Actions
+                    column. {resolved.length > 0 ? `${resolved.length} already resolved, below.` : ''}
+                  </td>
+                </tr>
+              )}
               {[...pending, ...resolved].map(claim => (
                 <tr key={claim.id} className="border-t-2 border-bauhaus-black/10">
                   <td className="px-4 py-3 font-bold">
@@ -168,7 +181,7 @@ export default function ClaimsAdminPage() {
                       {claim.charity_name}
                     </a>
                     {claim.org_type && !claim.is_acnc && (
-                      <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-bauhaus-canvas border border-bauhaus-black/10 text-bauhaus-muted font-black uppercase tracking-wider">
+                      <span className="ml-2 whitespace-nowrap text-[10px] px-1.5 py-0.5 bg-bauhaus-canvas border border-bauhaus-black/10 text-bauhaus-muted font-black uppercase tracking-wider">
                         {claim.org_type.replace(/_/g, ' ')}
                       </span>
                     )}

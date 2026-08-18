@@ -49,7 +49,15 @@ UI/UX pass 2. Pass 1 was how the shell looked; pass 2 was whether the numbers ar
       browse pages have none; each call site needs wrapping by hand, no shared data layer.
 - [ ] Foundations: `GIVING/YR` == `GRANTED` exactly on some rows, 90x apart on others. Footer says
       "Giving can mix grantmaking with program spend" — is that the whole explanation?
-- [ ] Grantee wave 1 remainder (~4-5h): Ian Potter scraper, Myer PDFs, Buckland PDFs, VFFF prose.
+- [ ] **Grantee wave 1 remainder — PARKED, and the approach changed.** Do NOT do the 4-5h of
+      bespoke extraction. 29 foundation/grantee scripts already exist; each funder has been adding
+      another and re-implementing the expensive half (tiering, judge rules, source_record_id,
+      reversible dataset key, provenance TSV) that is identical every time. Build ONE staging table
+      + one shared resolve/tier/judge/apply path first, against Ian Potter (structured DB, amounts,
+      1964-2026 — the highest-value source, previously queued behind smaller ones), then Myer,
+      Buckland, VFFF. Perron/PRF are names-only with no amounts: lowest value, decide with Ben
+      whether dollar-less edges are worth having at all. Detail in memory:
+      grantee-ingest-pipeline.
 - [ ] Catalogue retire-or-keep (Ben) · docs-in-rail IA (Ben) · 475 unfiled round 2.
 
 ### Migrations applied this session (ALL already run against prod DB)
