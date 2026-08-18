@@ -20,20 +20,7 @@ Three rules, each from something that went wrong this week:
 guess wearing a plan's clothes — re-scout before acting on anything not checked this week, and move
 the date when you do.
 
-### 1. Lever 2 — one decision, not 28 edits · proven 2026-08-18
-`/reports/desert-overhead` was switched `force-dynamic` -> `revalidate = 3600` on the ideal
-candidate (every query already `safe()`-wrapped). Build passed; **the route stayed `ƒ` Dynamic**.
-
-`apps/web/src/app/layout.tsx:85` awaits `headers()` unconditionally to read middleware's
-`x-pathname`, which makes **every** route under it dynamic — 519 dynamic, 5 static, 11 SSG. No
-page-level `revalidate` can take effect until the chrome decision moves into route-group layouts.
-
-**The decision is Ben's:** restructure the root layout (touching the layout every public page
-renders), or cut Lever 2 and accept that Vercel invocations stay where they are.
-**Kill-criterion:** if the restructure is not worth its blast radius, cut it — the build-skip and
-the report caching were the affordable wins, and they are already banked.
-
-### 2. Grantee gaps — the two that carry dollars · scouted 2026-08-18, re-measured 2026-08-18
+### 1. Grantee gaps — the two that carry dollars · scouted 2026-08-18, re-measured 2026-08-18
 - **Myer FY13-23 + FY25** — confirmed: 39 rows, `grant_year` 2024 only, 12 of them with no amount.
 - **VFFF amounts** — confirmed exactly as written: 7 rows, **all 7 carry no dollars**. Either get
   amounts or delete the rows.
@@ -50,17 +37,18 @@ about 1,065 rows**, not an errand about 7. Decide the policy before doing either
 
 ## Cut — with the reason, so nobody re-adds them
 
-| cut | why |
-|---|---|
-| **The 83 internal uncached pages** (`/org` 47, `/clarity` 16, `/ops`, `/dashboard`) | A handful of hits a day, from Ben. Caching saves nothing measurable and risks staleness on the screens where live truth matters most. **`/ops/health` must stay uncached by design** — a cached health screen is a lie. |
-| **F12 name casing** (`QUEENSLAND RAIL LTD` vs `Legal Aid Queensland`) | Many all-caps names are correct as registered. The "fix" is guesswork that can make correct names wrong. The people browser already does the safe half. |
-| **A12 floating widgets** | It is a browser extension overlay, not our chrome. Not ours to fix. |
-| **96 leftover `foundation_grantees` rows** | $87,150 across 96 rows, in a $34bn graph. Below the noise floor. |
-| **HMST 816 held-out names** | Mostly defunct pre-2000 Victorian orgs. Resolving them creates edges to entities that no longer exist. |
-| **Telethon 45 · Lotterywest 65 held-out** | Same class, smaller. Revisit only if entity coverage materially improves — not as a task. |
-| **Perron grantee data** | Names only, no amounts. Same reasoning as VFFF: an edge with no dollars earns nothing. |
-| **Catalogue retire-or-keep · docs-in-rail IA · 475 unfiled round 2** | Carried across three sessions untouched. That is the answer. Grooming, not value. |
-| **`/clarity` dark-inside-light framing** | Listed as UNCONFIRMED for weeks with nobody blocked on it. |
+| cut | why | returns if |
+|---|---|---|
+| **The 83 internal uncached pages** (`/org` 47, `/clarity` 16, `/ops`, `/dashboard`) | A handful of hits a day, from Ben. Caching saves nothing measurable and risks staleness on the screens where live truth matters most. **`/ops/health` must stay uncached by design** — a cached health screen is a lie. | |
+| **F12 name casing** (`QUEENSLAND RAIL LTD` vs `Legal Aid Queensland`) | Many all-caps names are correct as registered. The "fix" is guesswork that can make correct names wrong. The people browser already does the safe half. | |
+| **A12 floating widgets** | It is a browser extension overlay, not our chrome. Not ours to fix. | |
+| **96 leftover `foundation_grantees` rows** | $87,150 across 96 rows, in a $34bn graph. Below the noise floor. | |
+| **HMST 816 held-out names** | Mostly defunct pre-2000 Victorian orgs. Resolving them creates edges to entities that no longer exist. | |
+| **Telethon 45 · Lotterywest 65 held-out** | Same class, smaller. Revisit only if entity coverage materially improves — not as a task. | |
+| **Perron grantee data** | Names only, no amounts. Same reasoning as VFFF: an edge with no dollars earns nothing. | |
+| **Catalogue retire-or-keep · docs-in-rail IA · 475 unfiled round 2** | Carried across three sessions untouched. That is the answer. Grooming, not value. | |
+| **Lever 2 — the root-layout restructure** | The spike works: 78 routes flip to static, 519/5/11 becomes 441/83/11, one `(marketing)` group and 47 `git mv`s. But it optimises a cost nobody measures — **Web Analytics is not enabled**, so there is no route-level traffic data at all, and the only countable invocations are 248/month of cron. Meanwhile `auth.users` holds 25 and **exactly 1 has signed in in 30 days**, so the price (a signed-out flash while the nav hydrates client-side) is paid by one person. Doing the expensive thing to fix an unmeasured cost is the same shape as the four-month debris. | Analytics shows real traffic to the 78 routes, **or** something else forces `app/layout.tsx` open. The spike branch is deleted; the method is in [the ticket](https://github.com/Acurioustractor/grantscope/issues/281) — root layout holds every route dynamic, and `nav.tsx` is already `'use client'` with `initialUserEmail` as a bare `useState` seed. |
+| **`/clarity` dark-inside-light framing** | Listed as UNCONFIRMED for weeks with nobody blocked on it. | |
 
 ---
 
