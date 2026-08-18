@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
@@ -338,11 +339,14 @@ async function getLiveContext(): Promise<{
   };
 }
 
+/** Cost + pooler load: Three queries (one an exec_sql aggregate) ran on every request for data that moves nightly. */
+const getLiveContextCached = unstable_cache(getLiveContext, ['opportunities-ecosystem-live-context'], { revalidate: 3600 });
+
 export default async function OpportunityEcosystemPage() {
   const opportunities = rankedEcosystemOpportunities();
   const actions = rankedEcosystemActions();
   const [live, intelligence, goodsSnapshot] = await Promise.all([
-    getLiveContext(),
+    getLiveContextCached(),
     getOpportunityIntelligence({ minScore: 55 }),
     getGoodsReadinessSnapshot(),
   ]);

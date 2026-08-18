@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { getServiceSupabase } from '@/lib/supabase';
 import { TableOfContents } from './toc';
 import {
@@ -84,8 +85,12 @@ async function getSnapshot(): Promise<SnapshotData> {
   };
 }
 
+/** Cost + pooler load: Uncached, every request rebuilt the whole ACNC snapshot. The register is refreshed nightly
+ *  at most. */
+const getSnapshotCached = unstable_cache(getSnapshot, ['charities-insights-snapshot'], { revalidate: 3600 });
+
 export default async function CharityInsightsPage() {
-  const snapshot = await getSnapshot();
+  const snapshot = await getSnapshotCached();
 
   const totalCharities = snapshot.bySize.reduce((s, r) => s + r.count, 0);
   const totalRevenue = snapshot.bySize.reduce((s, r) => s + r.total_revenue, 0);

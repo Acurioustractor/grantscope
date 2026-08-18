@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getServiceSupabase } from '@/lib/supabase';
@@ -79,6 +80,77 @@ function get(sp: SP, key: string, fallback: string = ''): string {
   return v ?? fallback;
 }
 
+interface PipelineQuery {
+  q: string; entityType: string; state: string; ccOnly: boolean; snOnly: boolean;
+  minSystems: number; minFlow: number; sortBy: string; sortDir: string;
+  offset: number; pageSize: number;
+}
+
+/** The whole read for one filter combination, lifted out of the component so it can be cached.
+ *  Returns errorMessage rather than the PostgrestError itself: only plain values survive the
+ *  cache, and the page renders the message. */
+async function getPipelineData(p: PipelineQuery) {
+  const supabase = getServiceSupabase();
+
+  let query = supabase
+    .from('mv_entity_power_index')
+    .select(
+      'gs_id, canonical_name, entity_type, abn, state, lga_name, is_community_controlled, in_procurement, in_recorded_grants, in_political_donations, in_charity_registry, in_foundation, in_alma_evidence, in_ndis_provider, system_count, procurement_dollars, recorded_grants_dollars, donation_dollars, foundation_giving, total_dollar_flow, contract_count, recorded_grants_count, donation_count, power_score, charity_size',
+      { count: 'exact' },
+    );
+
+  if (p.q) query = query.ilike('canonical_name', `%${p.q}%`);
+  if (p.entityType) query = query.eq('entity_type', p.entityType);
+  if (p.state) query = query.eq('state', p.state);
+  if (p.ccOnly) query = query.eq('is_community_controlled', true);
+  if (p.minSystems > 0) query = query.gte('system_count', p.minSystems);
+  if (p.minFlow > 0) query = query.gte('total_dollar_flow', p.minFlow);
+
+  query = query.order(p.sortBy, { ascending: p.sortDir === 'asc', nullsFirst: false });
+  query = query.range(p.offset, p.offset + p.pageSize - 1);
+
+  const { data: rows, count, error } = await query;
+
+  const results: Row[] = (rows as Row[] | null) ?? [];
+
+  // Summary stats (separate cheaper query)
+  const { data: statsData } = await supabase
+    .from('mv_entity_power_index')
+    .select('total_dollar_flow.sum(), is_community_controlled.count()', { count: 'exact', head: false })
+    .limit(1);
+  const totalDollarFlow = ((statsData as Record<string, number>[] | null)?.[0]?.sum) ?? 0;
+  const ccCount = ((statsData as Record<string, number>[] | null)?.[0]?.count) ?? 0;
+
+  const stats: Stats = {
+    total_entities: count ?? 0,
+    filtered: results.length,
+    total_dollar_flow: Number(totalDollarFlow) || 0,
+    cc_count: Number(ccCount) || 0,
+  };
+
+  // Supply Nation filter (post-query because mv_entity_power_index doesn't include the flag yet)
+  let filteredResults = results;
+  if (p.snOnly) {
+    const abns = results.map((r) => r.abn).filter(Boolean);
+    if (abns.length > 0) {
+      const { data: snEntities } = await supabase
+        .from('gs_entities')
+        .select('abn')
+        .eq('is_supply_nation_certified', true)
+        .in('abn', abns);
+      const snAbns = new Set((snEntities ?? []).map((e) => e.abn));
+      filteredResults = results.filter((r) => r.abn && snAbns.has(r.abn));
+    }
+  }
+
+  return { results: filteredResults, count: count ?? 0, stats, errorMessage: error?.message ?? null };
+}
+
+/** Cost + pooler load: this page ran two mv_entity_power_index queries on every request,
+ *  including the unfiltered default that every visitor lands on. The MV is refreshed nightly.
+ *  unstable_cache folds the arguments into the key, so each filter combination caches separately. */
+const getPipelineDataCached = unstable_cache(getPipelineData, ['pipeline-power-index'], { revalidate: 3600 });
+
 export default async function PipelinePage({
   searchParams,
 }: {
@@ -99,59 +171,9 @@ export default async function PipelinePage({
   const PAGE_SIZE = 50;
   const offset = (page - 1) * PAGE_SIZE;
 
-  const supabase = getServiceSupabase();
-
-  let query = supabase
-    .from('mv_entity_power_index')
-    .select(
-      'gs_id, canonical_name, entity_type, abn, state, lga_name, is_community_controlled, in_procurement, in_recorded_grants, in_political_donations, in_charity_registry, in_foundation, in_alma_evidence, in_ndis_provider, system_count, procurement_dollars, recorded_grants_dollars, donation_dollars, foundation_giving, total_dollar_flow, contract_count, recorded_grants_count, donation_count, power_score, charity_size',
-      { count: 'exact' },
-    );
-
-  if (q) query = query.ilike('canonical_name', `%${q}%`);
-  if (entityType) query = query.eq('entity_type', entityType);
-  if (state) query = query.eq('state', state);
-  if (ccOnly) query = query.eq('is_community_controlled', true);
-  if (minSystems > 0) query = query.gte('system_count', minSystems);
-  if (minFlow > 0) query = query.gte('total_dollar_flow', minFlow);
-
-  query = query.order(sortBy, { ascending: sortDir === 'asc', nullsFirst: false });
-  query = query.range(offset, offset + PAGE_SIZE - 1);
-
-  const { data: rows, count, error } = await query;
-
-  const results: Row[] = (rows as Row[] | null) ?? [];
-
-  // Summary stats (separate cheaper query)
-  const statsPromise = supabase
-    .from('mv_entity_power_index')
-    .select('total_dollar_flow.sum(), is_community_controlled.count()', { count: 'exact', head: false })
-    .limit(1);
-  const { data: statsData } = await statsPromise;
-  const totalDollarFlow = ((statsData as Record<string, number>[] | null)?.[0]?.sum) ?? 0;
-  const ccCount = ((statsData as Record<string, number>[] | null)?.[0]?.count) ?? 0;
-
-  const stats: Stats = {
-    total_entities: count ?? 0,
-    filtered: results.length,
-    total_dollar_flow: Number(totalDollarFlow) || 0,
-    cc_count: Number(ccCount) || 0,
-  };
-
-  // Supply Nation filter (post-query because mv_entity_power_index doesn't include the flag yet)
-  let filteredResults = results;
-  if (snOnly) {
-    const abns = results.map((r) => r.abn).filter(Boolean);
-    if (abns.length > 0) {
-      const { data: snEntities } = await supabase
-        .from('gs_entities')
-        .select('abn')
-        .eq('is_supply_nation_certified', true)
-        .in('abn', abns);
-      const snAbns = new Set((snEntities ?? []).map((e) => e.abn));
-      filteredResults = results.filter((r) => r.abn && snAbns.has(r.abn));
-    }
-  }
+  const { results: filteredResults, count, stats, errorMessage } = await getPipelineDataCached({
+    q, entityType, state, ccOnly, snOnly, minSystems, minFlow, sortBy, sortDir, offset, pageSize: PAGE_SIZE,
+  });
 
   // Build share URL
   const qp = new URLSearchParams();
@@ -338,13 +360,13 @@ export default async function PipelinePage({
           </p>
         </div>
 
-        {error && (
+        {errorMessage && (
           <div className="px-5 py-4 text-sm font-medium text-bauhaus-red">
-            Query error: {error.message}
+            Query error: {errorMessage}
           </div>
         )}
 
-        {filteredResults.length === 0 && !error && (
+        {filteredResults.length === 0 && !errorMessage && (
           <div className="px-5 py-10 text-center text-sm font-medium text-bauhaus-muted">
             No matches. Try widening filters or searching a different name.
           </div>

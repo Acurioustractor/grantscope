@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { getServiceSupabase } from '@/lib/supabase';
 import { PUBLIC_DATASET_KEYS, PUBLIC_DATASETS } from '@/lib/giving-commons';
 import { GivingHeader, GivingSubnav } from '../_components';
@@ -53,14 +54,19 @@ async function getCatalogHealth() {
       .select('table_name, snapshot_at, row_count, freshness_hours, provenance_coverage_pct, confidence_coverage_pct, sla_hours')
       .in('table_name', tables);
 
-    return new Map((data ?? []).map((row) => [row.table_name, row as CatalogHealth]));
+    return (data ?? []) as CatalogHealth[];
   } catch {
-    return new Map<string, CatalogHealth>();
+    return [] as CatalogHealth[];
   }
 }
 
+/** Cost + pooler load: catalog health is a nightly-grain measure; it does not need recomputing
+ *  per request. Note the row shape above: this used to return a Map, which does NOT survive the
+ *  cache — only plain JSON does — so the fetcher returns rows and the Map is built per render. */
+const getCatalogHealthCached = unstable_cache(getCatalogHealth, ['giving-quality-catalog-health'], { revalidate: 3600 });
+
 export default async function GivingQualityPage() {
-  const health = await getCatalogHealth();
+  const health = new Map((await getCatalogHealthCached()).map((row) => [row.table_name, row]));
   const statuses = PUBLIC_DATASET_KEYS.map((key) => statusFor(health.get(PUBLIC_DATASETS[key].table)));
   const freshCount = statuses.filter((status) => status === 'fresh').length;
   const staleCount = statuses.filter((status) => status === 'stale').length;

@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 import { getLiveReportSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
@@ -5,7 +6,7 @@ import { safe } from '@/lib/services/utils';
 export const dynamic = 'force-dynamic';
 export const metadata = {
   title: "What's changing — CivicGraph",
-  description: 'Live data feed from across the platform. Latest watchhouse snapshot, recent ingestion runs, new reports, recent feedback. Refreshed every page load.',
+  description: 'Live data feed from across the platform. Latest watchhouse snapshot, recent ingestion runs, new reports, recent feedback. Refreshed every five minutes.',
 };
 
 type AgentRun = { agent_id: string; agent_name: string | null; status: string; items_found: number | null; items_new: number | null; duration_ms: number | null; started_at: string };
@@ -88,8 +89,13 @@ async function getChanges() {
   };
 }
 
+/** Cost + pooler load: this page ran six queries on every request. Five minutes, not the hour
+ *  used elsewhere, because this screen's whole job is to show what just changed — and the copy
+ *  below says so, so the window has to stay short enough for that to remain true. */
+const getChangesCached = unstable_cache(getChanges, ['changes-feed'], { revalidate: 300 });
+
 export default async function ChangesPage() {
-  const r = await getChanges();
+  const r = await getChangesCached();
   const ws = r.watchhouse;
   const fnPctChild = ws && ws.total_children > 0 ? Math.round((ws.child_first_nations / ws.total_children) * 100) : 0;
 
@@ -108,7 +114,7 @@ export default async function ChangesPage() {
           What&apos;s changing on CivicGraph
         </h1>
         <p className="text-xl text-bauhaus-muted leading-tight font-medium max-w-3xl">
-          Live activity from across the platform. Watchhouse refreshes, ingestion runs, new reports, recent feedback. Refreshed every page load.
+          Live activity from across the platform. Watchhouse refreshes, ingestion runs, new reports, recent feedback. Refreshed every five minutes.
         </p>
       </div>
 
