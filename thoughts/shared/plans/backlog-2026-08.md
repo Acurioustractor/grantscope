@@ -51,10 +51,6 @@ build-skip and report caching were the affordable wins.
 - **VFFF amounts** — its 7 edges all carry $0, so the data is currently inert. Either get amounts or
   delete the 7 rows; a funder→grantee edge with no dollars earns nothing in a money graph.
 
-### 5. Close the 6 stale issues · 5 min
-#246-#251 are open for browsers that shipped days ago. A tracker that lies about what is outstanding
-is worse than no tracker.
-
 ---
 
 ## Cut — with the reason, so nobody re-adds them
