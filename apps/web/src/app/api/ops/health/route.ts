@@ -53,7 +53,8 @@ export async function GET() {
       grantSourceIdentitySources,
       // Breakdowns + recent runs
       sourceBreakdownResult, confidenceBreakdownResult,
-      recentRuns, recentDiscoveryRuns,
+      recentRuns,
+      newestAgentRun, recentDiscoveryRuns,
       sourceHealthRuns,
       pipelineSchedules, pipelineTasks, pipelineRuns,
       // Entity graph
@@ -186,6 +187,11 @@ export async function GET() {
       safe(db.rpc('get_grant_source_breakdown'), 8000),
       safe(db.rpc('get_foundation_confidence_breakdown'), 8000),
       safe(db.from('agent_runs').select('*').order('completed_at', { ascending: false }).limit(20), 8000),
+      // Orchestrator heartbeat. The pm2 orchestrator daemon was found stopped on 2026-08-18 having
+      // been down ~2 days: 86 scheduled tasks had fired into nothing, verified_at stopped being
+      // refreshed, and the entire opportunity feed quarantined. NOTHING reported it — it was found
+      // by hand. The newest agent_run of ANY kind is the cheapest proof the scheduler is alive.
+      safe(db.from('agent_runs').select('started_at').order('started_at', { ascending: false }).limit(1), 8000),
       safe(db.from('grant_discovery_runs').select('*').order('started_at', { ascending: false }).limit(10), 8000),
       // Per-source ingest health — latest run per source:* agent
       safe(db.from('agent_runs')
@@ -421,6 +427,14 @@ export async function GET() {
       sourceBreakdown: sourceBreakdownResult.data ?? [],
       confidenceBreakdown: confidenceBreakdownResult.data ?? [],
       recentRuns: recentRuns.data ?? [],
+      // See the heartbeat query above. Null lastRunAt means we could not read it, which is NOT the
+      // same as "no runs" — the UI must not turn an unreadable heartbeat into a dead one.
+      orchestrator: (() => {
+        const at = newestAgentRun.data?.[0]?.started_at ?? null;
+        if (!at) return { lastRunAt: null, hoursSince: null, stale: false, unknown: true };
+        const hours = (Date.now() - new Date(at).getTime()) / 3_600_000;
+        return { lastRunAt: at, hoursSince: Math.round(hours * 10) / 10, stale: hours > 6, unknown: false };
+      })(),
       discoveryRuns: recentDiscoveryRuns.data ?? [],
       sourceHealth,
       pipelineHealth,

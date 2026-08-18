@@ -18,9 +18,14 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 BASE="${1:-origin/main}"
 
-FILES="$(git diff --name-only "$BASE"...HEAD)"
+# Committed changes vs the base, PLUS anything still in the working tree. Without the second part
+# this reported "no changes -> SAFE" whenever it ran before the commit — a false SAFE, which is the
+# one answer that must never be wrong, because SAFE is what auto-merges.
+FILES="$(
+  { git diff --name-only "$BASE"...HEAD; git status --porcelain | awk '{print $NF}'; } | sort -u
+)"
 if [[ -z "$FILES" ]]; then
-  echo "no changes vs $BASE" >&2
+  echo "no changes vs $BASE and nothing uncommitted" >&2
   echo "SAFE"
   exit 0
 fi
