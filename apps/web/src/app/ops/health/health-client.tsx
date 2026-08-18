@@ -11,6 +11,8 @@ function tableToSlug(table: string): string {
 }
 
 interface HealthData {
+  /** Is anything scheduling agents at all? See the API route for why this exists. */
+  orchestrator?: { lastRunAt: string | null; hoursSince: number | null; stale: boolean; unknown: boolean };
   stats: {
     // A13: null means the count timed out and was never measured — NOT that it is zero.
     grants: { total: number; withDescription: number | null; enriched: number | null; embedded: number | null; open: number | null };
@@ -437,6 +439,27 @@ export function HealthClient() {
           </div>
         </div>
       </div>
+
+      {/* The scheduler being dead outranks every number below it: if nothing is running, every
+          figure on this page is a snapshot of whenever it last ran. */}
+      {data.orchestrator?.stale && (
+        <section className="mb-6">
+          <div className="border-4 border-bauhaus-red p-5">
+            <div className="text-xs font-black uppercase tracking-widest text-bauhaus-red mb-1">
+              No agent has run in {data.orchestrator.hoursSince} hours
+            </div>
+            <div className="text-sm">
+              The orchestrator schedules every agent. Nothing has run since{' '}
+              {data.orchestrator.lastRunAt
+                ? new Date(data.orchestrator.lastRunAt).toLocaleString('en-AU')
+                : 'unknown'}
+              , so the figures below are as stale as that. Check it with{' '}
+              <code className="font-mono text-xs">pm2 describe orchestrator</code> and start it with{' '}
+              <code className="font-mono text-xs">pm2 start orchestrator</code>.
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ===== COMPOSITE HEALTH SCORE ===== */}
       <section className="mb-10">
