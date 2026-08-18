@@ -18,8 +18,24 @@ harness · #260 dedupe · #261 Vercel build-skip · #262 report caching.
 **Test:** `scripts/precheck.sh` (tsc + 734 vitest) · dev 3013
 
 ### Now
-[->] Nothing blocking. Three decisions are Ben's (crons, Lever 2, F12 casing); the biggest
-open work is the 129 uncached pages and the grantee coverage gaps.
+[->] **Run `scripts/wizard-pm2-startup.sh`** (2 min, needs Ben's password) — it is the last gap in
+the orchestrator outage. Then: the two cron decisions, or Lever 2 proven on one page.
+
+### Orchestrator outage — CLOSED 2026-08-18 (after the close-out above)
+The pm2 orchestrator daemon was found **stopped, down ~2 days**. On restart it logged "Recovered 1
+stuck task" and "Coalesced 86 superseded scheduled tasks". This CORRECTS the earlier A1 diagnosis:
+the `persist()` crash was real and fixed, but **necessary, not sufficient** — with the daemon down,
+nothing scheduled the work regardless. Both were needed.
+
+- **Proven:** the nightly grant pipeline then ran `success` in **277s**, after every run since
+  2026-08-07 had been `timed_out` with duration 0.
+- Feed recovered: `apply_now`+`rolling` **1,449** (was 0), quarantined 822 (was 2,592).
+- `pm2 save` done — 43 processes; old dump backed up at `~/.pm2/dump.pm2.bak-20260818`.
+- **Still open:** `pm2 startup` needs a sudo line only Ben can run → `scripts/wizard-pm2-startup.sh`
+  (#264). Until then a reboot takes the orchestrator down silently again.
+- Alarm shipped (#263): `/ops/health` leads with a red banner when no agent has run in 6 hours.
+  Also fixed a **false SAFE** in `classify-changes.sh` — it compared committed history only, so
+  running it before a commit answered "no changes -> SAFE", and SAFE is what auto-merges.
 
 ### This Session (2026-08-18→19)
 Started as "continue UX", became a data-honesty and cost session.
