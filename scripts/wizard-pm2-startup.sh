@@ -225,7 +225,22 @@ say "    -u benknight --hp /Users/benknight"
 say ""
 note "If your node version has changed since 2026-08-18, run 'pm2 startup' first to"
 note "regenerate the line — the path above pins node v22.21.1."
-confirm "Did the command complete without an error?"
+say ""
+warn "READ THE OUTPUT, do not trust its last line. On macOS, pm2 run under sudo writes a USER"
+warn "LaunchAgent and then tries to load it AS ROOT. The domains do not match, so you get:"
+warn "    Load failed: 5: Input/output error"
+warn "and pm2 STILL prints '[v] Command successfully executed.' immediately after."
+say ""
+step "If you saw that Load failed line, the plist was written but never loaded. Fix it by"
+step "loading it in your own domain (no sudo) — this wizard will offer to do it next."
+confirm "Did the command complete (even if you saw the Load failed warning)?"
+
+if ! launchctl list 2>/dev/null | grep -qi pm2; then
+  warn "Not registered yet — this is the sudo/domain mismatch described above."
+  if confirm "Load it now in your user domain?"; then
+    launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/pm2.$(whoami).plist" 2>&1 | head -3 || true
+  fi
+fi
 
 # ── 4 ─────────────────────────────────────────────────────────────────────
 stage "Verify the job is registered"
@@ -234,13 +249,25 @@ pause "Press enter to check launchctl"
 if launchctl list 2>/dev/null | grep -i pm2; then
   say ""
   note "Found it. A reboot will now run 'pm2 resurrect' and bring the orchestrator back."
+  say ""
+  note "Real proof is a reboot: restart the Mac, then run 'pm2 describe orchestrator'."
+  note "It should come back online without you starting it."
+  finish
 else
-  warn "No pm2 entry found in launchctl."
-  warn "The startup command may not have completed. Re-run stage 3, or run 'pm2 startup'"
-  warn "and use the exact line it prints."
+  # The first run of this wizard printed "Setup complete" while the launchd job was NOT
+  # installed — stage 3 was confirmed but never actually run. A closing message that claims
+  # success over a failed check is the same defect this codebase has been fixing all week:
+  # never report a state you did not measure. So this path fails loudly and does NOT call finish.
+  say ""
+  warn "NOT DONE — no pm2 entry in launchctl, so the startup job is not installed."
+  warn ""
+  warn "Stage 3 did not take. Run this line yourself, then re-run this wizard:"
+  warn ""
+  warn "  sudo env PATH=\$PATH:/Users/benknight/.nvm/versions/node/v22.21.1/bin \\"
+  warn "    /opt/homebrew/lib/node_modules/pm2/bin/pm2 startup launchd \\"
+  warn "    -u benknight --hp /Users/benknight"
+  warn ""
+  warn "pm2 save DID work, so 'pm2 resurrect' still restores the process list by hand."
+  warn "What is missing is only the automatic run at boot."
+  exit 1
 fi
-say ""
-note "Real proof is a reboot: restart the Mac, then run 'pm2 describe orchestrator'."
-note "It should come back online without you starting it."
-
-finish
