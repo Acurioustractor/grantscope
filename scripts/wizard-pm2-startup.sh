@@ -225,7 +225,22 @@ say "    -u benknight --hp /Users/benknight"
 say ""
 note "If your node version has changed since 2026-08-18, run 'pm2 startup' first to"
 note "regenerate the line — the path above pins node v22.21.1."
-confirm "Did the command complete without an error?"
+say ""
+warn "READ THE OUTPUT, do not trust its last line. On macOS, pm2 run under sudo writes a USER"
+warn "LaunchAgent and then tries to load it AS ROOT. The domains do not match, so you get:"
+warn "    Load failed: 5: Input/output error"
+warn "and pm2 STILL prints '[v] Command successfully executed.' immediately after."
+say ""
+step "If you saw that Load failed line, the plist was written but never loaded. Fix it by"
+step "loading it in your own domain (no sudo) — this wizard will offer to do it next."
+confirm "Did the command complete (even if you saw the Load failed warning)?"
+
+if ! launchctl list 2>/dev/null | grep -qi pm2; then
+  warn "Not registered yet — this is the sudo/domain mismatch described above."
+  if confirm "Load it now in your user domain?"; then
+    launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/pm2.$(whoami).plist" 2>&1 | head -3 || true
+  fi
+fi
 
 # ── 4 ─────────────────────────────────────────────────────────────────────
 stage "Verify the job is registered"
