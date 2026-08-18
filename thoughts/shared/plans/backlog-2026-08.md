@@ -20,21 +20,7 @@ Three rules, each from something that went wrong this week:
 guess wearing a plan's clothes — re-scout before acting on anything not checked this week, and move
 the date when you do.
 
-### 1. `/api/cron/usage-alerts` — delete it, don't reschedule it · scouted 2026-08-18
-This item used to read "the two hourly crons, `usage-alerts` and `deliver-notifications`, ~1,440
-invocations/month; 4-hourly cuts that 75%." **Both halves were wrong within a day of being written:**
-
-- `deliver-notifications` **no longer exists** — #267 deleted it the same day, along with `run-due`.
-  `vercel.json` now has 11 crons and only one hourly. So the figure is ~720/month, not ~1,440.
-- Rescheduling is the wrong verb. The route reads `api_keys` to alert on keys over 80% of their rate
-  limit. **`api_keys` holds 0 rows** (measured 2026-08-18). It has alerted on nothing since the April
-  scope cut removed the product it serves.
-
-So this is the same class as #267, not a tuning question: delete the cron, and decide whether
-`/api/cron/usage-alerts` and the `api_keys` table go with it.
-**Kill-criterion:** if API keys are coming back as a product, it stays and this item is cut instead.
-
-### 2. Lever 2 — one decision, not 28 edits · proven 2026-08-18
+### 1. Lever 2 — one decision, not 28 edits · proven 2026-08-18
 `/reports/desert-overhead` was switched `force-dynamic` -> `revalidate = 3600` on the ideal
 candidate (every query already `safe()`-wrapped). Build passed; **the route stayed `ƒ` Dynamic**.
 
@@ -47,7 +33,7 @@ renders), or cut Lever 2 and accept that Vercel invocations stay where they are.
 **Kill-criterion:** if the restructure is not worth its blast radius, cut it — the build-skip and
 the report caching were the affordable wins, and they are already banked.
 
-### 3. Grantee gaps — the two that carry dollars · scouted 2026-08-18, re-measured 2026-08-18
+### 2. Grantee gaps — the two that carry dollars · scouted 2026-08-18, re-measured 2026-08-18
 - **Myer FY13-23 + FY25** — confirmed: 39 rows, `grant_year` 2024 only, 12 of them with no amount.
 - **VFFF amounts** — confirmed exactly as written: 7 rows, **all 7 carry no dollars**. Either get
   amounts or delete the rows.
