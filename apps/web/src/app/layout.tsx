@@ -38,6 +38,10 @@ import { resolveSubscriptionTier } from '@/lib/subscription';
 import { isAdminEmail } from '@/lib/admin';
 import type { User } from '@supabase/supabase-js';
 import { cookies, headers } from 'next/headers';
+// Vercel Web Analytics. Added 2026-08-19 because Lever 2 was cut for the want of exactly this
+// number: the restructure would flip 78 routes to static, and nothing on this project measured
+// whether those routes are ever hit. See #284 and the Cut table's "returns if" column.
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
   title: "CivicGraph — Australia's Accountability Atlas",
@@ -121,6 +125,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <body className={`font-sans antialiased bg-transparent ${qlFontVars}`}>
           <BrandFontLinks />
           {children}
+          <Analytics />
         </body>
       </html>
     );
@@ -263,6 +268,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </>
         )}
         <ShortlistBar />
+        <Analytics />
         {/* The Atlas is a full-viewport map; the chat bubble sat on its
             bottom corner controls (Ben, 2026-08-09: no AI button there). */}
         {!pathname.startsWith('/atlas') && (
