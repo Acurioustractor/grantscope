@@ -354,6 +354,8 @@ export interface FoundationFunder {
   foundation_abn: string;
   total_giving_annual: number;
   grant_count: number;
+  /** How many of grant_count carry no dollar figure — so a reader can tell what total_grant_amount covers. */
+  grants_without_amount: number;
   total_grant_amount: number;
   grant_years: string[];
   foundation_score: number | null;
@@ -1568,6 +1570,10 @@ export async function getOrgFoundationFunders(abn: string | string[]): Promise<F
     query: `SELECT fg.foundation_name, fg.foundation_abn,
               MAX(fg.total_giving_annual)::bigint as total_giving_annual,
               COUNT(*)::int as grant_count,
+              -- Disclose, do not hide (issues/285): grant_count includes links whose source
+              -- published no dollar figure, so "N grants, $X" understates the average unless the
+              -- reader knows how many of the N carry no amount at all.
+              COUNT(*) FILTER (WHERE fg.grant_amount IS NULL OR fg.grant_amount = 0)::int as grants_without_amount,
               SUM(fg.grant_amount)::bigint as total_grant_amount,
               array_agg(DISTINCT fg.grant_year) FILTER (WHERE fg.grant_year IS NOT NULL) as grant_years,
               MAX(fs.foundation_score)::int as foundation_score,

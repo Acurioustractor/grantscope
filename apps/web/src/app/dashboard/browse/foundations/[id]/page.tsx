@@ -103,7 +103,7 @@ export default async function FoundationProfile({ params }: { params: Promise<{ 
         {Array.isArray(f.thematic_focus) && f.thematic_focus.length ? ` · focus: ${f.thematic_focus.slice(0, 5).join(', ')}` : ''}
       </p>
 
-      <Section title="Who it funds" note={`${grantees.length} linked grantees${grantees.length === 200 ? ' (first 200)' : ''} · each link states its method`}>
+      <Section title="Who it funds" note={`${grantees.length} linked grantees${grantees.length === 200 ? ' (first 200)' : ''}${grantees.filter((g) => !g.grant_amount).length > 0 ? ` · ${grantees.filter((g) => !g.grant_amount).length} with no amount on record` : ''} · each link states its method`}>
         {grantees.length === 0 ? (
           <p className="text-[13px]" style={{ color: 'var(--shell-muted)' }}>
             No grantee links recorded. That is a statement about our data, not about the foundation.
