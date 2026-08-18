@@ -16,35 +16,42 @@ Three rules, each from something that went wrong this week:
 
 ## Do — in this order
 
-### 1. `scripts/wizard-pm2-startup.sh` · Ben · 2 min
-The orchestrator was down two days and nothing said so. `pm2 save` is done; only the launchd job is
-missing, and it needs a sudo line. Until it runs, one reboot repeats the whole outage.
-**Why first:** smallest action on the list, closes an entire failure class.
-
-### 2. The two hourly crons · Ben · 1 line each
+### 1. The two hourly crons · Ben · 1 line each
 `usage-alerts` and `deliver-notifications` run hourly — ~1,440 invocations/month between them.
 4-hourly cuts that 75%. The only cost is notification latency, which is a product decision.
 **Kill-criterion:** if either genuinely needs to be hourly, say so and it stays hourly forever.
 
-### 3. Lever 2, proven on ONE page · half an hour
-`force-dynamic` → `revalidate` is the **only** thing that cuts Vercel *invocations*. The build-skip
-and the report caching did not touch them. The risk is real — ISR prerenders at build time, so the
-build queries Supabase, which is a known way to break builds here.
-**Do:** pick one low-traffic public report, switch it, watch the build. If the build survives, the
-pattern is proven and the next 20 are mechanical. If it breaks, we know in one page instead of 28.
+### 2. Lever 2 — BLOCKED, and not where we thought · proven 2026-08-18
+Tried exactly as specified: `/reports/desert-overhead` (static route, every query already wrapped in
+`safe()` with a fallback, so a build-time query failure cannot break the build — the ideal candidate).
+`force-dynamic` -> `revalidate = 3600`. Build passed. **The route stayed `ƒ` Dynamic.**
 
-### 4. Cache the ~14 high-traffic PUBLIC pages · 1 hour
+**Cause:** `apps/web/src/app/layout.tsx:85` awaits `headers()` unconditionally to read the
+`x-pathname` that `middleware.ts:41` sets, then branches on it to pick chromeless vs marketing
+chrome. A root layout that reads `headers()`/`cookies()` makes **every route under it** dynamic, so
+no page-level `revalidate` can ever produce a static or ISR route. Measured on that build:
+**519 dynamic routes, 5 static, 11 SSG.**
+
+So Lever 2 is not 28 mechanical page edits. It is one structural change first: move the chrome
+decision out of root-layout pathname sniffing and into route-group layouts, so the root layout stops
+touching request headers. Only then does `revalidate` on a page do anything.
+
+**Kill-criterion:** if the route-group split is not worth its blast radius (it touches the layout
+every public page renders), Lever 2 is cut and Vercel invocations stay where they are — the
+build-skip and report caching were the affordable wins.
+
+### 3. Cache the ~14 high-traffic PUBLIC pages · 1 hour
 `/`, `/home`, `/suppliers`, `/grants`, `/grants/[id]`, `/charities/[abn]`, `/charities/insights`,
 `/places/[postcode]`, `/giving`, `/giving/quality`, `/pipeline`, `/opportunities/ecosystem`,
 `/embed/entity/[identifier]`, `/changes`. Same `unstable_cache` shape proven on the 22 report pages.
 **Why these and not the other 67:** these are the ones a stranger can hit.
 
-### 5. Grantee gaps — only the two worth it · harness makes each ~1h
+### 4. Grantee gaps — only the two worth it · harness makes each ~1h
 - **Myer FY13-23 + FY25** — real volume; we hold 2024 only.
 - **VFFF amounts** — its 7 edges all carry $0, so the data is currently inert. Either get amounts or
   delete the 7 rows; a funder→grantee edge with no dollars earns nothing in a money graph.
 
-### 6. Close the 6 stale issues · 5 min
+### 5. Close the 6 stale issues · 5 min
 #246-#251 are open for browsers that shipped days ago. A tracker that lies about what is outstanding
 is worse than no tracker.
 
