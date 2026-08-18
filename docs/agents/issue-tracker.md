@@ -43,3 +43,15 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 - **Frontier query**: list the map's open children (`gh issue list --state open`, scoped to the map's sub-issues / task list), drop any with an open blocker (`issue_dependencies_summary.blocked_by > 0`, or an open issue in the `Blocked by` line) or an assignee; first in map order wins.
 - **Claim**: `gh issue edit <n> --add-assignee @me` — the session's first write.
 - **Resolve**: `gh issue comment <n> --body "<answer>"`, then `gh issue close <n>`, then append a context pointer (gist + link) to the map's Decisions-so-far.
+
+### A resolution may not contain a to-do
+
+**Before closing a ticket, every piece of work its resolution names must already be its own open ticket.** No "still to do", no "next we should", no leftovers in prose.
+
+The frontier query only sees open children. A closed ticket is off the frontier by definition, so anything parked inside its resolution comment is invisible to every later session — the map reports an empty frontier while real work is outstanding, which reads as *done* rather than as *not looked at*.
+
+This is not hypothetical. [Build and ship slice 1](https://github.com/Acurioustractor/grantscope/issues/198) closed with "**Still to do: deploy, schedule clarity_refresh(), 3 nights burn-in**" in its resolution. All eight children of the map were closed and the frontier query returned nothing, so the map looked finished for three days while its destination was unreached. The work was recovered on 2026-08-18 only because a session re-read the closing comment by hand — which is exactly the manual step the frontier query exists to remove.
+
+**The check, before `gh issue close`:** read your own resolution comment back. Every future-tense verb in it is either a new ticket, a line in **Not yet specified**, or a line in **Out of scope**. If it is none of those, do not close.
+
+The same rule governs the map body: **Decisions so far** records what was decided, never what is left. What is left is a ticket or it is fog.
