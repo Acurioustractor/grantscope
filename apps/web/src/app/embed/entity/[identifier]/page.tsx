@@ -38,7 +38,9 @@ export default async function EntityEmbedPage({
   try {
     const res = await fetch(
       `${baseUrl}/api/data/entity/${encodeURIComponent(identifier)}`,
-      { cache: 'no-store' }
+      // An entity card embedded in partner sites: served from cache for five minutes
+      // rather than re-queried on every iframe render on every page of every partner.
+      { next: { revalidate: 300 } }
     );
     if (!res.ok) {
       if (res.status === 404) notFound();

@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { searchSuppliers, getRegistryStats, getProvenOutcomesSuppliers, type SupplierResult } from '@/lib/services/supplier-search';
@@ -165,6 +166,15 @@ function safeTerm(value: string) {
   return value.replace(/[,%()]/g, ' ').trim().slice(0, 120);
 }
 
+/** Cost + pooler load: the unsearched landing state ran the registry stats and the featured
+ *  suppliers on every visit, and it is the state most visitors see. The search path stays
+ *  uncached on purpose: its keyspace is whatever a stranger types. */
+const getLandingCached = unstable_cache(
+  async () => Promise.all([getRegistryStats(), getProvenOutcomesSuppliers(6)]),
+  ['suppliers-landing'],
+  { revalidate: 3600 },
+);
+
 export default async function SupplierSearchPage({
   searchParams,
 }: {
@@ -179,7 +189,7 @@ export default async function SupplierSearchPage({
   const results = searched ? await searchSuppliers(q, state) : [];
   const [stats, featured] = searched
     ? ([null, []] as const)
-    : await Promise.all([getRegistryStats(), getProvenOutcomesSuppliers(6)]);
+    : await getLandingCached();
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
