@@ -1,9 +1,12 @@
 {
   "installCommand": "pnpm install",
   "buildCommand": "cd apps/web && NODE_OPTIONS=--max-old-space-size=4096 pnpm run build",
+  "ignoreCommand": "bash scripts/vercel-ignore-build.sh",
   "outputDirectory": "apps/web/.next",
   "framework": "nextjs",
-  "regions": ["syd1"],
+  "regions": [
+    "syd1"
+  ],
   "crons": [
     {
       "path": "/api/tender-intelligence/automation/run-due",
