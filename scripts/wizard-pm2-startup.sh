@@ -234,13 +234,25 @@ pause "Press enter to check launchctl"
 if launchctl list 2>/dev/null | grep -i pm2; then
   say ""
   note "Found it. A reboot will now run 'pm2 resurrect' and bring the orchestrator back."
+  say ""
+  note "Real proof is a reboot: restart the Mac, then run 'pm2 describe orchestrator'."
+  note "It should come back online without you starting it."
+  finish
 else
-  warn "No pm2 entry found in launchctl."
-  warn "The startup command may not have completed. Re-run stage 3, or run 'pm2 startup'"
-  warn "and use the exact line it prints."
+  # The first run of this wizard printed "Setup complete" while the launchd job was NOT
+  # installed — stage 3 was confirmed but never actually run. A closing message that claims
+  # success over a failed check is the same defect this codebase has been fixing all week:
+  # never report a state you did not measure. So this path fails loudly and does NOT call finish.
+  say ""
+  warn "NOT DONE — no pm2 entry in launchctl, so the startup job is not installed."
+  warn ""
+  warn "Stage 3 did not take. Run this line yourself, then re-run this wizard:"
+  warn ""
+  warn "  sudo env PATH=\$PATH:/Users/benknight/.nvm/versions/node/v22.21.1/bin \\"
+  warn "    /opt/homebrew/lib/node_modules/pm2/bin/pm2 startup launchd \\"
+  warn "    -u benknight --hp /Users/benknight"
+  warn ""
+  warn "pm2 save DID work, so 'pm2 resurrect' still restores the process list by hand."
+  warn "What is missing is only the automatic run at boot."
+  exit 1
 fi
-say ""
-note "Real proof is a reboot: restart the Mac, then run 'pm2 describe orchestrator'."
-note "It should come back online without you starting it."
-
-finish
