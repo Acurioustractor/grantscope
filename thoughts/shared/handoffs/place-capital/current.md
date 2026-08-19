@@ -1,7 +1,7 @@
 ---
-date: 2026-08-19T08:05:00Z
+date: 2026-08-19T08:45:00Z
 session_name: place-capital
-branch: fix/314-refresh-tiers
+branch: main
 status: active
 ---
 
@@ -9,11 +9,11 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-19T08:05:00Z
+**Updated:** 2026-08-19T08:45:00Z
 **Goal:** A buildable spec for what a community organisation uses to see, then capture, the
 capital moving through its place. Map #303 is the vehicle; done when `/to-spec` can run.
-**Branch:** `fix/314-refresh-tiers` (PR #316 open, CI running, watcher set to merge on green).
-Main is at `6e619586` (PR #312 merged `83720ba6`, then PR #313 merged `6e619586`).
+**Branch:** `main`, clean. Everything below is landed AND applied.
+Main is at `56d209ac`. Today: #313 `6e619586` · #318 `41d724dc` · #316 `cbaf6933` · #317 `56d209ac`.
 **Test:** `./scripts/precheck.sh` (tsc + 724 vitest). DB reads: `node --env-file=.env
 scripts/gsql.mjs "..."` — always `cd /Users/benknight/Code/grantscope` first, cwd drifts.
 
@@ -28,6 +28,31 @@ downstream, so it goes before #306/#307/#309. **Unchanged by the data-integrity 
     'success-fallback') AND mv_name IN ('act_grant_recommendations','mv_yj_report_acco_gap',
     'mv_yj_report_alma_type_counts','mv_yj_report_state_top_orgs',
     'mv_yj_report_unfunded_programs') GROUP BY 1;`
+
+### This Session — third half: place data, CI, and the Custodian Ledger
+- [x] **#301 SA3 defect measured, repaired, APPLIED.** The ticket said it was blocked on
+      downloading the ABS SA3-to-LGA correspondence file. **It was never blocked.**
+      `abs_poa_lga_ratio` was already loaded (3,968 rows / 2,641 postcodes) and is a BETTER
+      instrument — postcode straight to LGA with a population ratio, no SA3 hop. Covers 435 of 451.
+      **Check the warehouse before declaring a task blocked on an external file.**
+- [x] **133 of 451 postcodes were wrong** (not 4, and not the "6 of 12" I sampled — 29%).
+      87 dominant-but-wrong, 46 genuinely split AND disagreeing. **Every one of the 46 disagrees
+      and not one agrees** — systematic, so those were unplaced not corrected.
+      **9,101 entities re-placed, 5,741 unplaced, zero postcodes still disagree with ABS.**
+      Nerang→Gold Coast, Dubbo South→Dubbo, Kirwan→Townsville, Chatswood East→Willoughby.
+- [x] **Palm Island fixed and place-cut run.** 21 entities (14 community-controlled), and only
+      **4 receive anything**. The Shire Council takes **96.7%** ($18.16M of $18.78M). Bwgcolman
+      Arts, Community Justice Group, Community Store, Rodeo, Boxing, Coolgaree: all $0.
+      Federal contracts to the WHOLE island: 10 contracts, **$0.67M**.
+- [x] **Young Guns Container Crew (ABN 51116945807)** — QLD social enterprise, community-controlled:
+      **$0 justice funding, one $63.36M Home Affairs contract** (2026-06-30→2031-06-29, ~$12.7M/yr).
+      The whole custodian-economics thesis in one row. Caveat: one contract, opaque title.
+- [x] **QLD youth justice measured:** $915.6M / 4,056 grants / 1,235 recipients.
+      Community-controlled **10.5% of dollars (floor; ceiling 18.9%** — 311 grants / $76.7M never
+      matched an entity). Detention 2024-25 alone: $298M recurrent + $483.8M capital.
+- [x] **CI E2E hang diagnosed and fixed** (#318). Not the tests — the job never reached them.
+- [x] **The Custodian Ledger published** (artifact, private):
+      https://claude.ai/code/artifact/53ee6cf7-b780-47be-a4c4-d082e3d82c5a
 
 ### This Session — data integrity (second half, after #312 landed)
 - [x] **#290 CLOSED, applied.** 306 foundation self-loops deleted (**$98,694,338**), 157
@@ -66,6 +91,17 @@ downstream, so it goes before #306/#307/#309. **Unchanged by the data-integrity 
       `project_remote_funding_intermediaries.md`.
 
 ### Next
+- [ ] **ship-watch merges on STALE checks.** #317 merged in 5s with Type Check and Unit still
+      `pending`: `gh pr update-branch` made a new commit and a new run, and the watcher read the
+      PREVIOUS run's green. #316 was fine only by luck of timing. **Fix: require the check run's
+      commit SHA to match the PR head before treating green as green.** The landing policy leans
+      on this watcher for every SAFE merge.
+- [ ] **The registered-address problem** — Palm Island Community Company Ltd holds $8.7M (12th
+      largest in the QLD table) and books to **Townsville**, because its registered postcode is
+      4810. Fixing council codes does nothing for this. It is #304's intermediary question showing
+      up on the exact community in the conversation, and it is a bigger distortion than Croydon was.
+- [ ] **16 postcodes still have no ABS ratio row**, and 298 were already correct. #301 can close
+      once the 16 are dispositioned.
 - [ ] Confirm PR #316 merged; report SHA. Then the nightly-log check above.
 - [ ] **#314 residue** — `health` is NULL on all 104 registry rows, no max-age anywhere, so
       staleness is still only findable by hand. Decide what a surface does when its matview is
@@ -103,6 +139,15 @@ downstream, so it goes before #306/#307/#309. **Unchanged by the data-integrity 
   contract delivery-location extraction.
 
 ### Open Questions
+- **I was wrong twice today and both corrections were worth more than the original claim.**
+  (1) "The nightly refresh has stopped" — it had not; see below. (2) "The E2E hang is a dpkg lock
+  or an interactive prompt" — it is not. The log, once a timeout made it readable, is hundreds of
+  `Ign: http://azure.archive.ubuntu.com` lines then five minutes of dead air. A network stall.
+  `DEBIAN_FRONTEND` was never going to help. **The timeout did not fix the bug, it made the bug
+  legible** — that is the reusable lesson.
+- **Unverified: is `--with-deps` actually unnecessary?** #318 dropped it on the reasoning that
+  ubuntu-latest ships Playwright's chromium libraries. One green run (232s) is not proof across
+  runner-image changes. If chromium ever fails to launch with a missing-library error, that is why.
 - **I raised a false alarm on #314 and corrected it — keep the lesson.** I inferred "the nightly
   refresh has stopped" from matview row counts moving UP after a manual refresh. The nightly had
   run fine (job 4, 18 Aug, 11m48s, all 56 nightly-tier MVs stamped). Two errors: the eight MVs I
