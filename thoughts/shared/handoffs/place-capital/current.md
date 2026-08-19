@@ -1,5 +1,5 @@
 ---
-date: 2026-08-19T10:15:00Z
+date: 2026-08-19T11:45:00Z
 session_name: place-capital
 branch: main
 status: active
@@ -9,13 +9,14 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-19T10:15:00Z
+**Updated:** 2026-08-19T11:45:00Z
 **Goal:** A buildable spec for what a community organisation uses to see, then capture, the
 capital moving through its place. Map #303 is the vehicle; done when `/to-spec` can run.
 **Branch:** `main`, clean. Everything below is landed AND applied.
-Main is at `7168a7e4`. Today, 11 PRs: #313 `6e619586` · #318 `41d724dc` · #316 `cbaf6933` ·
-#317 `56d209ac` · #319 `4a34d0d6` · #320 `1aaa1f63` · #321 `1b1c8503` · #323 `de89a756` ·
-#325 `f28f138e` · #326 `7168a7e4`.
+Main is at `4f8b6bce`. Today, 17 PRs. Data integrity: #313 `6e619586` · #316 `cbaf6933` ·
+#317 `56d209ac` · #318 `41d724dc` · #320 `1aaa1f63` · #321 `1b1c8503` · #323 `de89a756` ·
+#326 `7168a7e4`. Docs: #319 `4a34d0d6` · #325 `f28f138e` · #328 `799ae79d` · #329 `85accab8`.
+Reports: #330 `1441a194` · #331 `665183ee` · #332 `af7e68f0` · #333 `4f8b6bce` · #334 (open).
 **Test:** `./scripts/precheck.sh` (tsc + 724 vitest). DB reads: `node --env-file=.env
 scripts/gsql.mjs "..."` — always `cd /Users/benknight/Code/grantscope` first, cwd drifts.
 
@@ -30,6 +31,40 @@ downstream, so it goes before #306/#307/#309. **Unchanged by the data-integrity 
     'success-fallback') AND mv_name IN ('act_grant_recommendations','mv_yj_report_acco_gap',
     'mv_yj_report_alma_type_counts','mv_yj_report_state_top_orgs',
     'mv_yj_report_unfunded_programs') GROUP BY 1;`
+
+### This Session — sixth: the reports were publishing things nobody computed
+
+Started as "verify the copy change is live". Ended five layers down. **Every step was found by
+LOADING THE PUBLIC PAGE, not by reading code** — nothing here was visible from the repo.
+
+- [x] **#330 `1441a194` — rank funders, not communities (CARE E1).** An Aboriginal
+      community-controlled org opening its own profile saw a red **"Funding Desert — Severe,
+      ranked #N"** banner about its home. The score is built ENTIRELY from absence (no money flow,
+      participants with no provider), so attributing it to funders is the accurate reading, not a
+      euphemism. Six surfaces; public report is now "Where the Money Doesn't Go".
+- [x] **#331 `665183ee` — reports refuse instead of printing zeros.**
+      `/reports/power-concentration` was publicly serving **"0 Australian entities scored across 7
+      public datasets… $0B of $0B"** dated that day, against 188K real rows.
+      **THE DISCRIMINATOR:** a query that ran and matched nothing returns `data: []`; a client that
+      never ran returns `data: null`. **`|| []` erases exactly that** and is why "no answer" became
+      "an answer of zero".
+- [x] **#332 `af7e68f0` — stopped choosing a database by reading a stack trace.**
+      `getServiceSupabase()` called `new Error().stack` and swapped in an empty client if it
+      matched `/app/reports/`. Bundling-dependent, invisible at the call site, and it caught
+      INDIRECT callers including `app/layout.tsx`. Replaced with a build-failing convention test.
+- [x] **#333 `4f8b6bce` — stopped publishing invented scores about NAMED foundations. VERIFIED
+      LIVE.** `/reports/philanthropy` listed **Paul Ramsay Foundation** ($210.0M, 240 grantees) and
+      **Minderoo Foundation** ($268.0M, 180 grantees) under **"Largest Foundations With Zero
+      Transparency"**, with invented transparency/evidence/need-alignment scores — under a full
+      Methodology section describing how they were computed. Source: `buildSnapshotData()`,
+      `foundation_id: 'snapshot-prf'`, `acnc_abn: ''`. The two funders named as approach targets in
+      the Custodian Pathways conversation.
+- [x] **#334 (open) — aggregates were ranked as grants.** `/reports/youth-justice` led its "top
+      grant recipients" with **Department of Youth Justice and Victim Support, QLD: 67 grants,
+      $11,397,825,690** — a department with **ZERO `measure_kind='grant'` rows**. Also fixed
+      `getTopOrgs`, whose hand-rolled name-prefix blocklist let **Territory Families (NT) $2,273.2M
+      and Community Services Directorate (ACT) $688.6M** through (96 rows, all aggregates) because
+      their names don't start with "Department of".
 
 ### This Session — fifth: entity identity, and a real person's name on 45 contracts
 
@@ -153,6 +188,21 @@ were confident and specific.**
       `project_remote_funding_intermediaries.md`.
 
 ### Next
+- [ ] **`report-service.ts`: 22 money-summing functions, ONE filtered.** 32 functions touch
+      `justice_funding`; only `getYouthJusticeGrants` (fixed today) references `measure_kind`.
+      `justice-money.ts` exports `GRANT_FILTER_SQL` for exactly this and the file never imports it.
+      **This is ~20 per-function JUDGEMENT calls, not a sweep** — `getRogsExpenditure`,
+      `getBudgetTotals`, `getQgipExpenditureByYear` legitimately want aggregates; `getProgramRecipients`,
+      `getAccoFundingGap`, `getCrossDomainOrgs`, `getFundingByLga` do not. Sweeping would replace
+      one silent error with another.
+- [ ] **The 61 report pages have nothing to read.** There is NO snapshot database —
+      `getReportSnapshotSupabase()` is a stub returning `{data:null,error:null}` — and
+      `CIVICGRAPH_LIVE_REPORTS` is not `true` in production. After #331 they fail honestly instead
+      of inventing, but "honestly blank" is not a product. Turning the flag on switches 61 public
+      pages to live queries at once; do it awake.
+- [ ] **`/reports/youth-justice` snapshot needs dating and labelling.** Its recipient figures are
+      REAL (Lifeline $30,136,777 matches the DB exactly) but are silently substituted per-section
+      with no marker and no capture date.
 - [ ] **The sentinel repair (#324).** Three things, not one: create ~677 entities, remap 53,109
       edges, repeat for `justice_funding` (40) and `lobbying_register_nsw` (5).
       **Needs a fresh session — write-heavy.** Two traps, both learned the hard way today:
@@ -223,6 +273,16 @@ were confident and specific.**
   contract delivery-location extraction.
 
 ### Open Questions
+- **I called a deploy broken THREE times today when it was merely building.** "Nothing ran on the
+  night of 18-19 Aug" (the nightly had run), the funding-deserts headline (deploy started 17s
+  earlier), and "merges are not reaching production" (the build was `state: BUILDING`). Each time I
+  read a stale live surface and reached for a failure explanation instead of a timing one.
+  **Check `list_deployments` before concluding a pipeline is broken.**
+- **Vercel CANCELS an in-flight production build when a newer merge lands.** Three today
+  (`85accab8`, `799ae79d`, `1d4145c0`). Harmless when changes are cumulative, but it means **some
+  merged SHAs never built at all** — do not claim "version X was live" without checking.
+- **Preview URLs are behind Vercel SSO.** The landing policy's SEEN gate assumes Ben can open a
+  link; anyone else gets a login page. A preview handed to a third party is a dead end.
 - **The 718 ABN→ABN pairs need a human call each, and must not be automated.** Three different
   things are mixed in there: sentinel black holes, whitespace variants of the SAME ABN (5
   entities, fixed forward by #326), and genuinely distinct legal entities (EY, PwC).
