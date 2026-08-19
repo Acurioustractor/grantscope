@@ -1,6 +1,8 @@
 # The Data Standard — what this data is for, and what it has to be true enough for
 
 **Written:** 2026-08-19, after a full day of data-integrity work
+**Revised:** 2026-08-19, same day, after primary-source research corrected its anchor. See
+`thoughts/shared/research/2026-08-19-civic-data-mandate-sovereignty-and-evidence.md`.
 **Status:** proposed. Companion to `buyer-wedge.md` (PROVISIONAL) and map #303.
 
 ## Why this document exists
@@ -22,6 +24,116 @@ were not theirs.
 
 **Every one of these would have produced a confident, wrong number in front of a community.** That
 is the reason this document is a strategy document and not an engineering note.
+
+## What this plugs into, and the mistake it must not make
+
+**Priority Reform 2 of the National Agreement on Closing the Gap, not Priority Reform 4.**
+
+The instinct is to reach for PR4, "Shared Access to Data and Information at a Regional Level".
+That is the wrong anchor. PR4 commits governments only, is not justiciable, and its target is a
+count of projects, satisfied by six projects existing. Six years after signing it has produced six
+unfinished projects and a partnership that has met once.
+
+Worse, the Productivity Commission's 2024 review names our own instinct as the failure mode:
+
+> "The few changes that have been made have largely been about increasing the sharing of existing
+> data held by governments. For example, governments have worked on presenting data in more
+> accessible formats, such as dashboards…"
+
+That sits inside a finding of "little progress". **The PC classifies building a dashboard as the
+weakest available response.** Anything we ship that is fundamentally a dashboard has already been
+assessed, by the national reviewer, as not the thing.
+
+**PR2 is the real hook, because its target is a money-flow measurement:**
+
+> "Increase the amount of government funding for Aboriginal and Torres Strait Islander programs and
+> services going through Aboriginal and Torres Strait Islander community-controlled organisations."
+
+And clause 118(d) of the Agreement requires Parties to
+
+> "list the number of Aboriginal and Torres Strait Islander community-controlled organisations and
+> other Aboriginal and Torres Strait Islander organisations that have been allocated funding … and
+> subject to confidentiality requirements, also list the names of the organisations and the amount
+> allocated."
+
+**That is a description of a CivicGraph table.** And the PC found it is not being produced:
+
+> "In most jurisdictions, it is unclear how much funding is allocated to ACCOs and non-Indigenous,
+> non-government organisations … most governments … have either not undertaken or not published the
+> expenditure reviews that they agreed to undertake."
+
+Four governments have completed and published theirs. That is the gap, it is named in a national
+review, and it is the most defensible reason for this work to exist. **We are not offering a
+product nobody asked for. We are producing the accounting that was committed to in clause 118(d)
+and has not been delivered.**
+
+The same review supplies the sentence JusticeHub should be built around. An ACCO providing alcohol,
+drug, family and justice services told the Commission that governments do not share justice data,
+and so it
+
+> "is unable to ascertain whether its justice reinvestment programs are working."
+
+A community organisation, in the national review, saying it cannot evaluate its own work because
+the data is withheld.
+
+## Legitimacy is an architecture question, not a comms one
+
+The uncomfortable finding from the research: **no peak body has asked a third party to build this.**
+SNAICC asks the Productivity Commission. NSW CAPO asks the Data Policy Partnership. The Coalition
+of Peaks asks governments. The demand is real, specific and published. Who supplies it is contested.
+
+The Commission itself names the working pattern: Maranguka's Palimaa platform, **governed by the
+Bourke Tribal Council**, with Seer Data as the supplier. One of only two Australian exemplars of
+Indigenous Data Governance it names.
+
+**The governance body governs. The vendor supplies.** No amount of good intent substitutes for
+that arrangement, and no communications strategy fixes its absence. If this work is not in a
+community-controlled governance structure, it is a private database about other people.
+
+## Rank funders, not communities
+
+CARE principle E1 prohibits portraying Indigenous Peoples in terms of deficit, and the PC named
+deficit narratives as the thing Indigenous Data Governance exists to disrupt.
+
+This has a direct product consequence and it is not cosmetic. **A "funding desert score" attached
+to a place says the place is deficient. The same numbers pointed at the funder say who failed to
+show up.** Identical data, opposite ethics. Every ranking this project produces should be a ranking
+of the party with the money.
+
+The operative trigger for the sovereignty obligations, per the AIATSIS Code, is disaggregation: a
+national grants table is weakly in scope, and "funding to ACCOs" as a distinct cut is squarely in
+scope. That cut is also exactly what clause 118(d) asks for, so it must be built, and it must be
+built inside a governance structure rather than beside one.
+
+## The evidence base is thinner than the sector admits
+
+Every confident Australian justice reinvestment claim traces to one KPMG report on Maranguka. KPMG
+disclaims it twice in writing: "not a process or outcomes evaluation … does not include reference
+to a control group … has not undertaken attribution or contribution analysis." Pro bono, single
+year, client-supplied unverified data, not an assurance engagement. The widely quoted 14% bail
+breach reduction is **nine events**. When the PC cites Maranguka it is citing KPMG, not
+corroborating it.
+
+Meanwhile the Commonwealth has committed roughly $91.5m plus $22.6m a year in perpetuity across 28
+justice reinvestment initiatives and published **zero** evaluations; its evaluation framework was
+finalised in January 2026.
+
+This is the same shape as ALMA's own defect, where one evidence record is cited by 277
+interventions, except at national scale. **The sector's evidence problem is not that its data is
+wrong. It is that one thin study is doing all the work**, and everyone repeating it sounds
+confident. Our standard has to be higher than the field's, not equal to it.
+
+## How this work dies, if it dies
+
+Not by being refuted. The Indigenous Expenditure Report, which accounted for $33.4bn in 2015-16,
+was discontinued with a single sentence and no reason given. ANAO documents that every Commonwealth
+Indigenous expenditure mechanism was dismantled between 2014 and 2017. The Data Availability and
+Transparency Act has produced eight agreements in four years, and ACCOs are statutorily ineligible
+to be accredited users, per the government's own review.
+
+**The characteristic death here is silence.** Nothing gets argued with. It simply stops being
+published. Which means the defence is not being right; it is being held by someone with standing to
+keep publishing it.
 
 ## The mission, stated so it can be failed
 
