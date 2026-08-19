@@ -1,10 +1,12 @@
 import { Fragment } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { NoGrantLevelData, type LaneRow } from '../../../_components/no-grant-level-data';
 import {
   getBudgetCommitments,
   getBudgetTotals,
   getTopOrgs,
+  getGrantLaneCoverage,
   getProgramsWithPartners,
   getTrackerLeadership,
   getTrackerInterlocks,
@@ -94,7 +96,7 @@ async function getTrackerData(abbr: string) {
     leadership, interlocks, donations, lgaFunding,
     evidenceCoverage, almaInterventions, almaCount,
     hansard, lobbying, revolvingDoor,
-    outcomes, comparison, ctgTrend, policyTimeline, oversight,
+    outcomes, comparison, ctgTrend, policyTimeline, oversight, laneCoverage,
   ] = await Promise.all([
     getBudgetCommitments(abbr),
     getBudgetTotals(abbr),
@@ -115,6 +117,7 @@ async function getTrackerData(abbr: string) {
     getCtgTrend(abbr),
     getPolicyTimeline(abbr),
     getOversightData(abbr),
+    getGrantLaneCoverage('youth-justice', abbr),
   ]);
 
   // Fetch time series data sequentially after main queries complete
@@ -136,6 +139,7 @@ async function getTrackerData(abbr: string) {
     budgetCommitments: (budgetCommitments as BudgetRow[] | null) || [],
     budgetTotals: (budgetTotals as BudgetTotal[] | null) || [],
     topOrgs: (topOrgs as OrgRow[] | null) || [],
+    laneCoverage: (laneCoverage as LaneRow[] | null) || [],
     partnersByProgram,
     leadership: (leadership as LeaderRow[] | null) || [],
     interlocks: (interlocks as InterlockRow[] | null) || [],
@@ -1187,14 +1191,22 @@ export default async function StateTrackerPage({ params }: { params: Promise<{ s
         </section>
       )}
 
-      {/* Who Gets the Money */}
-      {hasOrgs && (
+      {/* Who Gets the Money — renders even with no recipients, because a jurisdiction that
+          publishes no grant-level data is a finding, not an empty slot. */}
+      {(hasOrgs || data.laneCoverage.length > 0) && (
         <section className="mb-12">
           <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-2 border-b-4 border-bauhaus-black pb-2">
             {++sectionNum}. Who Gets the Money
           </h2>
           <p className="text-sm text-bauhaus-muted mb-4">Top funded organisations across all {abbr} youth justice programs.</p>
 
+          {!hasOrgs ? (
+            <NoGrantLevelData
+              jurisdiction={meta.name}
+              topicLabel="youth justice"
+              lanes={data.laneCoverage}
+            />
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -1221,6 +1233,7 @@ export default async function StateTrackerPage({ params }: { params: Promise<{ s
               </tbody>
             </table>
           </div>
+          )}
         </section>
       )}
 

@@ -6,10 +6,12 @@ import path from 'path';
 import { parse } from 'csv-parse/sync';
 import { FundingByProgramChart, StateComparisonChart, LgaFundingChart } from '../../_components/report-charts';
 import { qldAnnouncementHrefForProgram } from '@/lib/reports/qld-youth-justice-announcements';
+import { NoGrantLevelData, type LaneRow } from '../../_components/no-grant-level-data';
 import {
   getFundingByProgram,
   getProgramsWithPartners,
   getTopOrgs,
+  getGrantLaneCoverage,
   getAlmaInterventions,
   getAlmaCount,
   getFundingByLga,
@@ -632,6 +634,7 @@ async function getStateReport(stateCode: string) {
     outcomes,
     comparison,
     rogsExpenditure,
+    laneCoverage,
   ] = await Promise.all([
     getFundingByProgram('youth-justice', stateCode),
     getTopOrgs('youth-justice', 50, stateCode),
@@ -653,6 +656,7 @@ async function getStateReport(stateCode: string) {
       'pct_unsentenced', 'detention_5yr_trend_pct', 'cost_per_day_detention',
     ]),
     getRogsExpenditure(stateCode),
+    getGrantLaneCoverage('youth-justice', stateCode),
   ]);
 
   const stateFundingSnapshot = loadStateFundingSnapshot(stateCode);
@@ -707,6 +711,7 @@ async function getStateReport(stateCode: string) {
   return {
     programs: programRows,
     topOrgs: finalTopOrgs,
+    laneCoverage: (laneCoverage as LaneRow[] | null) || [],
     programPartners: finalProgramPartners,
     partnersByProgram,
     almaInterventions: (almaInterventions as AlmaRow[] | null) || [],
@@ -1441,6 +1446,19 @@ export default async function StateYouthJusticePage({ params }: { params: Promis
       )}
 
       {/* Top Funded Organisations */}
+      {report.topOrgs.length === 0 && report.laneCoverage.length > 0 && (
+        <section className="mb-12">
+          <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-4 border-b-4 border-bauhaus-black pb-2">
+            Top Funded Organisations
+          </h2>
+          <NoGrantLevelData
+            jurisdiction={meta.name}
+            topicLabel="youth justice"
+            lanes={report.laneCoverage}
+          />
+        </section>
+      )}
+
       {report.topOrgs.length > 0 && (
         <section className="mb-12">
           <h2 className="text-xl font-black text-bauhaus-black uppercase tracking-wider mb-4 border-b-4 border-bauhaus-black pb-2">
