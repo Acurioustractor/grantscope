@@ -322,6 +322,14 @@ async function main() {
 
     const { entity, method } = result;
 
+    // A foundation is not its own grantee. Name resolution can land back on the funder; see #290,
+    // where one backfill wrote 306 of these and $98.69M of fictional giving with them.
+    if (entity.id === foundationEntityId) {
+      skipped++;
+      log(`  ⊘ "${grantee.name}" resolved to the foundation itself -- self-loop refused`);
+      continue;
+    }
+
     // Check if edge already exists
     if (existingTargets.has(entity.id)) {
       skipped++;

@@ -1183,6 +1183,14 @@ async function processFoundation(key, config) {
       continue;
     }
 
+    // A foundation is not its own grantee. Name resolution can land back on the funder; see #290,
+    // where one backfill wrote 306 of these and $98.69M of fictional giving with them.
+    if (entity.id === foundationId) {
+      skipped++;
+      log(`    [skip] "${grantee.name}" resolved to the foundation itself -- self-loop refused`);
+      continue;
+    }
+
     matched++;
     if (VERBOSE) log(`    [match] "${grantee.name}" -> "${entity.canonical_name}" [${entity._method || '?'}]`);
 
