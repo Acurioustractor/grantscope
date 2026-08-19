@@ -61,6 +61,16 @@ elif [[ $FORCE_BUILD -eq 1 || -n "$BUILD_TRIGGER" ]]; then
   else
     echo "→ production build (next build) — forced with --build"
   fi
+  # `next build` and `next dev` share apps/web/.next. Building underneath a running dev server
+  # deletes the manifests it is serving and kills it mid-session — hit for real 2026-08-19,
+  # which then read as "the app is down" rather than "precheck did that". Next has no
+  # per-invocation dist-dir override, so the honest move is to refuse rather than to guess.
+  if lsof -ti:3013 >/dev/null 2>&1; then
+    echo "✗ a dev server is running on :3013 and shares apps/web/.next with the build."
+    echo "  Building now would kill it. Stop it and re-run, or use --no-build to skip"
+    echo "  (only safe when the diff cannot break a build)."
+    exit 1
+  fi
   ( cd apps/web && npx next build )
   echo "✓ production build"
 fi

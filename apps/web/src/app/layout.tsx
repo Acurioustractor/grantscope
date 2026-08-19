@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Newsreader, IBM_Plex_Mono, DM_Sans, JetBrains_Mono } from 'next/font/google';
+import { Newsreader, IBM_Plex_Mono, DM_Sans, JetBrains_Mono, Geist } from 'next/font/google';
 import './globals.css';
 
 // Quiet Ledger fonts — exposed as CSS vars the ql-* theme tokens reference.
@@ -38,6 +38,9 @@ import { resolveSubscriptionTier } from '@/lib/subscription';
 import { isAdminEmail } from '@/lib/admin';
 import type { User } from '@supabase/supabase-js';
 import { cookies, headers } from 'next/headers';
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "CivicGraph — Australia's Accountability Atlas",
@@ -117,7 +120,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   if (isChromeless) {
     return (
-      <html lang="en">
+      <html lang="en" className={cn("font-sans", geist.variable)}>
         <body className={`font-sans antialiased bg-transparent ${qlFontVars}`}>
           <BrandFontLinks />
           {children}
