@@ -30,8 +30,8 @@ const ACTIONS = [
   },
   {
     name: 'funding_deserts',
-    label: 'Funding Deserts',
-    description: 'Most underserved local government areas in Australia. Scored by disadvantage (SEIFA), remoteness, and funding shortfall.',
+    label: 'Where the money does not go',
+    description: 'Local government areas where funders and services have delivered least against measured need. Scored by disadvantage (SEIFA), remoteness, and funding shortfall. Describes funding behaviour, not the communities.',
     example: { action: 'funding_deserts', state: 'NT', limit: 10 },
     returns: 'LGAs ranked by desert_score with IRSD decile, entity counts, and dollar flows',
   },

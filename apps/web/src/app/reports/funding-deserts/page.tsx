@@ -9,18 +9,18 @@ import { DESERT_COMMUNITY_ORGS_SQL, mapDesertCommunityOrgs } from '@/lib/funding
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: 'Funding Deserts | CivicGraph Investigation',
-  description: 'Where disadvantage is highest and investment is lowest. 568 Local Government Areas scored by SEIFA disadvantage, remoteness, entity coverage, and funding flows.',
+  title: "Where the Money Doesn't Go | CivicGraph Investigation",
+  description: 'Where funders and services have delivered least against measured need. 568 Local Government Areas scored by SEIFA disadvantage, remoteness, entity coverage, and funding flows.',
   openGraph: {
-    title: 'Funding Deserts',
-    description: 'Geographic analysis of where disadvantage is highest and funding is lowest across Australian LGAs.',
+    title: "Where the Money Doesn't Go",
+    description: 'Geographic analysis of where funders and services have delivered least against measured need across Australian LGAs.',
     type: 'article',
     siteName: 'CivicGraph',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Funding Deserts',
-    description: 'Where disadvantage is highest and investment is lowest. 568 LGAs scored.',
+    title: "Where the Money Doesn't Go",
+    description: 'Where funders and services have delivered least against measured need. 568 LGAs scored.',
   },
 };
 
@@ -196,13 +196,14 @@ export default async function FundingDesertsReport() {
         <a href="/reports" className="text-xs font-black text-bauhaus-muted uppercase tracking-widest hover:text-bauhaus-black">&larr; All Reports</a>
         <div className="text-xs font-black text-bauhaus-red mt-4 mb-1 uppercase tracking-widest">Geographic Investigation</div>
         <h1 className="text-3xl sm:text-4xl font-black text-bauhaus-black mb-3">
-          Funding Deserts
+          Where the Money Doesn&rsquo;t Go
         </h1>
         <p className="text-bauhaus-muted text-base sm:text-lg max-w-3xl leading-relaxed font-medium">
-          Where disadvantage is highest and investment is lowest &mdash; {fmt(s.total_lgas)} Local
+          Where funders and services have delivered least against measured need &mdash; {fmt(s.total_lgas)} Local
           Government Areas scored by SEIFA disadvantage, remoteness, entity coverage, and funding
-          flows. {fmt(s.severe_deserts)} LGAs score above 100, indicating severe geographic
-          underinvestment relative to need.
+          flows. {fmt(s.severe_deserts)} score above 100, meaning money and providers have fallen
+          furthest short of what the need would warrant. The score describes funding behaviour, not
+          the communities themselves.
         </p>
         <div className="mt-4 text-xs text-bauhaus-muted font-bold">
           Data updated {new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}

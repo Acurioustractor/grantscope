@@ -7,6 +7,12 @@ import { money, L, makeQs, useDrawer, Drawer, SortHeader } from '../browse/brows
  * Places browser at LGA grain. The drawer's provenance block shows HOW each entity was placed
  * (lga_source stamps from the attribution rebuild) — a null LGA elsewhere is deliberate
  * unplacement with a reason code, not missing data.
+ *
+ * The "Unfunded" column is the DB's `desert_score` with the subject of the sentence changed. The
+ * score is built entirely from absence (no money flow, participants with no provider), so it
+ * measures what funders did not do. Naming a PLACE a desert states a deficit about the community;
+ * CARE E1 prohibits that, and it is the wrong reading of the number besides. See
+ * docs/strategy/data-standard.md.
  */
 
 export interface PlaceRow {
@@ -106,7 +112,7 @@ export default function PlaceBrowser({
           <SortHeader label="ACCO" sortKey="acco" current={sort} qs={qs} width="w-[64px]" align="right" title="community-controlled organisations" />
           <SortHeader label="Funding $" sortKey="funding" current={sort} qs={qs} width="w-[92px]" align="right" />
           <SortHeader label="SEIFA" sortKey="disadvantage" current={sort} qs={qs} width="w-[56px]" align="right" title="average SEIFA disadvantage decile, 1 = most disadvantaged; sorts most-disadvantaged first" />
-          <SortHeader label="Desert" sortKey="desert" current={sort} qs={qs} width="w-[64px]" align="right" title="funding-desert score: disadvantage vs money reaching the area" />
+          <SortHeader label="Unfunded" sortKey="desert" current={sort} qs={qs} width="w-[76px]" align="right" title="how far funders and providers have fallen short of this area's measured need — a measure of funding behaviour, not of the community" />
         </div>
         {rows.map((r) => (
           <button key={r.key} onClick={() => open(r)} className="flex w-full items-baseline gap-3 px-4 py-2 text-left hover:bg-[#FAFAF8]" style={{ borderBottom: '1px solid var(--shell-line)' }}>
@@ -116,7 +122,7 @@ export default function PlaceBrowser({
             <span className="w-[64px] shrink-0 text-right font-mono text-[12.5px]">{r.acco || '—'}</span>
             <span className="w-[92px] shrink-0 text-right font-mono text-[12.5px]">{money(r.funding)}</span>
             <span className="w-[56px] shrink-0 text-right font-mono text-[12.5px]">{r.seifa ?? '—'}</span>
-            <span className="w-[64px] shrink-0 text-right font-mono text-[12.5px]">{r.desert ?? '—'}</span>
+            <span className="w-[76px] shrink-0 text-right font-mono text-[12.5px]">{r.desert ?? '—'}</span>
           </button>
         ))}
       </div>
@@ -130,7 +136,7 @@ export default function PlaceBrowser({
             <>
               <p className="mt-1 text-[12.5px]" style={{ color: 'var(--shell-muted)' }}>
                 {detail.desert?.remoteness ?? ''}
-                {detail.desert?.desert_score != null ? ` · desert score ${detail.desert.desert_score}` : ''}
+                {detail.desert?.desert_score != null ? ` · funding shortfall ${detail.desert.desert_score}` : ''}
               </p>
 
               {detail.funding ? (
