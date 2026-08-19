@@ -27,7 +27,11 @@ export const EDGE_KEY_COLS = "source_entity_id, target_entity_id, relationship_t
 export const GRAPH_EDGE_DATASETS = [
   {
     dataset: 'aec_donations',
+    // TWO types out of one source, split on receipt_type. See the CASE in selectSql below.
+    // `relationshipType` stays for the reporting label; `relationshipTypes` is what the
+    // completeness gate counts, or it would expect every row and find only the donations.
     relationshipType: 'donation',
+    relationshipTypes: ['donation', 'party_receipt'],
     label: 'Donation relationships',
     sourceTable: 'political_donations',
     cols: '(source_entity_id, target_entity_id, relationship_type, amount, year, dataset, source_record_id, confidence, properties)',
@@ -45,7 +49,30 @@ export const GRAPH_EDGE_DATASETS = [
      CREATE INDEX ON donor_map(key);
      ANALYZE donor_map;`,
     selectSql: `SELECT
-       donor.id AS source_entity_id, party.id AS target_entity_id, 'donation' AS relationship_type, d.amount,
+       donor.id AS source_entity_id, party.id AS target_entity_id,
+       -- relationship_type = 'donation' is a CLAIM about a row, and until 2026-08-20 this
+       -- builder made it about every row of political_donations. Measured on the edges:
+       --
+       --   other receipt        797,404 edges   108.62 bn   <- fundraising income, transfers, levies
+       --   donation received    184,078 edges    17.32 bn   <- the actual donations
+       --   (null)               103,887 edges     6.85 bn
+       --   subscription          17,813 edges     1.20 bn
+       --   unspecified           27,237 edges     0.94 bn
+       --   public funding         1,435 edges     0.35 bn
+       --
+       -- 87% of the dollars were not donations, and /reports/donor-contractors published the
+       -- inflated total as "they donated 31.3 bn to 1073 political parties".
+       --
+       -- The fix is NOT a WHERE clause. Filtering here would delete 950K rows of real, useful
+       -- data — party fundraising income is how parties are funded, and worth being able to ask
+       -- about. It is also not a filter at each read site: seven matviews read this type, and
+       -- asking every future consumer to remember properties->>'receipt_type' is precisely how
+       -- the justice_funding filters came to be missing from 98 of 100 files.
+       --
+       -- So the rows stay and the LABEL stops lying. Everything that already filters
+       -- relationship_type = 'donation' becomes correct with no change to it.
+       CASE WHEN d.receipt_type = 'donation received' THEN 'donation'
+            ELSE 'party_receipt' END AS relationship_type, d.amount,
        NULLIF(split_part(d.financial_year, '-', 1), '')::int,
        'aec_donations', d.id::text AS source_record_id, 'registry',
        jsonb_build_object(

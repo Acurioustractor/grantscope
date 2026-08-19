@@ -10,7 +10,7 @@ You have access to these PostgreSQL tables:
 Columns: id (uuid), entity_type (text: charity, company, foundation, indigenous_corp, social_enterprise, government_body, political_party), canonical_name (text), abn (text), gs_id (text), state (text), postcode (text), sector (text), remoteness (text: 'Major Cities of Australia', 'Inner Regional Australia', 'Outer Regional Australia', 'Remote Australia', 'Very Remote Australia'), seifa_irsd_decile (smallint 1-10, 1=most disadvantaged), is_community_controlled (boolean), lga_name (text), lga_code (text), latest_revenue (numeric), latest_assets (numeric)
 
 ## gs_relationships (~200K rows) — links between entities
-Columns: id, source_entity_id (uuid→gs_entities.id), target_entity_id (uuid→gs_entities.id), relationship_type (text: 'contract', 'donation', 'grant', 'subsidiary_of'), amount (numeric), year (integer), dataset (text)
+Columns: id, source_entity_id (uuid→gs_entities.id), target_entity_id (uuid→gs_entities.id), relationship_type (text: 'contract', 'donation', 'party_receipt', 'grant', 'subsidiary_of'). 'donation' is a real political donation; 'party_receipt' is other party income from the same AEC returns — fundraising, transfers, levies. Never add them together and call the result donations., amount (numeric), year (integer), dataset (text)
 
 ## austender_contracts (~670K rows) — federal government contracts
 Columns: id, title, contract_value (numeric), buyer_name, supplier_name, supplier_abn, contract_start (date), contract_end (date), category, procurement_method

@@ -248,7 +248,11 @@ async function main() {
       relationships.push({
         source_entity_id: donorEntityId,
         target_entity_id: partyEntityId,
-        relationship_type: 'donation',
+        // Same split as scripts/lib/graph-edge-datasets.mjs. THIS SCRIPT IS A SECOND WRITER of
+        // aec_donations edges — 110,402 of them, 6.13 bn — and fixing only the set-based builder
+        // would look correct until the next run of this one silently re-injected 'donation' edges
+        // for rows that are party fundraising income, transfers and levies.
+        relationship_type: d.receipt_type === 'donation received' ? 'donation' : 'party_receipt',
         amount: d.amount,
         year,
         dataset: 'aec_donations',
