@@ -477,8 +477,10 @@ a, button {
 .clarity-dark .hover\:text-bauhaus-red:hover { color: var(--cd-red) !important; }
 
 @theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: var(--font-sans);
+  /* shadcn init wrote `--font-sans: var(--font-sans)` here — a self-reference, which
+     resolves to nothing and left the whole site falling back to system-ui, exactly the
+     failure the DM Sans comment above records happening once before. The brand stack is
+     defined in the @theme block at the top of this file and must not be redefined here. */
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -588,14 +590,16 @@ a, button {
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Scoped to .ui. shadcn init writes this layer unscoped, which set every element's border
+   to shadcn grey oklch(0.922) across all ~300 routes — Bauhaus black borders included — and
+   forced body colours site-wide. The PR that installed it claimed "nothing that renders today
+   changes"; this hunk was why that was false. The opt-in scope has to cover the base layer,
+   not just border-radius. */
 @layer base {
-  * {
+  .ui * {
     @apply border-border outline-ring/50;
   }
-  body {
+  .ui {
     @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
   }
 }

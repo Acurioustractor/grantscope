@@ -1,6 +1,6 @@
 {
   "installCommand": "pnpm install",
-  "buildCommand": "cd apps/web && NODE_OPTIONS=--max-old-space-size=4096 pnpm run build",
+  "buildCommand": "cd apps/web && rm -rf .next && NODE_OPTIONS=--max-old-space-size=4096 pnpm run build",
   "ignoreCommand": "bash scripts/vercel-ignore-build.sh",
   "outputDirectory": "apps/web/.next",
   "framework": "nextjs",
