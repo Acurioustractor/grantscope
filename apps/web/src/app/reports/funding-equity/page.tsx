@@ -1,11 +1,14 @@
 import { getServiceSupabase } from '@/lib/report-supabase';
+import { liveReportsEnabled } from '@/lib/report-supabase';
 import { ReportCTA } from '../_components/report-cta';
 import { money, fmt } from '@/lib/format';
 import { ReportUnavailable } from '../_components/report-unavailable';
 
 export const dynamic = 'force-static';
 
-const LIVE_REPORTS = process.env.CIVICGRAPH_LIVE_REPORTS === 'true';
+// Via the helper, not a private `=== 'true'`: production's value has a trailing newline and the
+// strict form silently disabled this page. See lib/report-supabase.ts.
+const LIVE_REPORTS = liveReportsEnabled();
 
 function pct(n: number, d: number) { return d > 0 ? `${((n / d) * 100).toFixed(1)}%` : '0%'; }
 
@@ -51,7 +54,8 @@ interface DonorRow {
 /**
  * FABRICATED FALLBACK REMOVED, 2026-08-19.
  *
- * When CIVICGRAPH_LIVE_REPORTS is not 'true' — which is its state in production — this page used to
+ * When live reports are off — which was production's effective state until the flag's trailing
+ * newline was found on 2026-08-20 — this page used to
  * return buildSnapshotData(): hand-authored constants. It then rendered them under a Methodology
  * section describing how the figures were computed, and cited sources for them.
  *

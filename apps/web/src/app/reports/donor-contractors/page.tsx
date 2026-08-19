@@ -56,7 +56,20 @@ async function getData() {
     supabase.from('gs_relationships').select('*', { count: 'exact', head: true }).eq('relationship_type', 'contract'),
   ]);
 
-  const all = (donorContractors || []) as DonorContractor[];
+  // Postgres array columns come back NULL, not empty, when a row has no values — 3 of the 2,065
+  // rows in mv_gs_donor_contractors have a NULL contract_years. Fourteen sites below iterate or
+  // read `.length` on these four fields, so one NULL crashed the whole page with
+  // "dc.contract_years is not iterable". Normalise once here rather than guarding fourteen times.
+  //
+  // This was invisible until 2026-08-20 because the page was reading the empty-result client and
+  // never had a row to trip on. Turning live reports on is what surfaced it.
+  const all = ((donorContractors || []) as DonorContractor[]).map((dc) => ({
+    ...dc,
+    parties_donated_to: dc.parties_donated_to ?? [],
+    government_buyers: dc.government_buyers ?? [],
+    donation_years: dc.donation_years ?? [],
+    contract_years: dc.contract_years ?? [],
+  }));
 
   // Aggregate stats
   let sumDonated = 0, sumContracts = 0, totalDonationRecords = 0, totalContractRecords = 0;
