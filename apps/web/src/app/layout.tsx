@@ -177,7 +177,21 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <body
-        className={`font-sans antialiased ${qlFontVars} ${isLoggedIn ? 'ws' : ''}`}
+        // NO `ws` class here. It used to be added for signed-in users, which meant the app
+        // rendered as two visually different products depending on auth state: `.ws` overrides
+        // every bauhaus-* colour with !important, thins border-4 to 1px, is exempt from the
+        // global `border-radius: 0`, and replaces DM Sans with the OS system font. So the
+        // "locked" design was only ever shown to logged-out visitors, and nobody working on the
+        // product was looking at it.
+        //
+        // It was never a design decision: `git log -S` dates it to d6e53129 (2026-03-14),
+        // "Phase 0 revenue infrastructure — tier enforcement, exposure API, ALMA linkage,
+        // contract alerts, NZ scaffolding". It arrived with billing.
+        //
+        // Nothing depended on it. `/org` applies its own `ws act-workspace` wrapper, and
+        // `/dashboard`, `/search` and `/clarity` use `.shell`, which is self-contained by
+        // design ("Scoped to .shell only; the public Bauhaus site is untouched").
+        className={`font-sans antialiased ${qlFontVars}`}
         data-authenticated={user ? 'true' : 'false'}
         data-user-email={user?.email ?? ''}
       >
