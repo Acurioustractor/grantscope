@@ -123,8 +123,13 @@ async function checkDataset(def) {
     `${pre}SELECT count(*) FROM (SELECT DISTINCT ${EDGE_KEY_COLS} FROM (${def.selectSql}) _q) _d;`));
 
   // ACTUAL: edges currently in gs_relationships for this dataset + type.
+  // A dataset may emit MORE THAN ONE relationship type. aec_donations splits on receipt_type into
+  // 'donation' and 'party_receipt', so counting only `relationshipType` would compare every
+  // expected row against the donations alone and report 87% drift on a healthy graph.
+  const types = def.relationshipTypes ?? [def.relationshipType];
+  const typeList = types.map((t) => `'${t}'`).join(', ');
   const actual = Number(await psqlScalar(`actual:${def.dataset}`,
-    `SELECT count(*) FROM gs_relationships WHERE dataset = '${def.dataset}' AND relationship_type = '${def.relationshipType}';`));
+    `SELECT count(*) FROM gs_relationships WHERE dataset = '${def.dataset}' AND relationship_type IN (${typeList});`));
 
   // SOURCE rows: coverage denominator (the trend line).
   const sourceRows = Number(await psqlScalar(`source:${def.dataset}`,
@@ -142,7 +147,7 @@ async function checkDataset(def) {
 
   return {
     dataset: def.dataset,
-    relationship_type: def.relationshipType,
+    relationship_type: (def.relationshipTypes ?? [def.relationshipType]).join('+'),
     expected_edges: expected,
     actual_edges: actual,
     source_rows: sourceRows,
