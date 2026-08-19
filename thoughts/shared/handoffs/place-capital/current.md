@@ -1,5 +1,5 @@
 ---
-date: 2026-08-19T09:30:00Z
+date: 2026-08-19T10:15:00Z
 session_name: place-capital
 branch: main
 status: active
@@ -9,12 +9,13 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-19T09:30:00Z
+**Updated:** 2026-08-19T10:15:00Z
 **Goal:** A buildable spec for what a community organisation uses to see, then capture, the
 capital moving through its place. Map #303 is the vehicle; done when `/to-spec` can run.
 **Branch:** `main`, clean. Everything below is landed AND applied.
-Main is at `de89a756`. Today: #313 `6e619586` · #318 `41d724dc` · #316 `cbaf6933` ·
-#317 `56d209ac` · #319 `4a34d0d6` · #320 `1aaa1f63` · #321 `1b1c8503` · #323 `de89a756`.
+Main is at `7168a7e4`. Today, 11 PRs: #313 `6e619586` · #318 `41d724dc` · #316 `cbaf6933` ·
+#317 `56d209ac` · #319 `4a34d0d6` · #320 `1aaa1f63` · #321 `1b1c8503` · #323 `de89a756` ·
+#325 `f28f138e` · #326 `7168a7e4`.
 **Test:** `./scripts/precheck.sh` (tsc + 724 vitest). DB reads: `node --env-file=.env
 scripts/gsql.mjs "..."` — always `cd /Users/benknight/Code/grantscope` first, cwd drifts.
 
@@ -29,6 +30,36 @@ downstream, so it goes before #306/#307/#309. **Unchanged by the data-integrity 
     'success-fallback') AND mv_name IN ('act_grant_recommendations','mv_yj_report_acco_gap',
     'mv_yj_report_alma_type_counts','mv_yj_report_state_top_orgs',
     'mv_yj_report_unfunded_programs') GROUP BY 1;`
+
+### This Session — fifth: entity identity, and a real person's name on 45 contracts
+
+- [x] **#326 MERGED `7168a7e4` — one validated `makeGsId`, because there were SEVEN.**
+      `scripts/lib/gs-id.mjs` + 8 tests. Real ATO checksum; an invalid ABN now falls through
+      instead of minting an entity. Killed the old `'AU-UNK-' + Date.now()` fallback (latent, never
+      fired, but a guaranteed duplicate generator). Only `build-entity-graph` is wired;
+      **six copies remain**: resolve-donor-entities, import-lobbying-register,
+      import-modern-slavery, ingest-ndis-providers, backfill-qgip-abns, link-entities-mega.
+- [x] **SENTINEL BLACK HOLES FOUND — the worst defect of the day.**
+      `AU-ABN-0` = "112 Trenerry Crescent Pty Ltd" holds **53,109 edges**. Also
+      `AU-ABN-Exempt-NonAustralianEntity` = "Michael John Hayter" (181),
+      `AU-ABN-Notapplicable` = "ATLASSIAN" (109),
+      `AU-ABN-Exempt-InsufficientTurnover` = "Karen Mary Knight" (45).
+      Every record whose ABN field held a sentinel collapsed onto one id, which took the name of
+      whichever record landed first. **~53,400 edges attributed to parties that had nothing to do
+      with them, including two real named individuals.** They rank ~56,133rd in
+      `mv_entity_power_index`, so no leaderboard is distorted; the harm is in per-entity lookups.
+- [x] **The people are RECOVERABLE — dry run done, nothing written.** The sentinel destroyed the
+      link, not the record: 100% of trapped edges carry `source_record_id` and join back to source.
+      53,064 of 53,109 are `aec_donations` → `political_donations`. Resolution:
+      **677 parties/32,295 edges → new AU-NAME · 71/14,035 → existing entity WITH ABN ·
+      345/5,502 → valid source ABN · 9/1,232 → existing, no ABN.** Two thirds of edge volume
+      returns to a real existing entity. `Australian Greens` converges from both variants.
+- [x] **Ben's call: ABN is canonical for government bodies.** Correct, but it settles only
+      **59 of 836** pairs. By PAIRS the dominant case is **ABN → ABN (718)**; by EDGES the
+      government cases dominate (34,532 of 45,220). Both true, different questions.
+- [x] **A blanket merge would be WRONG.** `ERNST and YOUNG` vs `ERNST & YOUNG` have different ABNs
+      and are separate legal entities; same for PwC. The 836-pair list is EVIDENCE, not a merge
+      instruction.
 
 ### This Session — fourth: the integrity thread, and $36bn
 
@@ -122,6 +153,18 @@ were confident and specific.**
       `project_remote_funding_intermediaries.md`.
 
 ### Next
+- [ ] **The sentinel repair (#324).** Three things, not one: create ~677 entities, remap 53,109
+      edges, repeat for `justice_funding` (40) and `lobbying_register_nsw` (5).
+      **Needs a fresh session — write-heavy.** Two traps, both learned the hard way today:
+      **resolve from the SOURCE row, never the surviving edge** (the surviving edge is what is
+      wrong), and **no correlated `EXISTS` against `gs_entities`** — it times out; use a LEFT JOIN
+      with the aggregation pushed up.
+- [ ] **Name-normalise BEFORE minting the 677.** `HSU - Health Services Union` vs
+      `Health Services Union` must not become two entities — that is the same duplication bug in a
+      new costume.
+- [ ] **Migrate the six remaining `makeGsId` copies** to `scripts/lib/gs-id.mjs`.
+- [ ] **The 5,855 kept-wrong edges from #323**, of which Saxonvale's 2,959 are corrected as a side
+      effect of the sentinel repair.
 - [ ] **#324 — decide scope BEFORE starting.** It touches the core of the graph. A query for
       "everything Defence bought" currently hits one of two entities and silently misses the
       other's edges; `mv_entity_power_index` and `mv_revolving_door` split one org across two rows.
@@ -180,6 +223,16 @@ were confident and specific.**
   contract delivery-location extraction.
 
 ### Open Questions
+- **The 718 ABN→ABN pairs need a human call each, and must not be automated.** Three different
+  things are mixed in there: sentinel black holes, whitespace variants of the SAME ABN (5
+  entities, fixed forward by #326), and genuinely distinct legal entities (EY, PwC).
+- **Where did blank become `0`?** Most trapped donors have an EMPTY `donor_abn` in
+  `political_donations`, not `'0'`. Something coerced blank to zero on the way into the graph.
+  Not found; #326 makes it harmless going forward but the coercion is still there.
+- **FIVE wrong answers today, in one thread.** Added to the four already recorded: "the merge map
+  is GOV→ABN" — it is 7% of pairs. **Every one came from reporting before checking the mechanism
+  against its source.** The $31.2bn phantom was the closest call. A large alarming number is the
+  moment to slow down, not speed up.
 - **FOUR wrong answers in one thread today. The pattern is the lesson.** In order:
   (1) "the nightly refresh has stopped" — it had not;
   (2) "the E2E hang is a dpkg lock" — it was the Azure apt mirror, a network stall;
