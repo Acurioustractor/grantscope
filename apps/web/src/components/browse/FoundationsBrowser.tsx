@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { SortHeader } from '../browse-ui';
+import { SortHeader } from './browse-ui';
 import Link from 'next/link';
 
 /**

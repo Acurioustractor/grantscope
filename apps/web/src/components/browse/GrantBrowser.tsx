@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { money, L, makeQs, useDrawer, Drawer, SortHeader } from '../browse-ui';
+import { money, L, makeQs, useDrawer, Drawer, SortHeader } from './browse-ui';
 
 /**
  * Grants browser: recipients of justice_funding as entity-shaped rollups, the individual grants

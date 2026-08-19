@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { unstable_cache } from 'next/cache';
 import { getDirectServiceSupabase } from '@/lib/supabase';
-import ContractSideBrowser, { type SideRow } from '../ContractSideBrowser';
+import ContractSideBrowser, { type SideRow } from '@/components/browse/ContractSideBrowser';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Government buyers — CivicGraph' };

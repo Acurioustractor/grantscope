@@ -131,10 +131,10 @@ export async function Shell({ title, children }: ShellProps) {
           Browse
         </div>
         {[
-          ['/dashboard/browse/foundations', 'Foundations'],
-          ['/dashboard/browse/social-enterprises', 'Social enterprises'],
-          ['/dashboard/browse/charities', 'Charities'],
-          ['/dashboard/browse/grants', 'Grant recipients'],
+          ['/foundations', 'Foundations'],
+          ['/social-enterprises', 'Social enterprises'],
+          ['/charities', 'Charities'],
+          ['/grants', 'Grant recipients'],
           ['/dashboard/browse/contracts', 'Contract suppliers'],
           ['/dashboard/browse/buyers', 'Government buyers'],
           ['/dashboard/browse/donations', 'Political donors'],

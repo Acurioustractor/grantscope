@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { money, L, makeQs, useDrawer, Drawer, SortHeader } from '../browse/browse-ui';
+import { money, L, makeQs, useDrawer, Drawer, SortHeader } from '@/components/browse/browse-ui';
 
 /**
  * People browser: board interlocks + de-collided money footprint. The list excludes nominee
@@ -143,7 +143,7 @@ export default function PersonBrowser({
                     {detail.organisations.map((org, i) => {
                       const abn = detail.organisation_abns?.[i] ?? null;
                       return abn ? (
-                        <Link key={`${org}-${i}`} href={`/dashboard/browse/charities?q=${encodeURIComponent(org)}`} className="text-[12.5px]" style={{ color: '#1040C0' }}>
+                        <Link key={`${org}-${i}`} href={`/charities?q=${encodeURIComponent(org)}`} className="text-[12.5px]" style={{ color: '#1040C0' }}>
                           {org}
                         </Link>
                       ) : (

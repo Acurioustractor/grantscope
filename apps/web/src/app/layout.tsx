@@ -90,7 +90,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     || pathname.startsWith('/org/a-curious-tractor/')
     || pathname === '/org/curious-tractor'
     || pathname.startsWith('/org/curious-tractor/');
-  const isChromeless = pathname.startsWith('/dashboard')
+  // The four catalogue indexes moved to their public URLs and kept the Shell layout, so they
+  // supply their own chrome. EXACT match, not startsWith: /charities/[abn], /charities/claim,
+  // /foundations/minderoo and the rest are public detail pages that still want the public nav.
+  const SHELL_INDEX_PATHS = ['/charities', '/foundations', '/grants', '/social-enterprises'];
+  const isChromeless = SHELL_INDEX_PATHS.includes(pathname)
+    || pathname.startsWith('/dashboard')
     || pathname.startsWith('/search')
     || pathname.startsWith('/clarity')
     || pathname.startsWith('/embed')
