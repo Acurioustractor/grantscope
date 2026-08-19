@@ -1202,7 +1202,7 @@ export default async function StateTrackerPage({ params }: { params: Promise<{ s
 
           {!hasOrgs ? (
             <NoGrantLevelData
-              jurisdiction={abbr}
+              jurisdiction={meta.name}
               topicLabel="youth justice"
               lanes={data.laneCoverage}
             />
