@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NON_RECIPIENT_NAMES, isRealRecipient, money } from './justice-money';
+import { GRANT_FILTER_SQL, NON_RECIPIENT_NAMES, donationFilterSql, grantFilterSql, isRealRecipient, money } from './justice-money';
 
 describe('isRealRecipient — the filter CLAUDE.md does not document', () => {
   it('rejects source-spreadsheet total rows', () => {
@@ -50,5 +50,42 @@ describe('money', () => {
   it('does not round a real figure up into a bigger unit', () => {
     expect(money(999_999)).toBe('$1000k');
     expect(money(1_000_000)).toBe('$1.0m');
+  });
+});
+
+
+describe('grantFilterSql — the predicate raw exec_sql call sites must not retype', () => {
+  it('carries all three filters', () => {
+    const sql = grantFilterSql();
+    expect(sql).toContain("measure_kind = 'grant'");
+    expect(sql).toContain('is_aggregate IS NOT TRUE');
+    expect(sql).toContain("'total'");
+  });
+
+  it('prefixes every column when given an alias, so it can be dropped into an aliased query', () => {
+    const sql = grantFilterSql('jf');
+    expect(sql).toContain("jf.measure_kind = 'grant'");
+    expect(sql).toContain('jf.is_aggregate IS NOT TRUE');
+    expect(sql).toContain('lower(btrim(jf.recipient_name))');
+    // No bare column may survive — a missed prefix is an ambiguous-column error at query time
+    // in some queries and, worse, resolves to the WRONG table's column in others.
+    expect(sql).not.toMatch(/(?<!\.)\bmeasure_kind\b/);
+    expect(sql).not.toMatch(/(?<!\.)\bis_aggregate\b/);
+    expect(sql).not.toMatch(/(?<!\.)\brecipient_name\b/);
+  });
+
+  it('exports the unaliased form as a constant', () => {
+    expect(GRANT_FILTER_SQL).toBe(grantFilterSql());
+  });
+
+  it('lists every non-recipient name', () => {
+    for (const n of NON_RECIPIENT_NAMES) expect(grantFilterSql()).toContain(`'${n}'`);
+  });
+});
+
+describe('donationFilterSql', () => {
+  it("keeps only 'donation received' — 'other receipt' is 85% of the dollars and is not donations", () => {
+    expect(donationFilterSql()).toBe("receipt_type = 'donation received'");
+    expect(donationFilterSql('pd')).toBe("pd.receipt_type = 'donation received'");
   });
 });

@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 import { esc } from '@/lib/sql';
-import { NON_RECIPIENT_NAMES } from '@/lib/justice-money';
+import { donationFilterSql, grantFilterSql } from '@/lib/justice-money';
 
 export type Topic = 'youth-justice' | 'child-protection' | 'ndis' | 'family-services' | 'indigenous' | 'legal-services' | 'diversion' | 'prevention';
 
@@ -34,13 +34,35 @@ function assertTopic(t: string): Topic {
 }
 
 /**
- * Topic filter for justice_funding queries. Excludes austender-direct which
- * contains 95% general procurement (postal, defence, IT) not justice data.
+ * Topic filter for justice_funding queries, in the GRANT lane.
+ *
+ * Three things, not one:
+ *   1. the topic tag (hyphenated — the underscore form returns zero rows silently);
+ *   2. `source NOT IN ('austender-direct')`, which is 95% general procurement (postal, defence,
+ *      IT) rather than justice data;
+ *   3. `grantFilterSql()` — measure_kind, is_aggregate, and the aggregate-shaped recipient names.
+ *
+ * (3) used to be absent, and that is the whole reason this comment is long. `justice_funding`
+ * carries two incompatible measures in one `amount_dollars` column: grants paid to organisations,
+ * and whole-of-state expenditure budgets. Mixing them does not produce a slightly-off number.
+ * Measured 2026-08-20 on the youth-justice topic:
+ *
+ *     topic tag alone            5,100 rows   $31.66bn
+ *     topic tag + grant lane     4,090 rows   $0.92bn
+ *
+ * A 34x overstatement, published as "funding by state" and as "top funded programs".
+ *
+ * Every caller here is asking a question about money that reached an organisation, so the grant
+ * lane is folded in rather than left to each call site to remember. Deliberate expenditure
+ * surfaces — `getRogsExpenditure`, `getBudgetTotals`, `getBudgetCommitments`, `getRogsTimeSeries` —
+ * scope by `source` instead and never call this.
  */
-function topicFilter(topic: Topic, alias?: string): string {
+function grantTopicFilter(topic: Topic, alias?: string): string {
   assertTopic(topic);
   const p = alias ? `${alias}.` : '';
-  return `${p}topics @> ARRAY['${topic}']::text[] AND ${p}source NOT IN ('austender-direct')`;
+  return `${p}topics @> ARRAY['${topic}']::text[]
+    AND ${p}source NOT IN ('austender-direct')
+    AND ${grantFilterSql(alias)}`;
 }
 
 /** Topic filter for alma_interventions (no source column to exclude). */
@@ -61,7 +83,7 @@ export async function getFundingByState(topic: Topic) {
               SUM(amount_dollars)::bigint as total,
               COUNT(DISTINCT recipient_name)::int as orgs
        FROM justice_funding
-       WHERE ${topicFilter(topic)}
+       WHERE ${grantTopicFilter(topic)}
        GROUP BY state
        ORDER BY total DESC`,
   })) as Promise<Array<{ state: string; grants: number; total: number; orgs: number }> | null>;
@@ -77,7 +99,7 @@ export async function getTopPrograms(topic: Topic, limit = 15) {
               COUNT(*)::int as grants,
               SUM(amount_dollars)::bigint as total
        FROM justice_funding
-       WHERE ${topicFilter(topic)}
+       WHERE ${grantTopicFilter(topic)}
        GROUP BY program_name, state
        ORDER BY total DESC
        LIMIT ${limit}`,
@@ -99,7 +121,7 @@ export async function getTopOrgs(topic: Topic, limit = 25, state?: string) {
               e.gs_id
        FROM justice_funding jf
        LEFT JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
-       WHERE ${topicFilter(topic, 'jf')}${stateFilter}
+       WHERE ${grantTopicFilter(topic, 'jf')}${stateFilter}
          AND jf.program_name NOT LIKE 'ROGS%'
          -- The name-prefix blocklist that used to live here did not work. It excluded
          -- 'Department of%' and 'State of%' but not 'Territory Families, Housing and Communities'
@@ -108,12 +130,9 @@ export async function getTopOrgs(topic: Topic, limit = 25, state?: string) {
          -- It also let 7 of the Synod of Brisbane's 8 aggregate rows inflate a real recipient.
          -- Matching on names cannot separate measures; measure_kind can. CLAUDE.md says use the
          -- canonical predicate rather than rewriting it, and this is why.
-         AND jf.measure_kind = 'grant'
-         AND jf.is_aggregate IS NOT TRUE
+         -- grantTopicFilter() now carries measure_kind, is_aggregate and the recipient-name list.
+         -- The NULL guard stays here: it belongs to the ORDER BY, not to the lane.
          AND jf.amount_dollars IS NOT NULL
-         AND lower(btrim(jf.recipient_name)) <> ALL (ARRAY[${[...NON_RECIPIENT_NAMES]
-           .map((n) => `'${n}'`)
-           .join(',')}])
        GROUP BY jf.recipient_name, jf.recipient_abn, jf.state, e.gs_id
        ORDER BY total DESC
        LIMIT ${limit}`,
@@ -194,7 +213,7 @@ export async function getFundingByLga(topic: Topic, limit = 20, state?: string) 
               MIN(e.seifa_irsd_decile)::int as seifa_decile
        FROM justice_funding jf
        JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
-       WHERE ${topicFilter(topic, 'jf')}${stateFilter}
+       WHERE ${grantTopicFilter(topic, 'jf')}${stateFilter}
          AND e.lga_name IS NOT NULL
          ${sc ? `AND e.state = '${sc}'` : ''}
        GROUP BY e.lga_name, e.state
@@ -222,7 +241,7 @@ export async function getCrossSystemOrgs(primaryTopic: Topic, crossTopics: Topic
       SELECT DISTINCT e.id, e.gs_id, e.canonical_name, e.entity_type, e.state
       FROM gs_entities e
       JOIN justice_funding jf ON jf.recipient_abn = e.abn AND e.abn IS NOT NULL
-      WHERE ${topicFilter(primaryTopic, 'jf')}
+      WHERE ${grantTopicFilter(primaryTopic, 'jf')}
     )`;
 
   const crossCtes = crossTopics.map((t, i) => `
@@ -230,7 +249,7 @@ export async function getCrossSystemOrgs(primaryTopic: Topic, crossTopics: Topic
       SELECT DISTINCT e.id
       FROM gs_entities e
       JOIN justice_funding jf ON jf.recipient_abn = e.abn AND e.abn IS NOT NULL
-      WHERE ${topicFilter(t, 'jf')}
+      WHERE ${grantTopicFilter(t, 'jf')}
     )`);
 
   const topicLabels: Record<string, string> = {
@@ -265,7 +284,7 @@ export async function getCrossSystemOrgs(primaryTopic: Topic, crossTopics: Topic
       ${crossJoins.join('\n      ')}
       LEFT JOIN justice_funding jf ON jf.recipient_abn = (
         SELECT abn FROM gs_entities WHERE id = p.id
-      )
+      ) AND ${grantFilterSql('jf')}
       WHERE ${crossWhere}
       GROUP BY p.gs_id, p.canonical_name, p.entity_type, p.state,
                ${crossTopics.map((_, i) => `c${i}.id`).join(', ')}
@@ -300,7 +319,7 @@ export async function getCrossSystemOverlap(primaryTopic: Topic, stateCode: stri
     JOIN justice_funding jf ON jf.recipient_abn = e.abn AND e.abn IS NOT NULL
     CROSS JOIN LATERAL unnest(jf.topics) AS t(topic)
     WHERE e.state = '${sc}'
-      AND jf.topics @> ARRAY['${primaryTopic}']::text[]
+      AND ${grantTopicFilter(primaryTopic, 'jf')}
     GROUP BY e.gs_id, e.canonical_name, e.entity_type
     HAVING COUNT(DISTINCT t.topic) > 1
     ORDER BY COUNT(DISTINCT t.topic) DESC, SUM(jf.amount_dollars) DESC NULLS LAST
@@ -475,6 +494,17 @@ export async function getEntityEvidencePrograms(db: SupabaseClient, entityId: st
   return rows ?? [];
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// THE EXPENDITURE LANE — deliberately NOT grant-filtered
+//
+// getRogsTimeSeries, getRogsExpenditure, getBudgetCommitments, getBudgetTotals and the two
+// getQgip* functions scope by `source` (rogs-2026, %-budget-sds, qgip) or by a ROGS program
+// prefix, and they are asking what a government SPENT, not what an organisation RECEIVED.
+// Applying measure_kind = 'grant' to these would empty them: 17 of the 18 %-budget-sds rows are
+// is_aggregate = true, and that is the measurement, not a defect. Do not "fix" them by adding
+// grantTopicFilter. getStateDataDepth counts rows and sums no money at all.
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 /**
  * ROGS time series data for a topic
  */
@@ -531,7 +561,7 @@ export async function getYouthJusticeGrants(limit = 15) {
               COUNT(*)::int as grants
        FROM justice_funding jf
        LEFT JOIN gs_entities ge ON ge.id = jf.gs_entity_id
-       WHERE ${topicFilter('youth-justice', 'jf')}
+       WHERE ${grantTopicFilter('youth-justice', 'jf')}
          AND jf.program_name NOT LIKE 'ROGS%'
          -- The mandatory filters. Without them this function, despite its name, does not return
          -- grants: it returned whole-of-state expenditure aggregates and budget announcements, so
@@ -540,12 +570,9 @@ export async function getYouthJusticeGrants(limit = 15) {
          -- while having ZERO rows with measure_kind='grant'. Same for the NSW, VIC, NT, SA and ACT
          -- departments. They were ranked above Lifeline Community Care's real $30.1M.
          -- See CLAUDE.md "Three filters that are mandatory, not optional".
-         AND jf.measure_kind = 'grant'
-         AND jf.is_aggregate IS NOT TRUE
+         -- grantTopicFilter() now carries measure_kind, is_aggregate and the recipient-name list.
+         -- The NULL guard stays here: it belongs to the ORDER BY, not to the lane.
          AND jf.amount_dollars IS NOT NULL
-         AND lower(btrim(jf.recipient_name)) <> ALL (ARRAY[${[...NON_RECIPIENT_NAMES]
-           .map((n) => `'${n}'`)
-           .join(',')}])
        GROUP BY jf.recipient_name, jf.state, ge.gs_id
        ORDER BY total DESC NULLS LAST
        LIMIT ${limit}`,
@@ -794,7 +821,7 @@ export async function getAccoFundingGap(topic: Topic, state?: string) {
               )::float as funding_share_pct
             FROM justice_funding jf
             JOIN gs_entities ge ON ge.id = jf.gs_entity_id
-            WHERE ${topicFilter(topic, 'jf')}${stateFilter}
+            WHERE ${grantTopicFilter(topic, 'jf')}${stateFilter}
               AND jf.source NOT IN ('austender-direct')
               AND jf.amount_dollars IS NOT NULL
               AND jf.amount_dollars > 0
@@ -821,7 +848,7 @@ export async function getFundingByRemoteness(topic: Topic, state?: string) {
               COUNT(*)::int as grants
             FROM justice_funding jf
             JOIN gs_entities ge ON ge.id = jf.gs_entity_id
-            WHERE ${topicFilter(topic, 'jf')}${stateFilter}
+            WHERE ${grantTopicFilter(topic, 'jf')}${stateFilter}
               AND jf.program_name NOT LIKE 'ROGS%' AND jf.program_name NOT LIKE 'Total%'
               AND ge.remoteness IS NOT NULL
             GROUP BY ge.remoteness
@@ -854,7 +881,7 @@ export async function getYjRevolvingDoor(topic: Topic, limit = 15, state?: strin
     query: `WITH yj_orgs AS (
               SELECT jf.gs_entity_id, SUM(jf.amount_dollars)::bigint as yj_funding
               FROM justice_funding jf
-              WHERE ${topicFilter(topic, 'jf')}${stateFilter}
+              WHERE ${grantTopicFilter(topic, 'jf')}${stateFilter}
                 AND jf.program_name NOT LIKE 'ROGS%'
                 AND jf.program_name NOT IN ('General Goods and Services', 'DYJVS Contract')
                 AND jf.gs_entity_id IS NOT NULL
@@ -1323,6 +1350,7 @@ export async function getYjMmrStats() {
        WHERE ac.supplier_abn IN (
          SELECT DISTINCT recipient_abn FROM justice_funding
          WHERE recipient_abn IS NOT NULL AND topics @> ARRAY['youth-justice']::text[]
+           AND ${grantFilterSql()}
        )`,
   })) as Promise<Array<{
     total_contracts: number;
@@ -1430,7 +1458,7 @@ export async function getYjLobbyingConnections(topic: Topic, state?: string, lim
   return safe(supabase.rpc('exec_sql', {
     query: `WITH yj_orgs AS (
               SELECT DISTINCT gs_entity_id FROM justice_funding
-              WHERE ${topicFilter(topic)}${stateFilter}
+              WHERE ${grantTopicFilter(topic)}${stateFilter}
                 AND gs_entity_id IS NOT NULL
             )
             SELECT e.canonical_name, e.gs_id,
@@ -1477,7 +1505,7 @@ export async function getProgramsWithPartners(topic: Topic, state: string, opts?
          FROM justice_funding jf
          LEFT JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
          WHERE jf.state = '${sc}'
-           AND ${topicFilter(topic, 'jf')}
+           AND ${grantTopicFilter(topic, 'jf')}
            AND jf.program_name NOT LIKE 'ROGS%'
            AND jf.program_name NOT LIKE 'Total%'
            AND jf.program_name NOT LIKE 'Government real%'
@@ -1539,7 +1567,7 @@ export async function getFundingByProgram(topic: Topic, state: string, limit = 2
               COUNT(DISTINCT recipient_name)::int as orgs
        FROM justice_funding
        WHERE state = '${sc}'
-         AND ${topicFilter(topic)}
+         AND ${grantTopicFilter(topic)}
          AND program_name NOT LIKE 'ROGS%'
          AND program_name NOT LIKE 'Total%'
          AND program_name NOT LIKE 'Government real%'
@@ -1623,6 +1651,7 @@ export async function getProgramRecipients(state: string, programName: string, l
        FROM justice_funding jf
        LEFT JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
        WHERE jf.state = '${sc}' AND jf.program_name = '${esc(programName)}'
+         AND ${grantFilterSql('jf')}
        GROUP BY jf.recipient_name, jf.recipient_abn, e.gs_id, e.is_community_controlled
        ORDER BY total DESC NULLS LAST
        LIMIT ${limit}`,
@@ -1649,7 +1678,7 @@ export async function getTrackerLeadership(state: string, topic: Topic, limit = 
                 SUM(jf.amount_dollars) OVER (PARTITION BY jf.recipient_abn) as total_funded
               FROM justice_funding jf
               JOIN gs_entities e ON e.abn = jf.recipient_abn
-              WHERE jf.state = '${sc}' AND ${topicFilter(topic, 'jf')}
+              WHERE jf.state = '${sc}' AND ${grantTopicFilter(topic, 'jf')}
                 AND jf.recipient_abn IS NOT NULL
                 AND jf.program_name NOT LIKE 'ROGS%' AND jf.program_name NOT LIKE 'Total%'
               ORDER BY jf.recipient_abn, total_funded DESC
@@ -1685,7 +1714,7 @@ export async function getTrackerInterlocks(state: string, topic: Topic, limit = 
               SELECT DISTINCT e.id
               FROM justice_funding jf
               JOIN gs_entities e ON e.abn = jf.recipient_abn
-              WHERE jf.state = '${sc}' AND ${topicFilter(topic, 'jf')}
+              WHERE jf.state = '${sc}' AND ${grantTopicFilter(topic, 'jf')}
                 AND jf.recipient_abn IS NOT NULL
             )
             SELECT bi.person_name_display as person_name, bi.board_count,
@@ -1719,9 +1748,10 @@ export async function getTrackerDonations(state: string, topic: Topic, limit = 1
               MIN(pd.financial_year) as from_fy,
               MAX(pd.financial_year) as to_fy
        FROM political_donations pd
-       WHERE pd.donor_abn IN (
+       WHERE ${donationFilterSql('pd')}
+         AND pd.donor_abn IN (
          SELECT DISTINCT recipient_abn FROM justice_funding
-         WHERE state = '${sc}' AND ${topicFilter(topic)}
+         WHERE state = '${sc}' AND ${grantTopicFilter(topic)}
            AND recipient_abn IS NOT NULL
        )
        GROUP BY pd.donor_name, pd.donation_to
@@ -1958,6 +1988,7 @@ export async function getCrossDomainOrgs(stateCode: string, limit = 20) {
       CROSS JOIN LATERAL unnest(jf.topics) AS t(topic)
       WHERE e.state = '${sc}'
         AND t.topic IN (${topicList})
+        AND ${grantFilterSql('jf')}
     )
     SELECT gs_id, canonical_name, entity_type, is_community_controlled,
            array_agg(DISTINCT topic ORDER BY topic) as domains,
@@ -2011,6 +2042,7 @@ export async function getStateDomainFunding(stateCode: string) {
            COUNT(DISTINCT recipient_name)::int as total_orgs
     FROM justice_funding
     WHERE state = '${sc}'
+      AND ${grantFilterSql()}
   `;
   type Row = Record<string, unknown>;
   const rows = await safe(supabase.rpc('exec_sql', { query })) as Row[] | null;
@@ -2088,6 +2120,10 @@ export async function getQgipExpenditureByYear(state: string) {
               SUM(amount_dollars)::bigint as total
        FROM justice_funding
        WHERE source = 'qgip' AND state = '${sc}'
+         -- 130 qgip rows are is_aggregate — $1.05bn, 5% of the source — and program_name
+         -- NOT LIKE 'Total%' does not catch them. This lane is expenditure by design, so
+         -- measure_kind is deliberately NOT applied; the rollup rows still have to go.
+         AND is_aggregate IS NOT TRUE
          AND financial_year IS NOT NULL AND amount_dollars IS NOT NULL
        GROUP BY financial_year
        ORDER BY financial_year`,
@@ -2114,6 +2150,7 @@ export async function getQgipTopPrograms(state: string, limit = 15) {
               MAX(financial_year) as to_fy
        FROM justice_funding
        WHERE source = 'qgip' AND state = '${sc}'
+         AND is_aggregate IS NOT TRUE
          AND amount_dollars IS NOT NULL
          AND program_name NOT LIKE 'Total%'
        GROUP BY program_name
