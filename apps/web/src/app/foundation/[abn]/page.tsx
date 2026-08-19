@@ -97,14 +97,20 @@ export async function generateMetadata({ params }: { params: Promise<{ abn: stri
   };
 }
 
+interface GranteeStatRow {
+  grantee_state: string | null;
+  n: number;
+  no_amount: number;
+  cc: number;
+}
+
 async function getData(abn: string) {
   const supabase = getServiceSupabase();
 
   const [
     scoreResult,
     granteesResult,
-    granteesNoAmountResult,
-    granteesTotalResult,
+    granteeStatsResult,
     trendsResult,
     trusteeResult,
     regrantResult,
@@ -124,22 +130,22 @@ async function getData(abn: string) {
       .eq('foundation_abn', abn)
       .order('grant_amount', { ascending: false, nullsFirst: false })
       .limit(100),
-    // How many grantees carry no dollar figure — counted across ALL of them, not the 100
-    // fetched above. Those are ordered amount-desc with nulls last, so every dollar-less row
-    // falls outside the window and counting the sample would always report zero (FRRR: 464
-    // of them, none in the first 100). Head-only count, no rows transferred.
-    supabase
-      .from('mv_foundation_grantees')
-      .select('grantee_gs_id', { count: 'exact', head: true })
-      .eq('foundation_abn', abn)
-      .or('grant_amount.is.null,grant_amount.eq.0'),
-    // Total grantee links, counted the same way. Both figures in the sentence below must come
-    // from the same population: mixing a sample count with a full-table count produced the live
-    // nonsense "93 traceable grantees, 464 of them with no amount".
-    supabase
-      .from('mv_foundation_grantees')
-      .select('grantee_gs_id', { count: 'exact', head: true })
-      .eq('foundation_abn', abn),
+    // EVERY figure in the Grantees paragraph comes from this one grouped query, so the whole
+    // sentence describes ONE population. The table above it is a 100-row sample ordered
+    // amount-desc with nulls last, which means no dollar-less row ever appears in it — deriving
+    // any count from that sample reported 0 dollar-less grantees out of a real 464, and mixing
+    // the two produced the live nonsense "93 traceable grantees, 464 of them with no amount".
+    supabase.rpc('exec_sql', {
+      query: `SELECT upper(trim(grantee_state)) AS grantee_state,
+                     count(*)::int AS n,
+                     count(*) FILTER (WHERE grant_amount IS NULL OR grant_amount = 0)::int AS no_amount,
+                     count(*) FILTER (WHERE grantee_community_controlled)::int AS cc
+              FROM mv_foundation_grantees
+              WHERE foundation_abn = '${abn.replace(/'/g, "''")}'
+              GROUP BY upper(trim(grantee_state))`,
+      // Normalised because grantee_state carries case variants — FRRR alone has VIC, Vic and
+      // vic, which split one state into three chips and made "7 states" read as "11".
+    }),
     // Trends
     supabase
       .from('mv_foundation_trends')
@@ -181,8 +187,7 @@ async function getData(abn: string) {
   return {
     score: scoreResult.data as FoundationScore,
     grantees: (granteesResult.data || []) as Grantee[],
-    granteesNoAmount: granteesNoAmountResult.count ?? 0,
-    granteesTotal: granteesTotalResult.count ?? 0,
+    granteeStats: (granteeStatsResult.data || []) as GranteeStatRow[],
     trends: (trendsResult.data || []) as TrendYear[],
     trusteeOverlaps: (trusteeResult.data || []) as TrusteeOverlap[],
     regranting: (regrantResult.data || []) as RegrантChain[],
@@ -241,19 +246,18 @@ export default async function FoundationDetailPage({ params }: { params: Promise
   const data = await getData(abn);
   if (!data) notFound();
 
-  const { score: s, grantees, granteesNoAmount, granteesTotal, trends, trusteeOverlaps, regranting, evidence, peers } = data;
+  const { score: s, grantees, granteeStats, trends, trusteeOverlaps, regranting, evidence, peers } = data;
 
-  // Aggregate grantee stats
-  const uniqueGrantees = new Set(grantees.map(g => g.grantee_abn || g.grantee_name)).size;
-  // Disclose rather than hide (policy: issues/285). Counted across ALL grantees by the query,
-  // not over the 100 fetched — those are ordered amount-desc with nulls last, so every
-  // dollar-less row sits outside the window and the sample would always say zero.
-  const ccGrantees = grantees.filter(g => g.grantee_community_controlled).length;
-  const stateDistribution = new Map<string, number>();
-  for (const g of grantees) {
-    if (g.grantee_state) stateDistribution.set(g.grantee_state, (stateDistribution.get(g.grantee_state) || 0) + 1);
-  }
-  const sortedStates = [...stateDistribution.entries()].sort((a, b) => b[1] - a[1]);
+  // Every figure below is summed from granteeStats — the grouped query over ALL links — so the
+  // paragraph and the chips describe one population. Nothing here is derived from `grantees`,
+  // which is a 100-row display sample (policy: issues/285).
+  const granteesTotal = granteeStats.reduce((t, r) => t + r.n, 0);
+  const granteesNoAmount = granteeStats.reduce((t, r) => t + r.no_amount, 0);
+  const ccGrantees = granteeStats.reduce((t, r) => t + r.cc, 0);
+  const sortedStates = granteeStats
+    .filter((r) => r.grantee_state)
+    .map((r) => [r.grantee_state as string, r.n] as [string, number])
+    .sort((a, b) => b[1] - a[1]);
 
   // Regranting stats
   const regrantingByRegranter = new Map<string, { name: string; abn: string; count: number }>();
@@ -329,8 +333,8 @@ export default async function FoundationDetailPage({ params }: { params: Promise
             <div className="text-2xl font-black">{money(Number(s.total_giving_annual))}</div>
           </div>
           <div className="border-4 border-l-0 max-md:border-l-4 border-bauhaus-black p-5 bg-white">
-            <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-1">Traceable Grantees</div>
-            <div className="text-2xl font-black">{fmt(uniqueGrantees)}</div>
+            <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-1">Grantee Links</div>
+            <div className="text-2xl font-black">{fmt(granteesTotal)}</div>
           </div>
           <div className="border-4 border-l-0 max-md:border-l-4 max-md:border-t-0 border-bauhaus-black p-5 bg-white">
             <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-1">Community-Controlled</div>
