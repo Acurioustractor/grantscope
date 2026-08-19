@@ -150,17 +150,24 @@ export function getReportSnapshotSupabase() {
   return reportSnapshotSupabase;
 }
 
-function shouldUseReportSnapshotClient() {
-  if (process.env.CIVICGRAPH_LIVE_REPORTS === 'true') return false;
-  const stack = new Error().stack || '';
-  return stack.includes('/app/reports/') || stack.includes('src_app_reports') || stack.includes('app_reports');
-}
-
+/**
+ * The client a caller asks for is the client it gets.
+ *
+ * This used to consult `new Error().stack` and silently swap in the empty report-snapshot client
+ * if the string contained '/app/reports/', 'src_app_reports' or 'app_reports'. Three problems with
+ * that, all of which cost us on 2026-08-19:
+ *
+ *   1. Whether it fired depended on how a page happened to be bundled, so it applied to some
+ *      report pages and not others with nothing distinguishing them.
+ *   2. It was invisible at the call site. Nothing in a page.tsx hinted that its queries might not
+ *      run, which is how two public reports came to publish "0 entities scored across 7 datasets".
+ *   3. It made the fix unavailable to the person reading the page: there was no import to change.
+ *
+ * Report pages that want the snapshot now say so, by importing from `@/lib/report-supabase`.
+ * `apps/web/src/lib/report-client-convention.test.ts` fails the build if one forgets, which is the
+ * guarantee the stack sniffing was reaching for and could not provide.
+ */
 export function getServiceSupabase() {
-  if (shouldUseReportSnapshotClient()) {
-    return reportSnapshotSupabase;
-  }
-
   return getDirectServiceSupabase();
 }
 
