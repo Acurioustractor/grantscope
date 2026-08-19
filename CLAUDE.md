@@ -146,7 +146,7 @@ These exist to separate incompatible measures that share one amount column.
 Omitting them does not produce a slightly-off number, it produces a wrong one by an order of magnitude.
 
 ```sql
--- 1. justice_funding: 848 'expenditure_aggregate' rows are WHOLE-OF-STATE BUDGETS ($66.1bn),
+-- 1. justice_funding: 368 'expenditure_aggregate' rows are WHOLE-OF-STATE BUDGETS ($28.35bn),
 --    not money to any organisation. For funding received by orgs:
 WHERE measure_kind = 'grant'          -- 126,673 rows, $46.1bn
 
@@ -179,9 +179,17 @@ recipients of youth justice funding in Australia**. One of them even carries an 
 ABN-based join will not save you.
 
 **`is_aggregate` and `measure_kind` are independent — neither implies the other.** 1,358 rows are
-`measure_kind='grant'` AND `is_aggregate` ($12.06bn of grant-shaped aggregates), while 330
-`expenditure_aggregate` rows are `is_aggregate=false` ($17.39bn). Filtering on either alone leaves
+`measure_kind='grant'` AND `is_aggregate` ($12.06bn of grant-shaped aggregates), while 180
+`expenditure_aggregate` rows are `is_aggregate=false` ($6.77bn). Filtering on either alone leaves
 billions behind.
+
+**Re-measured 2026-08-19 after the ROGS dedupe (#299).** The `expenditure_aggregate` lane was
+848 rows / $66.13bn, of which 483 were exact duplicates of a second ingest of the same
+Productivity Commission table. It is now 368 rows / $28.35bn. The `is_aggregate=false` count
+fell from 330 / $17.39bn to 180 / $6.77bn in the same fix, which also flagged the 80 ROGS
+rollup rows that had been only 30/80 flagged. Per-lane figures (detention, community-based,
+group conferencing) were never affected — the duplication was across `program_name` labels,
+not within them.
 
 `political_donations` was checked for the same defect and is clean — no aggregate-shaped donor
 names. Filter 2 is specific to `justice_funding`.
