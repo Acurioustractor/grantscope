@@ -124,3 +124,88 @@ Written, not applied. Applying is a Tier 3 write.
   same question for the whole $230bn.
 - **Wangaratta.** $258M and 8.3 per cent is either a real finding or an artefact, and one
   hour of looking at the recipient list settles it.
+
+---
+
+# Additions and corrections, same day
+
+Four things changed after the above was written. Two are new findings, two are corrections
+to what I wrote.
+
+## The state-level cut: money stays in the state and leaves the town
+
+Across **281,003 awards worth $200.21bn**, excluding multi-state and pseudo-state values:
+
+- **97.5% of awards** are received in the state they were delivered into
+- **96.8% of the dollars** are
+
+Per state, every real jurisdiction sits between 93% and 98%.
+
+Set that beside the LGA figures from earlier: 85.1% of awards and **59.6% of dollars**.
+
+**State borders are almost never crossed. The leak is entirely internal.** Money delivered
+into a place reliably stays in that state and then leaves the town, travelling to a capital
+city or a regional centre inside the same jurisdiction. Any policy response pitched at
+interstate extraction is aimed at something that is not happening. The gap between 96.8% and
+59.6% is the whole problem, and it is a within-state problem.
+
+## Correction: `delivery_state` is not a single state
+
+I wrote in the scoping document and in spec #300 that `delivery_state` is populated on 100%
+of awards and therefore supports a state cut with no exclusions. **That was wrong.**
+
+The column holds **318 distinct values**, including comma-separated lists like
+`ACT, VIC, SA, WA, QLD, TAS`, plus the pseudo-places `National` and `Overseas`.
+
+- multi-state values: 4,726 rows, $9.73bn
+- `National`: 1,644 awards, $18.93bn, 30.2% "captured locally", which is meaningless
+- `Overseas`: 1,002 awards, $1.00bn
+
+Left in, they never equal a single recipient state and so count as delivered off-site, the
+same failure mode as `'Multiple'` in `delivery_postcode`. The uncorrected national figure was
+95.3% of awards and 87.1% of dollars. Corrected: **97.5% and 96.8%.**
+
+Coverage remains excellent, at $200.21bn of $230bn, but it is not uncaveated. Spec #300 needs
+this fixed.
+
+## Correction: the SA3-shaped `postcode_geo` rows are mostly fine
+
+I wrote that 443 rows carry wrong LGAs and should be repaired. **The extent was overstated
+and the repair is not available.**
+
+Most SA3-shaped rows are correct. Postcode 0812 `Malak - Marrara` maps to Darwin, which is
+right. 2000 `Sydney (North) - Millers Point` maps to Sydney, which is right. Postcode 4816
+`Townsville - South` maps to Croydon, which is wrong by about 900km, and that one is proven.
+
+How many others are wrong is **unknown, and cannot be determined from inside the database.**
+Only 4 of the 443 rows have a same-postcode sibling to cross-check against, and all 4 agree.
+The remaining 439 have no internal evidence either way. The Croydon case was caught by
+eyeballing an output, which is not a method that scales.
+
+So the blanket exclusion in `v_grant_place_capture` stands, but its justification changes. It
+is not removing 443 known-bad rows. It is refusing an unknown number of unknown-bad rows at a
+cost of about $10bn of coverage, on the evidence of one proven case. That is a defensible
+trade and it should be stated as such rather than as a repair.
+
+Fixing this properly needs the ABS SA3-to-LGA correspondence file, an external source.
+Separate project, not a migration.
+
+## Wangaratta was an artefact
+
+$258M delivered at 8.3% captured, the largest gap in the ranked table. The cause is a single
+recipient:
+
+**Australian Rail Track Corporation, registered in South Australia, $940M across 4 awards.**
+Inland Rail.
+
+That is a Commonwealth-owned corporation delivering national rail infrastructure. It is not a
+community organisation losing work to a city competitor, which is what the ranked table
+invites you to read.
+
+The lesson generalises. **Large national infrastructure delivered by government-owned
+corporations will dominate any per-place capture ranking and means something different from
+the rest of the measure.** Any surface built on this needs to segment it or the ranked list
+will mostly be a list of places that had a road, a railway or a transmission line built.
+
+A second, smaller thing surfaced in the same query: `Indigo Shire Council` appears twice under
+different casing, with separate dollar totals. Recipient names are not normalised.
