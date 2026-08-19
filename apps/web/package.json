@@ -11,7 +11,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "palette": "node scripts/palette-scan.mjs",
+    "palette:baseline": "node scripts/palette-scan.mjs --write"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.50",
