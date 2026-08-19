@@ -138,25 +138,38 @@ const SNAPSHOT_CONTRACTS: AustenderContract[] = [
   },
 ];
 
+/**
+ * Corrected 2026-08-19. This array previously listed government departments as the top grant
+ * recipients — "Department of Youth Justice and Victim Support, QLD, 67 grants, $11,397,825,690"
+ * at #1, above Lifeline Community Care's real $30.1M.
+ *
+ * That department has ZERO rows with measure_kind='grant'. Its 46 expenditure_aggregate rows and
+ * 16 budget_announcement rows are whole-of-state budgets, not money to any organisation. The same
+ * was true of the NSW, VIC, NT, SA, WA, TAS and ACT departments in the old list. A reader could
+ * have written "Queensland's youth justice department received $11.4 billion in grants" straight
+ * off the page.
+ *
+ * Regenerated with the mandatory filters from CLAUDE.md — measure_kind='grant', is_aggregate IS
+ * NOT TRUE, amount_dollars IS NOT NULL, aggregate-shaped recipient names excluded — matching the
+ * corrected getYouthJusticeGrants query so the snapshot and the live path agree.
+ *
+ * Captured 2026-08-19. Every row is QLD because that is where the grant-level youth-justice data
+ * sits; other states appear in this dataset only as expenditure aggregates, which is exactly what
+ * these filters exclude.
+ */
 const SNAPSHOT_GRANTS: GrantRecipient[] = [
-  { recipient_name: 'Department of Youth Justice and Victim Support', state: 'QLD', gs_id: null, grants: 67, total: 11_397_825_690 },
-  { recipient_name: 'Department of Justice and Community Safety', state: 'VIC', gs_id: null, grants: 69, total: 10_029_145_347 },
-  { recipient_name: 'Department of Communities and Justice', state: 'NSW', gs_id: null, grants: 68, total: 9_161_174_435 },
-  { recipient_name: 'Department of Justice', state: 'WA', gs_id: null, grants: 67, total: 4_036_320_078 },
-  { recipient_name: 'Territory Families, Housing and Communities', state: 'NT', gs_id: null, grants: 68, total: 3_155_482_834 },
-  { recipient_name: 'Department of Human Services', state: 'SA', gs_id: null, grants: 68, total: 1_868_969_579 },
-  { recipient_name: 'Department of Justice', state: 'TAS', gs_id: null, grants: 68, total: 1_024_657_134 },
-  { recipient_name: 'Community Services Directorate', state: 'ACT', gs_id: null, grants: 68, total: 986_194_612 },
   { recipient_name: 'Lifeline Community Care', state: 'QLD', gs_id: null, grants: 3, total: 30_136_777 },
   { recipient_name: 'Relationships Australia (Qld)', state: 'QLD', gs_id: null, grants: 4, total: 25_524_918 },
-  { recipient_name: 'The Corporation of the Synod of the Diocese of Brisbane', state: 'QLD', gs_id: null, grants: 8, total: 22_832_236 },
   { recipient_name: 'Mission Australia', state: 'QLD', gs_id: null, grants: 6, total: 20_078_666 },
-  { recipient_name: 'The Ted Noffs Foundation', state: 'QLD', gs_id: null, grants: 4, total: 16_634_362 },
-  { recipient_name: 'Shine For Kids Limited', state: 'QLD', gs_id: null, grants: 2, total: 13_308_276 },
   { recipient_name: 'YouthLink', state: 'QLD', gs_id: null, grants: 16, total: 13_074_243 },
-  { recipient_name: 'Life Without Barriers', state: 'QLD', gs_id: null, grants: 8, total: 12_747_262 },
   { recipient_name: 'UnitingCare Community', state: 'QLD', gs_id: null, grants: 1, total: 12_664_874 },
-  { recipient_name: 'Bridges Health & Community Care Ltd', state: 'QLD', gs_id: null, grants: 6, total: 12_229_418 },
+  { recipient_name: 'Youth and Family Service (Logan City) Inc', state: 'QLD', gs_id: null, grants: 4, total: 11_405_987 },
+  { recipient_name: 'Australian Red Cross Society', state: 'QLD', gs_id: null, grants: 4, total: 10_775_030 },
+  { recipient_name: 'Youth Housing and Reintegration Service Including After Care Service (Inala)', state: 'QLD', gs_id: null, grants: 9, total: 10_430_277 },
+  { recipient_name: 'Wesley Mission Brisbane', state: 'QLD', gs_id: null, grants: 4, total: 9_369_203 },
+  { recipient_name: 'Youth Housing and Reintegration Service including After Care Service (Townsville)', state: 'QLD', gs_id: null, grants: 9, total: 8_902_084 },
+  { recipient_name: 'Palm Island Community Company Ltd', state: 'QLD', gs_id: null, grants: 4, total: 8_665_581 },
+  { recipient_name: 'Abused Child Trust Inc', state: 'QLD', gs_id: null, grants: 3, total: 8_660_605 },
 ];
 
 const SNAPSHOT_STATE_METRICS: ComparisonRow[] = [
