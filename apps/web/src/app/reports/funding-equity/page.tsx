@@ -1,6 +1,7 @@
 import { getServiceSupabase } from '@/lib/report-supabase';
 import { ReportCTA } from '../_components/report-cta';
 import { money, fmt } from '@/lib/format';
+import { ReportUnavailable } from '../_components/report-unavailable';
 
 export const dynamic = 'force-static';
 
@@ -46,6 +47,26 @@ interface DonorRow {
   buyers: string | null;
 }
 
+
+/**
+ * FABRICATED FALLBACK REMOVED, 2026-08-19.
+ *
+ * When CIVICGRAPH_LIVE_REPORTS is not 'true' — which is its state in production — this page used to
+ * return buildSnapshotData(): hand-authored constants. It then rendered them under a Methodology
+ * section describing how the figures were computed, and cited sources for them.
+ *
+ * On this page that meant publishing scored assessments of NAMED REAL ORGANISATIONS. Paul Ramsay
+ * Foundation and Minderoo Foundation were listed under "Largest Foundations With Zero
+ * Transparency", with invented transparency, evidence and need-alignment scores, invented grantee
+ * counts, and round giving figures. `foundation_id: 'snapshot-prf'` and `acnc_abn: ''` show the
+ * author knew these were placeholders; nothing on the rendered page did.
+ *
+ * A reputational claim about a real organisation, carrying a methodology that says it was measured,
+ * is the one thing this project must never publish. An honest blank costs a reader a refresh.
+ *
+ * The constants are left in the file, unused and clearly marked, because they document what was
+ * served and for how long. They must not be wired back in without real figures behind them.
+ */
 function buildSnapshotData() {
   const deciles: DecileRow[] = [
     { irsd_decile: 1, disadvantage_group: 'Most disadvantaged', charity_count: 4300, total_income: 8_900_000_000, govt_revenue: 5_100_000_000, donations: 290_000_000, total_expenses: 8_400_000_000, avg_income: 2_070_000, avg_govt_revenue: 1_186_000, avg_staff_fte: 7, total_volunteers: 68000 },
@@ -122,7 +143,8 @@ function buildSnapshotData() {
 
 async function getData() {
   if (!LIVE_REPORTS) {
-    return buildSnapshotData();
+    // See the note above buildSnapshotData. Serving nothing beats serving invented figures.
+    return null;
   }
 
   const supabase = getServiceSupabase();
@@ -199,6 +221,9 @@ async function getData() {
 
 export default async function FundingEquityPage() {
   const d = await getData();
+  if (!d) {
+    return <ReportUnavailable title="Funding Equity" detail="The charity and disadvantage figures for this report did not load." />;
+  }
 
   const bottomPct = d.totalIncome > 0 ? ((d.groups[0]?.income || 0) / d.totalIncome * 100).toFixed(1) : '0';
   const topPct = d.totalIncome > 0 ? ((d.groups[2]?.income || 0) / d.totalIncome * 100).toFixed(1) : '0';

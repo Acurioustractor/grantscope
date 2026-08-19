@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 };
 
 import { money, fmt } from '@/lib/format';
+import { ReportUnavailable } from '../_components/report-unavailable';
 
 function ScoreBar({ score, label, color }: { score: number; label: string; color: string }) {
   return (
@@ -90,6 +91,26 @@ interface Stats {
   ccGrantees: number;
 }
 
+
+/**
+ * FABRICATED FALLBACK REMOVED, 2026-08-19.
+ *
+ * When CIVICGRAPH_LIVE_REPORTS is not 'true' — which is its state in production — this page used to
+ * return buildSnapshotData(): hand-authored constants. It then rendered them under a Methodology
+ * section describing how the figures were computed, and cited sources for them.
+ *
+ * On this page that meant publishing scored assessments of NAMED REAL ORGANISATIONS. Paul Ramsay
+ * Foundation and Minderoo Foundation were listed under "Largest Foundations With Zero
+ * Transparency", with invented transparency, evidence and need-alignment scores, invented grantee
+ * counts, and round giving figures. `foundation_id: 'snapshot-prf'` and `acnc_abn: ''` show the
+ * author knew these were placeholders; nothing on the rendered page did.
+ *
+ * A reputational claim about a real organisation, carrying a methodology that says it was measured,
+ * is the one thing this project must never publish. An honest blank costs a reader a refresh.
+ *
+ * The constants are left in the file, unused and clearly marked, because they document what was
+ * served and for how long. They must not be wired back in without real figures behind them.
+ */
 function buildSnapshotData() {
   const topScores: FoundationScore[] = [
     { foundation_id: 'snapshot-prf', name: 'Paul Ramsay Foundation', acnc_abn: '', total_giving_annual: 210_000_000, type: 'foundation', parent_company: null, transparency_score: 82, need_alignment_score: 78, evidence_score: 76, concentration_score: 68, foundation_score: 78, grantee_count: 240, lgas_funded: 58, avg_desert_score: 6.8, community_controlled_grantees: 18, evidence_backed_orgs: 42, interventions_funded: 31, states_funded: 8, unique_lgas: 58, total_trustees: 9, overlapping_trustees: 1, overlap_instances: 1 },
@@ -138,7 +159,8 @@ function buildSnapshotData() {
 
 async function getData() {
   if (!LIVE_REPORTS) {
-    return buildSnapshotData();
+    // See the note above buildSnapshotData. Serving nothing beats serving invented figures.
+    return null;
   }
 
   const supabase = getServiceSupabase();
@@ -227,6 +249,9 @@ async function getData() {
 
 export default async function PhilanthropyReport() {
   const d = await getData();
+  if (!d) {
+    return <ReportUnavailable title="Foundation Intelligence" detail="Foundation scores are not available. This page previously showed placeholder figures for named foundations and no longer does." />;
+  }
   const s = d.stats;
 
   // Group revolving door by foundation
