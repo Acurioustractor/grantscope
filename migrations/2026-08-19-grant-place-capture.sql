@@ -57,7 +57,7 @@ base AS (
      AND lower(trim(recipient_name)) NOT IN
          ('total','totals','various','n/a','na','unknown','other')
 )
-SELECT b.id,
+SELECT b.ga_id,
        b.value_aud,
        b.recipient_name,
        b.recipient_abn,
