@@ -97,13 +97,20 @@ export async function generateMetadata({ params }: { params: Promise<{ abn: stri
   };
 }
 
+interface GranteeStatRow {
+  grantee_state: string | null;
+  n: number;
+  no_amount: number;
+  cc: number;
+}
+
 async function getData(abn: string) {
   const supabase = getServiceSupabase();
 
   const [
     scoreResult,
     granteesResult,
-    granteesNoAmountResult,
+    granteeStatsResult,
     trendsResult,
     trusteeResult,
     regrantResult,
@@ -123,15 +130,22 @@ async function getData(abn: string) {
       .eq('foundation_abn', abn)
       .order('grant_amount', { ascending: false, nullsFirst: false })
       .limit(100),
-    // How many grantees carry no dollar figure — counted across ALL of them, not the 100
-    // fetched above. Those are ordered amount-desc with nulls last, so every dollar-less row
-    // falls outside the window and counting the sample would always report zero (FRRR: 464
-    // of them, none in the first 100). Head-only count, no rows transferred.
-    supabase
-      .from('mv_foundation_grantees')
-      .select('grantee_gs_id', { count: 'exact', head: true })
-      .eq('foundation_abn', abn)
-      .or('grant_amount.is.null,grant_amount.eq.0'),
+    // EVERY figure in the Grantees paragraph comes from this one grouped query, so the whole
+    // sentence describes ONE population. The table above it is a 100-row sample ordered
+    // amount-desc with nulls last, which means no dollar-less row ever appears in it — deriving
+    // any count from that sample reported 0 dollar-less grantees out of a real 464, and mixing
+    // the two produced the live nonsense "93 traceable grantees, 464 of them with no amount".
+    supabase.rpc('exec_sql', {
+      query: `SELECT upper(trim(grantee_state)) AS grantee_state,
+                     count(*)::int AS n,
+                     count(*) FILTER (WHERE grant_amount IS NULL OR grant_amount = 0)::int AS no_amount,
+                     count(*) FILTER (WHERE grantee_community_controlled)::int AS cc
+              FROM mv_foundation_grantees
+              WHERE foundation_abn = '${abn.replace(/'/g, "''")}'
+              GROUP BY upper(trim(grantee_state))`,
+      // Normalised because grantee_state carries case variants — FRRR alone has VIC, Vic and
+      // vic, which split one state into three chips and made "7 states" read as "11".
+    }),
     // Trends
     supabase
       .from('mv_foundation_trends')
@@ -173,7 +187,7 @@ async function getData(abn: string) {
   return {
     score: scoreResult.data as FoundationScore,
     grantees: (granteesResult.data || []) as Grantee[],
-    granteesNoAmount: granteesNoAmountResult.count ?? 0,
+    granteeStats: (granteeStatsResult.data || []) as GranteeStatRow[],
     trends: (trendsResult.data || []) as TrendYear[],
     trusteeOverlaps: (trusteeResult.data || []) as TrusteeOverlap[],
     regranting: (regrantResult.data || []) as RegrантChain[],
@@ -182,27 +196,32 @@ async function getData(abn: string) {
   };
 }
 
-function ScoreGauge({ score, label, color, description }: { score: number; label: string; color: string; description: string }) {
+/**
+ * Score meter. Was four circular SVG gauges in Tailwind blue/amber/teal/violet with
+ * strokeLinecap="round" — radius and decorative colour, both of which DESIGN.md rules out
+ * ("zero border-radius", "colour is rare and meaningful", "the geometry is the ornament").
+ *
+ * These are four INDEPENDENT magnitudes, not a series, so there is no categorical palette to
+ * assign and no legend to carry: the bar length is the encoding. Colour is left to signal one
+ * state — a score under 40 fills red, the DESIGN.md attention colour — so EVIDENCE at 4/100
+ * reads as a problem rather than as another pretty ring.
+ */
+function ScoreGauge({ score, label, description }: { score: number; label: string; description: string }) {
+  const weak = score < 40;
   return (
-    <div className="text-center">
-      <div className="relative w-20 h-20 mx-auto mb-2">
-        <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
-          <circle cx="40" cy="40" r="35" stroke="#e5e7eb" strokeWidth="6" fill="none" />
-          <circle
-            cx="40" cy="40" r="35"
-            stroke={color}
-            strokeWidth="6"
-            fill="none"
-            strokeDasharray={`${(score / 100) * 220} 220`}
-            strokeLinecap="round"
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-lg font-black">{score}</span>
-        </div>
+    <div>
+      <div className="flex items-baseline justify-between mb-1">
+        <span className="font-display text-[28px] font-black leading-none tabular-nums">{score}</span>
+        <span className="font-mono text-[10px] text-bauhaus-muted">/100</span>
       </div>
-      <div className="text-xs font-black uppercase tracking-widest text-bauhaus-black">{label}</div>
-      <div className="text-[10px] text-bauhaus-muted mt-1">{description}</div>
+      <div className="h-3 w-full border-2 border-bauhaus-black bg-white">
+        <div
+          className={`h-full ${weak ? 'bg-bauhaus-red' : 'bg-bauhaus-black'}`}
+          style={{ width: `${Math.max(0, Math.min(100, score))}%` }}
+        />
+      </div>
+      <div className="mt-2 text-[11px] font-black uppercase tracking-widest">{label}</div>
+      <div className="text-[11px] text-bauhaus-muted">{description}</div>
     </div>
   );
 }
@@ -232,19 +251,18 @@ export default async function FoundationDetailPage({ params }: { params: Promise
   const data = await getData(abn);
   if (!data) notFound();
 
-  const { score: s, grantees, granteesNoAmount, trends, trusteeOverlaps, regranting, evidence, peers } = data;
+  const { score: s, grantees, granteeStats, trends, trusteeOverlaps, regranting, evidence, peers } = data;
 
-  // Aggregate grantee stats
-  const uniqueGrantees = new Set(grantees.map(g => g.grantee_abn || g.grantee_name)).size;
-  // Disclose rather than hide (policy: issues/285). Counted across ALL grantees by the query,
-  // not over the 100 fetched — those are ordered amount-desc with nulls last, so every
-  // dollar-less row sits outside the window and the sample would always say zero.
-  const ccGrantees = grantees.filter(g => g.grantee_community_controlled).length;
-  const stateDistribution = new Map<string, number>();
-  for (const g of grantees) {
-    if (g.grantee_state) stateDistribution.set(g.grantee_state, (stateDistribution.get(g.grantee_state) || 0) + 1);
-  }
-  const sortedStates = [...stateDistribution.entries()].sort((a, b) => b[1] - a[1]);
+  // Every figure below is summed from granteeStats — the grouped query over ALL links — so the
+  // paragraph and the chips describe one population. Nothing here is derived from `grantees`,
+  // which is a 100-row display sample (policy: issues/285).
+  const granteesTotal = granteeStats.reduce((t, r) => t + r.n, 0);
+  const granteesNoAmount = granteeStats.reduce((t, r) => t + r.no_amount, 0);
+  const ccGrantees = granteeStats.reduce((t, r) => t + r.cc, 0);
+  const sortedStates = granteeStats
+    .filter((r) => r.grantee_state)
+    .map((r) => [r.grantee_state as string, r.n] as [string, number])
+    .sort((a, b) => b[1] - a[1]);
 
   // Regranting stats
   const regrantingByRegranter = new Map<string, { name: string; abn: string; count: number }>();
@@ -287,26 +305,25 @@ export default async function FoundationDetailPage({ params }: { params: Promise
             <ScoreGauge
               score={s.transparency_score}
               label="Transparency"
-              color="#3b82f6"
-              description={`${s.grantee_count} traceable grantees`}
+              description={`${fmt(s.grantee_count)} organisations funded`}
             />
             <ScoreGauge
               score={s.need_alignment_score}
               label="Need Alignment"
-              color="#f59e0b"
               description={`${s.lgas_funded} LGAs funded`}
             />
             <ScoreGauge
               score={s.evidence_score}
               label="Evidence"
-              color="#14b8a6"
               description={`${s.evidence_backed_orgs} evidence-backed orgs`}
             />
             <ScoreGauge
               score={s.concentration_score}
               label="Geographic Reach"
-              color="#8b5cf6"
-              description={`${s.states_funded} states, ${s.unique_lgas} LGAs`}
+              /* sortedStates, not s.states_funded: the matview counts VIC/Vic/vic separately and
+                 renders 11 for an 8-state funder. Fixing it at source changes concentration_score
+                 for 4 foundations, which is a decision, not a caption. */
+              description={`${sortedStates.length} states, ${s.unique_lgas} LGAs`}
             />
           </div>
         </div>
@@ -320,12 +337,12 @@ export default async function FoundationDetailPage({ params }: { params: Promise
             <div className="text-2xl font-black">{money(Number(s.total_giving_annual))}</div>
           </div>
           <div className="border-4 border-l-0 max-md:border-l-4 border-bauhaus-black p-5 bg-white">
-            <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-1">Traceable Grantees</div>
-            <div className="text-2xl font-black">{fmt(uniqueGrantees)}</div>
+            <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-1">Grantee Links</div>
+            <div className="text-2xl font-black">{fmt(granteesTotal)}</div>
           </div>
           <div className="border-4 border-l-0 max-md:border-l-4 max-md:border-t-0 border-bauhaus-black p-5 bg-white">
             <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-1">Community-Controlled</div>
-            <div className="text-2xl font-black text-green-700">{fmt(ccGrantees)}</div>
+            <div className="text-2xl font-black text-money">{fmt(ccGrantees)}</div>
           </div>
           <div className="border-4 border-l-0 max-md:border-l-4 max-md:border-t-0 border-bauhaus-black p-5 bg-white">
             <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-1">Board Overlaps</div>
@@ -355,7 +372,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
               </thead>
               <tbody>
                 {trends.map((t, i) => (
-                  <tr key={t.ais_year} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <tr key={t.ais_year} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas/60'}>
                     <td className="p-3 font-black">{t.ais_year}</td>
                     <td className="p-3 text-right font-mono font-bold">{Number(t.giving) > 0 ? money(Number(t.giving)) : '—'}</td>
                     <td className="p-3 text-right font-mono hidden sm:table-cell">{Number(t.revenue) > 0 ? money(Number(t.revenue)) : '—'}</td>
@@ -363,7 +380,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
                     <td className="p-3 text-right font-mono hidden sm:table-cell">{pct(t.giving_ratio_pct)}</td>
                     <td className="p-3 text-right font-mono font-bold">
                       {t.giving_growth_pct != null ? (
-                        <span className={Number(t.giving_growth_pct) > 0 ? 'text-green-700' : Number(t.giving_growth_pct) < 0 ? 'text-red-600' : ''}>
+                        <span className={Number(t.giving_growth_pct) > 0 ? 'text-money' : Number(t.giving_growth_pct) < 0 ? 'text-bauhaus-red' : ''}>
                           {Number(t.giving_growth_pct) > 0 ? '+' : ''}{t.giving_growth_pct}%
                         </span>
                       ) : '—'}
@@ -377,11 +394,11 @@ export default async function FoundationDetailPage({ params }: { params: Promise
           <div className="mt-4 flex gap-8 flex-wrap">
             <div>
               <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Giving Trend</div>
-              <TrendSparkline values={trends.map(t => Number(t.giving))} color="#3b82f6" />
+              <TrendSparkline values={trends.map(t => Number(t.giving))} color="#121212" />
             </div>
             <div>
               <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Asset Trend</div>
-              <TrendSparkline values={trends.map(t => Number(t.assets))} color="#8b5cf6" />
+              <TrendSparkline values={trends.map(t => Number(t.assets))} color="#121212" />
             </div>
           </div>
         </section>
@@ -392,7 +409,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
         <section className="mb-12">
           <h2 className="text-xl font-black text-bauhaus-black mb-2 uppercase tracking-widest">Grantees</h2>
           <p className="text-sm text-bauhaus-muted mb-4">
-            {uniqueGrantees} traceable grantees across {sortedStates.length} states
+            {fmt(granteesTotal)} grantee links across {sortedStates.length} states
             {granteesNoAmount > 0 ? `, ${granteesNoAmount} of them with no amount on record` : ''}.
             {ccGrantees > 0 && ` ${ccGrantees} community-controlled.`}
           </p>
@@ -401,7 +418,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
           {sortedStates.length > 1 && (
             <div className="flex flex-wrap gap-2 mb-4">
               {sortedStates.map(([state, count]) => (
-                <span key={state} className="inline-block px-2 py-1 text-[10px] font-bold bg-gray-100 border border-gray-200 rounded">
+                <span key={state} className="inline-block px-2 py-1 text-[10px] font-bold bg-white border-2 border-bauhaus-black">
                   {state}: {count}
                 </span>
               ))}
@@ -421,7 +438,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
               </thead>
               <tbody>
                 {grantees.slice(0, 50).map((g, i) => (
-                  <tr key={`${g.grantee_abn || g.grantee_name}-${g.grant_year}-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <tr key={`${g.grantee_abn || g.grantee_name}-${g.grant_year}-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas/60'}>
                     <td className="p-3">
                       {g.grantee_gs_id ? (
                         <Link href={`/org/${g.grantee_gs_id}`} className="font-bold text-bauhaus-black hover:text-bauhaus-red">
@@ -431,14 +448,14 @@ export default async function FoundationDetailPage({ params }: { params: Promise
                         <span className="font-bold text-bauhaus-black">{g.grantee_name}</span>
                       )}
                       {g.grantee_community_controlled && (
-                        <span className="ml-2 text-[10px] font-black text-green-700">COMMUNITY</span>
+                        <span className="ml-2 text-[10px] font-black text-money">COMMUNITY</span>
                       )}
                     </td>
                     <td className="p-3 text-xs hidden sm:table-cell">{g.grantee_state || '—'}</td>
                     <td className="p-3 text-right font-mono font-bold">{Number(g.grant_amount) > 0 ? money(Number(g.grant_amount)) : '—'}</td>
                     <td className="p-3 text-xs hidden md:table-cell">{g.grant_year || '—'}</td>
                     <td className="p-3 hidden md:table-cell">
-                      <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 rounded font-bold">{g.link_method}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 bg-bauhaus-canvas font-bold">{g.link_method}</span>
                     </td>
                   </tr>
                 ))}
@@ -447,7 +464,9 @@ export default async function FoundationDetailPage({ params }: { params: Promise
           </div>
           {grantees.length > 50 && (
             <div className="mt-2 text-xs text-bauhaus-muted font-bold text-right">
-              Showing 50 of {grantees.length} grantees
+              {/* Say what this table IS: the 50 largest by amount, out of every link — not
+                  "50 of 100", which described the fetch window and read as the whole. */}
+              Showing the 50 largest by amount, of {fmt(granteesTotal)} links
             </div>
           )}
         </section>
@@ -462,12 +481,12 @@ export default async function FoundationDetailPage({ params }: { params: Promise
           <p className="text-sm text-bauhaus-muted mb-4">
             Foundation trustees who also sit on the boards of organisations this foundation funds.
           </p>
-          <div className="border-4 border-bauhaus-red/30 bg-red-50/30 p-4">
+          <div className="border-4 border-bauhaus-red/30 bg-bauhaus-red/5 p-4">
             {trusteeOverlaps.map((t, i) => (
-              <div key={`${t.trustee_name}-${t.grantee_name}-${i}`} className="flex items-center gap-2 py-2 border-b border-red-100 last:border-0">
-                <span className="inline-block px-2 py-0.5 text-[10px] font-bold bg-red-100 text-red-800 rounded">{t.trustee_name}</span>
+              <div key={`${t.trustee_name}-${t.grantee_name}-${i}`} className="flex items-center gap-2 py-2 border-b border-bauhaus-black/10 last:border-0">
+                <span className="inline-block px-2 py-0.5 text-[10px] font-bold bg-bauhaus-red text-white">{t.trustee_name}</span>
                 <span className="text-bauhaus-muted text-xs">&rarr;</span>
-                <span className="inline-block px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded">{t.grantee_name}</span>
+                <span className="inline-block px-2 py-0.5 text-[10px] font-bold bg-bauhaus-yellow text-bauhaus-black">{t.grantee_name}</span>
               </div>
             ))}
           </div>
@@ -514,7 +533,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
           <div className="border-4 border-bauhaus-black bg-white overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-teal-700 text-white">
+                <tr className="bg-bauhaus-black text-white">
                   <th className="text-left p-3 font-black uppercase tracking-widest text-xs">Grantee</th>
                   <th className="text-left p-3 font-black uppercase tracking-widest text-xs">Intervention</th>
                   <th className="text-center p-3 font-black uppercase tracking-widest text-xs hidden sm:table-cell">Evidence</th>
@@ -523,17 +542,17 @@ export default async function FoundationDetailPage({ params }: { params: Promise
               </thead>
               <tbody>
                 {evidence.map((e, i) => (
-                  <tr key={`${e.grantee_name}-${e.intervention_name}-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-teal-50/30'}>
+                  <tr key={`${e.grantee_name}-${e.intervention_name}-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas/60'}>
                     <td className="p-3 font-bold text-xs">{e.grantee_name}</td>
                     <td className="p-3 text-xs text-bauhaus-muted">{e.intervention_name}</td>
                     <td className="p-3 text-center hidden sm:table-cell">
-                      <span className="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-teal-100 text-teal-800 rounded">
+                      <span className="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-bauhaus-blue text-white">
                         {e.evidence_level || 'N/A'}
                       </span>
                     </td>
                     <td className="p-3 text-center hidden sm:table-cell">
                       {e.cultural_authority && (
-                        <span className="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded">YES</span>
+                        <span className="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-bauhaus-yellow text-bauhaus-black">YES</span>
                       )}
                     </td>
                   </tr>
@@ -553,7 +572,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
         <div className="border-4 border-bauhaus-black bg-white overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-100">
+              <tr className="bg-bauhaus-canvas">
                 <th className="text-left p-3 font-black uppercase tracking-widest text-[10px]">Foundation</th>
                 <th className="text-right p-3 font-black uppercase tracking-widest text-[10px]">Giving</th>
                 <th className="text-center p-3 font-black uppercase tracking-widest text-[10px] hidden sm:table-cell">T</th>
@@ -573,7 +592,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
                 <td className="p-3 text-right font-mono font-black text-bauhaus-yellow">{s.foundation_score}</td>
               </tr>
               {peers.map((p, i) => (
-                <tr key={p.foundation_id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                <tr key={p.foundation_id} className={i % 2 === 0 ? 'bg-white' : 'bg-bauhaus-canvas/60'}>
                   <td className="p-3">
                     <Link href={`/foundation/${p.acnc_abn}`} className="font-bold hover:text-bauhaus-red">
                       {p.name}
@@ -603,7 +622,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
             </Link>
             <Link
               href={`/graph?mode=hubs&type=foundation`}
-              className="inline-block px-6 py-2 bg-purple-700 text-white font-black text-xs uppercase tracking-widest hover:bg-bauhaus-black transition-colors"
+              className="inline-block px-6 py-2 bg-bauhaus-blue text-white font-black text-xs uppercase tracking-widest hover:bg-bauhaus-black transition-colors"
             >
               Foundation Network Graph
             </Link>
