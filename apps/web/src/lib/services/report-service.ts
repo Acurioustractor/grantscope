@@ -494,6 +494,43 @@ export async function getEntityEvidencePrograms(db: SupabaseClient, entityId: st
   return rows ?? [];
 }
 
+/**
+ * What measurement lanes a jurisdiction actually publishes for a topic.
+ *
+ * Exists because of what `grantTopicFilter` does to the state pages. Seven of the eight states
+ * publish NO grant-level youth justice data at all — what they publish is ROGS system expenditure.
+ * Before this, those pages hid the "top recipients" section when the query came back empty, and a
+ * hidden section is indistinguishable from a section we never looked at.
+ *
+ * So: instead of a silent gap, ask the database what the jurisdiction DOES have and say it. This
+ * deliberately applies NO measure filter — describing the lanes is the entire point.
+ */
+export async function getGrantLaneCoverage(topic: Topic, state?: string) {
+  assertTopic(topic);
+  const supabase = getServiceSupabase();
+  const stateFilter = state ? ` AND state = '${assertState(state)}'` : '';
+  return safe(supabase.rpc('exec_sql', {
+    query: `SELECT measure_kind,
+              COUNT(*)::int as rows,
+              SUM(amount_dollars)::bigint as dollars,
+              COUNT(DISTINCT source)::int as sources,
+              MIN(financial_year) as from_fy,
+              MAX(financial_year) as to_fy
+       FROM justice_funding
+       WHERE topics @> ARRAY['${topic}']::text[]
+         AND source NOT IN ('austender-direct')${stateFilter}
+       GROUP BY measure_kind
+       ORDER BY rows DESC`,
+  }), 'getGrantLaneCoverage') as Promise<Array<{
+    measure_kind: string;
+    rows: number;
+    dollars: number | null;
+    sources: number;
+    from_fy: string | null;
+    to_fy: string | null;
+  }> | null>;
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // THE EXPENDITURE LANE — deliberately NOT grant-filtered
 //
