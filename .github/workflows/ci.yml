@@ -14,6 +14,7 @@ jobs:
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -27,6 +28,7 @@ jobs:
   unit-tests:
     name: Unit & Integration Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -41,6 +43,10 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     needs: [typecheck, unit-tests]
+    # Without this a hung step squats for GitHub's 6-hour default. On 2026-08-19 two runs sat on
+    # `playwright install --with-deps` for close to an hour and blocked two PRs; the same step
+    # normally takes 62 seconds.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -49,8 +55,32 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: cd apps/web && npx playwright install --with-deps chromium
+
+      # Cache the browser binaries so the usual run does no download at all. The cache key has to
+      # move with the Playwright version or a version bump silently reuses the wrong browsers.
+      - name: Resolve Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('./apps/web/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      # No `--with-deps`, deliberately. That flag runs `sudo apt-get update && install`, and the
+      # Azure Ubuntu mirror these runners default to is what actually hangs: the log is hundreds of
+      # `Ign: http://azure.archive.ubuntu.com` lines, a partial fallback to archive.ubuntu.com, then
+      # five minutes of dead air. It is a network stall, not a dpkg lock, so DEBIAN_FRONTEND does
+      # nothing for it. The ubuntu-latest image already ships Playwright's chromium system
+      # libraries, so the apt call bought nothing and cost the whole pipeline.
+      # If a library ever is missing, chromium fails to launch with a named error instead of hanging.
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 6
+        run: cd apps/web && npx playwright install chromium
+
       - run: cd apps/web && pnpm test:e2e
+        timeout-minutes: 10
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
