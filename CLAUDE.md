@@ -194,6 +194,11 @@ not within them.
 `political_donations` was checked for the same defect and is clean — no aggregate-shaped donor
 names. Filter 2 is specific to `justice_funding`.
 
+**Run `/money-audit` before shipping any surface that renders a dollar figure.** It enumerates
+every summing site, classifies each as grant-lane or expenditure-lane, and refuses to call a
+filter applied without measuring the delta. It exists because `topicFilter()` mixed the two lanes
+for months and published $31.66bn where the grant figure was $0.92bn.
+
 Use `isRealRecipient()` / `themeMoney()` from `apps/web/src/lib/justice-money.ts` rather than
 rewriting the predicate. Two further traps are handled there:
 
@@ -277,8 +282,14 @@ SELECT remoteness, COUNT(*) FROM gs_entities WHERE is_community_controlled = tru
 
 1. **Start:** Run `/preflight` to check database, env, git, and types
 2. **Work:** Build features, fix bugs, run agents
-3. **Ship:** Run `/ship-merge` — do NOT hand-roll push/PR/merge (see Landing Policy below)
-4. **Close:** Run `/close` to verify, commit, and update handoff
+3. **Before shipping a money surface:** `/money-audit` — figures are the product
+4. **Before flipping a flag that changes what many pages read:** `/surface-sweep` — 200 is not working
+5. **Ship:** Run `/ship-merge` — do NOT hand-roll push/PR/merge (see Landing Policy below)
+6. **Close:** Run `/close` to verify, commit, and update handoff
+
+**`/config-truth` when a feature is configured but inert.** `/preflight` checks env vars are
+*present*; `/config-truth` checks their deployed values can satisfy the comparisons the code makes
+on them. That gap hid a trailing newline that blanked 61 public pages for four months.
 
 ## Cutting scope: sweep the periphery (learned the hard way, 2026-08-18)
 
