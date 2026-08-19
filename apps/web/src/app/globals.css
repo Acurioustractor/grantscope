@@ -206,8 +206,17 @@ h1, h2, h3, h4 {
   --cd-yellow: #8A6A00;
 }
 
-/* ── Workspace theme (editorial style for operational tools) ── */
-.ws {
+/* ── Workspace tokens ──
+   DEFINED AT :root, not on `.ws`, and that move is a bug fix rather than tidying.
+   `app/components/nav.tsx` — the global nav on every public page — sets
+   `background: var(--ws-surface-1)` and `color: var(--ws-text)` inline with NO fallbacks. While
+   these lived only inside `.ws`, and `.ws` was only applied to signed-in users, every logged-out
+   visitor got undefined custom properties: the nav had no background of its own, and the active,
+   inactive and muted nav states (--ws-text / --ws-text-secondary / --ws-text-tertiary) all
+   collapsed to one inherited colour. The active-page indicator was invisible to the public for
+   five months and nothing errored, because an invalid var() is silent by design.
+   Defined here, every consumer resolves the same whoever is looking. */
+:root {
   --ws-surface-0: #FDFCFB;
   --ws-surface-1: #FFFFFF;
   --ws-surface-2: #F9F8F6;
@@ -220,6 +229,12 @@ h1, h2, h3, h4 {
   --ws-red: #DC2626;
   --ws-amber: #D97706;
   --ws-green: #16A34A;
+}
+
+/* ── Workspace theme (editorial style for operational tools) ──
+   The scope class, now only ever applied deliberately — by `/org`'s layout, which pairs it with
+   `.act-workspace`. It is no longer put on `<body>` for signed-in users; see layout.tsx. */
+.ws {
   background: var(--ws-surface-0);
   color: var(--ws-text);
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
