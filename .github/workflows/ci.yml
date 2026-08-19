@@ -67,21 +67,17 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
 
-      # `--with-deps` shells out to apt, which is the part that hangs: it blocks on a dpkg lock or
-      # an interactive prompt and never returns. DEBIAN_FRONTEND removes the prompt, the step
-      # timeout bounds the lock, and on a cache hit only the apt half runs.
+      # No `--with-deps`, deliberately. That flag runs `sudo apt-get update && install`, and the
+      # Azure Ubuntu mirror these runners default to is what actually hangs: the log is hundreds of
+      # `Ign: http://azure.archive.ubuntu.com` lines, a partial fallback to archive.ubuntu.com, then
+      # five minutes of dead air. It is a network stall, not a dpkg lock, so DEBIAN_FRONTEND does
+      # nothing for it. The ubuntu-latest image already ships Playwright's chromium system
+      # libraries, so the apt call bought nothing and cost the whole pipeline.
+      # If a library ever is missing, chromium fails to launch with a named error instead of hanging.
       - name: Install Playwright browsers
         if: steps.pw-cache.outputs.cache-hit != 'true'
         timeout-minutes: 6
-        env:
-          DEBIAN_FRONTEND: noninteractive
-        run: cd apps/web && npx playwright install --with-deps chromium
-      - name: Install Playwright system dependencies
-        if: steps.pw-cache.outputs.cache-hit == 'true'
-        timeout-minutes: 6
-        env:
-          DEBIAN_FRONTEND: noninteractive
-        run: cd apps/web && npx playwright install-deps chromium
+        run: cd apps/web && npx playwright install chromium
 
       - run: cd apps/web && pnpm test:e2e
         timeout-minutes: 10
