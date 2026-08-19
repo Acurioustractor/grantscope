@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 import { esc } from '@/lib/sql';
+import { NON_RECIPIENT_NAMES } from '@/lib/justice-money';
 
 export type Topic = 'youth-justice' | 'child-protection' | 'ndis' | 'family-services' | 'indigenous' | 'legal-services' | 'diversion' | 'prevention';
 
@@ -100,13 +101,19 @@ export async function getTopOrgs(topic: Topic, limit = 25, state?: string) {
        LEFT JOIN gs_entities e ON e.abn = jf.recipient_abn AND jf.recipient_abn IS NOT NULL
        WHERE ${topicFilter(topic, 'jf')}${stateFilter}
          AND jf.program_name NOT LIKE 'ROGS%'
-         AND jf.program_name NOT LIKE 'Total%'
-         AND jf.recipient_name NOT LIKE 'Youth Justice -%'
-         AND jf.recipient_name NOT LIKE 'Total%'
-         AND jf.recipient_name NOT LIKE 'Department of%'
-         AND jf.recipient_name NOT LIKE 'State of%'
-         AND jf.recipient_name NOT LIKE 'Multiple%'
+         -- The name-prefix blocklist that used to live here did not work. It excluded
+         -- 'Department of%' and 'State of%' but not 'Territory Families, Housing and Communities'
+         -- (NT) or 'Community Services Directorate' (ACT), which topped this list with 48 rows and
+         -- $2,273.2M / $688.6M respectively — every one of those 96 rows an aggregate, not a grant.
+         -- It also let 7 of the Synod of Brisbane's 8 aggregate rows inflate a real recipient.
+         -- Matching on names cannot separate measures; measure_kind can. CLAUDE.md says use the
+         -- canonical predicate rather than rewriting it, and this is why.
+         AND jf.measure_kind = 'grant'
+         AND jf.is_aggregate IS NOT TRUE
          AND jf.amount_dollars IS NOT NULL
+         AND lower(btrim(jf.recipient_name)) <> ALL (ARRAY[${[...NON_RECIPIENT_NAMES]
+           .map((n) => `'${n}'`)
+           .join(',')}])
        GROUP BY jf.recipient_name, jf.recipient_abn, jf.state, e.gs_id
        ORDER BY total DESC
        LIMIT ${limit}`,
@@ -526,6 +533,19 @@ export async function getYouthJusticeGrants(limit = 15) {
        LEFT JOIN gs_entities ge ON ge.id = jf.gs_entity_id
        WHERE ${topicFilter('youth-justice', 'jf')}
          AND jf.program_name NOT LIKE 'ROGS%'
+         -- The mandatory filters. Without them this function, despite its name, does not return
+         -- grants: it returned whole-of-state expenditure aggregates and budget announcements, so
+         -- the public report's "top grant recipients" table was led by government departments.
+         -- Department of Youth Justice and Victim Support showed as 67 grants / $11,397,825,690
+         -- while having ZERO rows with measure_kind='grant'. Same for the NSW, VIC, NT, SA and ACT
+         -- departments. They were ranked above Lifeline Community Care's real $30.1M.
+         -- See CLAUDE.md "Three filters that are mandatory, not optional".
+         AND jf.measure_kind = 'grant'
+         AND jf.is_aggregate IS NOT TRUE
+         AND jf.amount_dollars IS NOT NULL
+         AND lower(btrim(jf.recipient_name)) <> ALL (ARRAY[${[...NON_RECIPIENT_NAMES]
+           .map((n) => `'${n}'`)
+           .join(',')}])
        GROUP BY jf.recipient_name, jf.state, ge.gs_id
        ORDER BY total DESC NULLS LAST
        LIMIT ${limit}`,
