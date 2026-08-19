@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import { ReportCTA } from '../_components/report-cta';
 import { DESERT_COMMUNITY_ORGS_SQL, mapDesertCommunityOrgs } from '@/lib/funding-deserts';
+import { reportDataUnavailable } from '@/lib/report-data';
+import { ReportUnavailable } from '../_components/report-unavailable';
 
 // Public, service-role, heavy fan-out and no per-request inputs. Cached hourly so
 // anonymous traffic cannot drive one service-role query fan-out per hit
@@ -114,6 +116,10 @@ async function getData() {
     }),
   ]);
 
+  // Checked BEFORE the `|| []` below. Once a null becomes an empty array the page can no longer
+  // tell "nothing matched" from "the query never ran", and it prints the second as a zero.
+  const unavailable = reportDataUnavailable([worstResult, bestResult, summaryResult]);
+
   const allDeserts = (worstResult.data as Record<string, unknown>[]) || [];
   const allBest = (bestResult.data as Record<string, unknown>[]) || [];
 
@@ -151,7 +157,7 @@ async function getData() {
     zero_funding_orgs: communityOrgs.filter((o) => o.total_dollar_flow === 0).length,
   };
 
-  return { worst30, best10, worst10, byRemoteness, byState, summary, communityOrgs, communitySummary };
+  return { worst30, best10, worst10, byRemoteness, byState, summary, communityOrgs, communitySummary , unavailable };
 }
 
 const REMOTENESS_COLORS: Record<string, string> = {
@@ -180,6 +186,14 @@ const REMOTENESS_BAR_COLORS: Record<string, string> = {
 
 export default async function FundingDesertsReport() {
   const d = await getData();
+  if (d.unavailable) {
+    return (
+      <ReportUnavailable
+        title="Where the Money Doesn&rsquo;t Go"
+        detail="The funding and disadvantage figures for this report did not load."
+      />
+    );
+  }
   const s = d.summary;
 
   const fundingGap = s.max_funding - s.min_funding;

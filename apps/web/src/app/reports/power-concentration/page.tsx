@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
+import { reportDataUnavailable } from '@/lib/report-data';
+import { ReportUnavailable } from '../_components/report-unavailable';
 import Link from 'next/link';
 import { ReportCTA } from '../_components/report-cta';
 
@@ -201,7 +203,11 @@ async function getData() {
     veryRemoteFlowB: Number(veryRemote?.flow_b) || 0,
   };
 
-  return { powerTop, revolvingDoor, deserts, communityTop, stats };
+  // Checked against the raw results, before any `|| 0` turns "no answer" into "zero". This page
+  // was publishing "0 Australian entities scored across 7 public datasets" as a finding.
+  const unavailable = reportDataUnavailable([powerTopResult, revolvingDoorResult, desertsResult]);
+
+  return { powerTop, revolvingDoor, deserts, communityTop, stats, unavailable };
 }
 
 const SYSTEM_LABELS: Record<string, string> = {
@@ -262,6 +268,14 @@ function VectorBadges({ entity }: { entity: RevolvingDoorEntity }) {
 
 export default async function PowerConcentrationReport() {
   const d = await getData();
+  if (d.unavailable) {
+    return (
+      <ReportUnavailable
+        title="Cross-System Power Concentration"
+        detail="The cross-system entity figures for this report did not load."
+      />
+    );
+  }
   const s = d.stats;
 
   const communityProcurementPct = s.totalProcurementB > 0
