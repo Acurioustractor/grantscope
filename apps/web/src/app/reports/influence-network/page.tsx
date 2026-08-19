@@ -1,4 +1,5 @@
 import { unstable_cache } from 'next/cache';
+import { ReportUnavailable } from '../_components/report-unavailable';
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
@@ -210,7 +211,34 @@ const getDataCached = unstable_cache(getData, ['reports-influence-network'], { r
 
 export default async function InfluenceNetworkReport() {
   const d = await getDataCached();
-  if (!d) return <div className="p-8 text-bauhaus-muted">No data available.</div>;
+  if (!d) return <ReportUnavailable title="The Influence Network" />;
+
+  // EVERY figure on this page comes from a column that does not exist.
+  //
+  // The queries below select `in_procurement`, `in_political_donations`, `in_foundation`,
+  // `system_count`, `power_score`, `procurement_dollars`, `donation_dollars`,
+  // `distinct_govt_buyers`, `distinct_parties_funded` and `total_dollar_flow` from
+  // `mv_revolving_door`. That view has none of them — they belong to `mv_entity_power_index`.
+  // The page was written against one view's shape and points at another's.
+  //
+  // So the select errors, `safe()` returns null, `|| []` makes it an empty list, and 62 sites
+  // below coerce with `|| 0`. The page then renders a complete, confident, entirely fabricated
+  // zero — about political influence, on a public URL. That is worse than rendering nothing,
+  // and it is the exact failure `ReportUnavailable` exists for (#331).
+  //
+  // This guard is a STOPGAP, not the fix. The fix is to rewrite the data layer against the
+  // columns that exist (`contracts`, `donates`, `influence_vectors`, `total_contracts`,
+  // `total_donated`, `distinct_buyers`, `parties_funded`) — 62 sites across 608 lines, its own
+  // PR. The party-aggregate query also sums `political_donations.amount` with no
+  // `receipt_type` filter, which nationally is the difference between $240.8bn and $25.3bn.
+  if (d.allEntities.length === 0) {
+    return (
+      <ReportUnavailable
+        title="The Influence Network"
+        detail="This report reads columns that its source view does not have, so it has no figures to show. Rendering zeros here would be a claim about who holds influence in Australia, and we do not have one."
+      />
+    );
+  }
 
   const s = d.stats;
 
