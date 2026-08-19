@@ -14,9 +14,22 @@
  *   --verify  URL to curl after the deploy. `=CODE` asserts an exact status; otherwise any
  *             non-5xx counts as alive (an admin route legitimately answers 401/403/307).
  *
- * Never waits on advisory checks — only on what `gh pr checks` reports as pending. This repo has
+ * Never waits on advisory checks — only on what the rollup reports as pending. This repo has
  * no branch protection, so there is no required-check list to consult; every reported check is
  * treated as blocking, which is the conservative reading.
+ *
+ * STALE-CHECK GUARD (added after PR #317, 2026-08-19). #317 merged in FIVE SECONDS with Type Check
+ * and Unit Tests still pending. `gh pr update-branch` had just pushed a new head commit, and the
+ * check rollup had not yet caught up, so the watcher read the PREVIOUS commit's green and merged.
+ * The sibling PR that day escaped only because its poll happened to land after the new run
+ * registered. Luck, not design.
+ *
+ * Three defences, because any one of them alone still has a window:
+ *   1. Read head SHA and rollup in ONE `gh pr view` call, so they cannot disagree with each other.
+ *   2. Require green on TWO consecutive polls with an unchanged head SHA, and never merge inside
+ *      the first MIN_SETTLE_S. A rollup that is about to be replaced does not survive that.
+ *   3. Pass `--match-head-commit` to the merge, so if the head moves between the decision and the
+ *      merge, GitHub itself refuses rather than landing something nobody checked.
  */
 
 import { execFile } from 'node:child_process';
@@ -59,24 +72,41 @@ async function gh(argv) {
   return stdout;
 }
 
-/** `gh pr checks` exits non-zero when checks fail OR are pending, so read rows, not exit codes. */
+const PENDING_STATES = ['PENDING', 'QUEUED', 'IN_PROGRESS', 'EXPECTED', 'WAITING', 'REQUESTED'];
+const FAILED_STATES = ['FAILURE', 'ERROR', 'CANCELLED', 'TIMED_OUT', 'ACTION_REQUIRED', 'STARTUP_FAILURE'];
+
+/**
+ * Head SHA and rollup together, from one call, so they always describe the same commit.
+ * A CheckRun is pending until status COMPLETED, then judged on conclusion; a StatusContext
+ * (Vercel and friends) carries its verdict directly in `state`.
+ */
 async function checkState() {
   let raw = '';
   try {
-    raw = await gh(['pr', 'checks', PR, '--json', 'name,state,link']);
+    raw = await gh(['pr', 'view', PR, '--json', 'headRefOid,statusCheckRollup']);
   } catch (err) {
     raw = err.stdout || '';
-    if (!raw) return { settled: false, failed: [], pending: ['(gh unavailable)'] };
   }
-  let rows = [];
+  if (!raw) return { settled: false, failed: [], pending: ['(gh unavailable)'], total: 0, head: null };
+
+  let data;
   try {
-    rows = JSON.parse(raw);
+    data = JSON.parse(raw);
   } catch {
-    return { settled: false, failed: [], pending: ['(unparseable)'] };
+    return { settled: false, failed: [], pending: ['(unparseable)'], total: 0, head: null };
   }
-  const pending = rows.filter((r) => ['PENDING', 'QUEUED', 'IN_PROGRESS', 'EXPECTED'].includes(r.state));
-  const failed = rows.filter((r) => ['FAILURE', 'ERROR', 'CANCELLED', 'TIMED_OUT', 'ACTION_REQUIRED'].includes(r.state));
-  return { settled: pending.length === 0, failed, pending, total: rows.length };
+
+  const head = data.headRefOid || null;
+  const rows = (data.statusCheckRollup || []).map((r) => ({
+    name: r.name || r.context || '(unnamed)',
+    state: r.__typename === 'CheckRun'
+      ? (r.status === 'COMPLETED' ? (r.conclusion || 'NEUTRAL') : r.status)
+      : r.state,
+  }));
+
+  const pending = rows.filter((r) => PENDING_STATES.includes(r.state));
+  const failed = rows.filter((r) => FAILED_STATES.includes(r.state));
+  return { settled: rows.length > 0 && pending.length === 0, failed, pending, total: rows.length, head };
 }
 
 async function verifyUrl(spec) {
@@ -92,19 +122,37 @@ async function verifyUrl(spec) {
 }
 
 (async () => {
-  // Phase 1 — CI
+  // Phase 1 — CI. Green must hold across two consecutive polls on the same head SHA before it
+  // counts, and never inside the first MIN_SETTLE_S. See the stale-check note at the top.
+  const MIN_SETTLE_S = 45;
+  let confirmedHead = null;
+  let mergeHead = null;
+
   for (;;) {
     if (elapsed() > TIMEOUT_S) {
       console.log(`ship-watch: TIMEOUT after ${elapsed()}s waiting on CI for PR #${PR}`);
       process.exit(1);
     }
-    const { settled, failed, pending, total } = await checkState();
+    const { settled, failed, pending, total, head } = await checkState();
+
+    if (failed.length) {
+      console.log(`ship-watch: FAILED — ${failed.map((f) => f.name).join(', ')} (PR #${PR}, ${elapsed()}s). Read the log; do not retry blindly.`);
+      process.exit(1);
+    }
+
     if (settled && total > 0) {
-      if (failed.length) {
-        console.log(`ship-watch: FAILED — ${failed.map((f) => f.name).join(', ')} (PR #${PR}, ${elapsed()}s). Read the log; do not retry blindly.`);
-        process.exit(1);
+      if (confirmedHead === head && elapsed() >= MIN_SETTLE_S) {
+        mergeHead = head;
+        break;
       }
-      break;
+      // First green sighting, or the head moved under us, or we are still inside the settle
+      // window. Remember what we saw and look again rather than acting on it.
+      if (confirmedHead && confirmedHead !== head) {
+        console.log(`ship-watch: head moved ${confirmedHead.slice(0, 7)} -> ${String(head).slice(0, 7)}, re-waiting on CI`);
+      }
+      confirmedHead = head;
+    } else {
+      confirmedHead = null;
     }
     await sleep(POLL_MS);
   }
@@ -116,7 +164,9 @@ async function verifyUrl(spec) {
 
   // Phase 2 — merge
   try {
-    await gh(['pr', 'merge', PR, '--squash', '--delete-branch']);
+    // --match-head-commit: if the head moved since the green we confirmed, GitHub refuses the
+    // merge rather than landing a commit no check ever saw.
+    await gh(['pr', 'merge', PR, '--squash', '--delete-branch', '--match-head-commit', mergeHead]);
   } catch (err) {
     console.log(`ship-watch: MERGE REFUSED for PR #${PR} — ${(err.stderr || err.message || '').trim().split('\n')[0]}`);
     process.exit(1);
