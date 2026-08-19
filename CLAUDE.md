@@ -458,3 +458,38 @@ This repo's cluster: see brand alignment map. The map says:
 **Rule**: read the map before designing. Update the map BEFORE shipping a new design. Never re-decide what's already decided.
 
 <!-- END ACT-CONTEXT -->
+
+## Verifying a change: local first, previews for Ben (decided 2026-08-20)
+
+A whole session went on trying to read Vercel previews. They are protected by SSO, an agent
+cannot sign in, and every attempt cost an 8–11 minute build and ended at a login page. Meanwhile
+everything that was actually found that day came from local:
+
+| found by | what |
+|---|---|
+| `npm run dev` on 3013 | the 61-route sweep, the donor-contractors crash, the state-disclosure render, the influence-network zeros |
+| a local production build | the 60s static-generation limit that failed a preview build (#344) |
+| a Vercel preview | nothing |
+
+**So: local for the agent's verification, previews for Ben's review. The agent does not try to
+read previews.** Hand Ben the URL with the specific thing to look at, and say plainly what was
+verified locally.
+
+### `npm run dev` is not enough on its own
+
+Dev mode is not a production build. The 60-second prerender cap only exists at build time, so no
+amount of clicking around a dev server would ever have surfaced it. Before claiming a
+public-surface change is verified:
+
+```bash
+cd apps/web && npm run preview     # production build + start on :3015, live reports on
+```
+
+It shares `.next` with the dev server, so stop dev first — `scripts/precheck.sh` says the same
+thing and for the same reason.
+
+### What local genuinely cannot tell you
+
+Vercel build-machine limits, deployment protection behaviour, and the values of production env
+vars. The first is mostly covered by `npm run preview`; for the third use `/config-truth`, because
+a var can be set, non-empty and still wrong.

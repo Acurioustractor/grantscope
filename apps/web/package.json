@@ -13,7 +13,8 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "palette": "node scripts/palette-scan.mjs",
-    "palette:baseline": "node scripts/palette-scan.mjs --write"
+    "palette:baseline": "node scripts/palette-scan.mjs --write",
+    "preview": "CIVICGRAPH_LIVE_REPORTS=true next build && CIVICGRAPH_LIVE_REPORTS=true next start -p 3015"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.50",
