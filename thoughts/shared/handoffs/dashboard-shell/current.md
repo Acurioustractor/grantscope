@@ -9,152 +9,88 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-19T08:00:00Z
+**Updated:** 2026-08-19T05:30:00Z
 **Goal:** CivicGraph as one legible system — every number on a screen means what the screen says,
 and landing the work stops costing more than the work.
-**Branch:** `main` through `2e817b71`. **Zero open PRs**, tree clean, all local branches deleted.
-Merged this session: #257 name normalisation · #258 admin audit + landing policy · #259 grantee
-harness · #260 dedupe · #261 Vercel build-skip · #262 report caching.
-**Test:** `scripts/precheck.sh` (tsc + 734 vitest) · dev 3013
+**Branch:** `main` through `3cd384c0`. **Zero open PRs.** Merged this session: #270-#278, #286-#288,
+#292-#297 (16 PRs).
+**Test:** `scripts/precheck.sh` — tsc + 742 vitest + a production build when the diff touches
+package.json / lockfile / next.config / root layout / middleware. Refuses to build if :3013 is up.
 
 ### Now
-[->] **Back to real GrantScope work.** The pm2/cron detour is CLOSED (see below) — do not reopen it.
-Pick up: the two cron decisions (`usage-alerts`, `deliver-notifications`), or Lever 2
-(`force-dynamic` -> `revalidate`) proven on ONE page first, or the 129 uncached pages.
+[->] **Design-system migration, step 1: wrap `/dashboard/*` in `.ui`.** shadcn is installed and
+live; 19 routes are the cheapest first conversion. Order and costs: artifact
+https://claude.ai/code/artifact/ae4d84e9-3d02-4833-aa44-1a3adbd18718
 
-### pm2 startup — CLOSED 2026-08-19. The detour, and what it cost.
-The wizard could not be driven from Claude Code (`!` gives no interactive TTY — it hangs at the
-first prompt). It also **did not need to be run**: the sudo half had already been done 2026-08-18.
-It wrote `~/Library/LaunchAgents/pm2.benknight.plist` and then failed to load it, because pm2 under
-sudo tries to load a *user* LaunchAgent from the *root* domain. The wizard's own text warns about
-exactly this and the earlier run still printed success.
+### This Session
+- [x] **Periphery swept and disarmed** (#277, #278) — `send-billing-reminders` was armed: enabled,
+      daily, 33 runs, no `--dry-run`, live `sendEmail()` for a product cut in April. Now
+      double-latched. 4 dead schedules off, pg_cron reactor unscheduled.
+- [x] **`agent_schedules.last_run_at` was lying** — written on task creation, not success. Four
+      schedules claimed "ran this week" while `agent_runs` said June. Split into
+      `last_scheduled_at`; both writers fixed; proven live after orchestrator restart.
+- [x] **API-key surface dormant** (#286) — 6 routes, 2 pages, 4 nav entries deleted; table +
+      `/api/v1/exposure` kept on purpose. A keyless caller gets 401, verified.
+- [x] **Dollar-less funder policy** (#292) — 202 rows `amount_unknown`. Found **306 self-loops
+      carrying $98.69M** → issue #290.
+- [x] **`/foundation/[abn]` 404'd for everyone** (#294) — 10 matviews had NO PostgREST grants.
+      6th instance of that class. Fixed; also fixed a 24x ACCO undercount on that page.
+- [x] **shadcn/ui installed** (#296) + `/ui` (public reference) + `/ui/routes` (admin-gated,
+      filesystem-scanned route map with thumbnails).
+- [x] **Regression I shipped and fixed** (#297) — #296's unscoped `@layer base` killed DM Sans
+      site-wide and turned every border shadcn grey. Live for ~1h. Caught by `/code-review`.
 
-- Fix was one no-password command: `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/pm2.benknight.plist`
-- Verified: `launchctl list` -> `23718  0  com.PM2`; orchestrator still online; 44 procs (6 online).
-- **A reboot now runs `pm2 resurrect` automatically.** This was the last gap in the outage.
-
-**The 38 "stopped" pm2 jobs are NOT broken.** All 38 are `cron_restart` + `autorestart=off` —
-one-shot scheduled jobs whose correct resting state IS stopped. Every one's last-run age matches
-its own cron (weekly Mon jobs ~32h, Saturday job 3.4d, monthly 17.4d = Aug 1, 6-hourly 4.9h).
-Do not "fix" this again — it reads as 38 dead jobs and is 38 healthy ones.
-
-**5 exited non-zero. Two of those are working as designed — do not fix them:**
-- `el-rebuild-rollups` — consent guard: "Global analysis rollup is disabled until source audience,
-  purpose and withdrawal provenance are retained". Making it exit 0 = disabling a consent control.
-- `wiki-lint` — exits 1 because it FOUND 877 missing reciprocal wiki links. A linter reporting.
-
-**Fixed + pushed** (repo `act-global-infrastructure`, branch `fix/cron-log-paths-and-e2k-service-role`,
-commit `c6a95bd`, **PR not opened** — Tier 3, needs Ben's verb):
-- `email-to-knowledge` — pm2's env already had `SUPABASE_SERVICE_ROLE_KEY`; the script only looked
-  for `SUPABASE_ANON_KEY`. The anon key would not have worked either: `project_knowledge` RLS
-  refuses it, so it connects, processes, saves ZERO. Verified after fix: exit 0, 8 saved.
-- `/tmp` log paths — the ecosystem sent all cron logs to `/tmp`; macOS purges it, so any job that
-  failed before a reboot lost its diagnostics (this is why `wiki-lint`'s cause was unrecoverable).
-  pm2-logrotate only manages `~/.pm2/logs`. **Live only after those procs are restarted from an
-  env-loaded shell** — recreating them from a bare shell STRIPS the inherited secrets and re-breaks
-  them (my shell had none of them; direnv installed but not loaded).
-
-**Still broken, both need Ben:**
-- `xero-bank-balances` — Xero OAuth token expired 2026-08-17 15:00 (401). Browser reauth.
-- `el-analyze-consented` — real drift: `production_schema_20260111.sql` declares
-  `transcripts.ai_processing_consent` (+ a `sync_transcript_consent_from_profile` trigger) but the
-  live DB lacks it. Fix = ALTER TABLE on empathy-ledger-v2 PRODUCTION, on a consent column. Tier 3.
-
-**Note:** `act-global-infrastructure` is sitting on `main` with **91 uncommitted files** from
-another session, last commit 2 days old. I committed on a branch and put HEAD back on main. Untangle
-that before it gets lost to a reset.
-
-### Orchestrator outage — CLOSED 2026-08-18 (after the close-out above)
-The pm2 orchestrator daemon was found **stopped, down ~2 days**. On restart it logged "Recovered 1
-stuck task" and "Coalesced 86 superseded scheduled tasks". This CORRECTS the earlier A1 diagnosis:
-the `persist()` crash was real and fixed, but **necessary, not sufficient** — with the daemon down,
-nothing scheduled the work regardless. Both were needed.
-
-- **Proven:** the nightly grant pipeline then ran `success` in **277s**, after every run since
-  2026-08-07 had been `timed_out` with duration 0.
-- Feed recovered: `apply_now`+`rolling` **1,449** (was 0), quarantined 822 (was 2,592).
-- `pm2 save` done — 43 processes; old dump backed up at `~/.pm2/dump.pm2.bak-20260818`.
-- ~~**Still open:** `pm2 startup` needs a sudo line only Ben can run~~ **DONE 2026-08-19** — see the
-  "pm2 startup — CLOSED" section above. It needed no password in the end.
-- Alarm shipped (#263): `/ops/health` leads with a red banner when no agent has run in 6 hours.
-  Also fixed a **false SAFE** in `classify-changes.sh` — it compared committed history only, so
-  running it before a commit answered "no changes -> SAFE", and SAFE is what auto-merges.
-
-### This Session (2026-08-18→19)
-Started as "continue UX", became a data-honesty and cost session.
-
-- [x] **UX pass 2 shipped (#257)** — `entity_name_key()` folds PTY LTD/LIMITED/P/L variants; Pratt
-      Holdings 8 rows -> 1; fixed a drawer/row mismatch; ABN borrowing now needs a name to map to
-      exactly ONE ABN. Remoteness chart follows the topic filter and the dashboard reconciles.
-- [x] **Admin audit + fixes (#258)** — 12 findings, `docs/ux-audit/admin-ux-findings.md`.
-      **A1: the opportunity feed was stuck, not bad.** The nightly orchestrator last succeeded
-      2026-08-07 and timed out 3x daily since; one transient `fetch failed` on a single Supabase
-      write killed the whole pass after ~10 rows. `persist()` now retries and skips the bad row —
-      **proven: 5,546 rows, 0 failures**. `act_grant_recommendations_current` 0 -> 7,241.
-      A staleness **warn band** (7-21d = `stale_warning`, >21d hard) means one missed job can no
-      longer silently zero the screen.
-- [x] **$304.4M of double-counting removed (#260)** — found by checking the graph before writing an
-      Ian Potter scraper: he was already ingested, and ingested TWICE. 5,481 of `foundation_grantees`'
-      5,577 grant rows were duplicates of `ian_potter_grants_db`/`frrr_grants`/`myer_annual_report_2024`.
-      Backed up in `_backup_foundation_grantees_dupes_20260818` + committed TSV.
-- [x] **Grantee harness (#259)** — `grantee-resolve.mjs` + `grantee-migration.mjs` replace the
-      per-funder hand-work. Verified 322/322 against known-good HMST rows.
-- [x] **Landing policy + adapters (#258)** — we were burning sessions on push/PR/merge ceremony.
-      `precheck.sh`, `classify-changes.sh`, `ship-watch.mjs` + a repo-scoped standing authorization
-      in CLAUDE.md. SAFE changes land on green unattended; VISIBLE stop for Ben.
-- [x] **Vercel cost (#261, #262)** — 20 deployments in 8.9h, most for commits that touched no app
-      code. Ignored Build Step skips 62% of builds. 22 report pages moved off per-request queries.
-
-### Next on resume
-- [ ] **Ben's calls:** the two hourly crons (`usage-alerts`, `deliver-notifications`, ~1,440
-      invocations/month); Lever 2 (`force-dynamic` -> `revalidate`, proven on ONE page first —
-      it makes builds query Supabase); F12 name casing.
-- [ ] **129 uncached pages** remain (mostly `/org` 47, `/clarity` 16). Same `unstable_cache` shape
-      as the reports.
-- [ ] **Grantee gaps, re-scouted** — the parked list was stale, every source is part-done:
-      Buckland 2023 · Myer FY13-23 + FY25 · VFFF amounts (7 edges carry $0) · Perron is the only
-      genuinely absent one. Paul Ramsay (108 edges) was never on the list.
-- [ ] 96 leftover `foundation_grantees` rows · A12 floating widgets · `classify-changes.sh` does
-      not list `data/`, so it calls a data-only change VISIBLE.
-
-### Key traps (this arc, will bite again)
-- **A parameterised SQL function gets a GENERIC plan.** Same SQL: 2.8s with literals, >60s inside
-  the function. Never benchmark a query body and assume the RPC matches.
-- **`unstable_cache` serves the OLD value shape until the KEY changes** — a new field silently does
-  not render, for an hour, with no error.
-- **`CREATE OR REPLACE FUNCTION` cannot change the return type or column order.** Read
-  `pg_get_function_result(oid)` first — se_browse had 5 boolean columns a rewrite would have dropped.
-- **A timed-out count rendered as a confident zero** (`count ?? 0`). Three separate layers this
-  session could not tell "I measured zero" from "I could not measure".
-- **Audit the page, not the viewport** — two P2 findings were wrong because the disclosure sat below
-  a 200-row table.
-- `git reset --hard` discards uncommitted TRACKED edits while leaving untracked files alone.
-- Vercel's ignore step is INVERTED: exit 0 skips, exit 1 builds.
+### Next
+- [ ] **Reopen #289 (analytics).** Closed as "deterministically stuck, cause unknown" — likely the
+      same build fault. If it lands, Lever 2's re-entry trigger becomes pullable again.
+- [ ] **Correct the queue entry** claiming Lever 2's "returns if" is unreachable (premise died).
+- [ ] **#290** — delete the 306 self-loops + $98.69M, guard the backfill.
+- [ ] **#274** — 2-minute `/clarity` prod check (admin login needed).
+- [ ] `.dark` block from shadcn init still global; DESIGN.md permits dark for `/clarity` only.
 
 ### Decisions
-- **Disclose, do not hide.** The grants browser states its 91%-QLD skew and 55%-untagged share
-  rather than filtering them away. Merge on identifiers, disclose on names.
-- **Never commit to `main`.** Branch always; SAFE lands unattended, VISIBLE waits for Ben.
-- Keep funder-specific dataset keys over the generic bucket — they carry provenance and reverse
-  individually.
-- Caching before ISR: `unstable_cache` cuts DB load with no build-time risk.
+- **shadcn/ui is the design system.** Ben rejected all three existing languages. Token layer +
+  components, matching his Pencil doc. `.ui` is the opt-in scope.
+- **`.ui` scope is load-bearing**: `globals.css` has `border-radius: 0 !important` outside
+  `.ws`/`.shell`, which flattens every shadcn component. Base layer must be scoped too.
+- **`shadcn` belongs in `dependencies`, not devDependencies** — `globals.css` imports
+  `shadcn/tailwind.css`. Removing it breaks the CSS build. A review flagged it; the review was wrong.
+- **Migration order** (artifact above): dashboard 19 → the 31 templated reports → script the 126
+  Tailwind-default routes → 55 hand-rolled articles when next edited, not as a project.
+
+### Open Questions
+- **UNCONFIRMED: the Vercel build fault is not understood.** Builds hang at "Creating an optimized
+  production build" with NO error, ~29 min, whenever the dependency tree changes. `rm -rf .next` in
+  `vercel.json` currently works around it and is still there — it discards incremental cache on
+  every deploy. My "stale cache, one clean build heals it" conclusion was DISPROVEN (#297 hung on a
+  fresh cache). Not root-caused.
+- **UNCONFIRMED: `/ui/routes` may return an empty list in production.** It reads `src/app` from the
+  filesystem at request time; source files are not guaranteed in a serverless bundle. Only ever
+  verified locally — on prod I saw the login redirect and stopped.
+- **UNCONFIRMED: route-map classification is asserted, not measured.** `route-scan.ts` assigns a
+  system by path prefix and regexes only each route's own `page.tsx`, never its imports. The
+  "136 routes mixing vocabularies" headline is unverifiable in both directions.
+- `precheck.sh` cannot catch lockfile drift — a local install is not `--frozen-lockfile`.
+- 3 foundation detail pages still exist (`/foundation/[abn]`, `/foundations/[id]`,
+  `/dashboard/browse/foundations/[id]`). Duplication now costs more, not less.
 
 ### Workflow State
-pattern: ship-per-slice via /ship-merge (branch -> precheck -> classify -> PR -> watch -> merge)
-phase: 7
-total_phases: open-ended
+pattern: sequential
+phase: 1
+total_phases: 5
 retries: 0
 max_retries: 3
 
 #### Resolved
-- goal: "UX pass 2, admin audit, and stop the landing tax"
+- goal: "one design system, locked, every page reads from it"
 - resource_allocation: balanced
 
 #### Unknowns
-- Tonight's nightly orchestrator run is the outstanding test of the persist() fix.
+- vercel_build_hang: UNKNOWN (root cause)
+- ui_routes_serverless_fs: UNKNOWN (untested in prod)
 
 #### Last Failure
-(none)
+(none — #297 green and verified live)
 
 ---
 
