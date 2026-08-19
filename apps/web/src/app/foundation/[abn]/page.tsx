@@ -104,6 +104,7 @@ async function getData(abn: string) {
     scoreResult,
     granteesResult,
     granteesNoAmountResult,
+    granteesTotalResult,
     trendsResult,
     trusteeResult,
     regrantResult,
@@ -132,6 +133,13 @@ async function getData(abn: string) {
       .select('grantee_gs_id', { count: 'exact', head: true })
       .eq('foundation_abn', abn)
       .or('grant_amount.is.null,grant_amount.eq.0'),
+    // Total grantee links, counted the same way. Both figures in the sentence below must come
+    // from the same population: mixing a sample count with a full-table count produced the live
+    // nonsense "93 traceable grantees, 464 of them with no amount".
+    supabase
+      .from('mv_foundation_grantees')
+      .select('grantee_gs_id', { count: 'exact', head: true })
+      .eq('foundation_abn', abn),
     // Trends
     supabase
       .from('mv_foundation_trends')
@@ -174,6 +182,7 @@ async function getData(abn: string) {
     score: scoreResult.data as FoundationScore,
     grantees: (granteesResult.data || []) as Grantee[],
     granteesNoAmount: granteesNoAmountResult.count ?? 0,
+    granteesTotal: granteesTotalResult.count ?? 0,
     trends: (trendsResult.data || []) as TrendYear[],
     trusteeOverlaps: (trusteeResult.data || []) as TrusteeOverlap[],
     regranting: (regrantResult.data || []) as RegrантChain[],
@@ -232,7 +241,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
   const data = await getData(abn);
   if (!data) notFound();
 
-  const { score: s, grantees, granteesNoAmount, trends, trusteeOverlaps, regranting, evidence, peers } = data;
+  const { score: s, grantees, granteesNoAmount, granteesTotal, trends, trusteeOverlaps, regranting, evidence, peers } = data;
 
   // Aggregate grantee stats
   const uniqueGrantees = new Set(grantees.map(g => g.grantee_abn || g.grantee_name)).size;
@@ -392,7 +401,7 @@ export default async function FoundationDetailPage({ params }: { params: Promise
         <section className="mb-12">
           <h2 className="text-xl font-black text-bauhaus-black mb-2 uppercase tracking-widest">Grantees</h2>
           <p className="text-sm text-bauhaus-muted mb-4">
-            {uniqueGrantees} traceable grantees across {sortedStates.length} states
+            {fmt(granteesTotal)} grantee links across {sortedStates.length} states
             {granteesNoAmount > 0 ? `, ${granteesNoAmount} of them with no amount on record` : ''}.
             {ccGrantees > 0 && ` ${ccGrantees} community-controlled.`}
           </p>
