@@ -1,10 +1,13 @@
 import { getServiceSupabase } from '@/lib/report-supabase';
+import { liveReportsEnabled } from '@/lib/report-supabase';
 import { TableOfContents } from './toc';
 import { ReportCTA } from '../_components/report-cta';
 
 export const dynamic = 'force-static';
 
-const LIVE_REPORTS = process.env.CIVICGRAPH_LIVE_REPORTS === 'true';
+// Via the helper, not a private `=== 'true'`: production's value has a trailing newline and the
+// strict form silently disabled this page. See lib/report-supabase.ts.
+const LIVE_REPORTS = liveReportsEnabled();
 
 const SNAPSHOT_COUNTS = {
   total: 20000,

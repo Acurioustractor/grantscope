@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { liveReportsEnabled } from '@/lib/report-supabase';
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
@@ -535,7 +536,7 @@ function loadYouthJusticeSnapshot(): YouthJusticeReport | null {
 }
 
 async function getReport(): Promise<YouthJusticeReport> {
-  if (process.env.CIVICGRAPH_LIVE_REPORTS !== 'true') {
+  if (!liveReportsEnabled()) {
     const snapshot = loadYouthJusticeSnapshot();
     if (snapshot) return snapshot;
   }

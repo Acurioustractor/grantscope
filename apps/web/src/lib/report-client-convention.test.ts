@@ -43,3 +43,35 @@ describe('report pages declare which Supabase client they want', () => {
     ).toEqual([]);
   });
 });
+
+/**
+ * Nobody re-derives the live-reports flag by hand.
+ *
+ * Production stores `CIVICGRAPH_LIVE_REPORTS` as `"true\n"`. A strict `=== 'true'` is therefore
+ * false in production, and three report pages carried their own private copy of exactly that
+ * comparison — so they read the empty client even once the shared helper was fixed. The failure is
+ * silent by construction: an unread flag renders as a page with no numbers, not as an error.
+ */
+describe('the live-reports flag is read in exactly one place', () => {
+  it('no file compares CIVICGRAPH_LIVE_REPORTS directly', () => {
+    const roots = [join(process.cwd(), 'src/app'), join(process.cwd(), 'src/lib')];
+    const offenders: string[] = [];
+    for (const root of roots) {
+      for (const file of walk(root)) {
+        // The helper itself, its test, and this file (which names the pattern it forbids).
+        if (/report-supabase(\.test)?\.ts$/.test(file) || file === __filename) continue;
+        const src = readFileSync(file, 'utf8');
+        // The env READ, not a mention of the name in prose.
+        if (src.includes('process.env.CIVICGRAPH_LIVE_REPORTS')) {
+          offenders.push(file.replace(process.cwd() + '/', ''));
+        }
+      }
+    }
+    expect(
+      offenders,
+      `These read CIVICGRAPH_LIVE_REPORTS directly. Import liveReportsEnabled() from ` +
+        `@/lib/report-supabase instead — it trims, and production's value has a trailing newline:\n` +
+        offenders.join('\n'),
+    ).toEqual([]);
+  });
+});
