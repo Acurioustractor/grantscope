@@ -1,5 +1,5 @@
 ---
-date: 2026-08-19T08:45:00Z
+date: 2026-08-19T09:30:00Z
 session_name: place-capital
 branch: main
 status: active
@@ -9,11 +9,12 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-19T08:45:00Z
+**Updated:** 2026-08-19T09:30:00Z
 **Goal:** A buildable spec for what a community organisation uses to see, then capture, the
 capital moving through its place. Map #303 is the vehicle; done when `/to-spec` can run.
 **Branch:** `main`, clean. Everything below is landed AND applied.
-Main is at `56d209ac`. Today: #313 `6e619586` · #318 `41d724dc` · #316 `cbaf6933` · #317 `56d209ac`.
+Main is at `de89a756`. Today: #313 `6e619586` · #318 `41d724dc` · #316 `cbaf6933` ·
+#317 `56d209ac` · #319 `4a34d0d6` · #320 `1aaa1f63` · #321 `1b1c8503` · #323 `de89a756`.
 **Test:** `./scripts/precheck.sh` (tsc + 724 vitest). DB reads: `node --env-file=.env
 scripts/gsql.mjs "..."` — always `cd /Users/benknight/Code/grantscope` first, cwd drifts.
 
@@ -28,6 +29,36 @@ downstream, so it goes before #306/#307/#309. **Unchanged by the data-integrity 
     'success-fallback') AND mv_name IN ('act_grant_recommendations','mv_yj_report_acco_gap',
     'mv_yj_report_alma_type_counts','mv_yj_report_state_top_orgs',
     'mv_yj_report_unfunded_programs') GROUP BY 1;`
+
+### This Session — fourth: the integrity thread, and $36bn
+
+Started as "measure self-loops in the other datasets" (#315). Ended four corrections later at a
+resolver defect. **Read the corrections, not just the conclusions — three of the four wrong answers
+were confident and specific.**
+
+- [x] **#315 CLOSED in substance.** `austender` has **595 self-loops worth $810.5M** and they are
+      **FAITHFUL TO THE REGISTER, not a bug**: AusTender publishes internal Defence project codes
+      (e.g. `AIR7000 P8 POSEIDON`) with **Defence's own ABN 68706814312** in the supplier field.
+      **Exclude at read time, do NOT delete.** `justice_funding`, `person_roles`,
+      `person_roles_crossmatch`, `acnc_register` are all **0, clean**.
+      **This retrospectively justifies scoping #290's constraint to `foundation_grantees`** — a
+      global self-loop ban would have refused legitimate rows.
+- [x] **#322/#323 APPLIED — 71,166 duplicate rows, $36.03bn removed.** Largest correction in the
+      project's history (cf. ROGS $37.8bn, foundation $304M). Per dataset: austender 35,326 rows /
+      **$28.46bn** · aec_donations 29,347 / $2.32bn · grant_opportunities 5,761 / $3.86bn ·
+      grantconnect_awards 552 / $1.38bn. `_backup_gs_rel_dupes_20260819` holds every deleted row.
+      New partial index `gs_relationships_dataset_source_record_uniq (dataset, source_record_id)`.
+- [x] **#324 OPENED — the actual cause, and it is bigger.** The duplicates were NOT re-inserts.
+      `idx_gs_rel_dedup` already existed and already blocked those. The rows **differed**:
+      45,220 in `source_entity_id`, 21,319 in `target_entity_id`, 5,483 in `relationship_type`.
+      **`makeGsId()` mints `AU-ABN-<abn>` when a source row carries an ABN and `AU-GOV-<buyer_id>`
+      when it does not, so ONE government body becomes TWO entities.** 1,891 AU-GOV entities,
+      only **78 have an ABN**. Department of Defence is the visible case.
+- [x] **Dedupe direction was verified, not assumed.** Kept-row-has-ABN vs deleted: **19,488 to 29**
+      on the target side, **34,647 to 123** on the source side. Later runs resolved to WORSE
+      entities. Keeping the earliest was right.
+- [x] **CI + tooling:** #318 E2E hang (Azure apt mirror, not a lock), #320 ship-watch stale-check
+      guard, #321 watcher timeout 30min → 10min. Pipelines now ~230s.
 
 ### This Session — third half: place data, CI, and the Custodian Ledger
 - [x] **#301 SA3 defect measured, repaired, APPLIED.** The ticket said it was blocked on
@@ -91,6 +122,16 @@ downstream, so it goes before #306/#307/#309. **Unchanged by the data-integrity 
       `project_remote_funding_intermediaries.md`.
 
 ### Next
+- [ ] **#324 — decide scope BEFORE starting.** It touches the core of the graph. A query for
+      "everything Defence bought" currently hits one of two entities and silently misses the
+      other's edges; `mv_entity_power_index` and `mv_revolving_door` split one org across two rows.
+- [ ] **#315's remaining half:** build the austender self-loop exclusion predicate alongside
+      `isRealRecipient()`/`themeMoney()` in `apps/web/src/lib/justice-money.ts`, and audit which
+      surfaces need it.
+- [ ] **Do NOT "make ingests upsert."** I proposed it and it is wrong — it would silently overwrite
+      a good entity resolution with a worse one on every run. #324 is the real fix.
+- [ ] **Every matview figure is stale until tonight's 17:00 UTC nightly** — the $36bn came out of
+      the base table after the MVs were last built.
 - [ ] **ship-watch merges on STALE checks.** #317 merged in 5s with Type Check and Unit still
       `pending`: `gh pr update-branch` made a new commit and a new run, and the watcher read the
       PREVIOUS run's green. #316 was fine only by luck of timing. **Fix: require the check run's
@@ -139,6 +180,20 @@ downstream, so it goes before #306/#307/#309. **Unchanged by the data-integrity 
   contract delivery-location extraction.
 
 ### Open Questions
+- **FOUR wrong answers in one thread today. The pattern is the lesson.** In order:
+  (1) "the nightly refresh has stopped" — it had not;
+  (2) "the E2E hang is a dpkg lock" — it was the Azure apt mirror, a network stall;
+  (3) **"$31.2bn of duplication in aec_donations"** — phantom. Grouping on
+  `(source,target,type,year,amount)` is NOT a duplicate test: the source genuinely holds 374
+  distinct Brisbane City Council → ALP(Qld) receipts at $2,498, verified 374-for-374;
+  (4) "there is no distinguishing key so this is unmeasurable" — `source_record_id` is a real
+  column, **100% populated**, found by reading `properties` instead of `information_schema`.
+  **Common fault: inferring schema and mechanism from data instead of reading the definition.**
+  CLAUDE.md Rule #2 and the context-efficiency rule both say to check `information_schema` first.
+- **Unverified: the 29 + 123 cases where the DISCARDED row held the ABN.** Small, recoverable from
+  the backup, worth revisiting during #324's merge.
+- **Unverified: was `grant_opportunities` duplication ever noticed?** 5,761 rows / $3.86bn came out
+  and that dataset was not in any prior audit. Nothing was looking at it.
 - **I was wrong twice today and both corrections were worth more than the original claim.**
   (1) "The nightly refresh has stopped" — it had not; see below. (2) "The E2E hang is a dpkg lock
   or an interactive prompt" — it is not. The log, once a timeout made it readable, is hundreds of
