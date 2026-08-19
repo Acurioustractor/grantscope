@@ -1,5 +1,5 @@
 ---
-date: 2026-08-19T11:45:00Z
+date: 2026-08-20T00:05:00Z
 session_name: place-capital
 branch: main
 status: active
@@ -9,28 +9,42 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-19T11:45:00Z
+**Updated:** 2026-08-20T00:05:00Z
 **Goal:** A buildable spec for what a community organisation uses to see, then capture, the
 capital moving through its place. Map #303 is the vehicle; done when `/to-spec` can run.
 **Branch:** `main`, clean. Everything below is landed AND applied.
-Main is at `4f8b6bce`. Today, 17 PRs. Data integrity: #313 `6e619586` · #316 `cbaf6933` ·
-#317 `56d209ac` · #318 `41d724dc` · #320 `1aaa1f63` · #321 `1b1c8503` · #323 `de89a756` ·
-#326 `7168a7e4`. Docs: #319 `4a34d0d6` · #325 `f28f138e` · #328 `799ae79d` · #329 `85accab8`.
-Reports: #330 `1441a194` · #331 `665183ee` · #332 `af7e68f0` · #333 `4f8b6bce` · #334 (open).
+Main is at `7502f4d2`. **Board is EMPTY — zero open PRs.** 19 landed on 2026-08-19.
+Data integrity: #313 `6e619586` · #316 `cbaf6933` · #317 `56d209ac` · #318 `41d724dc` ·
+#320 `1aaa1f63` · #321 `1b1c8503` · #323 `de89a756` · #326 `7168a7e4`.
+Docs: #319 `4a34d0d6` · #325 `f28f138e` · #328 `799ae79d` · #329 `85accab8` · #335 `7502f4d2`.
+Reports: #330 `1441a194` · #331 `665183ee` · #332 `af7e68f0` · #333 `4f8b6bce` ·
+#334 `d3410897` · #295 `e2ad6c60`.
 **Test:** `./scripts/precheck.sh` (tsc + 724 vitest). DB reads: `node --env-file=.env
 scripts/gsql.mjs "..."` — always `cd /Users/benknight/Code/grantscope` first, cwd drifts.
 
 ### Now
-[->] **#311 — talk to three place-based intermediaries.** HITL, Ben only. The single
-assumption today produced that nobody has tested. It can invalidate #304 and everything
-downstream, so it goes before #306/#307/#309. **Unchanged by the data-integrity detour below.**
+[->] **#311 — talk to three place-based intermediaries.** HITL, Ben only. Untouched after a full
+day. Everything below made the numbers trustworthy and the argument sharper; **none of it tested
+whether anyone will pay.** That was true at 07:00 and is still true.
 
-[ ] **Tomorrow, one query:** did the five promoted matviews log a success in the 17:00 UTC
-    nightly? Plan membership is not proof; the log is.
-    `SELECT mv_name, max(finished_at) FROM mv_refresh_log WHERE status IN ('success',
-    'success-fallback') AND mv_name IN ('act_grant_recommendations','mv_yj_report_acco_gap',
-    'mv_yj_report_alma_type_counts','mv_yj_report_state_top_orgs',
-    'mv_yj_report_unfunded_programs') GROUP BY 1;`
+### Closed out at end of day (2026-08-19)
+
+- [x] **VERIFIED: the five promoted matviews ran.** `act_grant_recommendations` 17:00:21,
+      the four `mv_yj_report_*` 17:11:20, all in the 19 Aug 17:00 UTC nightly. The #314 tier
+      promotion works — checked in the log, not assumed from plan membership.
+- [x] **#295 `e2ad6c60` landed after ELEVEN HOURS open and green**, holding a fix for a live
+      defect: `/foundation/[abn]` read **"93 traceable grantees … 464 of them with no amount"**.
+      464 of 93. Exactly the failure `/land` exists to kill: a PR sitting on a live defect.
+- [x] **VERIFIED LIVE on FRRR:** now reads **"3,595 grantee links across 8 states, 464 of them with
+      no amount on record. 214 community-controlled."** Transparency card: "2,308 organisations
+      funded".
+- [x] **The number that should worry us most: community-controlled went 9 → 214.** The old figure
+      counted only within the 100-row display sample, understating by **24x** on a public page.
+      Nothing about "9" looked wrong. **Plausible small numbers are the dangerous ones** — that is
+      the argument for the report-service.ts work below, not a nice-to-have.
+- [x] States went 7 → 8, not the 7 I predicted. Case-normalisation collapsed VIC/Vic/vic AND
+      revealed a state the 100-row sample never contained. My prediction was wrong; the number is
+      right.
 
 ### This Session — sixth: the reports were publishing things nobody computed
 
