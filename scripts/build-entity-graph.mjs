@@ -21,6 +21,7 @@ import { createClient } from '@supabase/supabase-js';
 import { spawnSync } from 'node:child_process';
 import { resolveBin, withRetry } from './lib/agent-resilience.mjs';
 import { edgeDataset, JUSTICE_PROGRAM_ENSURE_SQL, JUSTICE_BUILD_GUARD } from './lib/graph-edge-datasets.mjs';
+import { makeGsId } from './lib/gs-id.mjs';
 import 'dotenv/config';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -184,23 +185,7 @@ async function buildRelationshipsSetBased(label, cols, selectSql, prelude = '') 
   log(`  ${label}: ${m ? m[1] : '0'} inserted (existing rows skipped via ON CONFLICT)`);
 }
 
-function makeGsId({ abn, acn, icn, asx_code, buyer_id, name }) {
-  if (abn) return 'AU-ABN-' + abn.replace(/\s/g, '');
-  if (acn) return 'AU-ACN-' + acn.replace(/\s/g, '');
-  if (icn) return 'AU-ORIC-' + icn;
-  if (asx_code) return 'AU-ASX-' + asx_code.toUpperCase();
-  if (buyer_id) return 'AU-GOV-' + buyer_id;
-  if (name) {
-    let hash = 0;
-    const upper = name.toUpperCase().trim();
-    for (let i = 0; i < upper.length; i++) {
-      hash = ((hash << 5) - hash) + upper.charCodeAt(i);
-      hash |= 0;
-    }
-    return 'AU-NAME-' + Math.abs(hash).toString(36);
-  }
-  return 'AU-UNK-' + Date.now().toString(36);
-}
+// makeGsId now lives in ./lib/gs-id.mjs — see #324 for why it had to be validated and shared.
 
 
 // ─── Phase 1: Build entity registry ──────────────────────────────────────────
