@@ -2082,7 +2082,7 @@ export default function GraphPage() {
                 )}
                 {selectedNode.desert_score != null && (
                   <p className="text-[9px] text-[#f97316] font-mono">
-                    Desert score: {Math.round(selectedNode.desert_score)}
+                    Funding shortfall: {Math.round(selectedNode.desert_score)}
                   </p>
                 )}
               </div>

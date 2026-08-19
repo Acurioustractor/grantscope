@@ -423,20 +423,35 @@ export function RelationshipSummarySection({
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Funding Desert Context
+// Funding shortfall context — ranks the FUNDER, never the place
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//
+// This block used to render "Funding Desert — Severe" and "ranked #N funding desert" on an
+// organisation's own profile. An Aboriginal community-controlled organisation opening its own page
+// was told, in red, that its home is a severe desert ranked Nth worst in the country.
+//
+// CARE principle E1 prohibits portraying Indigenous Peoples in terms of deficit, and the
+// Productivity Commission's 2024 Closing the Gap review names deficit narratives as the thing
+// Indigenous Data Governance exists to disrupt. See docs/strategy/data-standard.md.
+//
+// The underlying score is built ENTIRELY from absence: points for zero or low money flow, points
+// for NDIS participants with no provider. Every component measures what funders and services did
+// not do. So attributing it to funders is not a euphemism, it is the accurate reading. The number
+// is unchanged; the subject of the sentence is not.
+//
+// The DB column stays `desert_score` because other consumers read it. The divergence is deliberate.
 
 export function FundingDesertSection({ fundingDesert }: { fundingDesert: FundingDesert | null }) {
   if (!fundingDesert) return null;
 
-  // Only show if it's meaningfully a desert (e.g., top 50% of desert scores)
-  const desertScore = Number(fundingDesert.desert_score);
-  if (desertScore <= 0) return null;
+  const shortfall = Number(fundingDesert.desert_score);
+  if (shortfall <= 0) return null;
 
+  // Severity describes the size of the FUNDING SHORTFALL, not a quality of the place.
   const severity =
-    desertScore >= 80 ? { label: 'Severe', bg: 'bg-red-50', border: 'border-red-400', text: 'text-red-800', dot: 'bg-red-500' }
-    : desertScore >= 50 ? { label: 'Significant', bg: 'bg-orange-50', border: 'border-orange-400', text: 'text-orange-800', dot: 'bg-orange-500' }
-    : { label: 'Moderate', bg: 'bg-yellow-50', border: 'border-yellow-400', text: 'text-yellow-800', dot: 'bg-yellow-500' };
+    shortfall >= 80 ? { label: 'Large shortfall', bg: 'bg-red-50', border: 'border-red-400', text: 'text-red-800', dot: 'bg-red-500' }
+    : shortfall >= 50 ? { label: 'Clear shortfall', bg: 'bg-orange-50', border: 'border-orange-400', text: 'text-orange-800', dot: 'bg-orange-500' }
+    : { label: 'Some shortfall', bg: 'bg-yellow-50', border: 'border-yellow-400', text: 'text-yellow-800', dot: 'bg-yellow-500' };
 
   return (
     <section>
@@ -445,18 +460,23 @@ export function FundingDesertSection({ fundingDesert }: { fundingDesert: Funding
           <span className={`w-3 h-3 rounded-full ${severity.dot} shrink-0 mt-1`} />
           <div className="flex-1">
             <h3 className={`font-black uppercase tracking-widest text-sm ${severity.text}`}>
-              Funding Desert — {severity.label}
+              Funders have under-served this area — {severity.label}
             </h3>
             <p className={`text-sm mt-1 ${severity.text}`}>
-              Located in <strong>{fundingDesert.lga_name}</strong> ({fundingDesert.state})
+              Less money and fewer providers have reached <strong>{fundingDesert.lga_name}</strong> ({fundingDesert.state})
+              than its measured need would warrant
               {fundingDesert.desert_rank > 0 && (
-                <> — ranked <strong>#{fundingDesert.desert_rank}</strong> funding desert</>
-              )}
+                <> — the <strong>#{fundingDesert.desert_rank}</strong> largest shortfall in the country</>
+              )}.
+            </p>
+            <p className="text-[11px] mt-1 text-gray-600">
+              This measures what funders and services delivered here. It is not a statement about the
+              community.
             </p>
             <div className="flex items-center gap-6 mt-3">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Desert Score</p>
-                <p className={`text-lg font-black ${severity.text}`}>{desertScore.toFixed(1)}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Funding shortfall</p>
+                <p className={`text-lg font-black ${severity.text}`}>{shortfall.toFixed(1)}</p>
               </div>
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Remoteness</p>
@@ -480,7 +500,7 @@ export function FundingDesertSection({ fundingDesert }: { fundingDesert: Funding
                 href="/reports/power-concentration"
                 className="text-xs text-bauhaus-blue font-bold hover:underline"
               >
-                View Funding Deserts Report
+                View where the money doesn&rsquo;t go
               </Link>
             </div>
           </div>
