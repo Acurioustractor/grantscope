@@ -1,7 +1,23 @@
 # The Buyer Wedge — CivicGraph SE Registry Strategy
 
 **Decided:** 2026-06-08 (Ben, strategy checkpoint session)
-**Status:** ACTIVE — every SE-registry feature decision gets evaluated against this.
+**Status:** **PROVISIONAL** as of 2026-08-19 — superseded on completion of map #303.
+
+> **Why provisional.** This document's central premise is that revenue comes from the buyer side.
+> Ten weeks after it was written there are 438 buyer prospects, **zero paying buyers**, and
+> `api_keys` holds 0 rows. The three rows in `org_profiles` are Palm Island Community Company,
+> JusticeHub and A Curious Tractor — all internal or adjacent. Buyer revenue is the best available
+> theory of revenue and it has not survived contact with a buyer yet.
+>
+> Map [#303](https://github.com/Acurioustractor/grantscope/issues/303) decided
+> ([#304](https://github.com/Acurioustractor/grantscope/issues/304)) that a community-first capital
+> product is **infrastructure for everyone and a product for one named payer**, and that the payer
+> is a **place-based intermediary** — council, land council, regional body — buying to keep spend
+> local, not a procurement buyer. That is a **second lane**, not a replacement, and it has the same
+> untested-demand problem this document does, which is why it has its own validation ticket.
+>
+> Until #303 completes, evaluate SE-registry decisions against this document **and** against #303,
+> and prefer #303 where they conflict.
 
 ## The one sentence
 

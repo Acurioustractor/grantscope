@@ -111,7 +111,21 @@ rather than as grant, which means it compounds, which means an organisation can 
 something at the end. Preston in Lancashire did exactly this and did it without new
 money: measure where institutional spend leaks out of the local economy, then close the
 leak. Locally retained spend went from 5 per cent to 18.2 per cent inside Preston and
-39 per cent to 79.2 per cent across Lancashire. Around £70 million rerouted, 4,500 jobs.
+39 per cent to 79.2 per cent across Lancashire, on the council's own accounting.
+
+The independent evidence is better than the council's. A difference-in-differences study
+in a peer-reviewed journal compared Preston against sixteen matched local authorities in
+the north and midlands of England, similar in size and deprivation, none of them running
+a community wealth building programme. Across 95,476 survey respondents from 2011 to
+2019, **employment rates rose 4 per cent** against those comparators, with a confidence
+interval of 2.4 to 5.7.
+
+The distribution is the part worth sitting with. The effect was larger for the people
+usually left out of a recovery: **22.1 per cent for disabled people** whose condition
+affects the type of work they can do, 6 per cent for minority ethnic groups, 5 per cent
+for people with lower levels of education. Redirecting procurement did not just move
+money. It moved it toward the people furthest from work.
+
 No new appropriation. A measuring instrument and the will to act on it.
 
 Nobody has built that instrument in Australia. The 0.43 per cent is the leak, unmeasured

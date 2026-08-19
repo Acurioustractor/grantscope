@@ -55,13 +55,38 @@ Verified, same join, `GROUP BY e.remoteness`. Same registered-address caveat.
 
 ## External sources
 
-**Preston: 5% to 18.2% local retention, 39% to 79.2% across Lancashire, ~£70M rerouted,
-4,500 jobs.** Unverified against primary documents. Taken from CLES and Preston City
-Council summaries via web search, which agree with each other.
+**Preston local retention: 5% to 18.2% within Preston, 39% to 79.2% across Lancashire.**
+Unverified against primary documents, and now explicitly attributed in the essay to the
+council's own accounting rather than stated as independent fact. From CLES and Preston
+City Council summaries, which agree with each other.
 - https://cles.org.uk/community-wealth-building-in-practice/community-wealth-building-places/community-wealth-building-in-preston/
 - https://pec.ac.uk/policy_briefing_entr/stimulating-local-growth-through-procurement-lessons-from-the-preston-model/
-Before publishing, read the CLES evaluation directly. The jobs figure in particular is
-the kind of number that gets repeated without a source.
+
+**CORRECTED 2026-08-19: the "4,500 jobs" claim has been REMOVED from the essay.**
+Two faults with it. First, **4,500 is the Lancashire figure, not Preston** — the Preston
+number is roughly 1,648, and the essay's sentence structure implied both belonged to
+Preston. Second, the careful sources say jobs **"supported"**, not "created", which is a
+materially weaker claim. It is exactly the kind of number that gets repeated without a
+source, which is what I was doing.
+
+**REPLACED WITH a peer-reviewed difference-in-differences study.** Verified by reading the
+paper. Preston compared against **sixteen matched local authorities** in the north and
+midlands of England (population 90,000–250,000, within the 25% most deprived, none running
+a CWB programme). Annual Population Survey, **2011–2019**, intervention dated 2015,
+**95,476 respondents**.
+- **Employment rate +4%** (95% CI 2.4 to 5.7) against comparators.
+- Disabled people, condition affecting work type: **+22.1%** (95% CI 15.1 to 29.2).
+- Disabled people, condition affecting work amount: +16.4% (95% CI 13.5 to 19.4).
+- Minority ethnic groups: +6% (95% CI 0.5 to 11.5). Lower education: +5% (95% CI 3.1 to 6.9).
+- Men: +5.8% (95% CI 4.6 to 7).
+- **Stated limitations, carried here:** the authors cannot fully rule out concurrent
+  unobserved economic changes, and subgroup analyses have reduced statistical power.
+- https://pmc.ncbi.nlm.nih.gov/articles/PMC12418530/
+
+This is a stronger evidence base than the essay originally rested on, and it changes the
+argument rather than only shoring it up: the distributional finding (largest effects for
+disabled people and minority ethnic groups) is a claim about who a redirected procurement
+pound reaches, which is the essay's actual subject.
 
 ## Claims made without a number
 
