@@ -85,12 +85,36 @@ export function applyGrantFilters<T extends { eq: any; not: any }>(query: T): T 
   return query.eq('measure_kind', 'grant').not('is_aggregate', 'is', true);
 }
 
-/** The same three filters as a SQL fragment, for raw `exec_sql` call sites. */
-export const GRANT_FILTER_SQL = `measure_kind = 'grant'
-  AND is_aggregate IS NOT TRUE
-  AND lower(btrim(recipient_name)) <> ALL (ARRAY[${[...NON_RECIPIENT_NAMES]
-    .map((n) => `'${n}'`)
-    .join(',')}])`;
+/**
+ * The same three filters as a SQL fragment, for raw `exec_sql` call sites.
+ *
+ * `alias` must match the table alias in the query (`jf` for `FROM justice_funding jf`). Getting it
+ * wrong is a SQL error at query time, not a silently wrong number, which is the point of taking it
+ * as an argument rather than leaving callers to hand-edit a template string.
+ */
+export function grantFilterSql(alias?: string): string {
+  const p = alias ? `${alias}.` : '';
+  return `${p}measure_kind = 'grant'
+    AND ${p}is_aggregate IS NOT TRUE
+    AND lower(btrim(${p}recipient_name)) <> ALL (ARRAY[${[...NON_RECIPIENT_NAMES]
+      .map((n) => `'${n}'`)
+      .join(',')}])`;
+}
+
+/** Unaliased form, for `FROM justice_funding` with no alias. */
+export const GRANT_FILTER_SQL = grantFilterSql();
+
+/**
+ * `political_donations.receipt_type` filter.
+ *
+ * 'other receipt' is 72% of rows and 85% of dollars and is NOT donations — it is party
+ * fundraising income, transfers and levies. Summing the table unfiltered reports $240.8bn of
+ * political donations in Australia. The real figure is $25.3bn (measured 2026-08-20).
+ */
+export function donationFilterSql(alias?: string): string {
+  const p = alias ? `${alias}.` : '';
+  return `${p}receipt_type = 'donation received'`;
+}
 
 export interface ThemeMoney {
   /** Dollars, after all three filters. A FLOOR, never a total — see coverage below. */
