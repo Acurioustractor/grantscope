@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { money, L, makeQs, useDrawer, Drawer, SortHeader } from '../browse/browse-ui';
+import { money, L, makeQs, useDrawer, Drawer, SortHeader } from '@/components/browse/browse-ui';
 
 /**
  * Places browser at LGA grain. The drawer's provenance block shows HOW each entity was placed

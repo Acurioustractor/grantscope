@@ -19,10 +19,10 @@ const VIEW_DOT: Record<string, string> = {
  * 2026-08-17 code-review pass).
  */
 const KIND_BROWSERS: { href: string; label: string; blurb: string }[] = [
-  { href: '/dashboard/browse/foundations', label: 'Foundations', blurb: 'who gives, and to whom' },
-  { href: '/dashboard/browse/social-enterprises', label: 'Social enterprises', blurb: 'the register and what we know' },
-  { href: '/dashboard/browse/charities', label: 'Charities', blurb: 'ACNC register with six years of returns' },
-  { href: '/dashboard/browse/grants', label: 'Grant recipients', blurb: 'who receives justice-system grants' },
+  { href: '/foundations', label: 'Foundations', blurb: 'who gives, and to whom' },
+  { href: '/social-enterprises', label: 'Social enterprises', blurb: 'the register and what we know' },
+  { href: '/charities', label: 'Charities', blurb: 'ACNC register with six years of returns' },
+  { href: '/grants', label: 'Grant recipients', blurb: 'who receives justice-system grants' },
   { href: '/dashboard/browse/contracts', label: 'Contract suppliers', blurb: 'who wins Commonwealth contracts' },
   { href: '/dashboard/browse/buyers', label: 'Government buyers', blurb: 'which agencies let them' },
   { href: '/dashboard/browse/donations', label: 'Political donors', blurb: 'declared donations only' },

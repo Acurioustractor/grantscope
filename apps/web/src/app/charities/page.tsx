@@ -1,519 +1,101 @@
 import type { Metadata } from 'next';
-import { getServiceSupabase } from '@/lib/supabase';
+import Link from 'next/link';
+import { Shell } from '@/components/shell/shell';
 import { unstable_cache } from 'next/cache';
-import { FilterBar } from '../components/filter-bar';
+import { getDirectServiceSupabase } from '@/lib/supabase';
+import { retryRpc } from '@/lib/rpc-retry';
+import OrgBrowser, { type OrgRow } from '@/components/browse/OrgBrowser';
 
 export const dynamic = 'force-dynamic';
+export const metadata: Metadata = { title: 'Charities — CivicGraph' };
 
-export const metadata: Metadata = {
-  title: 'Search 64,000+ Australian Charities | CivicGraph',
-  description: 'Search every registered charity in Australia by mission alignment, geography, cause area, organisation size, and financial health. Open data from the ACNC register.',
-};
-
-const PURPOSES = [
-  { value: 'Education', label: 'Education' },
-  { value: 'Health', label: 'Health' },
-  { value: 'Social Welfare', label: 'Social Welfare' },
-  { value: 'Religion', label: 'Religion' },
-  { value: 'Culture', label: 'Culture' },
-  { value: 'Environment', label: 'Environment' },
-  { value: 'Reconciliation', label: 'Reconciliation' },
-  { value: 'Human Rights', label: 'Human Rights' },
-  { value: 'Animal Welfare', label: 'Animal Welfare' },
-  { value: 'General Public', label: 'General Public' },
-  { value: 'Law & Policy', label: 'Law & Policy' },
-  { value: 'Security', label: 'Security' },
-];
-
-const BENEFICIARIES = [
-  { value: 'First Nations', label: 'First Nations' },
-  { value: 'Children', label: 'Children' },
-  { value: 'Youth', label: 'Youth' },
-  { value: 'Aged', label: 'Aged' },
-  { value: 'Disability', label: 'Disability' },
-  { value: 'Rural & Remote', label: 'Rural & Remote' },
-  { value: 'Financially Disadvantaged', label: 'Financially Disadvantaged' },
-  { value: 'Migrants & Refugees', label: 'Migrants & Refugees' },
-  { value: 'LGBTIQA+', label: 'LGBTIQA+' },
-  { value: 'Families', label: 'Families' },
-  { value: 'Homelessness Risk', label: 'Homelessness Risk' },
-  { value: 'Veterans', label: 'Veterans' },
-  { value: 'Overseas', label: 'Overseas' },
-  { value: 'Chronic Illness', label: 'Chronic Illness' },
-];
-
-const STATES = [
-  { value: 'NSW', label: 'NSW' },
-  { value: 'VIC', label: 'VIC' },
-  { value: 'QLD', label: 'QLD' },
-  { value: 'WA', label: 'WA' },
-  { value: 'SA', label: 'SA' },
-  { value: 'TAS', label: 'TAS' },
-  { value: 'ACT', label: 'ACT' },
-  { value: 'NT', label: 'NT' },
-];
-
-const SIZES = ['Small', 'Medium', 'Large'];
-
-const SORT_OPTIONS = [
-  { value: 'name', label: 'Name A-Z' },
-  { value: 'revenue', label: 'Highest Revenue' },
-  { value: 'grants', label: 'Highest Grants' },
-  { value: 'assets', label: 'Highest Assets' },
-  { value: 'fte', label: 'Most Staff' },
-  { value: 'volunteers', label: 'Most Volunteers' },
-  { value: 'newest', label: 'Newest Registered' },
-];
-
-interface CharityRow {
-  abn: string;
-  name: string;
-  charity_size: string | null;
-  state: string | null;
-  pbi: boolean;
-  hpc: boolean;
-  purposes: string[];
-  beneficiaries: string[];
-  operating_states: string[];
-  is_foundation: boolean;
-  website: string | null;
-  total_revenue: number | null;
-  total_grants_given: number | null;
-  total_assets: number | null;
-  staff_fte: number | null;
-  staff_volunteers: number | null;
-  latest_financial_year: number | null;
-  has_enrichment: boolean;
-}
-
-function formatCurrency(amount: number | null): string {
-  if (!amount) return '';
-  if (amount >= 1_000_000_000) return `$${(amount / 1_000_000_000).toFixed(1)}B`;
-  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
-  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`;
-  return `$${amount.toLocaleString()}`;
-}
-
-function sizeBadgeClass(size: string | null): string {
-  switch (size) {
-    case 'Large': return 'border-bauhaus-red bg-bauhaus-red/10 text-bauhaus-red';
-    case 'Medium': return 'border-bauhaus-blue bg-link-light text-bauhaus-blue';
-    case 'Small': return 'border-bauhaus-black/30 bg-bauhaus-canvas text-bauhaus-muted';
-    default: return 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted';
-  }
-}
-
-interface SearchParams {
-  q?: string;
-  size?: string;
-  purpose?: string;
-  beneficiary?: string;
-  pbi?: string;
-  hpc?: string;
-  state?: string;
-  reg_state?: string;
-  revenue_min?: string;
-  revenue_max?: string;
-  grants?: string;
-  foundation?: string;
-  sort?: string;
-  page?: string;
-}
-
-interface CharitiesQueryArgs {
-  query: string;
-  sizeFilter: string;
-  purposeFilter: string;
-  beneficiaryFilter: string;
-  pbiOnly: boolean;
-  hpcOnly: boolean;
-  stateFilter: string;
-  regStateFilter: string;
-  revenueMin: number | null;
-  revenueMax: number | null;
-  grantsOnly: boolean;
-  foundationsOnly: boolean;
-  sortBy: string;
-  offset: number;
-  pageSize: number;
-}
-
-// v_charity_explorer has no fast/default-view shortcut (unlike grants/foundations'
-// in-memory FAST_*_INDEX) — every hit, filtered or not, runs a `count: 'exact'`
-// scan. Caching by the full filter combo means repeat hits to the same URL
-// (the dominant crawl/traffic shape) skip the DB entirely for 5 minutes.
-const getCharitiesPage = unstable_cache(
-  async (args: CharitiesQueryArgs) => {
-    const supabase = getServiceSupabase();
-    let dbQuery = supabase
-      .from('v_charity_explorer')
-      .select('abn, name, charity_size, state, pbi, hpc, purposes, beneficiaries, operating_states, is_foundation, website, total_revenue, total_grants_given, total_assets, staff_fte, staff_volunteers, latest_financial_year, has_enrichment', { count: 'exact' });
-
-    if (args.query) {
-      dbQuery = dbQuery.ilike('name', `%${args.query}%`);
-    }
-    if (args.sizeFilter) {
-      dbQuery = dbQuery.eq('charity_size', args.sizeFilter);
-    }
-    if (args.purposeFilter) {
-      dbQuery = dbQuery.contains('purposes', [args.purposeFilter]);
-    }
-    if (args.beneficiaryFilter) {
-      dbQuery = dbQuery.contains('beneficiaries', [args.beneficiaryFilter]);
-    }
-    if (args.pbiOnly) {
-      dbQuery = dbQuery.eq('pbi', true);
-    }
-    if (args.hpcOnly) {
-      dbQuery = dbQuery.eq('hpc', true);
-    }
-    if (args.stateFilter) {
-      dbQuery = dbQuery.contains('operating_states', [args.stateFilter]);
-    }
-    if (args.regStateFilter) {
-      dbQuery = dbQuery.eq('state', args.regStateFilter);
-    }
-    if (args.revenueMin) {
-      dbQuery = dbQuery.gte('total_revenue', args.revenueMin);
-    }
-    if (args.revenueMax) {
-      dbQuery = dbQuery.lte('total_revenue', args.revenueMax);
-    }
-    if (args.grantsOnly) {
-      dbQuery = dbQuery.gt('total_grants_given', 0);
-    }
-    if (args.foundationsOnly) {
-      dbQuery = dbQuery.eq('is_foundation', true);
-    }
-
-    if (args.sortBy === 'revenue') {
-      dbQuery = dbQuery.order('total_revenue', { ascending: false, nullsFirst: false });
-    } else if (args.sortBy === 'grants') {
-      dbQuery = dbQuery.order('total_grants_given', { ascending: false, nullsFirst: false });
-    } else if (args.sortBy === 'assets') {
-      dbQuery = dbQuery.order('total_assets', { ascending: false, nullsFirst: false });
-    } else if (args.sortBy === 'fte') {
-      dbQuery = dbQuery.order('staff_fte', { ascending: false, nullsFirst: false });
-    } else if (args.sortBy === 'volunteers') {
-      dbQuery = dbQuery.order('staff_volunteers', { ascending: false, nullsFirst: false });
-    } else if (args.sortBy === 'newest') {
-      dbQuery = dbQuery.order('registration_date', { ascending: false, nullsFirst: false });
-    } else {
-      dbQuery = dbQuery.order('name', { ascending: true });
-    }
-
-    dbQuery = dbQuery.range(args.offset, args.offset + args.pageSize - 1);
-
-    const { data: charities, count } = await dbQuery;
-    return { charities: charities || [], count: count || 0 };
+const stats = unstable_cache(
+  async () => {
+    const supabase = getDirectServiceSupabase();
+    const { data } = await supabase.rpc('browse_enrichment_stats');
+    return data as Record<string, Record<string, number>> | null;
   },
-  ['charities-query'],
-  { revalidate: 300 },
+  ['browse-stats'],
+  { revalidate: 3600 },
 );
 
-export default async function CharitiesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const params = await searchParams;
-  const query = params.q || '';
-  const sizeFilter = params.size || '';
-  const purposeFilter = params.purpose || '';
-  const beneficiaryFilter = params.beneficiary || '';
-  const pbiOnly = params.pbi === '1';
-  const hpcOnly = params.hpc === '1';
-  const stateFilter = params.state || '';
-  const regStateFilter = params.reg_state || '';
-  const revenueMin = params.revenue_min ? parseInt(params.revenue_min, 10) : null;
-  const revenueMax = params.revenue_max ? parseInt(params.revenue_max, 10) : null;
-  const grantsOnly = params.grants === '1';
-  const foundationsOnly = params.foundation === '1';
-  const sortBy = params.sort || 'name';
-  const page = parseInt(params.page || '1', 10);
-  const pageSize = 50;
-  const offset = (page - 1) * pageSize;
+export default async function CharityList({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const q = typeof sp.q === 'string' ? sp.q.trim() : '';
+  const state = typeof sp.state === 'string' ? sp.state : '';
+  const size = typeof sp.size === 'string' ? sp.size : '';
+  const sort = typeof sp.sort === 'string' && sp.sort ? sp.sort : 'known';
 
-  const { charities, count } = await getCharitiesPage({
-    query,
-    sizeFilter,
-    purposeFilter,
-    beneficiaryFilter,
-    pbiOnly,
-    hpcOnly,
-    stateFilter,
-    regStateFilter,
-    revenueMin,
-    revenueMax,
-    grantsOnly,
-    foundationsOnly,
-    sortBy,
-    offset,
-    pageSize,
-  });
-  const totalPages = Math.ceil((count || 0) / pageSize);
-
-  // Build filter query string for pagination
-  const filterParams = new URLSearchParams();
-  if (query) filterParams.set('q', query);
-  if (sizeFilter) filterParams.set('size', sizeFilter);
-  if (purposeFilter) filterParams.set('purpose', purposeFilter);
-  if (beneficiaryFilter) filterParams.set('beneficiary', beneficiaryFilter);
-  if (pbiOnly) filterParams.set('pbi', '1');
-  if (hpcOnly) filterParams.set('hpc', '1');
-  if (stateFilter) filterParams.set('state', stateFilter);
-  if (regStateFilter) filterParams.set('reg_state', regStateFilter);
-  if (revenueMin) filterParams.set('revenue_min', String(revenueMin));
-  if (revenueMax) filterParams.set('revenue_max', String(revenueMax));
-  if (grantsOnly) filterParams.set('grants', '1');
-  if (foundationsOnly) filterParams.set('foundation', '1');
-  if (sortBy !== 'name') filterParams.set('sort', sortBy);
-  const filterQS = filterParams.toString();
+  const supabase = getDirectServiceSupabase();
+  let rows: OrgRow[] = [];
+  let statsLine = '';
+  let why: string | null = null;
+  try {
+    const [{ data, error }, s] = await Promise.all([
+      retryRpc(() => supabase.rpc('charity_browse', { p_q: q || null, p_state: state || null, p_size: size || null, p_sort: sort, p_limit: 200 })),
+      stats(),
+    ]);
+    if (error) throw new Error(error.message);
+    rows = ((data ?? []) as { abn: string; name: string; charity_size: string | null; state: string | null; is_foundation: boolean | null; gs_id: string | null; system_count: number | null; visible_dollars: number | null; ais_year: number | null; total_assets: number | null; known: number }[]).map((r) => ({
+      key: r.abn,
+      name: r.name,
+      abn: r.abn,
+      meta: `${r.charity_size ?? '—'} · ${r.state ?? '—'}${r.is_foundation ? ' · foundation' : ''}${r.ais_year ? ` · AIS ${r.ais_year}` : ''}`,
+      gs_id: r.gs_id,
+      system_count: r.system_count,
+      visible_dollars: r.visible_dollars,
+      known: r.known,
+    }));
+    const c = s?.charity;
+    statsLine = c
+      ? `${c.total.toLocaleString('en-AU')} on the ACNC register · all matched to the graph · ${c.with_ais.toLocaleString('en-AU')} with financial returns on file`
+      : '';
+  } catch (e) {
+    why = e instanceof Error ? e.message : String(e);
+  }
 
   return (
-    <div>
-      <div className="mb-8">
-        <p className="text-xs font-black text-bauhaus-red uppercase tracking-[0.3em] mb-2">Directory</p>
-        <h1 className="text-3xl font-black text-bauhaus-black mb-2">Australian Charities</h1>
-        <p className="text-bauhaus-muted font-medium">
-          {(count || 0).toLocaleString()} charities from the ACNC register — every registered charity in Australia. Search by mission, geography, cause area, size, and financial health.
+    <Shell title="Charities" activeHref="/charities">
+      <div className="mx-auto max-w-[1180px] px-6 py-6">
+        <h1 className="font-display text-[22px] font-extrabold">Charities</h1>
+        {/* The bespoke index this replaced was the only route into /charities/insights and the
+            only prompt to claim a listing. Both survive here rather than being orphaned. */}
+        <p className="mt-1 text-[13px]" style={{ color: 'var(--shell-muted)' }}>
+          <Link href="/charities/insights" style={{ color: '#1040C0' }}>
+            What the register shows
+          </Link>
+          {' · '}
+          <Link href="/charities/claim" style={{ color: '#1040C0' }}>
+            Claim your organisation
+          </Link>
         </p>
+        {why ? (
+          <p className="mt-4 text-[13px]" style={{ color: '#D02020' }}>The list could not be read: {why}</p>
+        ) : (
+          <OrgBrowser
+            rows={rows}
+            cfg={{
+              kind: 'charity',
+              basePath: '/charities',
+              knownMax: 5,
+              knownLegend: 'facts held: size, state, graph match, financial return, visible money',
+              stateFacets: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'],
+              sizeFacets: ['Small', 'Medium', 'Large'],
+              moneyCaveat:
+                'Known = facts we hold (size, state, graph match, financial return, visible money) — a short bar is our gap, not theirs.',
+            }}
+            q={q}
+            state={state}
+            size={size}
+            sort={sort}
+            statsLine={statsLine}
+          />
+        )}
       </div>
-
-      {/* Rankings banner */}
-      <a href="/rankings" className="block mb-4 group">
-        <div className="bg-bauhaus-black border-4 border-bauhaus-black p-4 flex items-center justify-between transition-all group-hover:-translate-y-0.5 bauhaus-shadow-sm">
-          <div>
-            <div className="text-xs font-black text-bauhaus-red uppercase tracking-widest mb-1">New</div>
-            <div className="text-sm font-black text-white">Charity Rankings &mdash; 42,000+ charities scored across 6 dimensions</div>
-          </div>
-          <span className="text-white font-black text-lg ml-4 flex-shrink-0">&rarr;</span>
-        </div>
-      </a>
-
-      {/* Insights banner */}
-      <a href="/charities/insights" className="block mb-6 group">
-        <div className="bg-bauhaus-blue border-4 border-bauhaus-black p-4 flex items-center justify-between transition-all group-hover:-translate-y-0.5 bauhaus-shadow-sm">
-          <div>
-            <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-1">New</div>
-            <div className="text-sm font-black text-white">Sector Insights &mdash; visualise where money concentrates, who it serves, and 7-year trends</div>
-          </div>
-          <span className="text-white font-black text-lg ml-4 flex-shrink-0">&rarr;</span>
-        </div>
-      </a>
-
-      {/* Primary filters */}
-      <form method="get" className="flex flex-col sm:flex-row gap-0 mb-4 flex-wrap">
-        <input
-          type="text"
-          name="q"
-          defaultValue={query}
-          placeholder="Search charities by name..."
-          className="flex-1 min-w-[200px] px-4 py-2.5 border-4 border-bauhaus-black text-sm font-bold bg-white focus:bg-bauhaus-yellow focus:outline-none"
-        />
-        <select name="size" defaultValue={sizeFilter} className="px-4 py-2.5 border-4 border-l-0 border-bauhaus-black text-sm font-bold bg-white focus:outline-none">
-          <option value="">All sizes</option>
-          {SIZES.map(s => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-        <select name="purpose" defaultValue={purposeFilter} className="px-4 py-2.5 border-4 border-l-0 border-bauhaus-black text-sm font-bold bg-white focus:outline-none">
-          <option value="">All purposes</option>
-          {PURPOSES.map(p => (
-            <option key={p.value} value={p.value}>{p.label}</option>
-          ))}
-        </select>
-        <select name="sort" defaultValue={sortBy} className="px-4 py-2.5 border-4 border-l-0 border-bauhaus-black text-sm font-bold bg-white focus:outline-none">
-          {SORT_OPTIONS.map(s => (
-            <option key={s.value} value={s.value}>{s.label}</option>
-          ))}
-        </select>
-        {/* Preserve hidden filters */}
-        {beneficiaryFilter && <input type="hidden" name="beneficiary" value={beneficiaryFilter} />}
-        {pbiOnly && <input type="hidden" name="pbi" value="1" />}
-        {hpcOnly && <input type="hidden" name="hpc" value="1" />}
-        {stateFilter && <input type="hidden" name="state" value={stateFilter} />}
-        {regStateFilter && <input type="hidden" name="reg_state" value={regStateFilter} />}
-        {revenueMin && <input type="hidden" name="revenue_min" value={String(revenueMin)} />}
-        {revenueMax && <input type="hidden" name="revenue_max" value={String(revenueMax)} />}
-        {grantsOnly && <input type="hidden" name="grants" value="1" />}
-        {foundationsOnly && <input type="hidden" name="foundation" value="1" />}
-        <button type="submit" className="px-5 py-2.5 bg-bauhaus-black text-white text-xs font-black uppercase tracking-widest hover:bg-bauhaus-red cursor-pointer border-4 border-bauhaus-black">
-          Filter
-        </button>
-      </form>
-
-      {/* Advanced filters */}
-      <FilterBar>
-        <form method="get" className="flex flex-col sm:flex-row gap-0 border-4 border-bauhaus-black bg-white flex-wrap">
-          {/* Preserve primary filters */}
-          {query && <input type="hidden" name="q" value={query} />}
-          {sizeFilter && <input type="hidden" name="size" value={sizeFilter} />}
-          {purposeFilter && <input type="hidden" name="purpose" value={purposeFilter} />}
-          {sortBy !== 'name' && <input type="hidden" name="sort" value={sortBy} />}
-
-          <div className="flex items-center px-3 py-2 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <span className="text-[11px] font-black text-bauhaus-muted uppercase tracking-wider mr-2">Beneficiary</span>
-            <select name="beneficiary" defaultValue={beneficiaryFilter} className="text-xs font-bold bg-bauhaus-canvas border-2 border-bauhaus-black/20 px-2 py-1 focus:outline-none">
-              <option value="">All</option>
-              {BENEFICIARIES.map(b => (
-                <option key={b.value} value={b.value}>{b.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center px-3 py-2 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <span className="text-[11px] font-black text-bauhaus-muted uppercase tracking-wider mr-2">Operates In</span>
-            <select name="state" defaultValue={stateFilter} className="text-xs font-bold bg-bauhaus-canvas border-2 border-bauhaus-black/20 px-2 py-1 focus:outline-none">
-              <option value="">All</option>
-              {STATES.map(s => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center px-3 py-2 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <span className="text-[11px] font-black text-bauhaus-muted uppercase tracking-wider mr-2 whitespace-nowrap">Revenue</span>
-            <input
-              type="number"
-              name="revenue_min"
-              defaultValue={revenueMin || ''}
-              placeholder="Min $"
-              className="w-20 px-2 py-1 text-xs font-bold border-2 border-bauhaus-black/20 bg-bauhaus-canvas focus:outline-none tabular-nums"
-            />
-            <span className="mx-1 text-bauhaus-muted">&ndash;</span>
-            <input
-              type="number"
-              name="revenue_max"
-              defaultValue={revenueMax || ''}
-              placeholder="Max $"
-              className="w-20 px-2 py-1 text-xs font-bold border-2 border-bauhaus-black/20 bg-bauhaus-canvas focus:outline-none tabular-nums"
-            />
-          </div>
-
-          <div className="flex items-center gap-3 px-3 py-2 border-b-4 sm:border-b-0 sm:border-r-4 border-bauhaus-black">
-            <label className="flex items-center gap-1.5 text-[11px] font-black text-bauhaus-black cursor-pointer uppercase tracking-wider">
-              <input type="checkbox" name="pbi" value="1" defaultChecked={pbiOnly} className="accent-bauhaus-red" />
-              PBI
-            </label>
-            <label className="flex items-center gap-1.5 text-[11px] font-black text-bauhaus-black cursor-pointer uppercase tracking-wider">
-              <input type="checkbox" name="grants" value="1" defaultChecked={grantsOnly} className="accent-bauhaus-red" />
-              Grants
-            </label>
-            <label className="flex items-center gap-1.5 text-[11px] font-black text-bauhaus-black cursor-pointer uppercase tracking-wider">
-              <input type="checkbox" name="foundation" value="1" defaultChecked={foundationsOnly} className="accent-bauhaus-red" />
-              Foundation
-            </label>
-          </div>
-
-          <button type="submit" className="px-4 py-2 bg-bauhaus-black text-white text-[11px] font-black uppercase tracking-widest hover:bg-bauhaus-red cursor-pointer">
-            Apply
-          </button>
-        </form>
-      </FilterBar>
-
-      {/* Results */}
-      <div className="space-y-3">
-        {((charities || []) as CharityRow[]).map((c) => (
-          <a key={c.abn} href={`/charities/${c.abn}`} className="block bg-white border-4 border-bauhaus-black p-4 sm:px-5 transition-all hover:-translate-y-0.5 bauhaus-shadow-sm group">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-bold text-bauhaus-black text-[15px] group-hover:text-bauhaus-blue">{c.name}</h3>
-                  <span className={`text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 ${sizeBadgeClass(c.charity_size)}`}>
-                    {c.charity_size || 'Unknown'}
-                  </span>
-                  {c.pbi && (
-                    <span className="text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 border-money bg-money-light text-money">PBI</span>
-                  )}
-                  {c.hpc && (
-                    <span className="text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 border-bauhaus-blue bg-link-light text-bauhaus-blue">HPC</span>
-                  )}
-                  {c.is_foundation && (
-                    <span className="text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 border-bauhaus-yellow bg-warning-light text-bauhaus-black">
-                      Foundation
-                    </span>
-                  )}
-                  {c.has_enrichment && (
-                    <span className="text-[11px] px-1.5 py-0.5 font-black uppercase tracking-wider border-2 border-bauhaus-yellow bg-bauhaus-yellow/20 text-bauhaus-black">
-                      Enriched
-                    </span>
-                  )}
-                </div>
-                <div className="text-xs text-bauhaus-muted mt-1">
-                  <span className="font-bold">{c.state || 'Unknown'}</span>
-                  {c.operating_states?.length > 0 && c.operating_states.length < 8 && (
-                    <span className="ml-2">Operates in: {c.operating_states.join(', ')}</span>
-                  )}
-                  {c.operating_states?.length >= 8 && (
-                    <span className="ml-2">Operates nationally</span>
-                  )}
-                </div>
-              </div>
-              <div className="sm:text-right sm:ml-4 flex-shrink-0">
-                {c.total_revenue != null && c.total_revenue > 0 && (
-                  <div className="text-sm font-black text-bauhaus-black tabular-nums">
-                    {formatCurrency(c.total_revenue)} rev
-                  </div>
-                )}
-                {c.total_grants_given != null && c.total_grants_given > 0 && (
-                  <div className="text-xs font-bold text-money tabular-nums">
-                    {formatCurrency(c.total_grants_given)} granted
-                  </div>
-                )}
-                {c.total_assets != null && c.total_assets > 0 && (
-                  <div className="text-[11px] text-bauhaus-muted font-bold tabular-nums">
-                    {formatCurrency(c.total_assets)} assets
-                  </div>
-                )}
-                {c.staff_fte != null && c.staff_fte > 0 && (
-                  <div className="text-[11px] text-bauhaus-muted font-bold tabular-nums">
-                    {c.staff_fte.toLocaleString()} FTE
-                  </div>
-                )}
-                {c.staff_volunteers != null && c.staff_volunteers > 0 && (
-                  <div className="text-[11px] text-bauhaus-muted font-bold tabular-nums">
-                    {c.staff_volunteers.toLocaleString()} vol
-                  </div>
-                )}
-                {c.latest_financial_year && (
-                  <div className="text-[10px] text-bauhaus-muted/60 font-bold tabular-nums">
-                    FY{c.latest_financial_year}
-                  </div>
-                )}
-              </div>
-            </div>
-            {(c.purposes?.length > 0 || c.beneficiaries?.length > 0) && (
-              <div className="flex gap-1 mt-2.5 flex-wrap">
-                {c.purposes?.map(t => (
-                  <span key={t} className="text-[10px] px-1.5 py-0.5 bg-money-light text-money font-bold border border-money/20">{t}</span>
-                ))}
-                {c.beneficiaries?.slice(0, 6).map(b => (
-                  <span key={b} className="text-[10px] px-1.5 py-0.5 bg-bauhaus-canvas text-bauhaus-muted font-bold border border-bauhaus-black/10">{b}</span>
-                ))}
-                {c.beneficiaries?.length > 6 && (
-                  <span className="text-[10px] px-1.5 py-0.5 text-bauhaus-muted font-bold">+{c.beneficiaries.length - 6} more</span>
-                )}
-              </div>
-            )}
-          </a>
-        ))}
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-0 mt-8">
-          {page > 1 && (
-            <a href={`/charities?${filterQS}&page=${page - 1}`} className="px-4 py-2 text-xs font-black uppercase tracking-widest border-4 border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-black hover:text-white">
-              Previous
-            </a>
-          )}
-          <span className="px-4 py-2 text-xs font-black uppercase tracking-widest border-4 border-l-0 border-bauhaus-black bg-bauhaus-canvas">
-            Page {page} of {totalPages.toLocaleString()}
-          </span>
-          {page < totalPages && (
-            <a href={`/charities?${filterQS}&page=${page + 1}`} className="px-4 py-2 text-xs font-black uppercase tracking-widest border-4 border-l-0 border-bauhaus-black text-bauhaus-black hover:bg-bauhaus-black hover:text-white">
-              Next
-            </a>
-          )}
-        </div>
-      )}
-    </div>
+    </Shell>
   );
 }
