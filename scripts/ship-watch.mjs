@@ -7,7 +7,7 @@
  *
  * Usage:
  *   node scripts/ship-watch.mjs --pr 123 [--merge] [--verify https://civicgraph.app/foo]
- *                               [--verify https://civicgraph.app/bar=200] [--timeout 1800]
+ *                               [--verify https://civicgraph.app/bar=200] [--timeout 600]
  *
  *   --merge   squash-merge when every check passes. Omit for VISIBLE changes: the watcher then
  *             reports green and stops, leaving the merge to Ben after he has seen the preview.
@@ -55,7 +55,10 @@ function args(name) {
 const PR = arg('pr');
 const DO_MERGE = flag('merge');
 const VERIFY = args('verify');
-const TIMEOUT_S = Number(arg('timeout', '1800'));
+// 600s, not 1800s. A healthy pipeline here is ~230s, so ten minutes is already generous; the old
+// half-hour default meant a hung job cost thirty minutes of waiting to learn nothing. Fail fast and
+// read the log. Raise it per-invocation with --timeout when a run legitimately needs longer.
+const TIMEOUT_S = Number(arg('timeout', '600'));
 const POLL_MS = 20_000;
 
 if (!PR) {
