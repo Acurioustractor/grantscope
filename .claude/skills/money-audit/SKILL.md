@@ -13,8 +13,8 @@ Measured 2026-08-20 on the youth-justice topic:
 
 | filter | rows | total |
 |---|---|---|
-| topic tag alone | 5,100 | **$31.66bn** |
-| topic tag + grant lane | 4,090 | **$0.92bn** |
+| topic tag alone | 5,100 | **31.66bn dollars** |
+| topic tag + grant lane | 4,090 | **915.7m dollars** |
 
 **34x.** It was published as "funding by state" and "top funded programs" for months. This skill
 exists because that is not a bug you find by reading code — you find it by measuring.
@@ -32,10 +32,12 @@ ends with a number that changed, or it is not a finding.
 Every site on the surface that sums, averages, ranks or counts money:
 
 ```bash
-awk '/^export (async )?function /{name=$4} /justice_funding|political_donations|austender_contracts/{print NR": "name}' <file>
+grep -nE '^export (async )?function |justice_funding|political_donations|austender_contracts' <file>
 ```
 
-Read the body of each. Ranking and averaging count — a `MAX`, an `ORDER BY amount DESC` and a
+Read the body of each function that appears near a table name.
+
+Ranking and averaging count — a `MAX`, an `ORDER BY amount DESC` and a
 `SUM(x)/COUNT(y)` are all money figures.
 
 ### 2. Classify each site into a lane — this is judgement, not a sweep
@@ -118,4 +120,15 @@ For each site: lane, delta, action. Then the two things that are easy to skip:
 ## Reference
 
 CLAUDE.md, "Three filters that are mandatory, not optional" — the source of truth for the filters
-and the measured national impact ($12.12bn, 26%, stripped by filters 1 and 2 together).
+and the measured national impact (12.12bn dollars, 26%, stripped by filters 1 and 2 together).
+
+## A note on writing this file
+
+A dollar sign immediately followed by a digit is substituted with the skill's arguments when this
+file loads. The first run of this skill printed a file path where a figure should have been, and a
+mangled awk expression, because two such sequences were sitting in the text.
+
+So: write money figures so they never start with a dollar sign followed by a digit that could read
+as a positional parameter — use the full amount (915.7m rather than a leading zero), and prefer
+`grep` over `awk` field references in examples. This paragraph is deliberately written without a
+single instance of the pattern it describes.
