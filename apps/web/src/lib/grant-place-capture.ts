@@ -473,3 +473,112 @@ export function rankWorstCapturing(
     )
     .slice(0, opts.limit ?? 20);
 }
+
+/** Below this many resolved awards a council reports nothing rather than a percentage on noise.
+ * Matches the Atlas layer's threshold so the map and the place page cannot disagree. */
+export const CAPTURE_MIN_RESOLVED_FOR_PLACE = 20;
+
+/**
+ * One council's capture, for its place page. Null means NOT MEASURED — either no covered awards
+ * were delivered here, or too few resolve to report a share.
+ *
+ * Null is never zero. A council with no covered awards has not been shown to keep nothing; it has
+ * been shown nothing about. Callers must render the difference.
+ */
+export async function captureForLga(
+  lgaName: string,
+  state?: string | null,
+): Promise<CapturePlace | null> {
+  const safeName = lgaName.replace(/'/g, "''");
+  const stateClause = state ? `AND delivery_state = '${state.replace(/'/g, "''")}'` : '';
+  const rows = await runSql<RawPlaceRow>(`
+    SELECT delivery_lga AS place,
+           delivery_state AS state,
+           max(delivery_remoteness) AS remoteness,
+           count(*)::bigint AS awards,
+           sum(value_aud)::numeric AS dollars,
+           count(*) FILTER (WHERE recipient_lga IS NOT NULL)::bigint AS resolved_awards,
+           COALESCE(sum(value_aud) FILTER (WHERE recipient_lga IS NOT NULL),0)::numeric AS resolved_dollars,
+           count(*) FILTER (WHERE captured_locally)::bigint AS local_awards,
+           COALESCE(sum(value_aud) FILTER (WHERE captured_locally),0)::numeric AS local_dollars,
+           count(*) FILTER (WHERE recipient_lga IS NOT NULL AND recipient_state <> delivery_state)::bigint AS cross_state_awards,
+           COALESCE(sum(value_aud) FILTER (WHERE recipient_lga IS NOT NULL AND recipient_state <> delivery_state),0)::numeric AS cross_state_dollars,
+           ROUND(100.0 * max(value_aud) / NULLIF(sum(value_aud), 0), 1) AS biggest_award_share
+      FROM v_grant_place_capture
+     WHERE delivery_lga = '${safeName}' ${stateClause}
+     GROUP BY delivery_lga, delivery_state`);
+  const row = rows[0];
+  if (!row) return null;
+  const tally = tallyFromRow(row);
+  if (tally.resolvedAwards < CAPTURE_MIN_RESOLVED_FOR_PLACE) return null;
+  return {
+    place: row.place,
+    state: row.state,
+    remoteness: row.remoteness,
+    biggestAwardShare: row.biggest_award_share === null ? null : n(row.biggest_award_share),
+    ...tally,
+  };
+}
+
+export interface LeavingProgram {
+  program: string;
+  awards: number;
+  dollars: number;
+  /** Distinct organisations that received it. A repeated program with one recipient is a standing
+   * arrangement; several recipients means the work is genuinely contestable. */
+  recipients: number;
+  latestYear: number | null;
+}
+
+/**
+ * Programs whose money was delivered into a place and received by an organisation somewhere else.
+ *
+ * This is the one list on the surface a community organisation can ACT on — it names programs that
+ * already run in their place and are already won by someone else.
+ *
+ * WHAT IT IS NOT. It is not a list of grants they should have won. Measured on Ashburton
+ * 2026-08-21, the two largest are `Activating a Regional Hydrogen Industry` ($3.3m to Engie) and
+ * `Domestic Airports Security Costs Support` ($990k to Hamersley Iron) — infrastructure and
+ * resources programs no community organisation could deliver. The actionable pattern sits lower
+ * and is repetitive: `Community Child Care Fund`, three awards, all to the same organisation in
+ * Belmont. So the award and recipient counts ride with every row, and the surface says plainly
+ * that size is not the same as opportunity.
+ *
+ * Ordered by dollars because that is the money story; read by repetition because that is the entry
+ * story. #308 found the honest product question here is entry, not growth.
+ */
+export async function programsLeavingPlace(
+  lgaName: string,
+  state?: string | null,
+  limit = 8,
+): Promise<LeavingProgram[]> {
+  const safeName = lgaName.replace(/'/g, "''");
+  const stateClause = state ? `AND v.delivery_state = '${state.replace(/'/g, "''")}'` : '';
+  const rows = await runSql<{
+    program: string;
+    awards: string | number;
+    dollars: string | number;
+    recipients: string | number;
+    latest_year: string | number | null;
+  }>(`
+    SELECT g.grant_program AS program,
+           count(*)::bigint AS awards,
+           sum(v.value_aud)::numeric AS dollars,
+           count(DISTINCT v.recipient_name)::bigint AS recipients,
+           max(extract(year from v.approval_date))::int AS latest_year
+      FROM v_grant_place_capture v
+      JOIN grantconnect_awards g ON g.ga_id = v.ga_id
+     WHERE v.delivery_lga = '${safeName}' ${stateClause}
+       AND v.captured_locally IS FALSE
+       AND g.grant_program IS NOT NULL
+     GROUP BY g.grant_program
+     ORDER BY sum(v.value_aud) DESC
+     LIMIT ${Math.max(1, Math.min(50, Math.floor(limit)))}`);
+  return rows.map(r => ({
+    program: r.program,
+    awards: n(r.awards),
+    dollars: n(r.dollars),
+    recipients: n(r.recipients),
+    latestYear: r.latest_year === null ? null : n(r.latest_year),
+  }));
+}
