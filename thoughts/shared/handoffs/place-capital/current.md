@@ -1,5 +1,5 @@
 ---
-date: 2026-08-21T09:00:00Z
+date: 2026-08-21T09:40:00Z
 session_name: place-capital
 branch: main
 status: active
@@ -9,12 +9,11 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-21T09:00:00Z
+**Updated:** 2026-08-21T09:40:00Z
 **Goal:** Make the published figures survive their own filters, and make the surfaces that
 render them reviewable. Done when a number on a public page can be traced to a measured delta.
-**Branch:** `main`, clean. Main at `9d285f8e`. **#391 is the only PR open** — public surface,
-waiting on Ben's eyeball.
-**14 PRs merged, 7 migrations applied today** (#371–#389). Migrations applied:
+**Branch:** `main`, clean. Main at `f288a13b`. **BOARD EMPTY — 0 PRs open.**
+**16 PRs merged, 7 migrations applied today** (#371–#392). Migrations applied:
 `gs-relationships-selfloops`, `mv-staleness-visible`, `grant-place-capture-narrow-sa3`,
 `postcode-4072-lockyer-valley`, `gov-entity-merge`, `gov-winner-entity-type`,
 `austender-supplier-abn-selfloops`, `curated-grantee-amount-unknown`, `soft-reference-repoint`.
@@ -104,8 +103,28 @@ funder-matching feature built on stated intent is built on self-description at 5
 
 ### Open / next
 
-- **#391** — public surface, needs Ben's eyeball.
-- **#390** — closed by #391.
+**Nine issues open and EIGHT are Ben's.** The agent-shaped queue is genuinely empty.
+
+- **#301** — the only agent-shaped one left, and it needs an EXTERNAL source: 10 SA3-shaped
+  postcodes, 337 entities. Two internal instruments were tried and both failed — lat/lng is NULL
+  on all 10, and locality-name matching produces false friends (`Darlington`→Hawkesbury,
+  `Durack` in two NT councils). Do not try either again.
+- **#311** — the three conversations. Only test of whether any of this sells. Brief current (#384,
+  #385).
+- **#303 / #306 / #307 / #309 / #310** — wayfinder. All five have agent evidence posted 2026-08-21;
+  what remains in each is a judgement call, and #307's is a consent decision Ben has said to skip.
+- **#274** — needs a signed-in admin. An agent cannot pass the SSO gate.
+- **#279** — map, unexamined this session.
+- **#190 CLOSED 2026-08-21** as a stale-open, verified not assumed: `/clarity` live, 1,544 objects /
+  1,486 described, `refresh-clarity-catalog-nightly` 6 runs 6 succeeded. **Second stale-open found
+  today after #301 — check whether a map's destination is already met before working it.**
+
+### NOT verified live in production
+
+Today's public-surface merges (#388, #389, #391) were verified on `:3013` against the live database
+but **production was still building when the session ended**. `/place/council/hope-vale`,
+`/place/council/ashburton` and `/foundation?sort=giving` should be checked with Playwright —
+curl gets Vercel's 429 challenge, and match case-insensitively.
 - **`apps/web/package.json` pins dev to port 3003**, which my notes say belongs to The Harvest.
   NOT changed — the note may be stale and changing it would move Ben's muscle memory. Verify which
   is right before touching it.
