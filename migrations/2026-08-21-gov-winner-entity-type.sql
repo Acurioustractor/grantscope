@@ -1,6 +1,10 @@
 -- The merged-into government entities are typed 'company'. #324, follow-up to the merge.
 --
--- NOT YET APPLIED.
+-- APPLIED 2026-08-21 to tednluwflfhxyucgwigh, on Ben's explicit authorization.
+--   UPDATE 112 (115 map rows matched; 3 winners are shared by two losers each).
+--   Verified after: 0 mistyped winners remain, and the resolver simulation against the 487 real
+--   AusTender buyers goes 486 reuse / 96 of them an ABN identity / 0 ambiguous / 1 mint new,
+--   against 393 / 4 / 0 / 94 before. A scheduled graph build is now safe.
 --
 -- Apply:
 --   source .env && PGPASSWORD="$DATABASE_PASSWORD" psql -h aws-0-ap-southeast-2.pooler.supabase.com \
