@@ -519,3 +519,66 @@ export async function captureForLga(
     ...tally,
   };
 }
+
+export interface LeavingProgram {
+  program: string;
+  awards: number;
+  dollars: number;
+  /** Distinct organisations that received it. A repeated program with one recipient is a standing
+   * arrangement; several recipients means the work is genuinely contestable. */
+  recipients: number;
+  latestYear: number | null;
+}
+
+/**
+ * Programs whose money was delivered into a place and received by an organisation somewhere else.
+ *
+ * This is the one list on the surface a community organisation can ACT on — it names programs that
+ * already run in their place and are already won by someone else.
+ *
+ * WHAT IT IS NOT. It is not a list of grants they should have won. Measured on Ashburton
+ * 2026-08-21, the two largest are `Activating a Regional Hydrogen Industry` ($3.3m to Engie) and
+ * `Domestic Airports Security Costs Support` ($990k to Hamersley Iron) — infrastructure and
+ * resources programs no community organisation could deliver. The actionable pattern sits lower
+ * and is repetitive: `Community Child Care Fund`, three awards, all to the same organisation in
+ * Belmont. So the award and recipient counts ride with every row, and the surface says plainly
+ * that size is not the same as opportunity.
+ *
+ * Ordered by dollars because that is the money story; read by repetition because that is the entry
+ * story. #308 found the honest product question here is entry, not growth.
+ */
+export async function programsLeavingPlace(
+  lgaName: string,
+  state?: string | null,
+  limit = 8,
+): Promise<LeavingProgram[]> {
+  const safeName = lgaName.replace(/'/g, "''");
+  const stateClause = state ? `AND v.delivery_state = '${state.replace(/'/g, "''")}'` : '';
+  const rows = await runSql<{
+    program: string;
+    awards: string | number;
+    dollars: string | number;
+    recipients: string | number;
+    latest_year: string | number | null;
+  }>(`
+    SELECT g.grant_program AS program,
+           count(*)::bigint AS awards,
+           sum(v.value_aud)::numeric AS dollars,
+           count(DISTINCT v.recipient_name)::bigint AS recipients,
+           max(extract(year from v.approval_date))::int AS latest_year
+      FROM v_grant_place_capture v
+      JOIN grantconnect_awards g ON g.ga_id = v.ga_id
+     WHERE v.delivery_lga = '${safeName}' ${stateClause}
+       AND v.captured_locally IS FALSE
+       AND g.grant_program IS NOT NULL
+     GROUP BY g.grant_program
+     ORDER BY sum(v.value_aud) DESC
+     LIMIT ${Math.max(1, Math.min(50, Math.floor(limit)))}`);
+  return rows.map(r => ({
+    program: r.program,
+    awards: n(r.awards),
+    dollars: n(r.dollars),
+    recipients: n(r.recipients),
+    latestYear: r.latest_year === null ? null : n(r.latest_year),
+  }));
+}
