@@ -1,4 +1,5 @@
 import { unstable_cache } from 'next/cache';
+import { donationFilterSql } from '@/lib/justice-money';
 import { ReportUnavailable } from '../_components/report-unavailable';
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
@@ -31,6 +32,35 @@ import { money, fmt } from '@/lib/format';
 function pct(n: number): string { return `${n.toFixed(1)}%`; }
 function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+/**
+ * The row shape the page has always wanted, assembled from the two views that actually hold it.
+ *
+ * Aliased to the existing field names on purpose: 40 render sites below already read
+ * `in_procurement`, `power_score`, `procurement_dollars` and the rest. Mapping in SQL keeps the
+ * seam in one place instead of touching 40 call sites, and means the interface below stays the
+ * contract it always was.
+ */
+function influenceRowsSql(limit?: number): string {
+  return `SELECT rd.gs_id, rd.canonical_name, rd.entity_type, rd.abn, rd.state,
+            rd.is_community_controlled,
+            COALESCE(p.in_procurement, 0)         AS in_procurement,
+            COALESCE(p.in_political_donations, 0) AS in_political_donations,
+            COALESCE(p.in_foundation, 0)          AS in_foundation,
+            COALESCE(p.system_count, 0)           AS system_count,
+            COALESCE(p.power_score, 0)            AS power_score,
+            rd.revolving_door_score,
+            COALESCE(p.procurement_dollars, 0)    AS procurement_dollars,
+            COALESCE(p.donation_dollars, 0)       AS donation_dollars,
+            COALESCE(p.donation_count, 0)         AS donation_count,
+            COALESCE(p.contract_count, 0)         AS contract_count,
+            COALESCE(p.distinct_govt_buyers, 0)   AS distinct_govt_buyers,
+            COALESCE(p.distinct_parties_funded,0) AS distinct_parties_funded,
+            COALESCE(p.total_dollar_flow, 0)      AS total_dollar_flow
+       FROM mv_revolving_door rd
+       LEFT JOIN mv_entity_power_index p ON p.gs_id = rd.gs_id
+      ORDER BY rd.revolving_door_score DESC NULLS LAST${limit ? `\n      LIMIT ${limit}` : ''}`;
 }
 
 /* --- Types ----------------------------------------------------- */
@@ -86,30 +116,70 @@ async function getData() {
   const [
     allEntitiesResult,
     topEntitiesResult,
+    statsResult,
     donationAggResult,
     partyAggResult,
   ] = await Promise.all([
-    // All revolving door entities (small view, ~4.7K rows)
-    safe(supabase
-      .from('mv_revolving_door')
-      .select('gs_id, canonical_name, entity_type, abn, state, is_community_controlled, in_procurement, in_political_donations, in_foundation, system_count, power_score, revolving_door_score, procurement_dollars, donation_dollars, donation_count, contract_count, distinct_govt_buyers, distinct_parties_funded, total_dollar_flow')
-      .order('revolving_door_score', { ascending: false })),
+    // THE PAGE NEEDED A JOIN, NOT A REWRITE.
+    //
+    // Every figure here used to be selected from `mv_revolving_door`: in_procurement,
+    // in_political_donations, in_foundation, system_count, power_score, procurement_dollars,
+    // donation_dollars, distinct_govt_buyers, distinct_parties_funded, total_dollar_flow.
+    // That view has NONE of them — they all live on `mv_entity_power_index`. So every select
+    // errored, `safe()` returned null, and 40 sites below coerced with `|| 0`: the page rendered
+    // a complete, confident, fabricated zero about political influence (#345 stopped it doing
+    // that, honestly, while this fixed the cause).
+    //
+    // The two views are complementary, not alternatives. mv_revolving_door is the SUBJECT — the
+    // 3,586 entities with two or more influence vectors, and the only home of
+    // revolving_door_score. mv_entity_power_index holds the measurements for all 185,393
+    // entities. Basing on the former and joining the latter keeps the page about what it says it
+    // is about, at the size it was always meant to be.
+    safe(supabase.rpc('exec_sql', { query: influenceRowsSql() })),
+    safe(supabase.rpc('exec_sql', { query: influenceRowsSql(20) })),
 
-    // Top 20 by revolving door score
-    safe(supabase
-      .from('mv_revolving_door')
-      .select('gs_id, canonical_name, entity_type, abn, state, is_community_controlled, in_procurement, in_political_donations, in_foundation, system_count, power_score, revolving_door_score, procurement_dollars, donation_dollars, donation_count, contract_count, distinct_govt_buyers, distinct_parties_funded, total_dollar_flow')
-      .order('revolving_door_score', { ascending: false })
-      .limit(20)),
-
-    // Donations aggregated by ABN (for entities that also hold contracts)
+    // Headline figures, counted over ALL 3,586 rows rather than the 1,000 exec_sql returns.
     safe(supabase.rpc('exec_sql', {
-      query: `SELECT donor_abn, SUM(amount) as total_donated, COUNT(DISTINCT donation_to) as parties_donated_to, array_agg(DISTINCT donation_to) as parties FROM political_donations WHERE donor_abn IS NOT NULL GROUP BY donor_abn HAVING SUM(amount) > 10000 ORDER BY total_donated DESC LIMIT 500`,
+      query: `SELECT count(*)::int AS total,
+                count(*) FILTER (WHERE COALESCE(p.in_procurement,0) + COALESCE(p.in_political_donations,0)
+                                     + COALESCE(p.in_foundation,0) >= 3)::int AS three_vector,
+                count(*) FILTER (WHERE COALESCE(p.in_procurement,0) = 1
+                                   AND COALESCE(p.in_political_donations,0) = 1
+                                   AND COALESCE(p.procurement_dollars,0) > 0
+                                   AND COALESCE(p.donation_dollars,0) > 0)::int AS both,
+                COALESCE(avg(rd.revolving_door_score), 0)::float AS avg_score,
+                COALESCE(sum(p.procurement_dollars), 0)::bigint AS contract_dollars,
+                COALESCE(sum(p.donation_dollars), 0)::bigint AS donation_dollars
+           FROM mv_revolving_door rd
+           LEFT JOIN mv_entity_power_index p ON p.gs_id = rd.gs_id`,
     })),
 
-    // Which parties benefit most from revolving door donors
+    // Donations aggregated by ABN. `donationFilterSql` is mandatory: 'other receipt' is 72% of
+    // rows and 85% of the dollars in political_donations and is party fundraising income, not
+    // donations. Without it this HAVING > 10000 admits entities that never donated at all.
     safe(supabase.rpc('exec_sql', {
-      query: `SELECT pd.donation_to as party, ROUND(SUM(pd.amount)) as total_received, COUNT(DISTINCT pd.donor_abn) as donor_count FROM political_donations pd INNER JOIN mv_revolving_door rd ON pd.donor_abn = rd.abn WHERE pd.donor_abn IS NOT NULL AND pd.donation_to IS NOT NULL AND rd.in_procurement = 1 AND rd.in_political_donations = 1 GROUP BY pd.donation_to ORDER BY total_received DESC LIMIT 20`,
+      query: `SELECT donor_abn, SUM(amount) as total_donated,
+                COUNT(DISTINCT donation_to) as parties_donated_to,
+                array_agg(DISTINCT donation_to) as parties
+         FROM political_donations
+        WHERE donor_abn IS NOT NULL AND ${donationFilterSql()}
+        GROUP BY donor_abn HAVING SUM(amount) > 10000
+        ORDER BY total_donated DESC LIMIT 500`,
+    })),
+
+    // Which parties benefit most from revolving-door donors. Was joining mv_revolving_door on
+    // rd.in_procurement = 1 and rd.in_political_donations = 1 — neither column exists there, so
+    // this returned nothing and the party table was empty. The flags live on the power index.
+    safe(supabase.rpc('exec_sql', {
+      query: `SELECT pd.donation_to as party, ROUND(SUM(pd.amount)) as total_received,
+                COUNT(DISTINCT pd.donor_abn) as donor_count
+         FROM political_donations pd
+         JOIN mv_revolving_door rd ON pd.donor_abn = rd.abn
+         JOIN mv_entity_power_index p ON p.gs_id = rd.gs_id
+        WHERE pd.donor_abn IS NOT NULL AND pd.donation_to IS NOT NULL
+          AND ${donationFilterSql('pd')}
+          AND p.in_procurement = 1 AND p.in_political_donations = 1
+        GROUP BY pd.donation_to ORDER BY total_received DESC LIMIT 20`,
     })),
   ]);
 
@@ -141,20 +211,42 @@ async function getData() {
   }
 
   // Stats
-  const totalEntities = allEntities.length;
-  const threeVectorPlus = allEntities.filter(e =>
+  // COUNTED IN SQL, NOT FROM THE ARRAY.
+  //
+  // `exec_sql` returns at most 1,000 rows. mv_revolving_door has 3,586. So `allEntities.length`
+  // was 1,000 — and the page opened with "1,000 entities operate across 2 or more influence
+  // vectors", reporting a row cap as a measurement of Australian political influence. A suspiciously
+  // round number is the tell; there is no reason reality should land on exactly 1,000.
+  //
+  // Every headline stat derived from the array had the same defect: the three-vector count, the
+  // average score and the donate-and-contract count were all computed over a truncated 28% of the
+  // subject. The fetched rows still drive the TABLES, which only ever showed a top slice anyway.
+  const stats = (statsResult || [])[0] as
+    | { total: number; three_vector: number; avg_score: number; both: number;
+        contract_dollars: number; donation_dollars: number }
+    | undefined;
+  const totalEntities = Number(stats?.total ?? allEntities.length);
+  const threeVectorPlusFallback = allEntities.filter(e =>
     e.in_procurement + e.in_political_donations + e.in_foundation >= 3
   ).length;
-  const totalContractValue = allEntities.reduce((s, e) => s + e.procurement_dollars, 0);
-  const totalDonationValue = allEntities.reduce((s, e) => s + e.donation_dollars, 0);
-  const avgScore = totalEntities > 0
-    ? allEntities.reduce((s, e) => s + e.revolving_door_score, 0) / totalEntities
-    : 0;
+  const threeVectorPlus = Number(stats?.three_vector ?? threeVectorPlusFallback);
+  const totalContractValue = Number(
+    stats?.contract_dollars ?? allEntities.reduce((s, e) => s + e.procurement_dollars, 0));
+  const totalDonationValue = Number(
+    stats?.donation_dollars ?? allEntities.reduce((s, e) => s + e.donation_dollars, 0));
+  const avgScore = Number(
+    stats?.avg_score
+    ?? (allEntities.length > 0
+      ? allEntities.reduce((s, e) => s + e.revolving_door_score, 0) / allEntities.length
+      : 0));
 
   // Entities that both donate AND hold contracts (the influence cycle)
-  const bothDonateAndContract = allEntities.filter(e =>
+  const bothDonateAndContractFallback = allEntities.filter(e =>
     e.in_procurement === 1 && e.in_political_donations === 1 && e.procurement_dollars > 0 && e.donation_dollars > 0
   ).sort((a, b) => b.procurement_dollars - a.procurement_dollars);
+  // The array is the table (a top slice was always the intent). The COUNT is the claim.
+  const bothDonateAndContract = bothDonateAndContractFallback;
+  const bothDonateAndContractCount = Number(stats?.both ?? bothDonateAndContractFallback.length);
 
   // By entity type breakdown
   const typeMap = new Map<string, { count: number; totalScore: number; totalContracts: number; totalDonations: number }>();
