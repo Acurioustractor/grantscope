@@ -115,16 +115,25 @@ export async function GET() {
       }),
 
       // 5. Pay-to-play: entities that both donate and hold contracts
-      // Use mv_revolving_door which already has this cross-reference
-      supabase
-        .from('mv_revolving_door')
-        .select('gs_id, canonical_name, entity_type, abn, state, donation_dollars, procurement_dollars, distinct_parties_funded, contract_count, revolving_door_score')
-        .eq('in_political_donations', true)
-        .eq('in_procurement', true)
-        .gt('donation_dollars', 0)
-        .gt('procurement_dollars', 0)
-        .order('procurement_dollars', { ascending: false })
-        .limit(100),
+      // WAS selecting donation_dollars, procurement_dollars, distinct_parties_funded,
+      // in_political_donations and in_procurement from mv_revolving_door. That view has none of
+      // them — they are all on mv_entity_power_index. The select errored, so this endpoint has
+      // been returning an empty donor-contractor list to every caller, including the Giving Data
+      // Commons consumers documented in docs/integrations/.
+      //
+      // The two views are complementary: the power index holds the measurements, mv_revolving_door
+      // holds revolving_door_score. Joined rather than swapped, so the score survives.
+      supabase.rpc('exec_sql', {
+        query: `SELECT p.gs_id, p.canonical_name, p.entity_type, p.abn, p.state,
+                  p.donation_dollars, p.procurement_dollars, p.distinct_parties_funded,
+                  p.contract_count, COALESCE(rd.revolving_door_score, 0) AS revolving_door_score
+             FROM mv_entity_power_index p
+             LEFT JOIN mv_revolving_door rd ON rd.gs_id = p.gs_id
+            WHERE p.in_political_donations = 1 AND p.in_procurement = 1
+              AND p.donation_dollars > 0 AND p.procurement_dollars > 0
+            ORDER BY p.procurement_dollars DESC
+            LIMIT 100`,
+      }),
     ]);
 
     // Parse results
