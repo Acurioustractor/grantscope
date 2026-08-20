@@ -1,7 +1,11 @@
 -- 152 curated grantee rows never had a per-grant source. Mark them amount_unknown. #291, #285.
 --
--- NOT YET APPLIED. Exceeds #291's stated scope on purpose -- read "SCOPE" below and narrow it to
--- the 7 VFFF rows if you would rather.
+-- APPLIED 2026-08-21 to tednluwflfhxyucgwigh, on Ben's explicit authorization, at the full
+-- 152-row scope (see SCOPE below).
+--   INSERT 152 (backup) / UPDATE 152. Guards passed: exactly 7 VFFF rows, 0 rows carrying
+--   evidence other than a Focus tag.
+--   Verified after: all 7 VFFF rows marked, and the backfill queue for this method is now
+--   445 rows -- every one from a surface that does publish amounts.
 --
 -- Apply:
 --   source .env && PGPASSWORD="$DATABASE_PASSWORD" psql -h aws-0-ap-southeast-2.pooler.supabase.com \
