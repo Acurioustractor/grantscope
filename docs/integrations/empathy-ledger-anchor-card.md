@@ -3,6 +3,23 @@
 How to anchor Empathy Ledger stories to a CivicGraph entity so every story
 is connected to the system it sits inside.
 
+> **Domain corrected 2026-08-20.** Every URL in this document said `civicgraph.com.au`, which is
+> NXDOMAIN and has never resolved. `robots.ts` and `sitemap.ts` already carried a comment saying so;
+> this document did not, so anyone implementing from it would have built against a host that does
+> not exist.
+>
+> The live host is **`civicgraph.app`**, confirmed against the Vercel project's registered domains
+> rather than inferred from DNS — `grantscope` (`prj_BFQcUhajUO5R1cocWJQhjgIzZn5S`) serves
+> `civicgraph.app`, `grantscope.vercel.app` and the `-git-main-` alias, and `civicgraph.com.au` is
+> not attached to the project at all.
+
+> **On `donation_total` from `/api/data/entity/{abn}`.** Until 2026-08-20 this field summed every
+> row of `political_donations`, including `other receipt` — party fundraising income, transfers and
+> levies, which is 72% of rows and 85% of the dollars. It reported Westpac as donating $3,478.6m
+> against a real $82.0m, and some entities as donating billions when they donated nothing; 1,880
+> were overstated by more than 10x. Fixed in #358. **If you cached or stored any value from this
+> field before that date, re-fetch it.**
+
 ## Why this exists
 
 Every EL story has a human at the centre, but the human is usually acting
@@ -22,7 +39,7 @@ Drop this into any EL story page at the bottom:
 
 ```html
 <iframe
-  src="https://civicgraph.com.au/embed/entity/12345678901"
+  src="https://civicgraph.app/embed/entity/12345678901"
   width="100%"
   height="280"
   style="border: 0; max-width: 100%;"
@@ -41,7 +58,7 @@ Fetch the data, render in EL's design system:
 
 ```ts
 const r = await fetch(
-  `https://civicgraph.com.au/api/data/entity/${abn}`,
+  `https://civicgraph.app/api/data/entity/${abn}`,
   { next: { revalidate: 300 } } // if using Next.js; otherwise cache for 5min
 );
 if (r.ok) {
@@ -74,8 +91,8 @@ Response shape:
     "alma_intervention_count": 1,
     "year_range": { "first": 2022, "last": 2025 }
   },
-  "url": "https://civicgraph.com.au/entities/GS-ORG-...",
-  "embed_url": "https://civicgraph.com.au/embed/entity/12345678901"
+  "url": "https://civicgraph.app/entities/GS-ORG-...",
+  "embed_url": "https://civicgraph.app/embed/entity/12345678901"
 }
 ```
 
@@ -127,8 +144,8 @@ the blocker for the reverse link — the CivicGraph side is ready to consume.
 Once deployed, verify with any real org ABN. Example test ABN (Oonchiumpa):
 
 ```
-https://civicgraph.com.au/api/data/entity/53658668627
-https://civicgraph.com.au/embed/entity/53658668627
+https://civicgraph.app/api/data/entity/53658668627
+https://civicgraph.app/embed/entity/53658668627
 ```
 
 If both return sensible data, integration is live.
