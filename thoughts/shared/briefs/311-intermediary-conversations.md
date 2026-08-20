@@ -6,8 +6,9 @@ today's figures are enough. Every figure below was re-verified against the live 
 
 > **Updated 2026-08-21.** The capture figures changed materially after #301's `postcode_geo`
 > repair let the SA3 exclusion be narrowed: coverage rose 28% and the headline dollar share moved
-> a long way. **Do not use any printout of this brief dated 2026-08-20.** One table has been
-> WITHDRAWN rather than restated — see "The table you cannot use yet".
+> a long way. **Do not use any printout of this brief dated 2026-08-20.** The remoteness shift
+> table was withdrawn and has since been re-derived on a sound base — and it reverses the
+> "into the cities" correction this brief made that morning.
 
 ## The four figures you can say
 
@@ -28,30 +29,40 @@ the cities". **Two separate problems: the wording, and now the numbers themselve
 Cities at all — it lands in postcodes we cannot map. Say "into the cities" and you overstate the
 city-ward flow by more than half.
 
-## The table you cannot use yet
+## The remoteness shift, re-derived 2026-08-21
 
-**WITHDRAWN 2026-08-21. Do not quote the remoteness shift percentages.**
+Withdrawn earlier today, now restored on a base that holds up. Full working:
+`thoughts/shared/analysis/2026-08-21-remoteness-shift-rederived.md`.
 
-The 26.6 / 35.6 / 22.5 figures were measured on the old $23.06bn resolved base. That base is now
-larger, and re-deriving the table produced **two different answers that disagree with each other
-and with the original**, because resolving a recipient's remoteness is genuinely hard:
+Restricted to awards where **both** the delivery postcode and the recipient postcode map to
+exactly one remoteness class, so no "unmapped" bucket absorbs the difference asymmetrically.
+**Base: 139,472 awards, $34.69bn.**
 
-- resolving via the recipient's COUNCIL means picking one remoteness class for councils that span
-  several — arbitrary, and it flipped Outer Regional from -26.6% to **+2.1%**, a sign change;
-- resolving via the recipient's POSTCODE drops every postcode spanning two classes, which pushed
-  **$16.2bn into "postcode unmapped"** on the address side against $3.6bn on the delivery side.
+| remoteness | by delivery | by registered address | shift |
+|---|---:|---:|---:|
+| Major Cities | $22,659m | $25,013m | **+10.4%** |
+| Inner Regional | $5,525m | $4,995m | -9.6% |
+| Outer Regional | $4,317m | $3,230m | **-25.2%** |
+| Remote | $1,010m | $636m | **-37.1%** |
+| Very Remote | $1,180m | $819m | **-30.6%** |
 
-Neither is trustworthy. A third number invented in an afternoon, quoted to a council, and later
-corrected is worse than not having the number.
+**$3,672m crosses a remoteness boundary and $2,669m of it — 72.7% — lands in Major Cities.**
 
-**What to say instead, which is still true and still lands:**
+**This reverses what this brief said this morning.** It flagged "into the cities" as wrong,
+because only $383m of $878m landed in Major Cities. That was an artefact of the unmapped bucket.
+Require both ends to map and the phrase is right: nearly three quarters of what moves goes to the
+cities.
 
-> Money is recorded where the organisation is registered, not where the work happens. In remote
-> Australia those are routinely different places, and the gap runs against the remote end. We
-> measure it per council rather than nationally, because the national average hides it.
+**The sentence for the room:**
 
-If they press for the national number, say it is being re-derived and you will send it. Then
-re-derive it properly.
+> Attribute the money by registered address instead of by where the work happens, and Remote
+> Australia's recorded total falls 37 per cent, Very Remote 31, Outer Regional 25. Nearly three
+> quarters of what moves lands in the major cities. That is measured on 35 billion dollars of
+> federal grants where we can place both ends.
+
+**Do not say "the more remote the worse."** Remote (-37.1%) falls further than Very Remote
+(-30.6%). The data says the non-city classes all lose and the cities gain, not that it worsens
+monotonically.
 
 ## Say this before they ask
 
