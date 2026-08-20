@@ -1,6 +1,9 @@
 -- Repair 4 rows my own merge broke, and record why it broke them. #324 follow-up.
 --
--- NOT YET APPLIED.
+-- APPLIED 2026-08-21 to tednluwflfhxyucgwigh, on Ben's explicit authorization.
+--   UPDATE 1 (organizations) / 2 (community_directory_orgs) / 1 (acnc_programs).
+--   Verified after: organizations resolving 104,136 -> 104,137, and ZERO rows in any of the three
+--   still point at a merged-away entity.
 --
 -- Apply:
 --   source .env && PGPASSWORD="$DATABASE_PASSWORD" psql -h aws-0-ap-southeast-2.pooler.supabase.com \
