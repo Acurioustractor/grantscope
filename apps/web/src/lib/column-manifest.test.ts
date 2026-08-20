@@ -43,17 +43,7 @@ const ALLOWED = new Set<string>([
   // REAL BUGS, found by this guard on the day it was written. Left failing rather than fixed in
   // the same PR so the guard could land immediately and stop new instances; each is its own fix.
   //
-  // /api/data/graph — a PUBLIC endpoint. Six columns that do not exist on mv_disability_landscape.
-  // The view has disability_entities (not ndis_entities), state_avg_utilisation (not
-  // ndis_avg_utilisation), avg_irsd_decile (not seifa_decile), cross_system_procurement and
-  // cross_system_justice (not *_entities), and no total_entities at all.
-  'mv_disability_landscape.ndis_entities',
-  'mv_disability_landscape.ndis_avg_utilisation',
-  'mv_disability_landscape.seifa_decile',
-  'mv_disability_landscape.procurement_entities',
-  'mv_disability_landscape.justice_entities',
-  'mv_disability_landscape.total_entities',
-  //
+
   // /reports/community-efficiency — mv_entity_power_index has total_dollar_flow, not
   // total_dollars, and id, not entity_id. That page has a THIRD defect this guard cannot see:
   // both its exec_sql calls pass `{ sql: ... }` where the parameter is `query`, so
