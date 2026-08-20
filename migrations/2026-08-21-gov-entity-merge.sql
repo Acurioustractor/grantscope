@@ -1,6 +1,15 @@
 -- Merge duplicate government entities. #324 step 2.
 --
--- NOT YET APPLIED. Ben's call.
+-- APPLIED 2026-08-21 to tednluwflfhxyucgwigh, on Ben's explicit authorization.
+--   Identical to the dry run: 131,699 rows re-pointed across 11 FK columns, DELETE 151,
+--   no constraint violations. Verified after: 0 duplicate government names remain, the
+--   Department of Defence is a single entity, self-loops 1,088 -> 1,090 as predicted.
+--
+--   FOLLOW-UP FOUND IMMEDIATELY AFTER, see migrations/2026-08-21-gov-winner-entity-type.sql:
+--   112 of the 119 class A WINNERS are typed 'company' because they arrived through ABN
+--   registers. The resolver fix looks up existing government identities by name within
+--   `government_body OR AU-GOV-*`, so those 112 fall outside it and a graph build would
+--   RE-CREATE class A in full. DO NOT RUN A GRAPH BUILD until that migration is applied.
 --
 -- DRY-RUN 2026-08-21 against production, identical file with COMMIT swapped for ROLLBACK, so every
 -- statement ran and nothing was kept:
