@@ -384,15 +384,29 @@ export async function GET(request: Request) {
         ndis_participants: number; ndis_entities: number;
         ndis_avg_utilisation: number | null;
         seifa_decile: number | null; desert_score: number | null;
-        procurement_entities: number; justice_entities: number;
         total_entities: number;
       }>(supabase,
+        // SIX of these columns did not exist on mv_disability_landscape, so this endpoint —
+        // /api/data/graph, a PUBLIC API — returned nothing for the LGA layer. Real names:
+        //   ndis_entities        -> disability_entities
+        //   ndis_avg_utilisation -> state_avg_utilisation
+        //   seifa_decile         -> avg_irsd_decile
+        //   procurement_entities -> cross_system_procurement   (was selected and never read)
+        //   justice_entities     -> cross_system_justice       (was selected and never read)
+        //   total_entities       -> no equivalent; see the sum below
+        // Aliased back to the names the response mapping already uses, so the API contract is
+        // unchanged — it just starts returning data.
         `SELECT dl.lga_name, dl.state, dl.remoteness,
-                dl.ndis_participants, dl.ndis_entities,
-                dl.ndis_avg_utilisation,
-                dl.seifa_decile, dl.desert_score,
-                dl.procurement_entities, dl.justice_entities,
-                dl.total_entities
+                dl.ndis_participants,
+                dl.disability_entities   AS ndis_entities,
+                dl.state_avg_utilisation AS ndis_avg_utilisation,
+                dl.avg_irsd_decile       AS seifa_decile,
+                dl.desert_score,
+                -- The response field is cross_system_entities and the view has no distinct count,
+                -- only the two lanes. This sum is an UPPER BOUND: an entity present in both
+                -- procurement and justice is counted twice. Stated rather than smoothed over.
+                (COALESCE(dl.cross_system_procurement, 0)
+                 + COALESCE(dl.cross_system_justice, 0)) AS total_entities
          FROM mv_disability_landscape dl
          WHERE dl.ndis_participants > 0 ${stateFilter}
          ORDER BY dl.ndis_participants DESC
