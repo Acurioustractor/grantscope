@@ -1,6 +1,10 @@
 -- Self-loops in gs_relationships: delete the false ones, constrain what has been judged.
 --
--- NOT YET APPLIED. Deleting production rows is Ben's call, not an agent's.
+-- APPLIED 2026-08-20 to tednluwflfhxyucgwigh, on Ben's explicit authorization.
+--   INSERT 6242 (backup) / DELETE 6242 / constraint added.
+--   Verified after: the only self-loops left are the 614 austender, 132 aec_donations and 342
+--   lobbying rows this migration deliberately does not touch. The constraint was tested in both
+--   directions — it rejects a grant_opportunities self-loop and still admits an austender one.
 --
 -- Apply:
 --   source .env && PGPASSWORD="$DATABASE_PASSWORD" psql -h aws-0-ap-southeast-2.pooler.supabase.com \

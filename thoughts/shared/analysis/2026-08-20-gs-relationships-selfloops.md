@@ -102,7 +102,11 @@ backlog at the same moment, which is exactly why #290 could not report a per-sur
 
 ## What was left undone
 
-`migrations/2026-08-20-gs-relationships-selfloops.sql` is written and **not applied**. It backs up
-inside the transaction, aborts on an unexpected count, deletes class A only, and extends the #290
-constraint to the six judged datasets as `NOT VALID`. Applying it deletes production rows, which is
-Ben's call.
+**Applied 2026-08-20**, on Ben's explicit authorization: 6,242 rows backed up to
+`gs_relationships_selfloop_backup_20260820` and deleted, constraint
+`gs_relationships_no_judged_selfloops` added `NOT VALID` over the six judged datasets. Verified
+after: the only self-loops remaining are the 614 `austender`, 132 `aec_donations` and 342 lobbying
+rows this migration deliberately does not touch, and the constraint was tested in both directions.
+
+Still open: the dependent matviews have NOT been refreshed, so no surface shows the change yet.
+Classes B and C remain, and belong to #324.
