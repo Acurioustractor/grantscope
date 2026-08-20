@@ -1,5 +1,5 @@
 ---
-date: 2026-08-21T06:20:00Z
+date: 2026-08-21T09:00:00Z
 session_name: place-capital
 branch: main
 status: active
@@ -9,14 +9,15 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-21T06:20:00Z
+**Updated:** 2026-08-21T09:00:00Z
 **Goal:** Make the published figures survive their own filters, and make the surfaces that
 render them reviewable. Done when a number on a public page can be traced to a measured delta.
-**Branch:** `main`, clean. **Board EMPTY, 0 PRs open.** Main at `f3f9f2f2`.
-**7 PRs merged, 4 migrations applied in the third tranche** (#371 #372 #373 #374 #375 #376 #377).
-Applied: `gs-relationships-selfloops`, `mv-staleness-visible`, `grant-place-capture-narrow-sa3`,
-`postcode-4072-lockyer-valley`. (`grant-place-capture` and `sa3-locality-lga-repair` were already
-applied before this session — the latter is why #301 turned out to be done.)
+**Branch:** `main`, clean. Main at `9d285f8e`. **#391 is the only PR open** — public surface,
+waiting on Ben's eyeball.
+**14 PRs merged, 7 migrations applied today** (#371–#389). Migrations applied:
+`gs-relationships-selfloops`, `mv-staleness-visible`, `grant-place-capture-narrow-sa3`,
+`postcode-4072-lockyer-valley`, `gov-entity-merge`, `gov-winner-entity-type`,
+`austender-supplier-abn-selfloops`, `curated-grantee-amount-unknown`, `soft-reference-repoint`.
 **Test:** `./scripts/precheck.sh`
 **Verify a change:** `npm run dev` (:3013) for a query/filter/render — 8s, same SQL, same answer.
 `npm run preview` (:3015, production build) ONLY for build-time behaviour or when you want the
@@ -44,6 +45,72 @@ process. Find a council or regional development body.
   contradicting each other, the newer aimed at another team.
 - **Tell whoever owns Empathy Ledger** that `/api/data/graph` donation figures dropped ~87% today
   (a correction, not a regression) and that `/api/data/entity/{abn}` was wrong until #358.
+
+### 2026-08-21 — the place surface got built, and four self-caught mistakes
+
+**The council page is now a product.** `/place/council/[slug]` (133 remote councils, the ones
+holding at least one remote or very-remote community-controlled org) went from "what we cannot
+tell you" to a surface a community organisation can read about itself. In order:
+
+1. **Who is here** (#389) — every placed organisation NAMED and linked, with kind, community-
+   controlled flag, ACNC status and recorded money. **Ben's catch: the page counted 15 and named
+   none, while itemising 127 it could NOT place.** The uncertainty was fully rendered and the
+   certainty was a number.
+2. **What this place keeps** (#388) — dollar share, award share, the divergence sentence, and a
+   warning when one award carries 30%+. **The three figures travel together or not at all.**
+3. **Programs running here, won elsewhere** (#388) — the actionable list. Ordered by money, READ by
+   repetition: Ashburton's top two are Engie and Hamersley Iron; the biddable row is third and
+   small (`Communirty Child Care Fund`, 3 awards, source typo preserved).
+4. **Who already buys from organisations here** (#388) — #308's contract ladder. Ashburton: 30 orgs,
+   96 contracts, Defence buying from 17 of them, and **every holder has exactly one buyer**.
+5. **Philanthropy we can see** (#389) — 519 grants across 121 remote councils. Ian Potter $300k to
+   Wilya Anyul Janta in Barkly.
+
+**`/admin/philanthropy` (#389) — the lane reviewed as a page.** Lead finding: **we hold what 98% of
+foundations SAY and what 0.2% DO.** 11,177 foundations, 10,945 with a stated theme, **20 with a
+single observed grantee.** Stated geography is state/national; place grain exists for 36. Any
+funder-matching feature built on stated intent is built on self-description at 500:1.
+
+### Four mistakes I made and caught, worth more than the features
+
+- **A catalogue-driven FK sweep does not see SOFT REFERENCES.** The #324 merge generated its
+  re-point list from `pg_constraint` *specifically* so nothing could be missed — and missed
+  `organizations.gs_entity_id` (104,139 rows, the JusticeHub bridge), `justice_funding` and
+  `state_tenders`, because none is a declared FK. 4 rows orphaned, repaired in #387. **Small only
+  by luck** — `justice_funding` is a soft reference over 156,636 rows that happened to hold none of
+  the 151 deleted ids. **Sweep `pg_constraint` AND `information_schema` for uuid columns named
+  `*entity_id` with no FK.**
+- **A denylist fails open.** The first #390 fix excluded three receiving types; `university` was not
+  one, so Sydney ($340.7M) and Monash stayed top of the giving ranking while the Red Cross was
+  correctly removed. `foundations.type` has 27 values. **PR #391 is an allowlist** of the nine
+  grantmaking types — a new type counts as nothing until a human decides.
+- **A count of the array is not a count of the place.** "Who is here" nearly published *"the 60
+  organisations our records place in Ashburton"* when Ashburton holds 151.
+- **Merging on a partial green.** #384 merged with one check passed. Docs-only so harmless, but it
+  is the stale-green trap.
+
+### Figures that MOVED today — anything quoting the old ones is wrong
+
+| | was | now |
+|---|---|---|
+| capture coverage | 85,898 awards, $33.75bn | **110,267, $42.37bn** |
+| awards / dollars kept | 85.1% / 59.6% | **90.4% / 84.3%** (resolved base) |
+| remoteness shift | -26.6 / -35.6 / -22.5 | **-25.2 / -37.1 / -30.6**, 72.7% to Major Cities |
+| Defence inbound | $927.16M | **$165.71M** |
+
+`total_giving_annual` is **revenue for universities, service providers and school systems**, and
+9,217 of 10,190 remaining values are one of three placeholders. **Never rank on it raw** — use
+`lib/foundation-giving.ts`.
+
+### Open / next
+
+- **#391** — public surface, needs Ben's eyeball.
+- **#390** — closed by #391.
+- **`apps/web/package.json` pins dev to port 3003**, which my notes say belongs to The Harvest.
+  NOT changed — the note may be stale and changing it would move Ben's muscle memory. Verify which
+  is right before touching it.
+- **#311** — still the only test of whether any of this sells. Brief current as of #384/#385.
+- **#301** — 10 unadjudicated postcodes, needs an external source.
 
 ### Third tranche of 2026-08-20 — four issues whose premise was wrong
 
