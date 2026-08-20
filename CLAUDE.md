@@ -503,6 +503,24 @@ worth a build on its own.
 `npm run preview` shares `.next` with the dev server, so stop dev first — `scripts/precheck.sh`
 says the same thing for the same reason.
 
+### Verifying PRODUCTION: Playwright, not curl, not the extension
+
+`curl` against civicgraph.app returns **429** — Vercel's Security Checkpoint is a JS challenge no
+HTTP client can solve, so every curl check yields a plausible-looking failure that means nothing.
+The Chrome extension works but disconnects; on 2026-08-20 it was down for hours while five merged
+PRs sat unverified.
+
+**`mcp__playwright__browser_navigate` + `browser_evaluate` is the reliable path.** It drives a
+real browser, passes the challenge, and needs no extension. It reads JSON API responses as easily
+as pages.
+
+Two traps when checking content this way, both hit on 2026-08-20:
+- **Match case-insensitively.** CSS `text-transform` means `innerText` gives "NOT PUBLISHED" where
+  the source says "Not published". Two changes were reported as "not deployed" when they were live.
+- **Check the code path, not just the route.** `/api/data/graph` returned zero LGA nodes and looked
+  broken; that layer only renders under `?mode=ndis`. A wrong probe reads exactly like a real
+  regression.
+
 ### What local genuinely cannot tell you
 
 Vercel build-machine limits, deployment protection behaviour, and the values of production env
