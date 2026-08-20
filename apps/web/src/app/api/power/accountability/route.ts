@@ -52,12 +52,27 @@ export async function GET() {
       // Revolving door: entities in 2+ influence systems
       safe(
         supabase
-          .from('mv_revolving_door')
-          .select(
-            'gs_id, canonical_name, entity_type, state, is_community_controlled, system_count, procurement_dollars, donation_dollars, contract_count, distinct_govt_buyers, distinct_parties_funded, total_dollar_flow, revolving_door_score'
-          )
-          .order('revolving_door_score', { ascending: false })
-          .limit(20)
+          // system_count, procurement_dollars, donation_dollars, distinct_govt_buyers,
+          // distinct_parties_funded and total_dollar_flow are NOT on mv_revolving_door — they are
+          // on mv_entity_power_index. This select errored and the endpoint returned nothing.
+          // Base on mv_revolving_door (the subject: entities with 2+ influence vectors, and the
+          // only home of revolving_door_score) and join the power index for the measurements.
+          .rpc('exec_sql', {
+            query: `SELECT rd.gs_id, rd.canonical_name, rd.entity_type, rd.state,
+                      rd.is_community_controlled,
+                      COALESCE(p.system_count, 0)            AS system_count,
+                      COALESCE(p.procurement_dollars, 0)     AS procurement_dollars,
+                      COALESCE(p.donation_dollars, 0)        AS donation_dollars,
+                      COALESCE(p.contract_count, 0)          AS contract_count,
+                      COALESCE(p.distinct_govt_buyers, 0)    AS distinct_govt_buyers,
+                      COALESCE(p.distinct_parties_funded, 0) AS distinct_parties_funded,
+                      COALESCE(p.total_dollar_flow, 0)       AS total_dollar_flow,
+                      rd.revolving_door_score
+                 FROM mv_revolving_door rd
+                 LEFT JOIN mv_entity_power_index p ON p.gs_id = rd.gs_id
+                ORDER BY rd.revolving_door_score DESC NULLS LAST
+                LIMIT 20`,
+          })
       ),
 
       // Summary stats
