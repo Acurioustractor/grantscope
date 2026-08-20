@@ -1,6 +1,10 @@
 -- postcode 4072 is St Lucia, Brisbane. It is stamped 'Lockyer Valley'. #301 residue.
 --
--- NOT YET APPLIED. Corrects production placement rows; Ben's call.
+-- APPLIED 2026-08-20 to tednluwflfhxyucgwigh, on Ben's explicit authorization.
+--   UPDATE 1 (postcode_geo) / UPDATE 29 (gs_entities), backed up to _backup_pc4072_20260820.
+--   Verified after: 4072 -> Brisbane (lga_code 31000), all 29 entities re-stamped
+--   lga_source 'sa3_residue_entity_evidence', and 440 entities remain in Lockyer Valley --
+--   the ones that genuinely belong there, so the correction did not over-reach.
 --
 -- Apply:
 --   source .env && PGPASSWORD="$DATABASE_PASSWORD" psql -h aws-0-ap-southeast-2.pooler.supabase.com \
