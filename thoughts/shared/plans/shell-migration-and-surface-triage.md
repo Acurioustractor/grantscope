@@ -102,7 +102,7 @@ what the database holds that has **no searchable surface anywhere**:
 
 | dataset | rows | why it matters |
 |---|---|---|
-| `grant_opportunities` | 26,137 (**4,452 open**, 354 closing within 60 days) | the only forward-looking money in the building. Everything else is history. |
+| `grant_opportunities` | 26,137 rows, but only **400 genuinely open** — see the correction below | the only forward-looking money in the building. Much thinner than it looks. |
 | `state_tenders` | 199,719 | read by report pages, browsable nowhere |
 | `acnc_ais` | 360,844 | charity financials by year — the charities browse is the register, not the money |
 | `mv_entity_power_index` | 185,393 | `/power` exists as one page, not as a browsable surface |
@@ -122,6 +122,39 @@ for them**, and nothing on the page says so.
 `grant_opportunities` is the sharpest *product* gap: 4,452 currently-open opportunities, and no
 way for anyone to browse them. Note the data needs a date filter before it ships — the table's
 latest deadline is 2051-03-31, so an unfiltered count would claim 26,137 open opportunities.
+
+### Correction, 2026-08-20: the opportunities number was wrong by 11x
+
+This document originally said 4,452 open opportunities and called it the sharpest gap. Measured
+properly before building anything, it is **400**.
+
+Three problems, in order of size:
+
+- **68% of the table has no date at all.** 17,761 of 26,137 rows have neither `deadline` nor
+  `closes_at`. You cannot say whether they are open, so they cannot honestly appear in a list of
+  open opportunities. `brisbane-grants` alone is 11,793 rows with **zero** dated.
+- **`arc-grants` is 4,045 of the 4,445 "open" rows, and none of them are opportunities.** They are
+  awarded ARC research projects: the `name` is a project abstract, the `provider` is the
+  university that received it, and all 5,598 carry an exact amount with no range. 42 distinct
+  providers — the number of Australian universities, not the number of funders running programs.
+  A row reads: *"Unravelling the mechanisms of sodium-selectivity in biological ion channels"*,
+  RMIT University, $394,101. That is a grant that has already been given.
+- **What is left is 400 rows across 60 sources**, 194 closing within 60 days. The largest honest
+  sources are `foundation_program` (89) and `grantconnect` (88); the rest are state programs in
+  single digits.
+
+So the feature is real but small, and two decisions come before it:
+
+1. **The ARC rows are in the wrong table.** Awarded grants belong with `grantconnect_awards`, not
+   in an opportunities table. Leaving them makes every count of "open opportunities" wrong by an
+   order of magnitude, whoever writes it.
+2. **Is a 400-row browse worth a surface?** It may well be — 194 closing inside 60 days is a real
+   thing a community organisation would want. But it is a different pitch from 4,452, and the
+   page would have to say plainly that 68% of what we hold is undateable.
+
+The general lesson, and the reason this correction is in the document rather than a commit
+message: **the number that makes a feature look worth building is the one most worth measuring.**
+Nothing here was hard to check. It just had not been checked before it was written down.
 
 ## 5. The live map
 
