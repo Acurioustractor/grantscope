@@ -121,6 +121,7 @@ async function getData() {
     topDonorsResult,
     yearResult,
     payToPlayResult,
+    payToPlayTotalsResult,
   ] = await Promise.all([
     // 1. Summary stats
     supabase.rpc('exec_sql', {
@@ -174,16 +175,42 @@ async function getData() {
       ORDER BY financial_year`,
     }),
 
-    // 5. Pay-to-play: entities that both donate and hold contracts
-    supabase
-      .from('mv_revolving_door')
-      .select('gs_id, canonical_name, entity_type, abn, state, donation_dollars, procurement_dollars, distinct_parties_funded, contract_count')
-      .eq('in_political_donations', true)
-      .eq('in_procurement', true)
-      .gt('donation_dollars', 0)
-      .gt('procurement_dollars', 0)
-      .order('procurement_dollars', { ascending: false })
-      .limit(100),
+    // 5. Pay-to-play: entities that both donate and hold contracts.
+    //
+    // WAS SELECTING FROM mv_revolving_door. That view has none of in_political_donations,
+    // in_procurement, donation_dollars, procurement_dollars or distinct_parties_funded — they all
+    // live on mv_entity_power_index. So the select errored, the array was empty, and this page
+    // published, live:
+    //
+    //   "0 entities that donate to political parties ALSO hold government contracts.
+    //    They donated a combined $0 and received $0 — a return of N/A their political investment."
+    //
+    // A confident zero about political money, on a page about political money. The real figures
+    // are 865 entities, $695m donated, $292.0bn in contracts.
+    //
+    // Same defect as /reports/influence-network, found by looking for the same shape elsewhere
+    // rather than waiting for it to be noticed.
+    supabase.rpc('exec_sql', {
+      query: `SELECT gs_id, canonical_name, entity_type, abn, state,
+                donation_dollars, procurement_dollars, distinct_parties_funded, contract_count
+           FROM mv_entity_power_index
+          WHERE in_political_donations = 1 AND in_procurement = 1
+            AND donation_dollars > 0 AND procurement_dollars > 0
+          ORDER BY procurement_dollars DESC
+          LIMIT 100`,
+    }),
+
+    // The COUNT and the TOTALS, over all 865 — not over the 100 rows above.
+    // `payToPlayCount = payToPlay.length` would have reported the LIMIT as a finding, which is
+    // the same mistake /reports/influence-network made with the 1,000-row exec_sql cap.
+    supabase.rpc('exec_sql', {
+      query: `SELECT count(*)::int AS entities,
+                COALESCE(sum(donation_dollars), 0)::bigint AS donated,
+                COALESCE(sum(procurement_dollars), 0)::bigint AS contracts
+           FROM mv_entity_power_index
+          WHERE in_political_donations = 1 AND in_procurement = 1
+            AND donation_dollars > 0 AND procurement_dollars > 0`,
+    }),
   ]);
 
   // Parse summary
@@ -210,9 +237,14 @@ async function getData() {
     contract_entity: d.donor_abn ? payToPlay.find(e => e.abn === d.donor_abn) || null : null,
   }));
 
-  const payToPlayCount = payToPlay.length;
-  const payToPlayDonationTotal = payToPlay.reduce((sum, e) => sum + e.donation_dollars, 0);
-  const payToPlayContractTotal = payToPlay.reduce((sum, e) => sum + e.procurement_dollars, 0);
+  // From SQL, so the headline is the population and not the page size.
+  const ptpTotals = ((payToPlayTotalsResult.data || []) as
+    { entities: number; donated: number; contracts: number }[])[0];
+  const payToPlayCount = Number(ptpTotals?.entities ?? payToPlay.length);
+  const payToPlayDonationTotal = Number(
+    ptpTotals?.donated ?? payToPlay.reduce((sum, e) => sum + e.donation_dollars, 0));
+  const payToPlayContractTotal = Number(
+    ptpTotals?.contracts ?? payToPlay.reduce((sum, e) => sum + e.procurement_dollars, 0));
 
   const summary: Summary = {
     totalRecords: Number(raw.total_records) || 0,
