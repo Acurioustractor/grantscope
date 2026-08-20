@@ -62,17 +62,28 @@ async function getStateReport(stateCode: string) {
     q(`SELECT entity_type, COUNT(*) as count
       FROM gs_entities WHERE state = '${sc}' AND sector ILIKE '%education%'
       GROUP BY entity_type ORDER BY count DESC`),
-    q(`SELECT COUNT(*) as contracts, SUM(contract_value)::bigint as total_value
-      FROM austender_contracts
-      WHERE (category ILIKE '%education%' OR category ILIKE '%training%'
-        OR title ILIKE '%school%' OR title ILIKE '%education%')
-        AND (supplier_state = '${sc}' OR buyer_state = '${sc}')`),
+    // austender_contracts has NO geographic column at all — not supplier_state, not buyer_state,
+    // not postcode or address. This query asked it for one, so it failed on every state and the
+    // page rendered its contract figures blank. Eight of the thirteen query failures this page
+    // logged in a single production build were this one line, once per state.
+    // Scope through the graph instead: join gs_entities on supplier_abn and use ITS state, which
+    // is how every other state-scoped contract query in the codebase does it.
+    q(`SELECT COUNT(*) as contracts, SUM(ac.contract_value)::bigint as total_value
+      FROM austender_contracts ac
+      JOIN gs_entities e ON e.abn = ac.supplier_abn
+      WHERE (ac.category ILIKE '%education%' OR ac.category ILIKE '%training%'
+        OR ac.title ILIKE '%school%' OR ac.title ILIKE '%education%')
+        AND e.state = '${sc}'`),
+    // `LEFT JOIN gs_relationships r ON r.source_entity_id = ge.id OR r.target_entity_id = ge.id`
+    // cannot use either index — an OR across two join keys forces a scan of 3.43M rows, and this
+    // timed out on five of the eight states in one production build. Two indexed counts instead:
+    // 2.9s and the same answer (QUT and Griffith top the list, as they should).
     q(`SELECT ge.canonical_name, ge.gs_id, ge.entity_type,
-        COUNT(DISTINCT r.id) as connections
+        (SELECT COUNT(*) FROM gs_relationships r WHERE r.source_entity_id = ge.id)
+        + (SELECT COUNT(*) FROM gs_relationships r WHERE r.target_entity_id = ge.id)
+        AS connections
       FROM gs_entities ge
-      LEFT JOIN gs_relationships r ON r.source_entity_id = ge.id OR r.target_entity_id = ge.id
       WHERE ge.state = '${sc}' AND ge.sector ILIKE '%education%'
-      GROUP BY ge.id, ge.canonical_name, ge.gs_id, ge.entity_type
       ORDER BY connections DESC LIMIT 15`),
     getOutcomesMetrics(sc, 'education'),
     q(`SELECT COUNT(*) as total_schools,
