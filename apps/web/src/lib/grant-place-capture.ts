@@ -218,6 +218,18 @@ export interface CapturePlace extends CaptureTally {
   place: string;
   state: string | null;
   remoteness: string | null;
+  /**
+   * Share of this place's delivered dollars sitting in its single largest award, one decimal.
+   *
+   * The confounder that the award/dollar thresholds do NOT catch. Measured 2026-08-20: EVERY one
+   * of the twelve worst dollar-capturing councils has high award capture (47.6%-96.0%) and one
+   * award carrying 38%-96% of its money. Armidale reads 96.0% of awards local and 4.4% of
+   * dollars because a single grant is 95.6% of the total. A "places that keep the least" table
+   * ranked on dollars is substantially a table of "places with one big externally-received
+   * grant", and a surface that ranks without showing this is telling the reader something untrue
+   * about the place.
+   */
+  biggestAwardShare: number | null;
 }
 
 export interface CaptureResult {
@@ -263,6 +275,7 @@ interface RawPlaceRow {
   local_dollars: string | number;
   cross_state_awards: string | number;
   cross_state_dollars: string | number;
+  biggest_award_share: string | number | null;
 }
 
 const n = (v: unknown) => Number(v ?? 0) || 0;
@@ -361,7 +374,8 @@ export async function captureByState(): Promise<CaptureResult> {
            count(*) FILTER (WHERE recipient_state = delivery_state)::bigint AS local_awards,
            COALESCE(sum(value_aud) FILTER (WHERE recipient_state = delivery_state),0)::numeric AS local_dollars,
            count(*) FILTER (WHERE recipient_state IN (${states}) AND recipient_state <> delivery_state)::bigint AS cross_state_awards,
-           COALESCE(sum(value_aud) FILTER (WHERE recipient_state IN (${states}) AND recipient_state <> delivery_state),0)::numeric AS cross_state_dollars
+           COALESCE(sum(value_aud) FILTER (WHERE recipient_state IN (${states}) AND recipient_state <> delivery_state),0)::numeric AS cross_state_dollars,
+           ROUND(100.0 * max(value_aud) / NULLIF(sum(value_aud), 0), 1) AS biggest_award_share
       FROM base
      GROUP BY delivery_state
      ORDER BY delivery_state`);
@@ -370,6 +384,7 @@ export async function captureByState(): Promise<CaptureResult> {
     place: r.place,
     state: r.state,
     remoteness: null,
+    biggestAwardShare: r.biggest_award_share === null ? null : n(r.biggest_award_share),
     ...tallyFromRow(r),
   }));
   const national = sumTallies(places);
@@ -403,7 +418,8 @@ export async function captureByLga(): Promise<CaptureResult> {
            count(*) FILTER (WHERE captured_locally)::bigint AS local_awards,
            COALESCE(sum(value_aud) FILTER (WHERE captured_locally),0)::numeric AS local_dollars,
            count(*) FILTER (WHERE recipient_lga IS NOT NULL AND recipient_state <> delivery_state)::bigint AS cross_state_awards,
-           COALESCE(sum(value_aud) FILTER (WHERE recipient_lga IS NOT NULL AND recipient_state <> delivery_state),0)::numeric AS cross_state_dollars
+           COALESCE(sum(value_aud) FILTER (WHERE recipient_lga IS NOT NULL AND recipient_state <> delivery_state),0)::numeric AS cross_state_dollars,
+           ROUND(100.0 * max(value_aud) / NULLIF(sum(value_aud), 0), 1) AS biggest_award_share
       FROM v_grant_place_capture
      GROUP BY delivery_lga, delivery_state`);
   const totals = await runSql<{ awards: string; dollars: string }>(TOTALS_SQL);
@@ -411,6 +427,7 @@ export async function captureByLga(): Promise<CaptureResult> {
     place: r.place,
     state: r.state,
     remoteness: r.remoteness,
+    biggestAwardShare: r.biggest_award_share === null ? null : n(r.biggest_award_share),
     ...tallyFromRow(r),
   }));
   const national = sumTallies(places);
@@ -427,9 +444,18 @@ export async function captureByLga(): Promise<CaptureResult> {
 }
 
 /**
- * Places that keep the least, thresholded so a single large grant in a tiny council cannot lead
- * the table. Ranked on the resolved base, because a place whose recipients simply do not resolve
- * has not been shown to leak anything.
+ * Places that keep the least, thresholded so a tiny council cannot lead the table on a handful of
+ * awards. Ranked on the resolved base, because a place whose recipients simply do not resolve has
+ * not been shown to leak anything.
+ *
+ * THE THRESHOLDS ARE NOT ENOUGH ON THEIR OWN, and this is deliberate rather than an oversight.
+ * They catch small-N noise; they do not catch DOLLAR CONCENTRATION, which is the failure mode the
+ * data actually has. Gladstone passes both thresholds comfortably — 27 resolved awards, $120m —
+ * and reads 0.3% of dollars kept, but the money is a handful of hydrogen and critical-minerals
+ * grants received by corporate head offices in Sydney and Perth, while 70.4% of its awards stay
+ * local. Filtering those places out would hide a real finding, so per disclose-don't-hide every
+ * row carries `biggestAwardShare` instead. **A caller that ranks on dollars without rendering it
+ * is publishing a misleading table.**
  */
 export function rankWorstCapturing(
   places: readonly CapturePlace[],

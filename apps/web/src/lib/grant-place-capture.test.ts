@@ -190,6 +190,7 @@ describe('ranked lists are thresholded', () => {
     place: 'Somewhere',
     state: 'QLD',
     remoteness: null,
+    biggestAwardShare: null,
     ...tallyCapture([]),
     ...over,
   });
@@ -219,6 +220,27 @@ describe('ranked lists are thresholded', () => {
       resolvedDollars: CAPTURE_MIN_DOLLARS * 10,
     });
     expect(rankWorstCapturing([justUnder])).toEqual([]);
+  });
+
+  // Measured 2026-08-20: every one of the twelve worst dollar-capturing councils passes both
+  // thresholds AND has one award carrying 38-96% of its money. Gladstone reads 0.3% of dollars
+  // kept against 70.4% of awards because a few hydrogen grants went to head offices in Sydney and
+  // Perth. The threshold cannot catch that, so the row must carry the concentration and callers
+  // must show it. Filtering these places out would hide a real finding.
+  it('a concentrated place still ranks, and carries the concentration that explains it', () => {
+    const gladstone = place({
+      place: 'Gladstone',
+      resolvedAwards: 27,
+      resolvedDollars: 120_000_000,
+      pctDollarsLocal: 0.3,
+      pctAwardsLocal: 70.4,
+      biggestAwardShare: 38.1,
+    });
+    const ranked = rankWorstCapturing([gladstone]);
+    expect(ranked.map(p => p.place)).toEqual(['Gladstone']);
+    expect(ranked[0].biggestAwardShare).toBe(38.1);
+    // The award share is the other half of the story and must survive alongside it.
+    expect(ranked[0].pctAwardsLocal).toBe(70.4);
   });
 
   it('ranks by awards when asked', () => {
