@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { applyGrantmakingFilter } from '@/lib/foundation-giving';
 import { getServiceSupabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { money } from '@/lib/format';
@@ -44,6 +45,15 @@ async function getData(search?: string, sort?: string) {
     : sort === 'need' ? 'need_alignment_score'
     : 'foundation_score';
 
+  // #390: when the question is "who gives the most", total_giving_annual cannot answer it as it
+  // stands. For service_delivery, religious_organisation and education_body it is revenue — the
+  // University of Sydney ($340.7M), Australian Red Cross ($265.7M) and Alice Springs Youth
+  // Accommodation & Support ($196.0M) all led this sort — and 9,217 of 10,190 remaining values are
+  // one of three placeholder round numbers. So THIS SORT ONLY narrows to figures that mean
+  // grantmaking. Those rows are still in the browse under every other sort; they are excluded from
+  // the answer to a question they cannot answer.
+  if (sort === 'giving') query = applyGrantmakingFilter(query);
+
   query = query.order(sortCol, { ascending: false }).limit(200);
 
   const { data, error } = await query;
@@ -86,6 +96,19 @@ export default async function FoundationIndexPage({
           evidence backing, and geographic reach.
         </p>
       </div>
+
+      {/* Sorting by giving narrows the list, and a user who is not told that reads the shorter
+          list as the whole register. #390: total_giving_annual is revenue for universities,
+          service providers and school systems, and a placeholder for 9,217 of 10,190 rows. */}
+      {params.sort === 'giving' && (
+        <p className="mb-6 border-l-4 border-bauhaus-yellow bg-white px-4 py-3 text-sm leading-relaxed">
+          <strong>Sorted by giving shows fewer foundations, on purpose.</strong> For universities,
+          service providers and school systems the recorded figure is revenue rather than
+          grantmaking, and most of the remaining values are a placeholder rather than a
+          measurement. This sort narrows to figures that mean grantmaking; every other sort shows
+          the full list.
+        </p>
+      )}
 
       {/* Search + Sort */}
       <div className="flex flex-wrap gap-3 mb-6 items-center">

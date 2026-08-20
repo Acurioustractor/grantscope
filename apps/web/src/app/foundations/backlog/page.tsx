@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { measuredGivingOrderSql } from '@/lib/foundation-giving';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
@@ -255,7 +256,9 @@ function buildBacklogQuery(comparableTypes: string, filter: string) {
           SELECT *
           FROM candidate_rows
           WHERE ${filter}
-          ORDER BY total_giving_annual DESC NULLS LAST
+          -- #390: total_giving_annual is revenue for three types and a placeholder for 90% of
+          -- the rest. Demote rather than exclude, so nothing leaves the backlog.
+          ORDER BY ${measuredGivingOrderSql()}
           LIMIT ${PAGE_QUEUE_SCAN_LIMIT}`;
 }
 
