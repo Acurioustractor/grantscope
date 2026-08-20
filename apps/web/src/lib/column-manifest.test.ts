@@ -6,15 +6,27 @@ import MANIFEST from './column-manifest.json';
 /**
  * No query may reference a column its table does not have.
  *
- * Three separate defects on 2026-08-20 were this one mistake, and each rendered a public page as
- * though it had measured nothing:
+ * WHAT IT CATCHES, AND WHAT IT DOES NOT. Tested, not assumed — the first draft of this comment
+ * claimed all three of 2026-08-20's defects and only one is in range:
  *
- *   mv_revolving_door.in_procurement            lives on mv_entity_power_index  (#353, #355, #356)
- *   austender_contracts.supplier_state          that table has NO geography at all  (#360)
- *   alma_interventions.gs_entity_id = e.gs_id   uuid vs text; it pairs with e.id  (#361)
+ *   CAUGHT    mv_revolving_door.in_procurement    an ALIASED column that does not exist
+ *                                                 (#353, #355, #356 — six surfaces, one cause)
+ *   NOT       austender_contracts.supplier_state  UNQUALIFIED. The check only reads
+ *                                                 `alias.column`, so a bare column in a
+ *                                                 single-table query is invisible to it (#360).
+ *   NOT       alma_interventions.gs_entity_id     a TYPE mismatch, uuid vs text. Both columns
+ *                                                 = gs_entities.gs_id                 exist; only the comparison is wrong (#361).
  *
- * None was caught by tsc, tests or review. They fail at RUNTIME, where `safe()` returns null and
- * the caller coerces with `|| []`. #357 guarded one view; this generalises it.
+ * So this closes one of three doors. Worth having — that door accounted for six broken surfaces
+ * in a day, including two public APIs — but do not read a green run as "no schema bugs".
+ *
+ * Extending to unqualified columns is possible where a query names exactly one relation and has
+ * no CTEs. Type mismatches need the column TYPES in the manifest and real expression parsing.
+ * Neither is done here.
+ *
+ * These fail at RUNTIME, where `safe()` returns null and the caller coerces with `|| []`, so the
+ * page renders as though it measured nothing. #357 guarded one view; this covers every relation
+ * the source names.
  *
  * Refresh the manifest after a migration:
  *   node apps/web/scripts/build-column-manifest.mjs
