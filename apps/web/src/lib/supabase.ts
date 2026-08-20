@@ -24,7 +24,14 @@ function isReadOnlyExecSql(query: string | undefined): boolean {
     .trim();
   if (!stripped) return false;
   if (!/^(select|with)\b/i.test(stripped)) return false; // top-level read only
-  if (/;\s*\S/.test(stripped.replace(/;\s*$/, ''))) return false; // no stacked statements
+  // Stacked-statement check runs on the query with STRING LITERALS REMOVED. A semicolon inside a
+  // quoted literal is not a statement separator, and treating it as one rejected valid read-only
+  // SQL: `STRING_AGG(DISTINCT location, '; ' ORDER BY location)` on
+  // /reports/youth-justice/qld/crime-prevention-schools failed on every build, and the page
+  // rendered its target-regions panel empty. Doubled quotes ('') are handled so an escaped quote
+  // inside a literal does not end it early.
+  const withoutLiterals = stripped.replace(/'(?:[^']|'')*'/g, "''");
+  if (/;\s*\S/.test(withoutLiterals.replace(/;\s*$/, ''))) return false; // no stacked statements
   if (/\b(insert\s+into|update\s+[\w".]+\s+set|delete\s+from|merge\s+into)\b/i.test(stripped)) {
     return false; // no data-modifying CTE
   }

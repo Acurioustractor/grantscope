@@ -1326,7 +1326,12 @@ export async function getPiccPeerOrgs() {
               COUNT(DISTINCT a.id)::int as alma_programs,
               STRING_AGG(DISTINCT a.type, ', ') as program_types
        FROM gs_entities e
-       JOIN alma_interventions a ON a.gs_entity_id = e.gs_id
+       -- e.id, NOT e.gs_id. alma_interventions.gs_entity_id is a uuid and gs_entities.gs_id is
+       -- text, so this failed with "operator does not exist: uuid = text" on every build and the
+       -- PICC peer-organisations panel rendered empty. The name is the trap: gs_entity_id reads
+       -- as if it pairs with gs_id, and it pairs with id.
+       -- (No backticks in this comment: it lives inside a JS template literal.)
+       JOIN alma_interventions a ON a.gs_entity_id = e.id
        WHERE a.type IN ('Cultural Connection', 'Community-Led', 'Wraparound Support', 'Diversion', 'Family Strengthening')
          AND e.is_community_controlled = true
          AND e.abn != '14640793728'
