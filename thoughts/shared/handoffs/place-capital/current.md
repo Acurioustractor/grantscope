@@ -1,5 +1,5 @@
 ---
-date: 2026-08-20T15:30:00Z
+date: 2026-08-20T23:55:00Z
 session_name: place-capital
 branch: main
 status: active
@@ -9,20 +9,37 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-20T22:10:00Z
+**Updated:** 2026-08-20T23:55:00Z
 **Goal:** Make the published figures survive their own filters, and make the surfaces that
 render them reviewable. Done when a number on a public page can be traced to a measured delta.
-**Branch:** `main`, clean. **Board EMPTY.** Main at `38bf5909`. **16 PRs merged today.**
-**Test:** `./scripts/precheck.sh` · **production-accurate local preview:** `cd apps/web && npm run preview` (:3015)
-DB reads: `node --env-file=.env scripts/gsql.mjs "..."` — heavy aggregates time out at ~8s, use psql.
+**Branch:** `main`, clean. **Board EMPTY.** Main at `2b8a409b`. **20 PRs merged today, 0 open.**
+**Test:** `./scripts/precheck.sh`
+**Verify a change:** `npm run dev` (:3013) for a query/filter/render — 8s, same SQL, same answer.
+`npm run preview` (:3015, production build) ONLY for build-time behaviour or when you want the
+build LOG. **Verify PRODUCTION with Playwright** (`browser_navigate` + `browser_evaluate`) —
+curl gets Vercel's 429 challenge and the Chrome extension disconnects. Match case-insensitively.
+DB reads: `gsql.mjs` caps at ~8s; heavy aggregates need `psql`.
 
 ### Now
-[->] **#311 — talk to three place-based intermediaries.** HITL, Ben only. STILL untouched, two
-days running. Everything below made the numbers true; **none of it tested whether anyone pays.**
+[->] **#311 — hold three conversations.** HITL, Ben only, and the ONLY item that tests whether any
+of this is sellable. Brief ready: `thoughts/shared/briefs/311-intermediary-conversations.md` (#368),
+figures grounded against the live DB.
+**Two things the brief settles before you walk in:**
+(a) The ticket MIS-STATES a figure. "26.6%/35.6%/22.5% of dollars into the cities" — percentages
+right, wording wrong. Of the $878m that shifts, only $383m lands in Major Cities; $497m lands in
+"postcode unmapped". Use the corrected sentence in the brief.
+(b) **Palm Island is the obvious first call and the wrong one** — a community organisation, the
+beneficiary in #304's model, not an intermediary who would pay. It also runs at #307's consent
+process. Find a council or regional development body.
 
-[->] **Tell whoever owns Empathy Ledger.** `/api/data/graph` filters `relationship_type='donation'`
-and its figures dropped ~87% at 2026-08-20 ~13:30. A correction, not a regression — but it is an
-external consumer and nobody has said anything. The only loose end from today an agent cannot close.
+### Waiting on Ben (nothing an agent can close)
+- **The Empathy Ledger anchor-card decision** — `thoughts/shared/decisions/2026-08-20-el-anchor-card-consent.md`
+  (#369). Four options; recommendation is **B, project-mediated**. The doc proposes anchoring a
+  person's story to an entity dossier by ABN with zero mentions of consent, four days after
+  "stories link to projects, never to data" was set. Current state is the worst one: two documents
+  contradicting each other, the newer aimed at another team.
+- **Tell whoever owns Empathy Ledger** that `/api/data/graph` donation figures dropped ~87% today
+  (a correction, not a regression) and that `/api/data/entity/{abn}` was wrong until #358.
 
 ### 2026-08-20 — thirteen PRs, twelve merged. The chain
 
@@ -140,6 +157,19 @@ six phantom columns on `mv_disability_landscape`. Brisbane now shows 29,711 part
   story directly to an entity dossier by ABN, with zero mentions of consent** — four days after
   "stories link to projects, never to data" was established. Retire it or rewrite it
   project-mediated. **Ben's call, still open.**
+
+### Final four PRs (after the ledger's second entry)
+
+- **#364 `0d366975`** — `/api/data/graph`, public, returned nothing for its LGA layer: six phantom
+  columns on `mv_disability_landscape`. Brisbane now shows 29,711 participants / 2,099 entities.
+  **The guard's ALLOWED list was shrunk in the same commit** — a baseline keeping fixed bugs hides
+  the regression when they return.
+- **#365 `38bf5909`** — `/reports/community-efficiency`: SIX defects, written up rather than
+  half-fixed. See `thoughts/shared/findings/community-efficiency-page.md`.
+- **#367 `06bbc41d`** — **Playwright is how you verify production.** I had concluded "an agent
+  cannot verify" from one broken tool and written that into `/land`. Production is public and
+  always was readable.
+- **#368 `0e64a680`, #369 `2b8a409b`** — the #311 brief and the EL decision doc.
 
 ### Traps learned today — do not re-derive
 
