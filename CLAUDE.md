@@ -475,18 +475,33 @@ everything that was actually found that day came from local:
 read previews.** Hand Ben the URL with the specific thing to look at, and say plainly what was
 verified locally.
 
-### `npm run dev` is not enough on its own
+### Match the check to the risk — dev for data, a build for build-time behaviour
 
-Dev mode is not a production build. The 60-second prerender cap only exists at build time, so no
-amount of clicking around a dev server would ever have surfaced it. Before claiming a
-public-surface change is verified:
+Corrected 2026-08-20, the same day the rule was written. The original said a production build was
+needed before claiming any public-surface change was verified. That is true for one class of
+problem and wasteful for the common one, and applying it to everything cost about an hour of
+builds in a single afternoon.
 
-```bash
-cd apps/web && npm run preview     # production build + start on :3015, live reports on
-```
+**`npm run dev` (:3013) is sufficient when the change is a query, a filter or a render.** The SQL
+runs against the same database and the same component renders. Measured: verifying a fixed query
+on `/reports/picc` took **8 seconds** on dev and **~9 minutes** via a production build, for an
+identical answer.
 
-It shares `.next` with the dev server, so stop dev first — `scripts/precheck.sh` says the same
-thing and for the same reason.
+**`npm run preview` (production build, :3015) is required when the change could alter build-time
+behaviour:**
+
+- anything touching `next.config.ts`, the root layout, `revalidate`/`dynamic`, or `package.json`
+- anything that could change how long a page takes to PRERENDER — the 60-second cap only exists
+  at build time, which is why `/reports/community-efficiency` at 59.6s hid for four months
+- when you need the build LOG, which is the only place per-surface query failures are listed
+
+**The build log is a first-class verification tool**, not a side effect. Since `safe()` names its
+surface, `grep '\[report-service\].*failed'` over a build turns "something is broken in reports"
+into a list of pages — and a fix is verified by a named failure disappearing from it. That is
+worth a build on its own.
+
+`npm run preview` shares `.next` with the dev server, so stop dev first — `scripts/precheck.sh`
+says the same thing for the same reason.
 
 ### What local genuinely cannot tell you
 
