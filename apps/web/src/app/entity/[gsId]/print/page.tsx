@@ -43,6 +43,7 @@ export default async function PrintEntityPage({ params }: { params: Promise<{ gs
     e.abn ? safe(supabase.rpc('exec_sql', {
       query: `SELECT donation_to, SUM(amount)::bigint as total, COUNT(*)::int as count
          FROM political_donations WHERE donor_abn = '${e.abn}'
+           AND receipt_type = 'donation received'
          GROUP BY donation_to ORDER BY total DESC LIMIT 10`,
     })) : null,
     e.abn ? safe(supabase.rpc('exec_sql', {
