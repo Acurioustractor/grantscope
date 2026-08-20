@@ -9,10 +9,10 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-20T15:30:00Z
+**Updated:** 2026-08-20T22:10:00Z
 **Goal:** Make the published figures survive their own filters, and make the surfaces that
 render them reviewable. Done when a number on a public page can be traced to a measured delta.
-**Branch:** `main`, clean. **Board EMPTY.** Main at `1d6123c6`.
+**Branch:** `main`, clean. **Board EMPTY.** Main at `38bf5909`. **16 PRs merged today.**
 **Test:** `./scripts/precheck.sh` · **production-accurate local preview:** `cd apps/web && npm run preview` (:3015)
 DB reads: `node --env-file=.env scripts/gsql.mjs "..."` — heavy aggregates time out at ~8s, use psql.
 
@@ -63,6 +63,83 @@ Each finding was exposed by the previous fix. Worth reading in order; none was o
      `(dataset, source_record_id)` uniqueness would have aborted it. **A CHECK constraint also
      rejected `party_receipt`** — blocking code already on main. Found by running, not reading.
    - **All six dependent matviews refreshed.** `mv_revolving_door` $0.76bn.
+
+### Second half of 2026-08-20 — the build log became readable, and everything fell out of it
+
+**#354 `4bc13dbd` is the hinge.** `safe()`'s context argument was optional and 65 of 68 call
+sites in report-service omitted it, so a build logged `[report-service] query failed` seventeen
+times and identified nothing. Making it REQUIRED found **187 unlabelled calls across 27 files**
+(codemod via the TypeScript AST, not regex). One production build later, the same log named seven
+distinct defects. Everything below came from reading it.
+
+- **#360 `99a267de`** — `/reports/education/[state]`, 13 failures in one build = 2 defects × 8
+  states. `austender_contracts` **has no geographic column at all**, so a `supplier_state` filter
+  failed everywhere; scoped through `gs_entities` it returns 341 contracts / $356m for QLD. And an
+  `OR` across two join keys can use neither index — 3.43M-row scan, replaced by two indexed counts,
+  2.9s.
+- **#361 `c951f2a2`** — three queries that could never succeed. A missing two-character alias
+  (`FROM agent_schedules` with `s.` everywhere); **the read-only guard was wrong, not the query** —
+  `/;\s*\S/` treated a semicolon inside `STRING_AGG(…, '; ')` as a stacked statement, now
+  literal-aware with five tests proving it still blocks writes, CTE-writes and stacked statements;
+  and `alma_interventions.gs_entity_id` (uuid) joined to `gs_entities.gs_id` (text) — **it pairs
+  with `id`**, the name is the trap.
+
+**The phantom-column class, closed in stages.** `mv_revolving_door` was queried for ten columns
+that live on `mv_entity_power_index` — the two views are COMPLEMENTARY (subject vs measurements),
+so the fix is a JOIN, never a swap, or `revolving_door_score` is lost.
+- **#353 `76a8f19c`** — `/reports/influence-network` had **four stacked defects and only one was
+  visible**: wrong view; a party query joining on a non-existent column so the table was silently
+  empty; two donation sums with no `receipt_type` filter; and **a row cap reported as a
+  measurement** — "1,000 entities operate across 2+ influence vectors" was `exec_sql`'s limit.
+  Real: **3,586**. A suspiciously round number is the tell.
+- **#355 `364fda55`** — `/reports/political-money` published *"0 entities that donate ALSO hold
+  government contracts… $0 … a return of N/A"*. Real: **865 entities, $695.0M, $292.0B, 420x**.
+  Found by looking for #353's shape elsewhere, not by report.
+- **#356 `6c04d5fb`** — scripted audit of all 20 consumers found two more, both returning nothing:
+  `/api/power/accountability` and **`/api/data/political-money`**.
+- **#357 `142eefde`** guarded that one view; **#363 `4ea5f0c6`** generalised it to a committed
+  manifest of 294 relations / 5,357 columns. **Scoping aliases per QUERY not per file took the
+  noise from 141 hits to 12.**
+
+**#358 `b82f7877` — the most serious thing found all day.** `/api/data/entity/{abn}` summed
+`political_donations` with no `receipt_type` filter and reported **Westpac as donating $3,478.6m
+against a real $82.0m**; Sino Iron and Greaton at **$8.1bn and $3.2bn having donated nothing**.
+**1,880 entities overstated by more than 10x**, on a public API, about named companies. Found
+while checking an endpoint before writing a note about it.
+
+**#364 `0d366975`** — `/api/data/graph`, a public endpoint, returned nothing for its LGA layer:
+six phantom columns on `mv_disability_landscape`. Brisbane now shows 29,711 participants.
+
+### Corrections I had to make to my own work
+
+- **#362 `6ea4a01b`** — the "always verify on a production build" rule written that morning was
+  over-applied all afternoon at ~9 minutes a time. **Measured: 8 seconds on dev vs ~9 minutes on a
+  build, identical answer.** Dev for a query/filter/render change; a build only for build-time
+  behaviour or when you want the LOG. `/land` updated to match.
+- **#346 `26095ea7`** — `/money-audit` corrupted its own instructions: a `$` followed by a digit
+  in a SKILL.md is substituted with the skill's arguments.
+- **#363** initially claimed to catch all three schema defects. **Tested: it catches one.**
+  Unqualified columns and type mismatches are out of range, and the file now says so.
+- Backticks inside a JS template literal broke the build **twice** in one day.
+
+### Open, with the diagnosis already paid for
+
+- **`/reports/community-efficiency` — `thoughts/shared/findings/community-efficiency-page.md`
+  (#365).** SIX defects. Both `exec_sql` calls pass a `sql` key where the parameter is `query`, so
+  **neither has ever run**; query 2 paginates **all 609,000 `gs_entities` rows** (~609
+  round-trips — this is the 59.6s that forced #344); and two row-cap truncations would feed
+  published stats from 3–4% samples. **Fixing the column names alone makes it worse.** The fix is
+  SQL-side aggregation, proven on one panel: ACCOs are **6.1% of contracted charities and 2.4% of
+  the contract dollars**.
+- **Two timeouts** wanting matview precompute: `reports/disability/[state]`, `getTrackerInterlocks`.
+- **The suite failed twice and passed on re-run, cause unproven.** Attributed to pooler contention
+  after a day of heavy querying. If it is a flaky test instead, it will eventually mask a real one.
+- **Five merges are unverified live** — the browser extension disconnected and curl gets Vercel's
+  429 challenge. Low risk, not zero.
+- **The Empathy Ledger integration doc (#359 fixed its dead domain) still proposes anchoring a
+  story directly to an entity dossier by ABN, with zero mentions of consent** — four days after
+  "stories link to projects, never to data" was established. Retire it or rewrite it
+  project-mediated. **Ben's call, still open.**
 
 ### Traps learned today — do not re-derive
 
