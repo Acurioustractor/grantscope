@@ -1,7 +1,13 @@
 -- Defence does not contract with itself for $823.59M. #315 class B, the last of the self-loops.
 --
--- NOT YET APPLIED. Deletes production edges. Ben's call, and there is a real judgement in it --
--- read "THE OPTION NOT TAKEN" before applying.
+-- APPLIED 2026-08-21 to tednluwflfhxyucgwigh, on Ben's explicit authorization.
+--   INSERT 616 (backup, $823.59M) / DELETE 616 / constraint extended to austender.
+--   Verified after, every predicted number exact:
+--     Department of Defence inbound  $927.16M -> $165.71M, 320 edges, 0 remaining self-loops
+--     self-loops across the graph    1,090 -> 474, all aec_donations or lobbying
+--     austender_contracts            825,222 rows, untouched
+--   The judgement in "THE OPTION NOT TAKEN" below still stands and is why this deletes rather
+--   than re-points. Read it before reversing.
 --
 -- Apply:
 --   source .env && PGPASSWORD="$DATABASE_PASSWORD" psql -h aws-0-ap-southeast-2.pooler.supabase.com \
