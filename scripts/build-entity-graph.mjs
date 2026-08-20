@@ -344,15 +344,59 @@ async function buildEntities() {
     if (!uniqueBuyers.has(b.buyer_id)) uniqueBuyers.set(b.buyer_id, b.buyer_name);
   }
 
+  // RESOLVE AGAINST WHAT EXISTS BEFORE MINTING. This is #324, and the reason the merge migration
+  // 2026-08-21-gov-entity-merge.sql had to exist at all.
+  //
+  // The old line here was `gs_id: makeGsId({ buyer_id: buyerId })` — no ABN passed, none looked
+  // up. So one government body became TWO entities depending on whether a given source row
+  // happened to carry an ABN: rows with it resolved to AU-ABN-<abn>, rows without to
+  // AU-GOV-<buyer_id>. That produced 119 cross-scheme duplicate pairs holding 130,963 edges, and
+  // 32 more within AU-GOV alone. The Department of Education was four entities.
+  //
+  // WHY THIS IS A LOOKUP AND NOT JUST "PASS THE ABN". Passing the ABN would re-split the graph a
+  // different way. 46 government entities SURVIVED the merge carrying a valid ABN under an
+  // AU-GOV gs_id — Defence among them, with 271,521 edges. Minting by ABN would create a brand
+  // new AU-ABN-68706814312 entity beside it and undo the merge on the next build. Identity
+  // resolution has to consult what already exists; minting is only for what does not.
+  const existingByName = new Map();
+  const existingRows = await selectJsonRows('existing government identities',
+    `SELECT gs_id, canonical_name FROM gs_entities
+      WHERE entity_type = 'government_body' OR gs_id LIKE 'AU-GOV-%'`);
+  for (const e of existingRows) {
+    const key = String(e.canonical_name ?? '').trim().toLowerCase();
+    if (!key) continue;
+    // Ambiguity is refused, not guessed: if two entities share a name we cannot know which the
+    // buyer is, so we fall through to minting and leave the pair for a human. Marked with null.
+    existingByName.set(key, existingByName.has(key) ? null : e.gs_id);
+  }
+
+  let govReused = 0;
+  function govGsId(buyerId, name) {
+    const existing = existingByName.get(String(name ?? '').trim().toLowerCase());
+    if (existing) {
+      govReused += 1;
+      return existing;
+    }
+    return makeGsId({ buyer_id: buyerId });
+  }
+
   if (!dryRun) {
     const govEntities = Array.from(uniqueBuyers.entries()).map(([buyerId, name]) => ({
       entity_type: 'government_body',
       canonical_name: name,
-      gs_id: makeGsId({ buyer_id: buyerId }),
+      gs_id: govGsId(buyerId, name),
       source_datasets: ['austender'],
       source_count: 1,
       confidence: 'registry',
     }));
+
+    // Two buyer_ids can now map to one gs_id — that is the whole point — but sending both to
+    // upsert would collide within a single statement. Keep the first.
+    const seen = new Set();
+    const deduped = govEntities.filter(e => !seen.has(e.gs_id) && seen.add(e.gs_id));
+    govEntities.length = 0;
+    govEntities.push(...deduped);
+    log(`  Government identities reused from existing entities: ${govReused}`);
 
     for (let i = 0; i < govEntities.length; i += 500) {
       const chunk = govEntities.slice(i, i + 500);
