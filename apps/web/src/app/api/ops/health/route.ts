@@ -3,6 +3,7 @@ import { requireAdminApi } from '@/lib/admin-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { classifySourceHealth, type SourceRun } from '@grant-engine/source-health';
 import { classifyPipelineHealth } from '@grant-engine/pipeline-health';
+import { getAllMvFreshness, summariseFreshness } from '@/lib/mv-freshness';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -366,6 +367,21 @@ export async function GET() {
       communityControlled: Number(ec.community_controlled ?? 0),
     };
 
+    // Read last: a freshness failure must not cost the rest of the health payload.
+
+    let matviews: ReturnType<typeof summariseFreshness> | null = null;
+
+    try {
+
+      matviews = summariseFreshness(await getAllMvFreshness());
+
+    } catch (err) {
+
+      console.error('[ops/health] matview freshness unreadable', err);
+
+    }
+
+
     const response = NextResponse.json({
       stats: {
         // Admin audit A13: these were `count ?? 0`. safe() returns count:null when a query blows
@@ -436,6 +452,11 @@ export async function GET() {
         return { lastRunAt: at, hoursSince: Math.round(hours * 10) / 10, stale: hours > 6, unknown: false };
       })(),
       discoveryRuns: recentDiscoveryRuns.data ?? [],
+      // Matview freshness (#314). `actionable` is the count worth going red on; `unknown` counts
+      // the on_demand matviews owned by paths that do not write to mv_refresh_log, which are a
+      // known unknown rather than a fault. A failed lookup reports null — unreadable is NOT
+      // healthy, and the tile must not render it as zero faults.
+      matviews,
       sourceHealth,
       pipelineHealth,
       lastUpdated: new Date().toISOString(),
