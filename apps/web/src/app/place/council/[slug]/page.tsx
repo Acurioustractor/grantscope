@@ -6,6 +6,8 @@ import { SchoolNeed } from '../../school-need';
 import { PlaceContextPanel } from '../../place-context';
 import { PlaceCapture } from '../../place-capture';
 import { PlaceLeaving } from '../../place-leaving';
+import { PlaceLadder } from '../../place-ladder';
+import { contractLadderForPlace } from '@/lib/place-contract-ladder';
 import { captureForLga, programsLeavingPlace } from '@/lib/grant-place-capture';
 import { CorrectionForm } from '../../correction-form';
 import { UnplacedAdviceList } from '../../unplaced-advice';
@@ -35,6 +37,9 @@ export default async function CouncilPage({ params }: { params: Promise<{ slug: 
   const leaving = capture
     ? await programsLeavingPlace(report.lgaName, report.state).catch(() => [])
     : [];
+  // Independent of the capture measure: a council can hold contracts without any measurable grant
+  // delivery, and the ladder is the entry story either way.
+  const ladder = await contractLadderForPlace(report.lgaName).catch(() => null);
 
   // The correction still goes to a person — the form writes to a review
   // queue (place_corrections) that a person reads, never to the register.
@@ -131,6 +136,8 @@ export default async function CouncilPage({ params }: { params: Promise<{ slug: 
         <PlaceCapture capture={capture} lgaName={report.lgaName} />
 
         <PlaceLeaving programs={leaving} lgaName={report.lgaName} />
+
+        <PlaceLadder ladder={ladder} lgaName={report.lgaName} />
 
         {schools ? <SchoolNeed signal={schools} placeLabel={report.lgaName} /> : null}
 
