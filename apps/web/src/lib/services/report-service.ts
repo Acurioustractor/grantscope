@@ -86,7 +86,7 @@ export async function getFundingByState(topic: Topic) {
        WHERE ${grantTopicFilter(topic)}
        GROUP BY state
        ORDER BY total DESC`,
-  })) as Promise<Array<{ state: string; grants: number; total: number; orgs: number }> | null>;
+  }), 'getFundingByState') as Promise<Array<{ state: string; grants: number; total: number; orgs: number }> | null>;
 }
 
 /**
@@ -103,7 +103,7 @@ export async function getTopPrograms(topic: Topic, limit = 15) {
        GROUP BY program_name, state
        ORDER BY total DESC
        LIMIT ${limit}`,
-  })) as Promise<Array<{ program_name: string; state: string; grants: number; total: number }> | null>;
+  }), 'getTopPrograms') as Promise<Array<{ program_name: string; state: string; grants: number; total: number }> | null>;
 }
 
 /**
@@ -136,7 +136,7 @@ export async function getTopOrgs(topic: Topic, limit = 25, state?: string) {
        GROUP BY jf.recipient_name, jf.recipient_abn, jf.state, e.gs_id
        ORDER BY total DESC
        LIMIT ${limit}`,
-  })) as Promise<Array<{
+  }), 'getTopOrgs') as Promise<Array<{
     recipient_name: string;
     recipient_abn: string | null;
     state: string | null;
@@ -160,7 +160,7 @@ export async function getAlmaInterventions(topic: Topic, limit = 25, state?: str
        WHERE ${almaTopicFilter(topic, 'ai')}${stateFilter}
        ORDER BY ai.portfolio_score DESC NULLS LAST
        LIMIT ${limit}`,
-  })) as Promise<Array<{
+  }), 'getAlmaInterventions') as Promise<Array<{
     name: string;
     type: string | null;
     evidence_level: string | null;
@@ -180,7 +180,7 @@ export async function getAlmaCount(topic: Topic, state?: string): Promise<number
   const stateFilter = state ? ` AND geography::text ILIKE '%${esc(state)}%'` : '';
   const data = await safe(supabase.rpc('exec_sql', {
     query: `SELECT COUNT(*)::int as cnt FROM alma_interventions WHERE ${almaTopicFilter(topic)}${stateFilter}`,
-  }));
+  }), 'getAlmaCount');
   return (data as Array<{ cnt: number }> | null)?.[0]?.cnt ?? 0;
 }
 
@@ -195,7 +195,7 @@ export async function getContractStats(keywords: string[]) {
               SUM(contract_value)::bigint as total_value
        FROM austender_contracts
        WHERE ${where}`,
-  })) as Promise<Array<{ contracts: number; total_value: number }> | null>;
+  }), 'getContractStats') as Promise<Array<{ contracts: number; total_value: number }> | null>;
 }
 
 /**
@@ -219,7 +219,7 @@ export async function getFundingByLga(topic: Topic, limit = 20, state?: string) 
        GROUP BY e.lga_name, e.state
        ORDER BY total_funding DESC
        LIMIT ${limit}`,
-  })) as Promise<Array<{
+  }), 'getFundingByLga') as Promise<Array<{
     lga_name: string;
     state: string;
     orgs: number;
@@ -294,7 +294,7 @@ export async function getCrossSystemOrgs(primaryTopic: Topic, crossTopics: Topic
     LIMIT ${limit}
   `;
 
-  return safe(supabase.rpc('exec_sql', { query })) as Promise<Array<{
+  return safe(supabase.rpc('exec_sql', { query }), 'getCrossSystemOrgs') as Promise<Array<{
     gs_id: string;
     canonical_name: string;
     entity_type: string | null;
@@ -325,7 +325,7 @@ export async function getCrossSystemOverlap(primaryTopic: Topic, stateCode: stri
     ORDER BY COUNT(DISTINCT t.topic) DESC, SUM(jf.amount_dollars) DESC NULLS LAST
     LIMIT ${limit}
   `;
-  return safe(supabase.rpc('exec_sql', { query })) as Promise<Array<{
+  return safe(supabase.rpc('exec_sql', { query }), 'getCrossSystemOverlap') as Promise<Array<{
     gs_id: string;
     canonical_name: string;
     entity_type: string | null;
@@ -351,7 +351,7 @@ export async function getSchoolProfiles(lgaNames: string[]) {
        FROM acara_schools
        WHERE lga_name IN (${lgaList})
        GROUP BY lga_name, state ORDER BY avg_icsea`,
-  })) as Promise<Array<{
+  }), 'getSchoolProfiles') as Promise<Array<{
     lga_name: string;
     state: string;
     schools: number;
@@ -378,7 +378,7 @@ export async function getProviderContracts(entityIds: string[], limit = 20) {
               OR r.source_entity_id IN (${idList}))
          AND r.amount > 0
        ORDER BY r.amount DESC LIMIT ${limit}`,
-  })) as Promise<Array<{
+  }), 'getProviderContracts') as Promise<Array<{
     source: string;
     target: string;
     amount: number;
@@ -490,7 +490,7 @@ export async function getEntityEvidencePrograms(db: SupabaseClient, entityId: st
                ai.evidence_strength_signal DESC NULLS LAST,
                ai.portfolio_score DESC NULLS LAST
       LIMIT ${lim}`,
-  })) as AlmaEvidenceProgram[] | null;
+  }), 'getEntityEvidencePrograms') as AlmaEvidenceProgram[] | null;
   return rows ?? [];
 }
 
@@ -555,7 +555,7 @@ export async function getRogsTimeSeries(programPrefix: string, states: string[])
        WHERE program_name LIKE '${esc(programPrefix)}%'
          AND state IN (${stateList})
        ORDER BY state, financial_year, program_name`,
-  })) as Promise<Array<{
+  }), 'getRogsTimeSeries') as Promise<Array<{
     state: string;
     financial_year: string;
     program_name: string;
@@ -577,7 +577,7 @@ export async function getYouthJusticeContracts(limit = 15) {
           OR title ILIKE '%youth%detention%'
        ORDER BY contract_value DESC
        LIMIT ${limit}`,
-  })) as Promise<Array<{
+  }), 'getYouthJusticeContracts') as Promise<Array<{
     buyer_name: string;
     supplier_name: string;
     amount: number;
@@ -613,7 +613,7 @@ export async function getYouthJusticeGrants(limit = 15) {
        GROUP BY jf.recipient_name, jf.state, ge.gs_id
        ORDER BY total DESC NULLS LAST
        LIMIT ${limit}`,
-  })) as Promise<Array<{
+  }), 'getYouthJusticeGrants') as Promise<Array<{
     recipient_name: string;
     state: string | null;
     gs_id: string | null;
@@ -639,7 +639,7 @@ export async function getNdisYouthOverlay() {
        WHERE state != 'OT'
        GROUP BY state
        ORDER BY ndis_budget DESC`,
-  })) as Promise<Array<{
+  }), 'getNdisYouthOverlay') as Promise<Array<{
     state: string;
     ndis_total: number;
     ndis_youth: number;
@@ -664,7 +664,7 @@ export async function getDssPaymentsByState() {
          AND state NOT IN ('Unknown')
        GROUP BY state, payment_type
        ORDER BY state, payment_type`,
-  })) as Promise<Array<{
+  }), 'getDssPaymentsByState') as Promise<Array<{
     state: string;
     payment_type: string;
     recipients: number;
@@ -687,7 +687,7 @@ export async function getDssPaymentsByLga(lgaNames: string[]) {
          AND d.payment_type IN ('Disability Support Pension','Youth Allowance (other)','JobSeeker Payment')
        GROUP BY p.lga_name, d.payment_type
        ORDER BY p.lga_name, d.payment_type`,
-  })) as Promise<Array<{
+  }), 'getDssPaymentsByLga') as Promise<Array<{
     lga_name: string;
     payment_type: string;
     recipients: number;
@@ -719,7 +719,7 @@ export async function getYouthJusticeIndicators() {
        ) r ON true
        WHERE d.financial_year = '2023-24'
        ORDER BY d.total_expenditure_m DESC`,
-  })) as Promise<Array<{
+  }), 'getYouthJusticeIndicators') as Promise<Array<{
     state: string;
     total_expenditure_m: number;
     cost_per_day: number;
@@ -746,7 +746,7 @@ export async function getCrimeStatsLga(lgaNames: string[]) {
        WHERE lga_name IN (${lgaList})
        GROUP BY lga_name, state
        ORDER BY avg_rate_per_100k DESC`,
-  })) as Promise<Array<{
+  }), 'getCrimeStatsLga') as Promise<Array<{
     lga_name: string;
     state: string;
     total_incidents: number;
@@ -778,7 +778,7 @@ export async function getCrossSystemHeatmap() {
        FROM lga_cross_system_stats
        WHERE school_count > 0 OR dsp_recipients > 0 OR ndis_youth_participants > 0
        ORDER BY lga_name`,
-  })) as Promise<Array<{
+  }), 'getCrossSystemHeatmap') as Promise<Array<{
     lga_name: string;
     state: string;
     population: number;
@@ -809,7 +809,7 @@ export async function getAlmaByLga(topic: Topic) {
             JOIN gs_entities ge ON ge.id = ai.gs_entity_id
             WHERE ${almaTopicFilter(topic, 'ai')} AND ge.lga_name IS NOT NULL
             GROUP BY ge.lga_name`,
-  })) as Promise<Array<{ lga_name: string; alma_count: number }> | null>;
+  }), 'getAlmaByLga') as Promise<Array<{ lga_name: string; alma_count: number }> | null>;
 }
 
 /**
@@ -869,7 +869,7 @@ export async function getAccoFundingGap(topic: Topic, state?: string) {
               AND jf.recipient_name NOT IN ('Territory Families, Housing and Communities', 'Community Services Directorate')
               AND jf.program_name NOT LIKE 'ROGS%' AND jf.program_name NOT LIKE 'Total%'
             GROUP BY CASE WHEN ge.is_community_controlled THEN 'Community Controlled' ELSE 'Other service providers' END`,
-  })) as Promise<Array<{ org_type: string; orgs: number; total_funding: number; avg_per_recipient: number; avg_grant: number; funding_rows: number; funding_share_pct: number }> | null>;
+  }), 'getAccoFundingGap') as Promise<Array<{ org_type: string; orgs: number; total_funding: number; avg_per_recipient: number; avg_grant: number; funding_rows: number; funding_share_pct: number }> | null>;
 }
 
 /**
@@ -890,7 +890,7 @@ export async function getFundingByRemoteness(topic: Topic, state?: string) {
               AND ge.remoteness IS NOT NULL
             GROUP BY ge.remoteness
             ORDER BY total DESC`,
-  })) as Promise<Array<{ remoteness: string; orgs: number; total: number; grants: number }> | null>;
+  }), 'getFundingByRemoteness') as Promise<Array<{ remoteness: string; orgs: number; total: number; grants: number }> | null>;
 }
 
 /**
@@ -905,7 +905,7 @@ export async function getUnfundedEffectivePrograms(topic: Topic) {
               AND (ai.evidence_level ILIKE '%Effective%' OR ai.evidence_level ILIKE '%Indigenous%')
               AND ai.gs_entity_id IS NULL
             ORDER BY ai.type, ai.name`,
-  })) as Promise<Array<{ name: string; type: string; evidence_level: string; cultural_authority: string; geography: string }> | null>;
+  }), 'getUnfundedEffectivePrograms') as Promise<Array<{ name: string; type: string; evidence_level: string; cultural_authority: string; geography: string }> | null>;
 }
 
 /**
@@ -934,7 +934,7 @@ export async function getYjRevolvingDoor(topic: Topic, limit = 15, state?: strin
             WHERE rd.canonical_name NOT LIKE 'Department %'
             ORDER BY rd.revolving_door_score DESC
             LIMIT ${limit}`,
-  })) as Promise<Array<{
+  }), 'getYjRevolvingDoor') as Promise<Array<{
     canonical_name: string; gs_id: string | null; revolving_door_score: number; influence_vectors: number;
     total_donated: number; total_contracts: number; total_funded: number;
     parties_funded: string; distinct_buyers: number; is_community_controlled: boolean;
@@ -957,7 +957,7 @@ export async function getYjFoundations(limit = 10) {
               AND f.name NOT ILIKE '%university%'
             ORDER BY f.total_giving_annual DESC NULLS LAST
             LIMIT ${limit}`,
-  })) as Promise<Array<{ name: string; total_giving_annual: number; thematic_focus: string; geographic_focus: string; gs_id: string | null }> | null>;
+  }), 'getYjFoundations') as Promise<Array<{ name: string; total_giving_annual: number; thematic_focus: string; geographic_focus: string; gs_id: string | null }> | null>;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1032,7 +1032,7 @@ export async function getPiccFundingByProgram() {
        WHERE jf.recipient_abn = '${PICC_ABN}'
        GROUP BY jf.program_name, fm.parent_funder_name, fm.parent_funder_gs_id, fm.funder_name, fm.funder_gs_id
        ORDER BY total DESC`,
-  })) as Promise<Array<{
+  }), 'getPiccFundingByProgram') as Promise<Array<{
     program_name: string;
     parent_funder_name: string | null;
     parent_funder_gs_id: string | null;
@@ -1059,7 +1059,7 @@ export async function getPiccFundingByYear() {
        WHERE recipient_abn = '${PICC_ABN}'
        GROUP BY financial_year
        ORDER BY financial_year`,
-  })) as Promise<Array<{
+  }), 'getPiccFundingByYear') as Promise<Array<{
     financial_year: string;
     total: number;
     grants: number;
@@ -1078,7 +1078,7 @@ export async function getPiccContracts() {
        FROM austender_contracts
        WHERE supplier_abn = '${PICC_ABN}'
        ORDER BY contract_value DESC`,
-  })) as Promise<Array<{
+  }), 'getPiccContracts') as Promise<Array<{
     title: string;
     value: number;
     buyer_name: string;
@@ -1099,7 +1099,7 @@ export async function getPiccAlmaInterventions() {
        JOIN gs_entities ge ON ge.id = ai.gs_entity_id
        WHERE ge.abn = '${PICC_ABN}'
        ORDER BY ai.name`,
-  })) as Promise<Array<{
+  }), 'getPiccAlmaInterventions') as Promise<Array<{
     name: string;
     type: string;
     evidence_level: string;
@@ -1119,7 +1119,7 @@ export async function getPiccEntity() {
               is_community_controlled, lga_name
        FROM gs_entities
        WHERE abn = '${PICC_ABN}'`,
-  })) as Promise<Array<{
+  }), 'getPiccEntity') as Promise<Array<{
     gs_id: string;
     canonical_name: string;
     abn: string;
@@ -1184,7 +1184,7 @@ export async function getPiccProgramDefinitions() {
             LEFT JOIN gs_entities funder_ge ON funder_ge.id = sl.funder_entity_id
             WHERE op.org_profile_id = '${PICC_ORG_PROFILE_ID}'
             ORDER BY op.sort_order, op.name, sl.sort_order, sl.source_type, sl.source_key`,
-  })) as Row[] | null;
+  }), 'getPiccProgramDefinitions') as Row[] | null;
 
   const byId = new Map<string, PiccProgramDefinition>();
   for (const row of rows ?? []) {
@@ -1232,7 +1232,7 @@ export async function getPalmIslandEntities() {
          AND abn != '${PICC_ABN}'
        ORDER BY canonical_name
        LIMIT 20`,
-  })) as Promise<Array<{
+  }), 'getPalmIslandEntities') as Promise<Array<{
     gs_id: string;
     canonical_name: string;
     abn: string;
@@ -1251,7 +1251,7 @@ export async function getPiccLeadership() {
        FROM org_leadership
        WHERE org_profile_id = '${PICC_ORG_PROFILE_ID}'
        ORDER BY sort_order`,
-  })) as Promise<Array<{
+  }), 'getPiccLeadership') as Promise<Array<{
     name: string;
     title: string;
     bio: string | null;
@@ -1277,7 +1277,7 @@ export async function getPiccMatchedGrants() {
          )
        ORDER BY deadline ASC
        LIMIT 15`,
-  })) as Promise<Array<{
+  }), 'getPiccMatchedGrants') as Promise<Array<{
     id: string;
     name: string;
     amount_min: number | null;
@@ -1305,7 +1305,7 @@ export async function getPiccPipeline() {
        ORDER BY CASE p.status
          WHEN 'submitted' THEN 1 WHEN 'upcoming' THEN 2 WHEN 'prospect' THEN 3 ELSE 4
        END, p.deadline`,
-  })) as Promise<Array<{
+  }), 'getPiccPipeline') as Promise<Array<{
     name: string;
     amount_display: string;
     amount_numeric: number | null;
@@ -1333,7 +1333,7 @@ export async function getPiccPeerOrgs() {
        GROUP BY e.canonical_name, e.abn, e.state, e.lga_name
        ORDER BY alma_programs DESC
        LIMIT 12`,
-  })) as Promise<Array<{
+  }), 'getPiccPeerOrgs') as Promise<Array<{
     canonical_name: string;
     abn: string;
     state: string;
@@ -1357,7 +1357,7 @@ export async function getAnaoYjCompliance() {
        JOIN anao_mmr_exemptions e ON e.portfolio = c.portfolio
        WHERE c.portfolio IN ('Attorney-Generals', 'Education', 'Social Services', 'National Indigenous Australians Agency')
        ORDER BY c.compliance_rate`,
-  })) as Promise<Array<{
+  }), 'getAnaoYjCompliance') as Promise<Array<{
     portfolio: string;
     compliance_rate: number;
     contracts_compliant: number;
@@ -1389,7 +1389,7 @@ export async function getYjMmrStats() {
          WHERE recipient_abn IS NOT NULL AND topics @> ARRAY['youth-justice']::text[]
            AND ${grantFilterSql()}
        )`,
-  })) as Promise<Array<{
+  }), 'getYjMmrStats') as Promise<Array<{
     total_contracts: number;
     mmr_applicable: number;
     mmr_community_controlled: number;
@@ -1417,7 +1417,7 @@ export async function getEvidenceCoverage(topic: Topic, state?: string) {
        FROM alma_interventions ai
        LEFT JOIN alma_intervention_evidence aie ON aie.intervention_id = ai.id
        WHERE ${almaTopicFilter(topic, 'ai')}${stateFilter}`,
-  })) as Promise<Array<{
+  }), 'getEvidenceCoverage') as Promise<Array<{
     total_interventions: number;
     with_evidence: number;
     without_evidence: number;
@@ -1443,7 +1443,7 @@ export async function getEvidenceGapDetail(topic: Topic, state?: string, limit =
        WHERE ${almaTopicFilter(topic, 'ai')}${stateFilter}
        ORDER BY has_evidence, ai.name
        LIMIT ${limit}`,
-  })) as Promise<Array<{
+  }), 'getEvidenceGapDetail') as Promise<Array<{
     name: string;
     type: string | null;
     evidence_level: string | null;
@@ -1476,7 +1476,7 @@ export async function getHansardMentions(state: string, limit = 20) {
            OR body_text ILIKE '%juvenile%')
        ORDER BY sitting_date DESC
        LIMIT ${limit}`,
-  })) as Promise<Array<{
+  }), 'getHansardMentions') as Promise<Array<{
     speaker_name: string;
     speaker_party: string | null;
     speaker_electorate: string | null;
@@ -1509,7 +1509,7 @@ export async function getYjLobbyingConnections(topic: Topic, state?: string, lim
                 OR r.target_entity_id IN (SELECT gs_entity_id FROM yj_orgs))
             ORDER BY e.canonical_name
             LIMIT ${limit}`,
-  })) as Promise<Array<{
+  }), 'getYjLobbyingConnections') as Promise<Array<{
     canonical_name: string;
     gs_id: string | null;
     lobbyist_name: string | null;
@@ -1560,7 +1560,7 @@ export async function getProgramsWithPartners(topic: Topic, state: string, opts?
        SELECT program_name, recipient_name, recipient_abn, total, grants, gs_id, is_community_controlled
        FROM ranked WHERE rn <= 30
        ORDER BY program_name, total DESC NULLS LAST`,
-  })) as Promise<Array<{
+  }), 'getProgramsWithPartners') as Promise<Array<{
     program_name: string;
     recipient_name: string;
     recipient_abn: string | null;
@@ -1584,7 +1584,7 @@ export async function getRogsExpenditure(state: string) {
          AND program_name NOT LIKE '%Total%'
        GROUP BY program_name
        ORDER BY total DESC`,
-  })) as Promise<Array<{
+  }), 'getRogsExpenditure') as Promise<Array<{
     program_name: string;
     total: number;
     years: number;
@@ -1617,7 +1617,7 @@ export async function getFundingByProgram(topic: Topic, state: string, limit = 2
        GROUP BY program_name
        ORDER BY total DESC NULLS LAST
        LIMIT ${limit}`,
-  })) as Promise<Array<{
+  }), 'getFundingByProgram') as Promise<Array<{
     program_name: string;
     grants: number;
     total: number;
@@ -1640,7 +1640,7 @@ export async function getStateDataDepth(state: string) {
               MAX(financial_year) as latest_year
        FROM justice_funding
        WHERE state = '${sc}'`,
-  })) as Promise<Array<{
+  }), 'getStateDataDepth') as Promise<Array<{
     total_records: number;
     sources: number;
     programs: number;
@@ -1666,7 +1666,7 @@ export async function getBudgetCommitments(state: string) {
        WHERE state = '${sc}' AND source LIKE '%-budget-sds'
          AND program_name NOT LIKE 'Total%'
        ORDER BY amount_dollars DESC NULLS LAST`,
-  })) as Promise<Array<{
+  }), 'getBudgetCommitments') as Promise<Array<{
     program_name: string;
     amount: number | null;
     financial_year: string;
@@ -1692,7 +1692,7 @@ export async function getProgramRecipients(state: string, programName: string, l
        GROUP BY jf.recipient_name, jf.recipient_abn, e.gs_id, e.is_community_controlled
        ORDER BY total DESC NULLS LAST
        LIMIT ${limit}`,
-  })) as Promise<Array<{
+  }), 'getProgramRecipients') as Promise<Array<{
     recipient_name: string;
     recipient_abn: string | null;
     total: number | null;
@@ -1730,7 +1730,7 @@ export async function getTrackerLeadership(state: string, topic: Topic, limit = 
             FROM top_orgs t
             ORDER BY t.total_funded DESC NULLS LAST
             LIMIT ${limit}`,
-  })) as Promise<Array<{
+  }), 'getTrackerLeadership') as Promise<Array<{
     recipient_name: string;
     recipient_abn: string | null;
     gs_id: string | null;
@@ -1765,7 +1765,7 @@ export async function getTrackerInterlocks(state: string, topic: Topic, limit = 
               )
             ORDER BY bi.board_count DESC
             LIMIT ${limit}`,
-  })) as Promise<Array<{
+  }), 'getTrackerInterlocks') as Promise<Array<{
     person_name: string;
     board_count: number;
     organisations: string; // JSON array text
@@ -1794,7 +1794,7 @@ export async function getTrackerDonations(state: string, topic: Topic, limit = 1
        GROUP BY pd.donor_name, pd.donation_to
        ORDER BY total DESC
        LIMIT ${limit}`,
-  })) as Promise<Array<{
+  }), 'getTrackerDonations') as Promise<Array<{
     donor_name: string;
     donation_to: string;
     total: number;
@@ -1816,7 +1816,7 @@ export async function getBudgetTotals(state: string) {
        WHERE state = '${sc}' AND source LIKE '%-budget-sds'
          AND program_name LIKE 'Total%'
        ORDER BY financial_year DESC`,
-  })) as Promise<Array<{
+  }), 'getBudgetTotals') as Promise<Array<{
     program_name: string;
     amount: number;
     financial_year: string;
@@ -1839,7 +1839,7 @@ export async function getOutcomesMetrics(jurisdiction: string, domain = 'youth-j
        FROM outcomes_metrics
        WHERE jurisdiction = '${j}' AND domain = '${d}'
        ORDER BY metric_name, period`,
-  })) as Promise<Array<{
+  }), 'getOutcomesMetrics') as Promise<Array<{
     metric_name: string;
     metric_value: number;
     metric_unit: string;
@@ -1863,7 +1863,7 @@ export async function getStateComparisonMetrics(metricNames: string[], domain = 
        WHERE domain = '${d}' AND metric_name IN (${nameList})
          AND (cohort = 'all' OR cohort = 'indigenous' OR cohort IS NULL)
        ORDER BY metric_name, jurisdiction, CASE WHEN cohort = 'all' THEN 0 WHEN cohort IS NULL THEN 1 ELSE 2 END, period DESC`,
-  })) as Promise<Array<{
+  }), 'getStateComparisonMetrics') as Promise<Array<{
     jurisdiction: string;
     metric_name: string;
     metric_value: number;
@@ -1886,7 +1886,7 @@ export async function getCtgTrend(jurisdiction: string, domain = 'youth-justice'
        WHERE jurisdiction = '${j}' AND domain = '${d}'
          AND metric_name = 'ctg_target11_indigenous_detention_rate'
        ORDER BY period`,
-  })) as Promise<Array<{
+  }), 'getCtgTrend') as Promise<Array<{
     rate: number;
     period: string;
     notes: string | null;
@@ -1914,7 +1914,7 @@ export async function getMetricTimeSeries(
          AND metric_name IN (${nameList})
          AND cohort = '${c}'
        ORDER BY metric_name, period`,
-  })) as Promise<Array<{
+  }), 'getMetricTimeSeries') as Promise<Array<{
     metric_name: string;
     metric_value: number;
     metric_unit: string;
@@ -1937,7 +1937,7 @@ export async function getCtgTargetComparison(jurisdiction: string) {
          AND metric_name IN ('ctg_detention_rate', 'ctg_detention_rate_projected', 'ctg_detention_rate_target')
          AND cohort = 'indigenous'
        ORDER BY metric_name, period`,
-  })) as Promise<Array<{
+  }), 'getCtgTargetComparison') as Promise<Array<{
     metric_name: string;
     metric_value: number;
     period: string;
@@ -1958,7 +1958,7 @@ export async function getPolicyTimeline(jurisdiction: string, domain = 'youth-ju
        FROM policy_events
        WHERE jurisdiction = '${j}' AND domain = '${d}'
        ORDER BY event_date DESC`,
-  })) as Promise<Array<{
+  }), 'getPolicyTimeline') as Promise<Array<{
     event_date: string;
     title: string;
     description: string;
@@ -1983,7 +1983,7 @@ export async function getOversightData(jurisdiction: string, domain = 'youth-jus
        FROM oversight_recommendations
        WHERE jurisdiction = '${j}' AND domain = '${d}'
        ORDER BY oversight_body, recommendation_number`,
-  })) as Promise<Array<{
+  }), 'getOversightData') as Promise<Array<{
     oversight_body: string;
     report_title: string;
     report_date: string;
@@ -2046,12 +2046,12 @@ export async function getCrossDomainOrgs(stateCode: string, limit = 20) {
     domain_count: number;
     total_funding: number;
   };
-  const rows = await safe(supabase.rpc('exec_sql', { query })) as Row[] | null;
+  const rows = await safe(supabase.rpc('exec_sql', { query }), 'getCrossDomainOrgs') as Row[] | null;
   // Map topic codes to labels
   return (rows || []).map(r => ({
     ...r,
     domain_labels: r.domains.map(d => domainLabels[d] || d),
-  }));
+  }), 'getCrossDomainOrgs');
 }
 
 /**
@@ -2082,7 +2082,7 @@ export async function getStateDomainFunding(stateCode: string) {
       AND ${grantFilterSql()}
   `;
   type Row = Record<string, unknown>;
-  const rows = await safe(supabase.rpc('exec_sql', { query })) as Row[] | null;
+  const rows = await safe(supabase.rpc('exec_sql', { query }), 'getStateDomainFunding') as Row[] | null;
   const row = rows?.[0];
   if (!row) return null;
   return {
@@ -2092,7 +2092,7 @@ export async function getStateDomainFunding(stateCode: string) {
       total: Number(row[`${d.topic}_total`] || 0),
       grants: Number(row[`${d.topic}_grants`] || 0),
       orgs: Number(row[`${d.topic}_orgs`] || 0),
-    })),
+    }), 'getStateDomainFunding'),
     grandTotal: Number(row.grand_total || 0),
     totalGrants: Number(row.total_grants || 0),
     totalOrgs: Number(row.total_orgs || 0),
@@ -2117,7 +2117,7 @@ export async function getOversightSummary(jurisdiction: string) {
     GROUP BY domain
     ORDER BY domain
   `;
-  return safe(supabase.rpc('exec_sql', { query })) as Promise<Array<{
+  return safe(supabase.rpc('exec_sql', { query }), 'getOversightSummary') as Promise<Array<{
     domain: string;
     total: number;
     implemented: number;
@@ -2137,7 +2137,7 @@ export async function getPiccFundingFlow() {
          AND amount IS NOT NULL
          AND year IS NOT NULL
        GROUP BY year ORDER BY year`,
-  })) as Promise<Array<{
+  }), 'getPiccFundingFlow') as Promise<Array<{
     year: number;
     total: number;
     grants: number;

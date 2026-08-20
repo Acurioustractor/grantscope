@@ -79,7 +79,7 @@ async function getData() {
         db
           .from('person_roles')
           .select('person_name, person_name_normalised, role_type, company_abn, company_name')
-          .range(offset, offset + PAGE - 1),
+          .range(offset, offset + PAGE - 1), 'reports/board-interlocks',
       );
       const rows = (data ?? []) as PersonRole[];
       if (rows.length === 0) break;
@@ -100,7 +100,7 @@ async function getData() {
           .from('acnc_ais')
           .select('abn, charity_name, total_revenue, total_expenses, total_paid_key_management, charity_size')
           .eq('ais_year', 2023)
-          .range(offset, offset + PAGE - 1),
+          .range(offset, offset + PAGE - 1), 'reports/board-interlocks',
       );
       const rows = (data ?? []) as AisRecord[];
       if (rows.length === 0) break;
@@ -122,7 +122,7 @@ async function getData() {
           .select('abn')
           .eq('is_community_controlled', true)
           .not('abn', 'is', null)
-          .range(offset, offset + PAGE - 1),
+          .range(offset, offset + PAGE - 1), 'reports/board-interlocks',
       );
       const rows = (data ?? []) as CommunityControlled[];
       if (rows.length === 0) break;

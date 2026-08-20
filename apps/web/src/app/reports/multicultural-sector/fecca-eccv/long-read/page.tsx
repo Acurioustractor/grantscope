@@ -28,19 +28,19 @@ async function getNumbers() {
                      net_surplus_deficit::bigint AS deficit, employee_expenses::bigint, total_paid_kmp::bigint,
                      staff_full_time
               FROM public.charity_impact_reports WHERE abn='${FECCA_ABN}' AND report_year=2024`,
-    })) as Promise<Array<{ total_revenue: number; revenue_from_government: number; total_expenses: number; deficit: number; employee_expenses: number; total_paid_kmp: number; staff_full_time: number | null }> | null>,
+    }), 'reports/multicultural-sector/fecca-eccv/long-read') as Promise<Array<{ total_revenue: number; revenue_from_government: number; total_expenses: number; deficit: number; employee_expenses: number; total_paid_kmp: number; staff_full_time: number | null }> | null>,
     safe(supabase.rpc('exec_sql', {
       query: `SELECT ais_year::int, total_revenue::bigint AS rev, revenue_from_government::bigint AS govt, net_surplus_deficit::bigint AS surplus
               FROM public.acnc_ais WHERE abn='${ECCV_ABN}' ORDER BY ais_year ASC`,
-    })) as Promise<Array<{ ais_year: number; rev: number; govt: number; surplus: number }> | null>,
+    }), 'reports/multicultural-sector/fecca-eccv/long-read') as Promise<Array<{ ais_year: number; rev: number; govt: number; surplus: number }> | null>,
     safe(supabase.rpc('exec_sql', {
       query: `SELECT COUNT(*)::int AS grants, SUM(amount_aud)::bigint AS total
               FROM public.vic_grants_awarded WHERE amount_aud > 0`,
-    })) as Promise<Array<{ grants: number; total: number }> | null>,
+    }), 'reports/multicultural-sector/fecca-eccv/long-read') as Promise<Array<{ grants: number; total: number }> | null>,
     safe(supabase.rpc('exec_sql', {
       query: `SELECT SUM(contract_value)::bigint AS total, COUNT(*)::int AS contracts
               FROM public.austender_contracts WHERE supplier_name ILIKE 'ADULT MULTICULTURAL EDUCATION%' OR supplier_name ILIKE '%AMES Australia%'`,
-    })) as Promise<Array<{ total: number; contracts: number }> | null>,
+    }), 'reports/multicultural-sector/fecca-eccv/long-read') as Promise<Array<{ total: number; contracts: number }> | null>,
     safe(supabase.rpc('exec_sql', {
       query: `SELECT topic, SUM(amount_aud)::bigint AS total FROM (
                 SELECT amount_aud, CASE
@@ -48,7 +48,7 @@ async function getNumbers() {
                   WHEN program_name ILIKE '%multicultural%' OR program_name ILIKE '%ethnic%' OR program_name ILIKE '%refugee%' OR program_name ILIKE '%settlement%' OR program_name ILIKE '%migrant%' OR program_name ILIKE '%MCIF%' OR recipient_name ILIKE '%ethnic communit%' OR recipient_name ILIKE '%multicultural%' OR recipient_name ILIKE '%migrant%' OR recipient_name ILIKE '%refugee%' THEN 'multicultural'
                   ELSE 'other' END AS topic FROM public.vic_grants_awarded WHERE amount_aud > 0 AND program_name IS NOT NULL
               ) t GROUP BY 1`,
-    })) as Promise<Array<{ topic: string; total: number }> | null>,
+    }), 'reports/multicultural-sector/fecca-eccv/long-read') as Promise<Array<{ topic: string; total: number }> | null>,
   ]);
 
   const fecca = feccaCir?.[0] || null;

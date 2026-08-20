@@ -106,7 +106,7 @@ async function getSchoolSummary(stateCode: string) {
               ROUND(AVG(indigenous_pct)::numeric, 1)::float as avg_indigenous_pct,
               COUNT(*) FILTER (WHERE icsea_value < 900)::int as low_icsea_schools
        FROM acara_schools WHERE state = '${sc}'`,
-  })) as Promise<SchoolRow[] | null>;
+  }), 'reports/[state]') as Promise<SchoolRow[] | null>;
 }
 
 async function getStateReport(stateCode: string) {

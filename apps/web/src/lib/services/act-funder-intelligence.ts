@@ -703,7 +703,7 @@ export async function loadActFunderIntelligence(orgProfileId: string): Promise<A
       LEFT JOIN roles r ON r.foundation_id = f.id
       LEFT JOIN pipeline pl ON pl.foundation_id = f.id
       ORDER BY (NOT ('parked' = ANY(p.stages))) DESC, p.fit_score DESC NULLS LAST, f.name`,
-  })) as FoundationRow[] | null;
+  }), 'act-funder-intelligence') as FoundationRow[] | null;
 
   mark('mega');
   if (!foundationRows?.length) return emptyIntelligence();
@@ -733,13 +733,13 @@ export async function loadActFunderIntelligence(orgProfileId: string): Promise<A
             ROW_NUMBER() OVER (PARTITION BY foundation_id ORDER BY grant_year DESC NULLS LAST, grant_amount DESC NULLS LAST, updated_at DESC) AS rn
           FROM foundation_grantees WHERE foundation_id IN (${ids})
         ) SELECT * FROM ranked WHERE rn <= 12 ORDER BY foundation_id, rn`,
-    })) as Promise<Array<Record<string, unknown>> | null>,
+    }), 'act-funder-intelligence') as Promise<Array<Record<string, unknown>> | null>,
     safe(db.rpc('exec_sql', {
       query: `SELECT id::text, foundation_id::text, person_name, role_title, role_type,
         source_url, source_document_url, confidence, extracted_at::text
         FROM foundation_people WHERE foundation_id IN (${ids})
         ORDER BY foundation_id, extracted_at DESC`,
-    })) as Promise<RawPersonRow[] | null>,
+    }), 'act-funder-intelligence') as Promise<RawPersonRow[] | null>,
     safe(db.rpc('exec_sql', {
       query: `SELECT pr.id::text, f.id::text AS foundation_id, pr.person_name, pr.role_type,
           pr.source, pr.confidence, pr.updated_at::text
@@ -752,7 +752,7 @@ export async function loadActFunderIntelligence(orgProfileId: string): Promise<A
             WHEN 'secretary' THEN 3 WHEN 'director' THEN 4 WHEN 'board_member' THEN 5 ELSE 6
           END,
           pr.person_name`,
-    })) as Promise<RawRoleRow[] | null>,
+    }), 'act-funder-intelligence') as Promise<RawRoleRow[] | null>,
     safe(db.rpc('exec_sql', {
       query: `WITH ranked AS (
           SELECT id::text, foundation_id::text, name, status, deadline::text, amount_min, amount_max,
@@ -762,20 +762,20 @@ export async function loadActFunderIntelligence(orgProfileId: string): Promise<A
               deadline ASC NULLS LAST, scraped_at DESC NULLS LAST) AS rn
           FROM foundation_programs WHERE foundation_id IN (${ids})
         ) SELECT * FROM ranked WHERE rn <= 6 ORDER BY foundation_id, rn`,
-    })) as Promise<Array<Record<string, unknown>> | null>,
+    }), 'act-funder-intelligence') as Promise<Array<Record<string, unknown>> | null>,
     safe(db.rpc('exec_sql', {
       query: `SELECT id::text, foundation_id::text, signal_type, related_name, person_name,
         evidence_text, strength, confidence, source_url
         FROM foundation_relationship_signals WHERE foundation_id IN (${ids})
         ORDER BY strength DESC NULLS LAST, created_at DESC LIMIT 800`,
-    })) as Promise<Array<Record<string, unknown>> | null>,
+    }), 'act-funder-intelligence') as Promise<Array<Record<string, unknown>> | null>,
     safe(db.rpc('exec_sql', {
       query: `SELECT funder_name, foundation_id::text, contacts, contacts_count, email_count,
         email_last_date::text, email_summary, relationship_score,
         most_recent_contact_at::text, refreshed_at::text
         FROM funder_context_snapshot WHERE foundation_id IN (${ids})
         ORDER BY relationship_score DESC, refreshed_at DESC`,
-    })) as Promise<RawSnapshot[] | null>,
+    }), 'act-funder-intelligence') as Promise<RawSnapshot[] | null>,
     safe(db.rpc('exec_sql', {
       query: `SELECT gc.id::text, gc.full_name, gc.email, gc.company_name,
           gc.last_contact_date::text, gc.tags, graph.entity_id::text AS graph_entity_id
@@ -790,14 +790,14 @@ export async function loadActFunderIntelligence(orgProfileId: string): Promise<A
         WHERE COALESCE(gc.company_name, '') <> '' OR graph.entity_id IS NOT NULL
           OR (COALESCE(gc.full_name, '') <> '' AND (gc.last_contact_date IS NOT NULL OR COALESCE(cardinality(gc.tags), 0) > 0))
         ORDER BY gc.last_contact_date DESC NULLS LAST, gc.ghl_updated_at DESC NULLS LAST LIMIT 5000`,
-    })) as Promise<RawGhlContact[] | null>,
+    }), 'act-funder-intelligence') as Promise<RawGhlContact[] | null>,
     safe(db.rpc('exec_sql', {
       query: `SELECT id::text, name, email, role, organisation, notes,
           last_contacted_at::text, linked_entity_id::text
         FROM org_contacts
         WHERE org_profile_id = '${orgProfileId}'
         ORDER BY last_contacted_at DESC NULLS LAST, updated_at DESC`,
-    })) as Promise<RawOrgContact[] | null>,
+    }), 'act-funder-intelligence') as Promise<RawOrgContact[] | null>,
     safe(db.rpc('exec_sql', {
       // cfg raises the trigram threshold for this statement (default 0.3
       // fetched huge candidate sets that the >=58 nameScore filter discarded
@@ -828,7 +828,7 @@ export async function loadActFunderIntelligence(orgProfileId: string): Promise<A
         ) e ON true
         ORDER BY c.organisation, c.name,
           similarity(lower(e.canonical_name), lower(c.search_name)) DESC NULLS LAST`,
-    })) as Promise<RawContactResolutionRow[] | null>,
+    }), 'act-funder-intelligence') as Promise<RawContactResolutionRow[] | null>,
     safe(db.rpc('exec_sql', {
       query: `WITH targets AS (
           SELECT DISTINCT f.id AS foundation_id, f.gs_entity_id AS target_entity_id
@@ -868,13 +868,13 @@ export async function loadActFunderIntelligence(orgProfileId: string): Promise<A
           act_contact, act_contact_email, last_contacted_at
         FROM ranked WHERE rn = 1
         ORDER BY last_contacted_at DESC NULLS LAST LIMIT 200`,
-    })) as Promise<RawOrganisationBridge[] | null>,
+    }), 'act-funder-intelligence') as Promise<RawOrganisationBridge[] | null>,
     safe(db.rpc('exec_sql', {
       query: `SELECT id::text, source_system, actor_name, actor_email, organisation, title, summary,
         signal_kind, source_url, happened_at::text, confidence
         FROM opportunity_context_events WHERE org_profile_id = '${orgProfileId}'
         ORDER BY COALESCE(happened_at, created_at) DESC LIMIT 300`,
-    })) as Promise<RawContextEvent[] | null>,
+    }), 'act-funder-intelligence') as Promise<RawContextEvent[] | null>,
     safe(db.rpc('exec_sql', {
       query: `SELECT i.id::text, opf.foundation_id::text, i.interaction_type, i.summary,
           i.notes, i.happened_at::text, i.status_snapshot
@@ -882,7 +882,7 @@ export async function loadActFunderIntelligence(orgProfileId: string): Promise<A
         JOIN org_project_foundations opf ON opf.id = i.org_project_foundation_id
         WHERE i.org_profile_id = '${orgProfileId}' AND opf.foundation_id IN (${ids})
         ORDER BY i.happened_at DESC, i.created_at DESC LIMIT 800`,
-    })) as Promise<RawInteraction[] | null>,
+    }), 'act-funder-intelligence') as Promise<RawInteraction[] | null>,
     safe(db.rpc('exec_sql', {
       query: `SELECT
         (SELECT COUNT(*) FROM foundations)::int AS foundations,
@@ -908,13 +908,13 @@ export async function loadActFunderIntelligence(orgProfileId: string): Promise<A
           (SELECT MAX(happened_at) FROM opportunity_context_events WHERE org_profile_id = '${orgProfileId}' AND source_system = 'notion')
         )::text AS notion_latest,
         (SELECT MAX(refreshed_at)::text FROM funder_context_snapshot) AS snapshot_latest`,
-    })) as Promise<Array<Record<string, unknown>> | null>,
+    }), 'act-funder-intelligence') as Promise<Array<Record<string, unknown>> | null>,
     safe(db.rpc('exec_sql', {
       query: `SELECT agent_id, status, started_at::text, completed_at::text, errors
         FROM agent_runs WHERE agent_id IN ('sync-goods-ghl', 'match-foundations-for-projects',
           'refresh-funder-context', 'foundation-intelligence-refresh', 'discover-foundation-programs')
         ORDER BY started_at DESC LIMIT 30`,
-    })) as Promise<Array<Record<string, unknown>> | null>,
+    }), 'act-funder-intelligence') as Promise<Array<Record<string, unknown>> | null>,
   ]);
 
   mark('parallel');

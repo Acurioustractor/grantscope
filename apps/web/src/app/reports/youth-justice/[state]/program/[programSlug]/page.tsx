@@ -130,7 +130,7 @@ async function getProgramDetail(state: string, programSlug: string) {
        WHERE state = '${state}'
          AND LOWER(REPLACE(program_name, ' ', '-')) = LOWER('${programSlug.replace(/'/g, "''")}')
        LIMIT 1`,
-  })) as Array<{ program_name: string }> | null;
+  }), 'reports/youth-justice/[state]/program/[programSlug]') as Array<{ program_name: string }> | null;
 
   const exactName = programLookup?.[0]?.program_name;
   if (!exactName) return null;
@@ -150,7 +150,7 @@ async function getProgramDetail(state: string, programSlug: string) {
          AND recipient_name NOT LIKE 'Total%'
          AND recipient_name NOT LIKE 'Youth Justice -%'
        GROUP BY program_name`,
-  })) as ProgramStats[] | null;
+  }), 'reports/youth-justice/[state]/program/[programSlug]') as ProgramStats[] | null;
 
   const stats = statsResult?.[0] ?? null;
 
@@ -172,7 +172,7 @@ async function getProgramDetail(state: string, programSlug: string) {
        GROUP BY jf.recipient_name, jf.recipient_abn, e.gs_id, e.is_community_controlled
        ORDER BY total DESC NULLS LAST, jf.recipient_name
        LIMIT 500`,
-  })) as OrgRow[] | null;
+  }), 'reports/youth-justice/[state]/program/[programSlug]') as OrgRow[] | null;
 
   // Get leadership for orgs with ABNs
   const abns = (orgs ?? []).map(o => o.recipient_abn).filter(Boolean);
@@ -187,7 +187,7 @@ async function getProgramDetail(state: string, programSlug: string) {
          WHERE e.abn IN (${abnList})
          ORDER BY e.canonical_name, pr.role_type, pr.person_name
          LIMIT 500`,
-    })) ?? []) as LeaderRow[];
+    }), 'reports/youth-justice/[state]/program/[programSlug]') ?? []) as LeaderRow[];
   }
 
   // Group leadership by ABN

@@ -35,7 +35,7 @@ function num(v: unknown): number {
 
 async function getData() {
   const supabase = getServiceSupabase();
-  const q = (query: string) => safe(supabase.rpc('exec_sql', { query })) as Promise<Row[] | null>;
+  const q = (query: string) => safe(supabase.rpc('exec_sql', { query }), 'reports/ndis') as Promise<Row[] | null>;
 
   const [
     nationalStats,

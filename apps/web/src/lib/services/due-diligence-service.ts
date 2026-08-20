@@ -202,7 +202,7 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
     safe(supabase.from('mv_gs_entity_stats')
       .select('total_relationships, total_inbound_amount, total_outbound_amount, counterparty_count')
       .eq('id', entity.id)
-      .single()),
+      .single(), 'due-diligence-service'),
 
     // ACNC financials (multi-year)
     entity.abn
@@ -210,7 +210,7 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
           .select('ais_year, total_revenue, total_expenses, total_assets, net_surplus_deficit, donations_and_bequests, revenue_from_government, staff_fte, charity_size')
           .eq('abn', entity.abn)
           .order('ais_year', { ascending: false })
-          .limit(5))
+          .limit(5), 'due-diligence-service')
       : Promise.resolve(null),
 
     // ACNC charity details
@@ -218,7 +218,7 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
       ? safe(supabase.from('acnc_charities')
           .select('name, charity_size, pbi, hpc, purposes, beneficiaries, operating_states')
           .eq('abn', entity.abn)
-          .limit(1))
+          .limit(1), 'due-diligence-service')
       : Promise.resolve(null),
 
     // Justice funding
@@ -226,7 +226,7 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
       ? safe(supabase.from('justice_funding')
           .select('program_name, amount_dollars, state, financial_year, sector')
           .eq('recipient_abn', entity.abn)
-          .limit(500))
+          .limit(500), 'due-diligence-service')
       : Promise.resolve(null),
 
     // AusTender contracts
@@ -235,7 +235,7 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
           .select('title, contract_value, buyer_name, contract_start, contract_end')
           .eq('supplier_abn', entity.abn)
           .order('contract_start', { ascending: false })
-          .limit(20))
+          .limit(20), 'due-diligence-service')
       : Promise.resolve(null),
 
     // Political donations
@@ -243,21 +243,21 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
       ? safe(supabase.from('political_donations')
           .select('donation_to, amount, financial_year')
           .eq('donor_abn', entity.abn)
-          .limit(100))
+          .limit(100), 'due-diligence-service')
       : Promise.resolve(null),
 
     // ALMA interventions with evidence + outcome counts
     safe(supabase.from('alma_interventions')
       .select('id, name, type, evidence_level, target_cohort, geography, portfolio_score, serves_youth_justice, years_operating, current_funding, website')
       .eq('gs_entity_id', entity.id)
-      .neq('data_quality', 'quarantined')),
+      .neq('data_quality', 'quarantined'), 'due-diligence-service'),
 
     // Place geo
     entity.postcode
       ? safe(supabase.from('postcode_geo')
           .select('postcode, locality, state, remoteness_2021, lga_name')
           .eq('postcode', entity.postcode)
-          .limit(1))
+          .limit(1), 'due-diligence-service')
       : Promise.resolve(null),
 
     // SEIFA
@@ -266,7 +266,7 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
           .select('score, decile_national')
           .eq('postcode', entity.postcode)
           .eq('index_type', 'IRSD')
-          .limit(1))
+          .limit(1), 'due-diligence-service')
       : Promise.resolve(null),
   ]);
 
@@ -332,10 +332,10 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
     const [evJunctionResult, outResult] = await Promise.all([
       safe(supabase.from('alma_intervention_evidence')
         .select('intervention_id, evidence_id')
-        .in('intervention_id', almaIds)),
+        .in('intervention_id', almaIds), 'due-diligence-service'),
       safe(supabase.from('alma_intervention_outcomes')
         .select('intervention_id, outcome_id')
-        .in('intervention_id', almaIds)),
+        .in('intervention_id', almaIds), 'due-diligence-service'),
     ]);
 
     const evJunction = (evJunctionResult || []) as Array<{ intervention_id: string; evidence_id: string }>;
@@ -349,7 +349,7 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
     if (evidenceIds.length > 0) {
       const evDetailResult = await safe(supabase.from('alma_evidence')
         .select('id, title, evidence_type, methodology, sample_size, effect_size')
-        .in('id', evidenceIds));
+        .in('id', evidenceIds), 'due-diligence-service');
       for (const row of (evDetailResult || []) as Array<{ id: string; title: string | null; evidence_type: string; methodology: string | null; sample_size: number | null; effect_size: string | null }>) {
         evidenceMap[row.id] = {
           evidence_type: row.evidence_type,
@@ -374,7 +374,7 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
     if (outcomeIds.length > 0) {
       const outcomeDetailResult = await safe(supabase.from('alma_outcomes')
         .select('id, name, outcome_type, measurement_method, indicators')
-        .in('id', outcomeIds));
+        .in('id', outcomeIds), 'due-diligence-service');
       for (const row of (outcomeDetailResult || []) as Array<{ id: string; name: string; outcome_type: string | null; measurement_method: string | null; indicators: string | null }>) {
         outcomeDetailMap[row.id] = {
           name: row.name,
@@ -423,7 +423,7 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
     .select('lifecycle_status, overall_confidence, evidence_confidence, voice_confidence, capital_confidence, governance_confidence')
     .eq('subject_id', entity.gs_id)
     .order('updated_at', { ascending: false })
-    .limit(1));
+    .limit(1), 'due-diligence-service');
   const proofRow = ((proofBundleResult || []) as Array<ProofStatus>)[0] || null;
 
   const placeGeoRow = ((placeGeoResult || []) as Array<Record<string, unknown>>)[0];

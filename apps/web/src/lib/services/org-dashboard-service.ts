@@ -404,13 +404,13 @@ export const getOrgProjectSummaries = cache(async function getOrgProjectSummarie
   const [programCounts, pipelineCounts, contactCounts] = await Promise.all([
     safe(supabase.rpc('exec_sql', {
       query: `SELECT project_id, COUNT(*)::int as n FROM org_programs WHERE project_id IN (${projectIds}) GROUP BY project_id`,
-    })) as Promise<Array<{ project_id: string; n: number }> | null>,
+    }), 'org-dashboard-service') as Promise<Array<{ project_id: string; n: number }> | null>,
     safe(supabase.rpc('exec_sql', {
       query: `SELECT project_id, COUNT(*)::int as n, COALESCE(SUM(amount_numeric), 0)::bigint as total FROM org_pipeline WHERE project_id IN (${projectIds}) GROUP BY project_id`,
-    })) as Promise<Array<{ project_id: string; n: number; total: number }> | null>,
+    }), 'org-dashboard-service') as Promise<Array<{ project_id: string; n: number; total: number }> | null>,
     safe(supabase.rpc('exec_sql', {
       query: `SELECT project_id, COUNT(*)::int as n FROM org_contacts WHERE project_id IN (${projectIds}) GROUP BY project_id`,
-    })) as Promise<Array<{ project_id: string; n: number }> | null>,
+    }), 'org-dashboard-service') as Promise<Array<{ project_id: string; n: number }> | null>,
   ]);
 
   const progMap = Object.fromEntries((programCounts ?? []).map(r => [r.project_id, r.n]));
@@ -570,7 +570,7 @@ export async function getOrgFundingByProgram(abn: string | string[], financialYe
        WHERE recipient_abn IN (${abnInList(abn)})${yearFilter}
        GROUP BY program_name
        ORDER BY total DESC`,
-  })) as Promise<FundingByProgram[] | null>;
+  }), 'org-dashboard-service') as Promise<FundingByProgram[] | null>;
 }
 
 export async function getOrgFundingYears(abn: string | string[]): Promise<string[]> {
@@ -580,7 +580,7 @@ export async function getOrgFundingYears(abn: string | string[]): Promise<string
        FROM justice_funding
        WHERE recipient_abn IN (${abnInList(abn)})
        ORDER BY financial_year DESC`,
-  })) as Array<{ financial_year: string }> | null;
+  }), 'org-dashboard-service') as Array<{ financial_year: string }> | null;
   return rows?.map(r => r.financial_year) ?? [];
 }
 
@@ -595,7 +595,7 @@ export async function getOrgFundingByYear(abn: string | string[]): Promise<Fundi
        WHERE recipient_abn IN (${abnInList(abn)})
        GROUP BY financial_year
        ORDER BY financial_year`,
-  })) as Promise<FundingByYear[] | null>;
+  }), 'org-dashboard-service') as Promise<FundingByYear[] | null>;
 }
 
 export async function getOrgContracts(abn: string | string[]): Promise<Contract[] | null> {
@@ -606,7 +606,7 @@ export async function getOrgContracts(abn: string | string[]): Promise<Contract[
        FROM austender_contracts
        WHERE supplier_abn IN (${abnInList(abn)})
        ORDER BY contract_value DESC`,
-  })) as Promise<Contract[] | null>;
+  }), 'org-dashboard-service') as Promise<Contract[] | null>;
 }
 
 export async function getOrgAlmaInterventions(abn: string | string[]): Promise<AlmaIntervention[] | null> {
@@ -618,7 +618,7 @@ export async function getOrgAlmaInterventions(abn: string | string[]): Promise<A
        JOIN gs_entities ge ON ge.id = ai.gs_entity_id
        WHERE ge.abn IN (${abnInList(abn)})
        ORDER BY ai.name`,
-  })) as Promise<AlmaIntervention[] | null>;
+  }), 'org-dashboard-service') as Promise<AlmaIntervention[] | null>;
 }
 
 export async function getOrgEntity(abn: string | string[]): Promise<GsEntity | null> {
@@ -630,7 +630,7 @@ export async function getOrgEntity(abn: string | string[]): Promise<GsEntity | n
        FROM gs_entities
        WHERE abn IN (${abnInList(abn)})
        ORDER BY canonical_name LIMIT 1`,
-  })) as GsEntity[] | null;
+  }), 'org-dashboard-service') as GsEntity[] | null;
   return rows?.[0] ?? null;
 }
 
@@ -655,10 +655,10 @@ export async function getOrgLocalEcosystem(abn: string, postcode?: string, lga?:
          WHERE ${where}
          ORDER BY canonical_name
          LIMIT ${limit}`,
-    })) as Promise<LocalEntity[] | null>,
+    }), 'org-dashboard-service') as Promise<LocalEntity[] | null>,
     safe(supabase.rpc('exec_sql', {
       query: `SELECT COUNT(*)::int as n FROM gs_entities WHERE ${where}`,
-    })) as Promise<Array<{ n: number }> | null>,
+    }), 'org-dashboard-service') as Promise<Array<{ n: number }> | null>,
   ]);
 
   return {
@@ -738,7 +738,7 @@ export async function getOrgPipeline(orgProfileId: string, projectId?: string): 
   if (funderIds.length > 0) {
     const entityRows = await safe(supabase.rpc('exec_sql', {
       query: `SELECT id, gs_id, canonical_name FROM gs_entities WHERE id IN (${funderIds.map(id => `'${id}'`).join(',')})`,
-    })) as Array<{ id: string; gs_id: string; canonical_name: string }> | null;
+    }), 'org-dashboard-service') as Array<{ id: string; gs_id: string; canonical_name: string }> | null;
 
     for (const e of entityRows ?? []) {
       entityMap[e.id] = e;
@@ -752,7 +752,7 @@ export async function getOrgPipeline(orgProfileId: string, projectId?: string): 
   if (grantIds.length > 0) {
     const grantRows = await safe(supabase.rpc('exec_sql', {
       query: `SELECT id, url, name, provider FROM grant_opportunities WHERE id IN (${grantIds.map(id => `'${id}'`).join(',')})`,
-    })) as Array<{ id: string; url: string | null; name: string; provider: string | null }> | null;
+    }), 'org-dashboard-service') as Array<{ id: string; url: string | null; name: string; provider: string | null }> | null;
 
     for (const g of grantRows ?? []) {
       grantMap[g.id] = g;
@@ -930,7 +930,7 @@ export async function getOrgContacts(
       query: `SELECT person_id, ghl_contact_id, notion_id, unified_tags
          FROM person_identity_map
          WHERE person_id IN (${personIds.map(id => `'${id}'`).join(',')})`,
-    })) as Array<{ person_id: string; ghl_contact_id: string | null; notion_id: string | null; unified_tags: string[] | null }> | null;
+    }), 'org-dashboard-service') as Array<{ person_id: string; ghl_contact_id: string | null; notion_id: string | null; unified_tags: string[] | null }> | null;
 
     for (const p of personRows ?? []) {
       personMap[p.person_id] = {
@@ -947,7 +947,7 @@ export async function getOrgContacts(
         query: `SELECT ghl_id, engagement_status, last_contact_date
            FROM ghl_contacts
            WHERE ghl_id IN (${ghlIds.map(id => `'${id}'`).join(',')})`,
-      })) as Array<{ ghl_id: string; engagement_status: string | null; last_contact_date: string | null }> | null;
+      }), 'org-dashboard-service') as Array<{ ghl_id: string; engagement_status: string | null; last_contact_date: string | null }> | null;
 
       for (const g of ghlRows ?? []) {
         ghlMap[g.ghl_id] = { engagement_status: g.engagement_status, last_contact_date: g.last_contact_date };
@@ -1410,7 +1410,7 @@ export async function getOrgPeerOrgs(abn: string): Promise<PeerOrg[]> {
        FROM alma_interventions a
        JOIN gs_entities e ON e.id = a.gs_entity_id
        WHERE e.abn = '${abn}'`,
-  })) as Array<{ type: string }> | null;
+  }), 'org-dashboard-service') as Array<{ type: string }> | null;
 
   const types = orgTypes?.map(r => r.type) ?? [];
 
@@ -1430,7 +1430,7 @@ export async function getOrgPeerOrgs(abn: string): Promise<PeerOrg[]> {
        GROUP BY e.gs_id, e.canonical_name, e.abn, e.state, e.lga_name
        ORDER BY alma_programs DESC
        LIMIT 12`,
-  })) as PeerOrg[] | null;
+  }), 'org-dashboard-service') as PeerOrg[] | null;
 
   return rows ?? [];
 }
@@ -1460,7 +1460,7 @@ export async function getOrgPowerIndex(abn: string | string[]): Promise<PowerInd
        FROM mv_entity_power_index
        WHERE abn IN (${abnInList(abn)})
        ORDER BY procurement_dollars DESC NULLS LAST LIMIT 1`,
-  })) as PowerIndex[] | null;
+  }), 'org-dashboard-service') as PowerIndex[] | null;
   return rows?.[0] ?? null;
 }
 
@@ -1478,7 +1478,7 @@ export async function getOrgRevolvingDoor(abn: string | string[]): Promise<Revol
        FROM mv_revolving_door
        WHERE abn IN (${abnInList(abn)})
        ORDER BY revolving_door_score DESC NULLS LAST LIMIT 1`,
-  })) as RevolvingDoor[] | null;
+  }), 'org-dashboard-service') as RevolvingDoor[] | null;
   return rows?.[0] ?? null;
 }
 
@@ -1490,7 +1490,7 @@ export async function getOrgRelationshipSummary(entityId: string): Promise<Relat
        WHERE source_entity_id = '${entityId}' OR target_entity_id = '${entityId}'
        GROUP BY relationship_type
        ORDER BY count DESC`,
-  })) as RelationshipSummary[] | null;
+  }), 'org-dashboard-service') as RelationshipSummary[] | null;
   return rows ?? [];
 }
 
@@ -1510,7 +1510,7 @@ export async function getOrgFundingDesert(lgaName: string): Promise<FundingDeser
          FROM mv_funding_deserts
        ) r ON r.lga_name = d.lga_name
        WHERE d.lga_name = '${lgaName.replace(/'/g, "''")}'`,
-  })) as FundingDesert[] | null;
+  }), 'org-dashboard-service') as FundingDesert[] | null;
   return rows?.[0] ?? null;
 }
 
@@ -1532,7 +1532,7 @@ export async function getOrgBoardMembers(abn: string | string[]): Promise<BoardM
        WHERE company_abn IN (${abnInList(abn)})
        ORDER BY (contract_dollars + justice_dollars + donation_dollars) DESC
        LIMIT 30`,
-  })) as BoardMember[] | null;
+  }), 'org-dashboard-service') as BoardMember[] | null;
   return rows ?? [];
 }
 
@@ -1556,7 +1556,7 @@ export async function getOrgDonorCrosslinks(abn: string | string[]): Promise<Don
        WHERE dc.org_abns && ${abnArrayLiteral}
        ORDER BY dc.total_donated DESC
        LIMIT 20`,
-  })) as DonorCrosslink[] | null;
+  }), 'org-dashboard-service') as DonorCrosslink[] | null;
   return rows ?? [];
 }
 
@@ -1587,7 +1587,7 @@ export async function getOrgFoundationFunders(abn: string | string[]): Promise<F
        GROUP BY fg.foundation_name, fg.foundation_abn
        ORDER BY SUM(fg.grant_amount) DESC NULLS LAST
        LIMIT 20`,
-  })) as FoundationFunder[] | null;
+  }), 'org-dashboard-service') as FoundationFunder[] | null;
   return rows ?? [];
 }
 

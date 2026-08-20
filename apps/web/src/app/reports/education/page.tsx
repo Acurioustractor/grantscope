@@ -28,7 +28,7 @@ const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'NT', 'TAS', 'ACT'] as const;
 
 async function getData() {
   const supabase = getServiceSupabase();
-  const q = (query: string) => safe(supabase.rpc('exec_sql', { query })) as Promise<Row[] | null>;
+  const q = (query: string) => safe(supabase.rpc('exec_sql', { query }), 'reports/education') as Promise<Row[] | null>;
 
   const [
     schoolsByState,
