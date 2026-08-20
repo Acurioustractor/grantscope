@@ -1,5 +1,5 @@
 ---
-date: 2026-08-20T23:55:00Z
+date: 2026-08-21T06:20:00Z
 session_name: place-capital
 branch: main
 status: active
@@ -9,10 +9,14 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-20T23:55:00Z
+**Updated:** 2026-08-21T06:20:00Z
 **Goal:** Make the published figures survive their own filters, and make the surfaces that
 render them reviewable. Done when a number on a public page can be traced to a measured delta.
-**Branch:** `main`, clean. **Board EMPTY.** Main at `2b8a409b`. **20 PRs merged today, 0 open.**
+**Branch:** `main`, clean. **Board EMPTY, 0 PRs open.** Main at `f3f9f2f2`.
+**7 PRs merged, 4 migrations applied in the third tranche** (#371 #372 #373 #374 #375 #376 #377).
+Applied: `gs-relationships-selfloops`, `mv-staleness-visible`, `grant-place-capture-narrow-sa3`,
+`postcode-4072-lockyer-valley`. (`grant-place-capture` and `sa3-locality-lga-repair` were already
+applied before this session — the latter is why #301 turned out to be done.)
 **Test:** `./scripts/precheck.sh`
 **Verify a change:** `npm run dev` (:3013) for a query/filter/render — 8s, same SQL, same answer.
 `npm run preview` (:3015, production build) ONLY for build-time behaviour or when you want the
@@ -40,6 +44,71 @@ process. Find a council or regional development body.
   contradicting each other, the newer aimed at another team.
 - **Tell whoever owns Empathy Ledger** that `/api/data/graph` donation figures dropped ~87% today
   (a correction, not a regression) and that `/api/data/entity/{abn}` was wrong until #358.
+
+### Third tranche of 2026-08-20 — four issues whose premise was wrong
+
+The pattern of this tranche: **the ticket's stated problem was not the problem** in four of five
+issues touched, and establishing that was most of the value. Read the premise before writing the
+fix.
+
+- **#300 place capture SHIPPED — #371 `05a30796`, verified live on production.** `lib/grant-place-capture.ts`
+  + two Atlas layers + six payload fields on `/api/data/map`. Of grant money delivered INTO a
+  council, what share is received by an organisation based there.
+  **The spec's headline dollar figure conflated two things:** awards whose recipient postcode does
+  not resolve are *unresolved*, not off-site. That is the whole gap between 59.6% and 87.3%. Both
+  are returned and named (`pctDollarsLocal` vs `pctDollarsLocalOfBase`).
+- **#315 self-loops — #372 `1cea86af`, migration APPLIED.** The measurement the ticket called
+  impossible takes ~1s in a **direct psql session**; what timed out was `gsql.mjs`'s 8-second
+  client cap. **Anything here that "times out against the pooler" should be retried through psql
+  before it is designed around.** 7,330 self-loops are THREE classes, not one:
+  A deletable (6,242 rows / $3,498.53M, deleted); **B a real relationship between two distinct
+  orgs our graph merged — 746 rows / $883.61M, NOT deleted**, deleting would erase real events;
+  C 342 lobbying rows, undecided, left out with the reason stated.
+- **#314 matview staleness — #373 `bba0bba2`, migration APPLIED. The non-run never happened.**
+  `cron.job_run_details` shows the nightly succeeded on 16-20 Aug. The "stale" cluster was tier
+  **`weekly`** (cron `0 15 * * 0`) and tier `retire`, exactly as fresh as configured. The 23
+  never-logged resolve to 16, all `on_demand`, each naming its owner in `notes` —
+  refreshed-but-unlogged. **Second defect found on the way: `v_mv_refresh_drift` computed the last
+  refresh from the last log row OF ANY STATUS, so a failed refresh reset the staleness clock.**
+  Now success-only, with a one-word `freshness` verdict, `max_age_hours` per tier, and
+  `lib/mv-freshness.ts` + `components/as-of.tsx`. Production: 76 fresh, 16 unlogged, 9 retired,
+  3 unmanaged, **0 stale**.
+- **#301 was already fixed and nobody closed it.** The repair migration had been applied; 387 SA3
+  postcodes agree with ABS and 4816 no longer says Croydon. **The "needs an external ABS file"
+  note was wrong** — `abs_poa_lga_ratio` was already in the warehouse.
+  **Consequence: my own exclusion 4 was over-conservative. #374 `49418310` narrowed it —
+  coverage 85,898 → 110,267 awards, $33.75bn → $42.37bn (+28%).** Headline figures restated
+  everywhere they are quoted: **90.4% of awards / 84.3% of dollars** on the resolved base.
+- **#375 `7016a835` APPLIED — postcode 4072 was stamped `Lockyer Valley`.** It is UQ St Lucia. All
+  29 entities are campus organisations, one with *Brisbane* in its own name, 60km from the council
+  it was placed in. **Two adjudication instruments failed first and both are worth remembering:
+  lat/lng is NULL on all 11 unadjudicated rows, and locality-name matching produces false friends**
+  (`Darlington`→Hawkesbury, `Durack` in two NT councils). The entity names settled it.
+  **10 postcodes / 337 entities remain unadjudicated — they need an external source, not a guess.**
+- **#376 `fa98fbd2` — the ranked list was misleading and the thresholds do not catch it.**
+  Gladstone keeps 0.3% of $200.0m delivered, but the money is hydrogen grants received by head
+  offices in Sydney and Perth (one recipient is literally *Gladstone* Fortescue Future Industries,
+  received in Perth) while **70.4% of its awards stay local**. Every one of the twelve worst
+  dollar-capturing councils has high award capture AND one award carrying 38-96% of its money
+  (Armidale: 96.0% of awards, 4.4% of dollars, one grant = 95.6%). `MIN_AWARDS`/`MIN_DOLLARS` guard
+  small-N noise, **not concentration**. Every row now carries `biggestAwardShare`.
+- **#324 measured, NOT fixed — #377 `f3f9f2f2`, deliberately docs-only.** `build-entity-graph.mjs:351`
+  mints government bodies as `makeGsId({ buyer_id })` with no ABN looked up. **122 duplicate pairs,
+  130,963 edges on the `AU-GOV` side and 150,013 on `AU-ABN`, 60 organisations with edges on BOTH.**
+  Bidirectional, so there is no "the ABN one is real" rule: Home Affairs 23,780 vs 4; Finance 15 vs
+  12,530. **Department of Education is four entities.**
+  **THE ONE-LINE FIX MUST NOT SHIP ALONE** — it orphans 130,963 edges into a third identity state
+  that every surface still reads. **Merge first, then the resolver.**
+
+**Next agent-closable piece:** the #324 merge, designed properly — it re-points 130,963 edges,
+must dedupe against `idx_gs_rel_dedup` as it goes, must refuse the 3 ambiguous pairs, and needs a
+deliberate matview refresh after.
+
+**Unrendered:** `components/as-of.tsx` ships but no page imports it. Rolling it across the ~60
+surfaces that read matviews is its own reviewed change.
+
+**Sunday 23 August:** the foundation matviews are tier `weekly` and pick up the #315 deletion then,
+with no manual action.
 
 ### 2026-08-20 — thirteen PRs, twelve merged. The chain
 
