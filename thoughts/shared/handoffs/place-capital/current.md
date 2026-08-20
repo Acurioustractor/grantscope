@@ -1,5 +1,5 @@
 ---
-date: 2026-08-20T00:05:00Z
+date: 2026-08-20T15:30:00Z
 session_name: place-capital
 branch: main
 status: active
@@ -9,23 +9,87 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-20T00:05:00Z
-**Goal:** A buildable spec for what a community organisation uses to see, then capture, the
-capital moving through its place. Map #303 is the vehicle; done when `/to-spec` can run.
-**Branch:** `main`, clean. Everything below is landed AND applied.
-Main is at `7502f4d2`. **Board is EMPTY — zero open PRs.** 19 landed on 2026-08-19.
-Data integrity: #313 `6e619586` · #316 `cbaf6933` · #317 `56d209ac` · #318 `41d724dc` ·
-#320 `1aaa1f63` · #321 `1b1c8503` · #323 `de89a756` · #326 `7168a7e4`.
-Docs: #319 `4a34d0d6` · #325 `f28f138e` · #328 `799ae79d` · #329 `85accab8` · #335 `7502f4d2`.
-Reports: #330 `1441a194` · #331 `665183ee` · #332 `af7e68f0` · #333 `4f8b6bce` ·
-#334 `d3410897` · #295 `e2ad6c60`.
-**Test:** `./scripts/precheck.sh` (tsc + 724 vitest). DB reads: `node --env-file=.env
-scripts/gsql.mjs "..."` — always `cd /Users/benknight/Code/grantscope` first, cwd drifts.
+**Updated:** 2026-08-20T15:30:00Z
+**Goal:** Make the published figures survive their own filters, and make the surfaces that
+render them reviewable. Done when a number on a public page can be traced to a measured delta.
+**Branch:** `main`, clean. **Board EMPTY.** Main at `1d6123c6`.
+**Test:** `./scripts/precheck.sh` · **production-accurate local preview:** `cd apps/web && npm run preview` (:3015)
+DB reads: `node --env-file=.env scripts/gsql.mjs "..."` — heavy aggregates time out at ~8s, use psql.
 
 ### Now
-[->] **#311 — talk to three place-based intermediaries.** HITL, Ben only. Untouched after a full
-day. Everything below made the numbers trustworthy and the argument sharper; **none of it tested
-whether anyone will pay.** That was true at 07:00 and is still true.
+[->] **#311 — talk to three place-based intermediaries.** HITL, Ben only. STILL untouched, two
+days running. Everything below made the numbers true; **none of it tested whether anyone pays.**
+
+[->] **Tell whoever owns Empathy Ledger.** `/api/data/graph` filters `relationship_type='donation'`
+and its figures dropped ~87% at 2026-08-20 ~13:30. A correction, not a regression — but it is an
+external consumer and nobody has said anything. The only loose end from today an agent cannot close.
+
+### 2026-08-20 — thirteen PRs, twelve merged. The chain
+
+Each finding was exposed by the previous fix. Worth reading in order; none was on any plan.
+
+1. **#337 `f0ba13c2`** — `topicFilter()` summed grants and whole-of-state budgets together.
+   Youth justice read **$31.66bn where the grant lane is $0.92bn — 34x.** Folded the grant lane
+   into the filter itself (`grantTopicFilter`) rather than 20 call sites. Six functions are
+   expenditure BY DESIGN and are commented so nobody "fixes" them.
+2. **Consequence:** youth-justice grant money is **99.99% QLD**. Seven states' tables went empty.
+3. **#338 `46c6779a`** — so they now say why. `getGrantLaneCoverage` queries what a jurisdiction
+   DOES publish, live. NSW: "46 whole-of-system expenditure rows worth $6.2B". Verified on prod.
+4. **#339 `fc4a9ea2`** — **`CIVICGRAPH_LIVE_REPORTS` was stored in production as `"true\n"`**
+   against a `=== 'true'` check. Set 2026-04-30; 61 public report pages read an empty stub for
+   four months. **8 of 42 prod vars carry a trailing newline.** Four pages had private copies of
+   the comparison; one used `!==`, which a grep for `=== '` misses and only the new test found.
+5. **Exposed by (4):** `/reports/donor-contractors` 500'd on a NULL array column — unhittable
+   while the page had no rows. Fixed in #339.
+6. **Exposed by (4):** **#344 `efb236eb`** — `/reports/community-efficiency` takes 59.6s to
+   prerender and Vercel's cap is 60s. Four months of builds never approached it because they
+   prerendered against an empty stub. `staticPageGenerationTimeout: 180`.
+7. **Exposed by (4):** `/reports/influence-network` selects ten columns from `mv_revolving_door`
+   that live on `mv_entity_power_index`, coerces with `|| 0` at 62 sites, and renders a
+   **fabricated zero about political influence**. **#345 `814f9ded`** makes it fail honestly.
+   THE REWRITE IS NOT DONE — column map is in a comment at the guard.
+8. **The donation chain.** `/reports/donor-contractors` claimed "$31.3B to 1073 political
+   parties". Root cause: the edge builder had **no `receipt_type` filter**. Real donations are
+   **12.8% of the dollars**.
+   - **#347 `b3e0b67e`** APPLIED — downstream filter on `mv_gs_donor_contractors`.
+     **2,065 → 556 entities, $31.5bn → $0.86bn.** 1,509 "donor-contractors" never donated.
+   - **#348 `f7217412`** — the real fix: `relationship_type` splits into `donation` /
+     `party_receipt`. Rows kept, label stops lying, **all seven matviews correct with no change
+     to them**. Four sites, three of which would have made it look done: a SECOND WRITER
+     (`resolve-donor-entities.mjs`), the completeness gate (would report 87% drift on a healthy
+     graph), and two LLM prompt schemas.
+   - **#350 `1d6123c6`** APPLIED — **947,776 edges retyped.** The planned `--phase=donations`
+     rebuild would NOT have worked: `ON CONFLICT DO NOTHING` never updates, and
+     `(dataset, source_record_id)` uniqueness would have aborted it. **A CHECK constraint also
+     rejected `party_receipt`** — blocking code already on main. Found by running, not reading.
+   - **All six dependent matviews refreshed.** `mv_revolving_door` $0.76bn.
+
+### Traps learned today — do not re-derive
+
+- **`gs_entities` holds 2,365 rows typed `political_party`**, from `SELECT DISTINCT donation_to`,
+  no resolution: state branches, electorate committees, `LNP-QLD (Sportsman's Lunch 2014)`,
+  `Agri-Arena Australia Club`, `Lib`. Australia has ~50. Per-party totals all understate.
+- **An env var can be set, non-empty and wrong.** `/preflight` checks presence. `/config-truth`
+  checks the deployed value can satisfy the comparison.
+- **200 is not working.** Three of four broken report routes returned 200. Read the server log.
+- **A `var(--x)` with no fallback is silent** exactly like a failed `===`. `--ws-*` was defined
+  only inside `.ws`, so the public nav's active-page state was invisible from March (#340).
+- **Empty commits do not trigger Vercel rebuilds** — `vercel-ignore-build.sh` skips zero-file
+  diffs, correctly. So **an env change can never trigger one.** Three redeploys died this way.
+- **`$` followed by a digit in a SKILL.md is substituted with the skill's arguments** (#346).
+
+### Skills built today — use them
+`/money-audit` · `/config-truth` · `/surface-sweep` (#343). Wired into CLAUDE.md and `/preflight`.
+**#349: local for the agent's verification, previews for Ben's review.** Vercel previews found
+nothing all day; local found everything. `npm run preview` = production build, not dev.
+
+### Next up (from thoughts/shared/plans/shell-migration-and-surface-triage.md)
+- **`grant_opportunities`** — 4,452 open, 354 closing in 60 days, **no browse surface**. The only
+  forward-looking money. Date filter mandatory: latest deadline is 2051-03-31.
+- **`/reports/influence-network` rewrite** — 62 sites, 608 lines, plus its party-aggregate query
+  sums `political_donations.amount` with no `receipt_type` filter.
+- **Atlas into the rail** — 9 layers, best place surface we have, reachable only by URL.
+- **Six other matviews** were fixed by #348+#350 but only `mv_gs_donor_contractors` was measured.
 
 ### Closed out at end of day (2026-08-19)
 
