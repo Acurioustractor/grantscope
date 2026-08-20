@@ -7,6 +7,10 @@ import { PlaceContextPanel } from '../../place-context';
 import { PlaceCapture } from '../../place-capture';
 import { PlaceLeaving } from '../../place-leaving';
 import { PlaceLadder } from '../../place-ladder';
+import { PlaceOrganisations } from '../../place-organisations';
+import { organisationsInPlace } from '@/lib/place-organisations';
+import { PlacePhilanthropySection } from '../../place-philanthropy';
+import { philanthropyInPlace } from '@/lib/place-philanthropy';
 import { contractLadderForPlace } from '@/lib/place-contract-ladder';
 import { captureForLga, programsLeavingPlace } from '@/lib/grant-place-capture';
 import { CorrectionForm } from '../../correction-form';
@@ -40,6 +44,13 @@ export default async function CouncilPage({ params }: { params: Promise<{ slug: 
   // Independent of the capture measure: a council can hold contracts without any measurable grant
   // delivery, and the ladder is the entry story either way.
   const ladder = await contractLadderForPlace(report.lgaName).catch(() => null);
+  // Named before anything is said about them. The page counted these organisations and never
+  // listed one, while itemising every organisation it could NOT place.
+  const organisations = await organisationsInPlace(report.lgaName).catch(() => ({
+    organisations: [],
+    total: 0,
+  }));
+  const philanthropy = await philanthropyInPlace(report.lgaName).catch(() => null);
 
   // The correction still goes to a person — the form writes to a review
   // queue (place_corrections) that a person reads, never to the register.
@@ -133,11 +144,19 @@ export default async function CouncilPage({ params }: { params: Promise<{ slug: 
           </section>
         ) : null}
 
+        <PlaceOrganisations
+          organisations={organisations.organisations}
+          total={organisations.total}
+          lgaName={report.lgaName}
+        />
+
         <PlaceCapture capture={capture} lgaName={report.lgaName} />
 
         <PlaceLeaving programs={leaving} lgaName={report.lgaName} />
 
         <PlaceLadder ladder={ladder} lgaName={report.lgaName} />
+
+        <PlacePhilanthropySection philanthropy={philanthropy} lgaName={report.lgaName} />
 
         {schools ? <SchoolNeed signal={schools} placeLabel={report.lgaName} /> : null}
 
