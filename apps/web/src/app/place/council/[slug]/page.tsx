@@ -4,6 +4,8 @@ import { getCouncilPlaceReport } from '@/lib/services/council-place-report';
 import { getSchoolNeedSignal } from '@/lib/services/school-need-signal';
 import { SchoolNeed } from '../../school-need';
 import { PlaceContextPanel } from '../../place-context';
+import { PlaceCapture } from '../../place-capture';
+import { captureForLga } from '@/lib/grant-place-capture';
 import { CorrectionForm } from '../../correction-form';
 import { UnplacedAdviceList } from '../../unplaced-advice';
 
@@ -24,6 +26,9 @@ export default async function CouncilPage({ params }: { params: Promise<{ slug: 
   const report = await getCouncilPlaceReport(slug);
   if (!report) notFound();
   const schools = await getSchoolNeedSignal(report.lgaName);
+  // A capture failure must not take down the page it annotates: this council page is about what we
+  // cannot tell you, and "we could not read the measure" is one more of those, not a 500.
+  const capture = await captureForLga(report.lgaName, report.state).catch(() => null);
 
   // The correction still goes to a person — the form writes to a review
   // queue (place_corrections) that a person reads, never to the register.
@@ -116,6 +121,8 @@ export default async function CouncilPage({ params }: { params: Promise<{ slug: 
             ) : null}
           </section>
         ) : null}
+
+        <PlaceCapture capture={capture} lgaName={report.lgaName} />
 
         {schools ? <SchoolNeed signal={schools} placeLabel={report.lgaName} /> : null}
 

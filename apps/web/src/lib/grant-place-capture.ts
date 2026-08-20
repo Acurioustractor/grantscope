@@ -473,3 +473,49 @@ export function rankWorstCapturing(
     )
     .slice(0, opts.limit ?? 20);
 }
+
+/** Below this many resolved awards a council reports nothing rather than a percentage on noise.
+ * Matches the Atlas layer's threshold so the map and the place page cannot disagree. */
+export const CAPTURE_MIN_RESOLVED_FOR_PLACE = 20;
+
+/**
+ * One council's capture, for its place page. Null means NOT MEASURED — either no covered awards
+ * were delivered here, or too few resolve to report a share.
+ *
+ * Null is never zero. A council with no covered awards has not been shown to keep nothing; it has
+ * been shown nothing about. Callers must render the difference.
+ */
+export async function captureForLga(
+  lgaName: string,
+  state?: string | null,
+): Promise<CapturePlace | null> {
+  const safeName = lgaName.replace(/'/g, "''");
+  const stateClause = state ? `AND delivery_state = '${state.replace(/'/g, "''")}'` : '';
+  const rows = await runSql<RawPlaceRow>(`
+    SELECT delivery_lga AS place,
+           delivery_state AS state,
+           max(delivery_remoteness) AS remoteness,
+           count(*)::bigint AS awards,
+           sum(value_aud)::numeric AS dollars,
+           count(*) FILTER (WHERE recipient_lga IS NOT NULL)::bigint AS resolved_awards,
+           COALESCE(sum(value_aud) FILTER (WHERE recipient_lga IS NOT NULL),0)::numeric AS resolved_dollars,
+           count(*) FILTER (WHERE captured_locally)::bigint AS local_awards,
+           COALESCE(sum(value_aud) FILTER (WHERE captured_locally),0)::numeric AS local_dollars,
+           count(*) FILTER (WHERE recipient_lga IS NOT NULL AND recipient_state <> delivery_state)::bigint AS cross_state_awards,
+           COALESCE(sum(value_aud) FILTER (WHERE recipient_lga IS NOT NULL AND recipient_state <> delivery_state),0)::numeric AS cross_state_dollars,
+           ROUND(100.0 * max(value_aud) / NULLIF(sum(value_aud), 0), 1) AS biggest_award_share
+      FROM v_grant_place_capture
+     WHERE delivery_lga = '${safeName}' ${stateClause}
+     GROUP BY delivery_lga, delivery_state`);
+  const row = rows[0];
+  if (!row) return null;
+  const tally = tallyFromRow(row);
+  if (tally.resolvedAwards < CAPTURE_MIN_RESOLVED_FOR_PLACE) return null;
+  return {
+    place: row.place,
+    state: row.state,
+    remoteness: row.remoteness,
+    biggestAwardShare: row.biggest_award_share === null ? null : n(row.biggest_award_share),
+    ...tally,
+  };
+}
