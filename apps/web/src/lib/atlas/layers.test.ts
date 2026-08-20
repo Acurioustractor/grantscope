@@ -38,6 +38,51 @@ function feature(overrides: Partial<AtlasFeature> = {}): AtlasFeature {
   };
 }
 
+describe('the place-capture layers', () => {
+  it('both are registered, public, and painted from the dollar share', () => {
+    const lga = getAtlasLayer('grant-capture-lga') as AtlasLiveLayer | null;
+    const state = getAtlasLayer('grant-capture-state') as AtlasLiveLayer | null;
+    expect(lga).not.toBeNull();
+    expect(state).not.toBeNull();
+    expect(lga!.consent).toBe('public');
+    expect(state!.consent).toBe('public');
+    expect(lga!.value(feature({ capture_pct_dollars: 8.3 }))).toBe(8.3);
+    expect(state!.value(feature({ state_capture_pct_dollars: 97.3 }))).toBe(97.3);
+  });
+
+  // A council with no covered awards has not been shown to keep nothing: it has
+  // not been measured. Coercing that to zero would paint it the worst red on the
+  // map for having no data.
+  it('an unmeasured council reads as no data, never as zero capture', () => {
+    const lga = getAtlasLayer('grant-capture-lga') as AtlasLiveLayer;
+    expect(lga.value(feature({ capture_pct_dollars: null }))).toBeNull();
+    expect(atlasStyleFor(lga, lga.value(feature({ capture_pct_dollars: null })))).toEqual(
+      ATLAS_NO_DATA_STYLE,
+    );
+    expect(lga.noDataLabel.toLowerCase()).not.toContain('0');
+  });
+
+  // Both layers describe the same measure at different coverage. The council
+  // layer must state its minority coverage on the surface so nobody quotes
+  // $33.75bn as if it were the whole $230bn register.
+  it('the council layer states its coverage and the state layer states its grain', () => {
+    const lga = getAtlasLayer('grant-capture-lga')!;
+    const state = getAtlasLayer('grant-capture-state')!;
+    expect(lga.caveat).toContain('$33.75bn');
+    expect(lga.caveat).toContain('$230bn');
+    expect(lga.honestAt).toBe('council');
+    expect(state.honestAt).toBe('state');
+  });
+
+  // 85.1% of awards against 59.6% of dollars: a layer that painted dollars
+  // without saying so would read as "remote Australia keeps more".
+  it('the council caveat says the award share moves differently', () => {
+    const lga = getAtlasLayer('grant-capture-lga')!;
+    expect(lga.caveat).toContain('85.1%');
+    expect(lga.caveat).toContain('59.6%');
+  });
+});
+
 describe('the registry contract', () => {
   it('every layer carries a real caveat, not a placeholder', () => {
     for (const layer of ATLAS_LAYERS) {
@@ -137,6 +182,8 @@ describe('consent tiers gate surfaces', () => {
     expect(visibleAtlasLayers('public').map(l => l.key)).toEqual([
       'funding-deserts',
       'grants-awarded',
+      'grant-capture-lga',
+      'grant-capture-state',
       'money-recorded',
       'justice-funding',
       'renewal-cliff',

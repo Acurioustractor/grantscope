@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AtlasFeature } from './layers';
+import { getAtlasLayer } from './layers';
 import {
   buildAtlasUrl,
   councilCsv,
@@ -172,8 +173,15 @@ describe('taking the data with its caveats', () => {
     expect(json.place.council).toBe('Ceduna');
     for (const layer of json.layers) {
       expect(String(layer.contains).length).toBeGreaterThan(80);
-      expect(layer.honest_at).toBe('council');
+      // Every layer ships the grain it is honest at, and it is not always
+      // 'council': the state capture layer repeats a state figure on every
+      // council of that state, so the export must say 'state' beside it
+      // rather than let a council row imply a council-grain number.
+      expect(layer.honest_at).toBe(getAtlasLayer(String(layer.key))!.honestAt);
+      expect(String(layer.honest_at_note).length).toBeGreaterThan(20);
     }
+    expect(json.layers.find(l => l.key === 'grant-capture-state')?.honest_at).toBe('state');
+    expect(json.layers.find(l => l.key === 'grant-capture-lga')?.honest_at).toBe('council');
     const deserts = json.layers.find(l => l.key === 'funding-deserts');
     expect(deserts?.formatted).toBe('180');
   });
