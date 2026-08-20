@@ -2,47 +2,60 @@
 
 **For Ben. Not a product, not a pitch deck.** #311 says do not build anything first and that
 today's figures are enough. Every figure below was re-verified against the live database on
-2026-08-20; the one that was mis-stated in the ticket is corrected here.
+**2026-08-21**; the one that was mis-stated in the ticket is corrected here.
+
+> **Updated 2026-08-21.** The capture figures changed materially after #301's `postcode_geo`
+> repair let the SA3 exclusion be narrowed: coverage rose 28% and the headline dollar share moved
+> a long way. **Do not use any printout of this brief dated 2026-08-20.** One table has been
+> WITHDRAWN rather than restated — see "The table you cannot use yet".
 
 ## The four figures you can say
 
 | figure | what it is | status |
 |---|---|---|
-| **85.1% of awards** and **59.6% of dollars** stay in the LGA where the work happens | 85,898 federal grant awards, $33.75bn, from `v_grant_place_capture` | Verified live |
+| **90.4% of awards** and **84.3% of dollars** stay in the LGA where the work happens | 110,267 federal grant awards, $42.37bn, from `v_grant_place_capture`. Of the awards where the recipient's location also resolves. | Verified 2026-08-21 |
+| **86.1% of awards / 56.9% of dollars** on the wider base | the same measure counting the 5,216 awards ($13.78bn) whose recipient location does NOT resolve as "not local". Gloomier, and only right if you mean "we cannot tell" to count as "not here". **Say which one you are quoting.** | Verified 2026-08-21 |
 | **97.5% of awards / 96.8% of dollars stay in-state** | the leak is almost entirely *within* states, not across them | Verified |
 | **$5.43bn of $1,268bn is community-controlled** — 0.43% | the split that #304 point 5 says must be on every figure | Verified |
-| **We can see about 2.5% of tracked money** | $33.75bn of roughly $1.36tn | Verified |
+| **We can see about 3.1% of tracked money** | $42.37bn of roughly $1.36tn | Verified 2026-08-21 |
 
 ## The one the ticket gets wrong
 
 #311 says the bias moves "26.6%/35.6%/22.5% of Outer Regional/Remote/Very Remote dollars into
-the cities". The percentages are right. **"Into the cities" is not.**
+the cities". **Two separate problems: the wording, and now the numbers themselves.**
 
-```
-                  by delivery   by registered address    shift
-Major Cities         15,214            15,597           +2.5%
-Inner Regional        2,831             2,691           -4.9%
-Outer Regional        1,680             1,233          -26.6%
-Remote                  536               345          -35.6%
-Very Remote             445               345          -22.5%
-postcode unmapped     2,354             2,851          +21.1%
-```
+**The wording.** "Into the cities" was never right. Most of what shifts does not land in Major
+Cities at all — it lands in postcodes we cannot map. Say "into the cities" and you overstate the
+city-ward flow by more than half.
 
-Of the $878m that shifts, **only $383m lands in Major Cities. $497m lands in "postcode
-unmapped".** Say "into the cities" and you have overstated the city-ward flow by more than half.
+## The table you cannot use yet
 
-Also: this table covers **$23.06bn**, the awards where both ends resolve. The 85.1%/59.6% figures
-cover $33.75bn. Quoting them in one breath implies one population.
+**WITHDRAWN 2026-08-21. Do not quote the remoteness shift percentages.**
 
-**The sentence that survives scrutiny:**
+The 26.6 / 35.6 / 22.5 figures were measured on the old $23.06bn resolved base. That base is now
+larger, and re-deriving the table produced **two different answers that disagree with each other
+and with the original**, because resolving a recipient's remoteness is genuinely hard:
 
-> Attribute the money by registered address instead of by where the work happens, and Remote
-> Australia's recorded total drops 35.6 per cent. Outer Regional drops 26.6. Very Remote drops
-> 22.5. That is on the 23 billion where we can see both ends.
+- resolving via the recipient's COUNCIL means picking one remoteness class for councils that span
+  several — arbitrary, and it flipped Outer Regional from -26.6% to **+2.1%**, a sign change;
+- resolving via the recipient's POSTCODE drops every postcode spanning two classes, which pushed
+  **$16.2bn into "postcode unmapped"** on the address side against $3.6bn on the delivery side.
+
+Neither is trustworthy. A third number invented in an afternoon, quoted to a council, and later
+corrected is worse than not having the number.
+
+**What to say instead, which is still true and still lands:**
+
+> Money is recorded where the organisation is registered, not where the work happens. In remote
+> Australia those are routinely different places, and the gap runs against the remote end. We
+> measure it per council rather than nationally, because the national average hides it.
+
+If they press for the national number, say it is being re-derived and you will send it. Then
+re-derive it properly.
 
 ## Say this before they ask
 
-- **We see about 2.5% of the money.** Federal grants with a resolvable delivery place. The
+- **We see about 3.1% of the money.** Federal grants with a resolvable delivery place. The
   $1.27tn contract lane is **absent, not zero**. A payer who signs without understanding that is
   a payer who churns.
 - **Contracts do not record delivery location at all.** Zero deliveryAddress across 100 live OCDS
@@ -51,6 +64,14 @@ cover $33.75bn. Quoting them in one breath implies one population.
   city-received awards go to Santos, Lynas, Metso and Engie. The mechanism is real and measured.
   The population is mostly resource companies. If they ask whose money is leaving, that is the
   answer, and it is not the answer a land council expects.
+
+- **A place that keeps little of the money may still keep most of the opportunities**, and you
+  should raise this before they do. Gladstone keeps **0.3% of the dollars** delivered into it but
+  **70.4% of the awards**: the money is a handful of hydrogen and critical-minerals grants received
+  by head offices in Sydney and Perth, while the many small grants stay local. Measured
+  2026-08-21, every one of the twelve worst dollar-capturing councils has high award capture and
+  one award carrying 38%-96% of its money. **If you lead with a dollar figure alone you will be
+  told, correctly, that it is one grant.** Lead with both.
 
 ## The five questions (#311)
 
