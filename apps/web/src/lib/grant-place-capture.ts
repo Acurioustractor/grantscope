@@ -30,25 +30,32 @@ import { NON_RECIPIENT_NAMES, isRealRecipient } from '@/lib/justice-money';
  *    `lga_name = 'Croydon'`, a council ~900km away. Left in, Croydon QLD ranked as the
  *    worst-capturing council in Australia on $72.9M that is really Palm Island money. Those rows
  *    are wrong for every consumer of `postcode_geo` and their repair is a separate issue; this
- *    module only refuses them; the repair is issue #301 and
- *    `migrations/2026-08-19-sa3-locality-lga-repair.sql`.
+ *    module refuses them. NARROWED 2026-08-20: #301 has since been REPAIRED against
+ *    `abs_poa_lga_ratio`, which was already in the warehouse — the note claiming it needed an
+ *    external ABS download was wrong. 387 SA3-shaped postcodes now agree with the ABS majority
+ *    and 4816 carries no LGA at all rather than Croydon. So the view no longer refuses all of
+ *    them, only the 11 that still carry an unchecked stamp with no ABS ratio row behind it.
+ *    That widened coverage from 85,898 awards / $33.75bn to 110,267 / $42.37bn — +28% of awards
+ *    and +$8.62bn — and moved the headline shares, which is why the figures below are the
+ *    post-repair ones.
  *
  * TWO MEASURES, NEVER ONE. Every result carries both `pctAwardsLocal` and `pctDollarsLocal`, and
  * the module deliberately offers no single "capture rate", because the two disagree and the
- * disagreement is the finding. Nationally (measured 2026-08-20) 85.1% of awards but 59.6% of
- * dollars stay in the delivery council. Award share falls monotonically with remoteness; dollar
- * share does not fall at all. A surface showing only dollars would report that remote Australia
+ * disagreement is the finding. Nationally (measured 2026-08-20, post-repair) 90.4% of awards
+ * but 84.3% of dollars stay in the delivery council on the resolved base. Award share falls
+ * monotonically with remoteness — 91.4% in Major Cities to 80.5% in Very Remote Australia —
+ * while the dollar share does not fall at all (86.1% against 75.2%). A surface showing only dollars would report that remote Australia
  * captures MORE than the cities — true, and deeply misleading alone.
  *
- * THE DENOMINATOR TRAP, found while implementing this (2026-08-20). 6,259 of the 85,898 covered
- * awards, worth $10.69bn — 31.7% of the covered dollars — have a delivery council but a recipient
+ * THE DENOMINATOR TRAP, found while implementing this (2026-08-20). 5,216 of the 110,267 covered
+ * awards, worth $13.78bn — 32.5% of the covered dollars — have a delivery council but a recipient
  * postcode that does NOT resolve to a single trustworthy council. They are unresolved, not
- * off-site. Counting them as off-site is where the headline 59.6% comes from; on the resolved base
- * the dollar figure is 87.3%. Both are true of different questions, so both are returned:
+ * off-site. Counting them as off-site is where the gloomier 56.9% comes from; on the resolved base
+ * the dollar figure is 84.3%. Both are true of different questions, so both are returned:
  * `pctDollarsLocal` uses the resolved base and `pctDollarsLocalOfBase` uses the wider one. Any
  * surface must say which it is showing.
  *
- * COVERAGE. The council path is a well-measured MINORITY: 85,898 awards and $33.75bn of 291,264
+ * COVERAGE. The council path is a well-measured MINORITY: 110,267 awards and $42.37bn of 291,264
  * awards and $230bn. The state path is near-complete: 281,016 awards and $200.22bn, losing only
  * the multi-state, National and Overseas delivery strings. Coverage counts ride on every result
  * so no caller recomputes them.

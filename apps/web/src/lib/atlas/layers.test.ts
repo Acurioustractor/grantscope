@@ -68,18 +68,18 @@ describe('the place-capture layers', () => {
   it('the council layer states its coverage and the state layer states its grain', () => {
     const lga = getAtlasLayer('grant-capture-lga')!;
     const state = getAtlasLayer('grant-capture-state')!;
-    expect(lga.caveat).toContain('$33.75bn');
+    expect(lga.caveat).toContain('$42.37bn');
     expect(lga.caveat).toContain('$230bn');
     expect(lga.honestAt).toBe('council');
     expect(state.honestAt).toBe('state');
   });
 
-  // 85.1% of awards against 59.6% of dollars: a layer that painted dollars
+  // 90.4% of awards against 84.3% of dollars: a layer that painted dollars
   // without saying so would read as "remote Australia keeps more".
   it('the council caveat says the award share moves differently', () => {
     const lga = getAtlasLayer('grant-capture-lga')!;
-    expect(lga.caveat).toContain('85.1%');
-    expect(lga.caveat).toContain('59.6%');
+    expect(lga.caveat).toContain('90.4%');
+    expect(lga.caveat).toContain('84.3%');
   });
 });
 
