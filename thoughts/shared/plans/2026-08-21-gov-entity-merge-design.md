@@ -119,3 +119,58 @@ supplier names. Merging Defence's two identities does not touch them.
 So the **82% figure** — Defence showing $927.16M inbound of which $761.45M is itself — does not
 clear here either. I have twice written that it waits on #324. More precisely: it waits on the
 supplier-ABN repair, which is a different piece of work that #324 was masking.
+
+---
+
+## Applied 2026-08-21, and the baseline to measure tonight against
+
+All three parts landed: the merge (#380, `31178bdf`), the retype (#381) and the resolver fix
+(#381, `54007acd`).
+
+| step | result |
+|---|---|
+| merge | 131,699 rows re-pointed, `DELETE 151`, identical to the dry run |
+| verify | 0 duplicate government names remain, Defence is one entity, self-loops 1,088 → 1,090 |
+| retype | `UPDATE 112` — 115 map rows matched, 3 winners shared by two losers each |
+| resolver | 486 of 487 buyers reuse an existing identity, 96 via an ABN identity, 0 ambiguous, 1 mints |
+
+**Class B came out at 32, not the 37 predicted here**, because 5 of those losers were also class A
+losers and class A wins. The map is `PRIMARY KEY`'d on `loser_id`, so without an explicit exclusion
+the insert aborts rather than silently choosing — which is why the exclusion is written out.
+
+### The urgency nobody had noticed
+
+`build-entity-graph` is **enabled on a 24-hour schedule** (`agent_schedules`, last run 2026-08-18
+20:35) and was already overdue, with the orchestrator cron ticking. Between the merge landing and
+the resolver landing, a scheduled build would have re-minted `AU-GOV` entities for the 119 rows the
+merge had just deleted. The window is now closed, but the general lesson is worth keeping: **a data
+migration that a scheduled job can undo is not finished when it commits.** Check
+`agent_schedules` and `cron.job` for anything that rebuilds what you just repaired.
+
+### Baseline for tonight's refresh
+
+`mv_entity_power_index` and `mv_revolving_door` are tier `nightly` and last refreshed 2.2 hours
+**before** the merge, so they still describe the split graph. They refresh at 17:00 UTC on their own.
+Deliberately NOT refreshed by hand: per #314 a manual refresh folds in unrelated backlog at the same
+moment, which is exactly why #290 could never report a per-surface delta.
+
+Recorded now so tomorrow's delta is measurable rather than asserted:
+
+| | before tonight's refresh |
+|---|---:|
+| `mv_entity_power_index` rows | 185,388 |
+| `mv_revolving_door` rows | 3,584 |
+| Department of Defence — `system_count` | 2 |
+| Department of Defence — `power_score` | 6 |
+| Department of Defence — edges now held | **271,521** |
+
+Note `mv_entity_power_index` holds Defence **once** already, keyed on ABN, so the merge does not
+change its row count for Defence — it changes what that row is computed from. Education and the ATO
+do not appear in it at all. Any claim that the merge "fixed" a figure there should be checked
+against these numbers, not assumed.
+
+### Still not fixed
+
+The `austender` self-loops (614 rows, $823.04M) and the 82% Defence figure. Those are the
+supplier-ABN defect — notices carrying a `supplier_abn` equal to the buyer's own ABN across 138 real
+supplier names (#315 class B). #324 was masking it; the merge does not touch it.
