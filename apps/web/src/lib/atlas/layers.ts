@@ -58,7 +58,7 @@ export interface AtlasFeature {
    * Optional for the same cached-payload reason as unplaced_reasons. */
   capture_pct_dollars?: number | null;
   /** The same share counted as AWARDS rather than dollars. It moves differently and
-   * both belong on screen: nationally 85.1% of awards but 59.6% of dollars stay put. */
+   * both belong on screen: nationally 90.4% of awards but 84.3% of dollars stay put. */
   capture_pct_awards?: number | null;
   /** Awards and dollars behind this council's capture figures — the covered minority,
    * never the whole grant record. */
@@ -486,7 +486,7 @@ const whatsWorking: AtlasLiveLayer = {
 // lib/grant-place-capture.ts for the four exclusions and their measured cost.
 //
 // Both paint the DOLLAR share. The award share moves differently (nationally
-// 85.1% of awards against 59.6% of dollars) and rides in the payload for the
+// 90.4% of awards against 84.3% of dollars) and rides in the payload for the
 // place panel; the caveats say so, because either number alone misleads.
 const captureScale: AtlasScaleStop[] = [
   { min: 90, color: '#1040C0', fillOpacity: 0.3, label: '90% or more stays' },
@@ -506,11 +506,11 @@ const grantCaptureLga: AtlasLiveLayer = {
   caveat:
     'Of the grant money GrantConnect records as delivered INTO this council, the share ' +
     'received by an organisation based here. It covers a well-measured minority of the ' +
-    'register — 85,898 awards and $33.75bn of 291,264 awards and $230bn — because both ' +
+    'register — 110,267 awards and $42.37bn of 291,264 awards and $230bn — because both ' +
     'the delivery and the recipient postcode must resolve to a single trustworthy ' +
     'council, and multi-site grants are excluded rather than counted as delivered away. ' +
-    'Counted as dollars; the share of separate awards kept locally runs far higher ' +
-    '(85.1% against 59.6% nationally), so this layer shows where the money goes, not ' +
+    'Counted as dollars; the share of separate awards kept locally runs higher ' +
+    '(90.4% against 84.3% nationally), so this layer shows where the money goes, not ' +
     'how many opportunities a place holds. Blank means not measured, never zero.',
   honestAt: 'council',
   honestAtNote:

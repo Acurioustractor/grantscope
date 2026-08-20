@@ -209,3 +209,40 @@ will mostly be a list of places that had a road, a railway or a transmission lin
 
 A second, smaller thing surfaced in the same query: `Indigo Shire Council` appears twice under
 different casing, with separate dollar totals. Recipient names are not normalised.
+
+---
+
+## Update 2026-08-20 — exclusion 4 narrowed, coverage up 28%
+
+The figures above were measured while `v_grant_place_capture` refused **every** SA3-shaped
+`postcode_geo` row, because one of them (4816 → `Croydon`) was wrong by ~900km and nothing
+distinguished the wrong rows from the right ones.
+
+`#301` has since been repaired against `abs_poa_lga_ratio`, which was already in the warehouse.
+Verified 2026-08-20: 387 SA3-shaped postcodes now agree with the ABS majority, none remain
+fixable, and 4816 carries no LGA at all rather than Croydon. The wholesale refusal was therefore
+defusing a defect that no longer exists.
+
+The view now refuses only the 11 SA3-shaped postcodes that still carry an unchecked stamp with no
+ABS ratio row behind them.
+
+| | awards | dollars |
+|---|---:|---:|
+| before | 85,898 | $33.75bn |
+| after | **110,267** | **$42.37bn** |
+| gain | +24,369 (+28%) | +$8.62bn (+26%) |
+
+Post-repair national figures, on the resolved base: **90.4% of awards and 84.3% of dollars** stay
+in the delivery council. On the whole base (counting the 5,216 unresolved awards / $13.78bn as
+not-local): 86.1% and 56.9%.
+
+The remoteness gradient survives the widening and still says the same thing — the award share
+falls monotonically, the dollar share does not fall at all:
+
+| remoteness | awards local | dollars local |
+|---|---:|---:|
+| Major Cities | 91.4% | 86.1% |
+| Inner Regional | 88.6% | 82.1% |
+| Outer Regional | 86.1% | 67.3% |
+| Remote | 81.1% | 65.7% |
+| Very Remote | 80.5% | 75.2% |
