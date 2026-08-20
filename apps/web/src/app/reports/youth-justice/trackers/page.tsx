@@ -183,7 +183,10 @@ async function getData() {
       r.status AS run_status,
       r.completed_at AS run_completed_at,
       r.duration_ms AS run_duration_ms
-    FROM agent_schedules
+    -- The alias. Every column above and in the WHERE is s.-prefixed, so without it this failed
+    -- with 'missing FROM-clause entry for table "s"' on every build, and the automations panel
+    -- rendered empty. agent_schedules has all five columns; only the two characters were missing.
+    FROM agent_schedules s
     LEFT JOIN latest_runs r
       ON r.agent_id = s.agent_id
      AND r.rn = 1
