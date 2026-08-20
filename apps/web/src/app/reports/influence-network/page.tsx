@@ -135,8 +135,8 @@ async function getData() {
     // revolving_door_score. mv_entity_power_index holds the measurements for all 185,393
     // entities. Basing on the former and joining the latter keeps the page about what it says it
     // is about, at the size it was always meant to be.
-    safe(supabase.rpc('exec_sql', { query: influenceRowsSql() })),
-    safe(supabase.rpc('exec_sql', { query: influenceRowsSql(20) })),
+    safe(supabase.rpc('exec_sql', { query: influenceRowsSql() }), 'reports/influence-network'),
+    safe(supabase.rpc('exec_sql', { query: influenceRowsSql(20) }), 'reports/influence-network'),
 
     // Headline figures, counted over ALL 3,586 rows rather than the 1,000 exec_sql returns.
     safe(supabase.rpc('exec_sql', {
@@ -152,7 +152,7 @@ async function getData() {
                 COALESCE(sum(p.donation_dollars), 0)::bigint AS donation_dollars
            FROM mv_revolving_door rd
            LEFT JOIN mv_entity_power_index p ON p.gs_id = rd.gs_id`,
-    })),
+    }), 'reports/influence-network'),
 
     // Donations aggregated by ABN. `donationFilterSql` is mandatory: 'other receipt' is 72% of
     // rows and 85% of the dollars in political_donations and is party fundraising income, not
@@ -165,7 +165,7 @@ async function getData() {
         WHERE donor_abn IS NOT NULL AND ${donationFilterSql()}
         GROUP BY donor_abn HAVING SUM(amount) > 10000
         ORDER BY total_donated DESC LIMIT 500`,
-    })),
+    }), 'reports/influence-network'),
 
     // Which parties benefit most from revolving-door donors. Was joining mv_revolving_door on
     // rd.in_procurement = 1 and rd.in_political_donations = 1 — neither column exists there, so
@@ -180,7 +180,7 @@ async function getData() {
           AND ${donationFilterSql('pd')}
           AND p.in_procurement = 1 AND p.in_political_donations = 1
         GROUP BY pd.donation_to ORDER BY total_received DESC LIMIT 20`,
-    })),
+    }), 'reports/influence-network'),
   ]);
 
   const allEntities = ((allEntitiesResult || []) as RevolvingDoorEntity[]).map(e => ({

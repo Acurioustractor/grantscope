@@ -390,7 +390,7 @@ export async function matchStepToData(step: { title: string; system?: string | n
         FROM alma_interventions
         WHERE ${ilikeClauses}
         LIMIT 5`,
-    })) as Promise<AlmaMatchResult[] | null>,
+    }), 'journey-service') as Promise<AlmaMatchResult[] | null>,
     step.system ? safe(supabase.rpc('exec_sql', {
       query: `SELECT program_name, SUM(amount_dollars)::bigint as total, state
         FROM justice_funding
@@ -398,7 +398,7 @@ export async function matchStepToData(step: { title: string; system?: string | n
         GROUP BY program_name, state
         ORDER BY total DESC
         LIMIT 5`,
-    })) as Promise<FundingMatchResult[] | null> : Promise.resolve(null),
+    }), 'journey-service') as Promise<FundingMatchResult[] | null> : Promise.resolve(null),
   ]);
 
   return {

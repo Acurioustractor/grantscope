@@ -12,7 +12,7 @@ function pct(n: number | null) { return n == null ? '—' : `${Math.round(n)}%`;
 
 async function getData() {
   const supabase = getServiceSupabase();
-  const q = (query: string) => safe(supabase.rpc('exec_sql', { query })) as Promise<Row[] | null>;
+  const q = (query: string) => safe(supabase.rpc('exec_sql', { query }), 'reports/disability') as Promise<Row[] | null>;
 
   const [
     thinMarketSummary,

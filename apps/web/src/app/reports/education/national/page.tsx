@@ -67,7 +67,7 @@ async function getSchoolsByState() {
        FROM acara_schools
        GROUP BY state
        ORDER BY total_enrolments DESC`,
-  })) as Promise<SchoolRow[] | null>;
+  }), 'reports/education/national') as Promise<SchoolRow[] | null>;
 }
 
 async function getData() {

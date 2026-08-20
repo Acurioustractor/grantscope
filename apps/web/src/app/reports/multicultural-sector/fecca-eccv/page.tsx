@@ -217,7 +217,7 @@ async function getReport() {
         ) a ON true
         WHERE e.abn IN ('${FECCA_ABN}','${ECCV_ABN}')
       `,
-    })) as Promise<AnchorRow[] | null>,
+    }), 'reports/multicultural-sector/fecca-eccv') as Promise<AnchorRow[] | null>,
 
     safe(supabase.rpc('exec_sql', {
       query: `
@@ -234,7 +234,7 @@ async function getReport() {
         WHERE abn IN ('${FECCA_ABN}','${ECCV_ABN}')
         ORDER BY abn, ais_year ASC
       `,
-    })) as Promise<AisYearRow[] | null>,
+    }), 'reports/multicultural-sector/fecca-eccv') as Promise<AisYearRow[] | null>,
 
     safe(supabase.rpc('exec_sql', {
       query: `
@@ -244,7 +244,7 @@ async function getReport() {
         WHERE supplier_abn = '${FECCA_ABN}'
         ORDER BY contract_value DESC NULLS LAST
       `,
-    })) as Promise<ContractRow[] | null>,
+    }), 'reports/multicultural-sector/fecca-eccv') as Promise<ContractRow[] | null>,
 
     safe(supabase.rpc('exec_sql', {
       query: `
@@ -254,7 +254,7 @@ async function getReport() {
         WHERE supplier_abn = '${ECCV_ABN}'
         ORDER BY contract_value DESC NULLS LAST
       `,
-    })) as Promise<ContractRow[] | null>,
+    }), 'reports/multicultural-sector/fecca-eccv') as Promise<ContractRow[] | null>,
 
     safe(supabase.rpc('exec_sql', {
       query: `
@@ -272,7 +272,7 @@ async function getReport() {
           AND src.gs_id LIKE 'GS-PERSON-%'
         ORDER BY tgt.canonical_name, src.canonical_name
       `,
-    })) as Promise<DirectorRow[] | null>,
+    }), 'reports/multicultural-sector/fecca-eccv') as Promise<DirectorRow[] | null>,
 
     safe(supabase.rpc('exec_sql', {
       query: `
@@ -305,7 +305,7 @@ async function getReport() {
         LEFT JOIN public.mv_person_influence pi ON LOWER(pi.person_name) = LOWER(po.pname)
         ORDER BY pi.max_influence_score DESC NULLS LAST, po.local_board_count DESC
       `,
-    })) as Promise<DirectorPortfolio[] | null>,
+    }), 'reports/multicultural-sector/fecca-eccv') as Promise<DirectorPortfolio[] | null>,
 
     safe(supabase.rpc('exec_sql', {
       query: `
@@ -325,7 +325,7 @@ async function getReport() {
         WHERE abn IN ('${FECCA_ABN}','${ECCV_ABN}')
         ORDER BY abn, report_year DESC
       `,
-    })) as Promise<AnnualReport[] | null>,
+    }), 'reports/multicultural-sector/fecca-eccv') as Promise<AnnualReport[] | null>,
     safe(supabase.rpc('exec_sql', {
       query: `
         SELECT vga.recipient_name, vga.program_name, vga.amount_aud::bigint AS amount,
@@ -340,7 +340,7 @@ async function getReport() {
         ORDER BY vga.amount_aud DESC NULLS LAST
         LIMIT 50
       `,
-    })) as Promise<Array<{
+    }), 'reports/multicultural-sector/fecca-eccv') as Promise<Array<{
       recipient_name: string;
       program_name: string | null;
       amount: number;
@@ -362,7 +362,7 @@ async function getReport() {
         ORDER BY vga.amount_aud DESC NULLS LAST
         LIMIT 30
       `,
-    })) as Promise<Array<{ recipient_name: string; program_name: string | null; amount: number; financial_year: string | null; dept_source: string; source_url: string | null; recipient_canonical: string | null; recipient_gs_id: string | null }> | null>,
+    }), 'reports/multicultural-sector/fecca-eccv') as Promise<Array<{ recipient_name: string; program_name: string | null; amount: number; financial_year: string | null; dept_source: string; source_url: string | null; recipient_canonical: string | null; recipient_gs_id: string | null }> | null>,
 
     safe(supabase.rpc('exec_sql', {
       query: `
@@ -381,7 +381,7 @@ async function getReport() {
         FROM public.mv_entity_power_index
         WHERE abn IN ('${FECCA_ABN}','${ECCV_ABN}')
       `,
-    })) as Promise<PowerRow[] | null>,
+    }), 'reports/multicultural-sector/fecca-eccv') as Promise<PowerRow[] | null>,
 
     safe(supabase.rpc('exec_sql', {
       query: `
@@ -445,7 +445,7 @@ async function getReport() {
         SELECT * FROM cir WHERE abn NOT IN (SELECT abn FROM ais)
         ORDER BY abn
       `,
-    })) as Promise<AisFinancialsRow[] | null>,
+    }), 'reports/multicultural-sector/fecca-eccv') as Promise<AisFinancialsRow[] | null>,
 
     // Top federal contractors in the multicultural / settlement / ethnic-services sector
     safe(supabase.rpc('exec_sql', {
@@ -470,7 +470,7 @@ async function getReport() {
         ORDER BY total DESC NULLS LAST
         LIMIT 8
       `,
-    })) as Promise<AmesContractRow[] | null>,
+    }), 'reports/multicultural-sector/fecca-eccv') as Promise<AmesContractRow[] | null>,
 
     // Topic mix across our newly-ingested 5K+ VIC grants.
     // Two-pass classifier: keywords on program_name first, recipient_name fallback.
@@ -559,7 +559,7 @@ async function getReport() {
         GROUP BY 1
         ORDER BY total DESC NULLS LAST
       `,
-    })) as Promise<TopicMixRow[] | null>,
+    }), 'reports/multicultural-sector/fecca-eccv') as Promise<TopicMixRow[] | null>,
 
     // Year-over-year by department
     safe(supabase.rpc('exec_sql', {
@@ -572,7 +572,7 @@ async function getReport() {
         GROUP BY 1,2
         ORDER BY 1,2
       `,
-    })) as Promise<YearMixRow[] | null>,
+    }), 'reports/multicultural-sector/fecca-eccv') as Promise<YearMixRow[] | null>,
   ]);
 
   const fecca = (anchors ?? []).find(a => a.abn === FECCA_ABN) || null;

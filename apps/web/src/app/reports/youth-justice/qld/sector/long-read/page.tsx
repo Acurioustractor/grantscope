@@ -74,23 +74,23 @@ async function getNumbers() {
  child_first_nations, child_3_7_days, child_over_7_days, child_longest_days,
  child_watchhouse_count, adult_first_nations, adult_over_7_days, adult_longest_days
  FROM public.v_qld_watchhouse_latest LIMIT 1`,
- })) as Promise<LatestRow[] | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<LatestRow[] | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT recipient_name, SUM(amount_dollars)::bigint AS total
  FROM public.justice_funding
  WHERE state = 'QLD' AND recipient_name LIKE 'Youth Justice -%'
  GROUP BY 1`,
- })) as Promise<SpendRow[] | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<SpendRow[] | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT org_type, total_funding::bigint, funding_share_pct::int, orgs::int
  FROM public.mv_yj_report_acco_gap`,
- })) as Promise<AccoRow[] | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<AccoRow[] | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT name, total_giving_annual::bigint, thematic_focus::text
  FROM public.foundations
  WHERE total_giving_annual > 100000000
  ORDER BY total_giving_annual DESC NULLS LAST LIMIT 10`,
- })) as Promise<FoundationRow[] | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<FoundationRow[] | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT recipient_name, COUNT(DISTINCT topic)::int AS sectors, SUM(amount_dollars)::bigint AS total
  FROM (SELECT recipient_name, unnest(topics) AS topic, amount_dollars
@@ -98,61 +98,61 @@ async function getNumbers() {
  WHERE topic IN ('youth-justice','child-protection','disability','ndis','family-services','indigenous','mental-health','aod','homelessness','family-violence')
  GROUP BY 1 HAVING COUNT(DISTINCT topic) >= 3
  ORDER BY total DESC NULLS LAST LIMIT 8`,
- })) as Promise<CrossSectorRow[] | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<CrossSectorRow[] | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT financial_year, actual_rate::numeric(10,2), gap_from_target::numeric(10,2)
  FROM public.v_ctg_youth_justice_progress
  WHERE state = 'QLD' ORDER BY financial_year DESC LIMIT 1`,
- })) as Promise<CtgRow[] | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<CtgRow[] | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT name, type, evidence_level
  FROM public.mv_yj_report_unfunded_programs
  WHERE (geography::text ILIKE '%QLD%' OR geography::text ILIKE '%Queensland%' OR geography::text ILIKE '%National%')
  ORDER BY (CASE WHEN evidence_level ILIKE '%proven%' OR evidence_level ILIKE '%effective%' THEN 0 ELSE 1 END)
  LIMIT 6`,
- })) as Promise<UnfundedRow[] | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<UnfundedRow[] | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT supplier_name, SUM(contract_value)::bigint AS total, COUNT(*)::int AS contracts
  FROM public.austender_contracts
  WHERE supplier_name ILIKE ANY (ARRAY['%youth justice%','%PCYC%','%mission australia%','%lifeline%','%anglicare%','%uniting%','%liquidlogic%','%halikos%','%save the children%'])
  AND contract_value > 0
  GROUP BY 1 ORDER BY total DESC NULLS LAST LIMIT 6`,
- })) as Promise<ContractRow[] | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<ContractRow[] | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT lga_name, pipeline_intensity::numeric(5,1) AS youth_offender_rate, indigenous_pct::numeric(5,1)
  FROM public.lga_cross_system_stats
  WHERE state = 'QLD' AND population > 5000 AND pipeline_intensity IS NOT NULL
  ORDER BY pipeline_intensity DESC NULLS LAST LIMIT 6`,
- })) as Promise<LgaRow[] | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<LgaRow[] | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT person_name, board_count::int, total_justice::bigint
  FROM public.mv_person_influence
  WHERE board_count >= 5 AND total_justice > 0
  ORDER BY total_justice DESC NULLS LAST LIMIT 6`,
- })) as Promise<DirectorRow[] | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<DirectorRow[] | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT state, youth_participants::int FROM public.v_ndis_youth_justice_overlay
  WHERE state ILIKE 'QLD%' OR state = 'Queensland' LIMIT 1`,
- })) as Promise<NdisRow[] | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<NdisRow[] | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT count(*)::int AS c FROM public.justice_funding
  WHERE state = 'QLD' AND amount_dollars > 0
  AND (topics @> ARRAY['mental-health'] OR topics @> ARRAY['aod'])`,
- })) as Promise<Array<{ c: number }> | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<Array<{ c: number }> | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT count(*)::int AS c FROM public.alma_interventions WHERE topics @> ARRAY['youth-justice']`,
- })) as Promise<Array<{ c: number }> | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<Array<{ c: number }> | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT count(*)::int AS c FROM public.alma_interventions
  WHERE ('QLD' = ANY(geography) OR 'Queensland' = ANY(geography))`,
- })) as Promise<Array<{ c: number }> | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<Array<{ c: number }> | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT financial_year, SUM(amount_dollars)::bigint AS total
  FROM public.justice_funding
  WHERE state = 'QLD' AND amount_dollars > 0 AND topics @> ARRAY['youth-justice']
  AND financial_year ~ '^20[0-9]{2}-'
  GROUP BY 1 ORDER BY 1`,
- })) as Promise<YearTotalRow[] | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<YearTotalRow[] | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT bill_name, sponsor, sponsor_party, introduced_date::text, status, status_date::text, source_url,
  explanatory_note_url, statement_of_compatibility_url, explanatory_note_text
@@ -160,14 +160,14 @@ async function getNumbers() {
  WHERE is_yj_relevant = true
  ORDER BY status_date DESC NULLS LAST, introduced_date DESC NULLS LAST
  LIMIT 8`,
- })) as Promise<OfficialBill[] | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<OfficialBill[] | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT title, deceased_identifier, finding_date::text, coroner_name, recommendations_count, topics, source_url
  FROM public.qld_coroners_findings
  WHERE is_youth_justice = true OR is_in_custody = true
  ORDER BY finding_date DESC NULLS LAST
  LIMIT 6`,
- })) as Promise<CoronerFinding[] | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<CoronerFinding[] | null>,
  // Structured outcomes, recidivism, detention spend, community spend, avg
  // detention population. Used to compute bed-day cost and the
  // money-vs-outcome diverging-trend story.
@@ -180,7 +180,7 @@ async function getNumbers() {
  'rogs_total_expenditure_community','aihw_avg_nightly_detention',
  'acco_yj_retention_pct')
  ORDER BY metric_name, period`,
- })) as Promise<Array<{ metric_name: string; metric_value: number; period: string }> | null>,
+ }), 'reports/youth-justice/qld/sector/long-read') as Promise<Array<{ metric_name: string; metric_value: number; period: string }> | null>,
  ]);
 
  const l = latest?.[0] || null;

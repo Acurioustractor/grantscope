@@ -71,7 +71,7 @@ const METRIC_LABELS: Record<string, string> = {
 
 async function getStateReport(stateCode: string) {
   const supabase = getServiceSupabase();
-  const q = (query: string) => safe(supabase.rpc('exec_sql', { query })) as Promise<Row[] | null>;
+  const q = (query: string) => safe(supabase.rpc('exec_sql', { query }), 'reports/disability/[state]') as Promise<Row[] | null>;
   const sc = stateCode.toUpperCase();
 
   const [thinMarkets, providers, almaInterventions, almaCount, outcomes, policyNational, policyState, oversightNational, oversightState, crossSystemOrgs] = await Promise.all([

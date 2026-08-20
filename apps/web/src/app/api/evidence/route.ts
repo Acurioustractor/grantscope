@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
          ${stateFilter}
          ORDER BY ai.portfolio_score DESC NULLS LAST
          LIMIT 50`,
-    })),
+    }), 'api/evidence'),
 
     // Evidence records for matching interventions (via junction table)
     safe(supabase.rpc('exec_sql', {
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
          WHERE ai.topics @> ARRAY['${topic}']::text[]
          ${stateFilter}
          LIMIT 100`,
-    })),
+    }), 'api/evidence'),
 
     // Outcomes for matching interventions (via junction table)
     safe(supabase.rpc('exec_sql', {
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
          WHERE ai.topics @> ARRAY['${topic}']::text[]
          ${stateFilter}
          LIMIT 100`,
-    })),
+    }), 'api/evidence'),
 
     // Summary stats
     safe(supabase.rpc('exec_sql', {
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
           JOIN alma_interventions ai ON ai.id = aio.intervention_id
           ${state ? `LEFT JOIN gs_entities ge ON ge.id = ai.gs_entity_id` : ''}
           WHERE ai.topics @> ARRAY['${topic}']::text[] ${stateFilter}) as outcomes`,
-    })),
+    }), 'api/evidence'),
   ]);
 
   const statsRow = (stats as Array<{ interventions: number; evidence: number; outcomes: number }> | null)?.[0]

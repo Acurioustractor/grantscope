@@ -28,7 +28,7 @@ export async function GET() {
         .from('mv_revolving_door')
         .select('gs_id, canonical_name, entity_type, abn, state, lga_name, is_community_controlled, lobbies, donates, contracts, receives_funding, influence_vectors, revolving_door_score, total_donated, total_contracts, total_funded, parties_funded, distinct_buyers')
         .order('revolving_door_score', { ascending: false })
-        .limit(20)),
+        .limit(20), 'api/data/who-runs-australia'),
 
       // Top board interlocks by interlock_score
       safe(supabase
@@ -36,7 +36,7 @@ export async function GET() {
         .select('person_name_normalised, person_name_display, board_count, organisations, role_types, total_procurement_dollars, total_justice_dollars, total_donation_dollars, max_entity_system_count, total_power_score, connects_community_controlled, interlock_score')
         .gte('board_count', 2)
         .order('interlock_score', { ascending: false })
-        .limit(20)),
+        .limit(20), 'api/data/who-runs-australia'),
 
       // People who sit on charity boards AND donate politically
       safe(supabase
@@ -45,7 +45,7 @@ export async function GET() {
         .eq('on_charity_boards', true)
         .eq('is_political_donor', true)
         .order('influence_score', { ascending: false })
-        .limit(20)),
+        .limit(20), 'api/data/who-runs-australia'),
 
       // Aggregate stats
       safe(supabase.rpc('exec_sql', {
@@ -54,7 +54,7 @@ export async function GET() {
           (SELECT COUNT(*)::int FROM mv_revolving_door WHERE influence_vectors >= 3) as three_vector_plus,
           (SELECT COUNT(*)::int FROM mv_board_interlocks WHERE board_count >= 2) as multi_board_people,
           (SELECT COUNT(*)::int FROM mv_person_cross_system WHERE on_charity_boards AND is_political_donor) as board_donors`,
-      })),
+      }), 'api/data/who-runs-australia'),
     ]);
 
     const stats = (statsResult as Record<string, string>[] | null)?.[0];

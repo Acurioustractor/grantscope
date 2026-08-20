@@ -43,30 +43,30 @@ async function getChanges() {
               FROM public.agent_runs
               WHERE started_at > NOW() - INTERVAL '7 days'
               ORDER BY started_at DESC LIMIT 30`,
-    })) as Promise<AgentRun[] | null>,
+    }), 'changes') as Promise<AgentRun[] | null>,
     safe(supabase.rpc('exec_sql', {
       query: `SELECT source_generated_at::text, total_people, total_adults, total_children,
                      child_first_nations, child_over_7_days
               FROM public.v_qld_watchhouse_latest LIMIT 1`,
-    })) as Promise<ChangesWatchhouse[] | null>,
+    }), 'changes') as Promise<ChangesWatchhouse[] | null>,
     safe(supabase.rpc('exec_sql', {
       query: `SELECT abn, charity_name, report_year, created_at::text
               FROM public.charity_impact_reports
               WHERE created_at > NOW() - INTERVAL '30 days'
               ORDER BY created_at DESC LIMIT 10`,
-    })) as Promise<ImpactReport[] | null>,
+    }), 'changes') as Promise<ImpactReport[] | null>,
     safe(supabase.rpc('exec_sql', {
       query: `SELECT count(*)::int AS c,
                      COUNT(*) FILTER (WHERE value_signals IS NOT NULL)::int AS with_signals,
                      MAX(submitted_at)::text AS latest
               FROM public.report_feedback
               WHERE submitted_at > NOW() - INTERVAL '30 days'`,
-    })) as Promise<FeedbackSummary[] | null>,
+    }), 'changes') as Promise<FeedbackSummary[] | null>,
     safe(supabase.rpc('exec_sql', {
       query: `SELECT count(*)::int AS c, MAX(submitted_at)::text AS latest
               FROM public.report_submissions
               WHERE submitted_at > NOW() - INTERVAL '30 days'`,
-    })) as Promise<SubmissionSummary[] | null>,
+    }), 'changes') as Promise<SubmissionSummary[] | null>,
     safe(supabase.rpc('exec_sql', {
       query: `SELECT
                 (SELECT count(*) FROM public.gs_entities)::bigint AS entities,
@@ -76,7 +76,7 @@ async function getChanges() {
                 (SELECT count(*) FROM public.acnc_charities)::bigint AS charities,
                 (SELECT count(*) FROM public.foundations)::bigint AS foundations,
                 (SELECT count(*) FROM public.alma_interventions)::bigint AS alma_interventions`,
-    })) as Promise<Array<{ entities: number; contracts: number; justice_grants: number; vic_grants: number; charities: number; foundations: number; alma_interventions: number }> | null>,
+    }), 'changes') as Promise<Array<{ entities: number; contracts: number; justice_grants: number; vic_grants: number; charities: number; foundations: number; alma_interventions: number }> | null>,
   ]);
 
   return {

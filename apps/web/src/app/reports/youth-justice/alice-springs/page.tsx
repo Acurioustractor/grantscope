@@ -67,7 +67,7 @@ async function getPageData() {
               FROM alma_interventions
               WHERE geography::text ILIKE '%Alice Springs%'
               ORDER BY type, name`,
-    })) as Promise<AlmaRow[] | null>,
+    }), 'reports/youth-justice/alice-springs') as Promise<AlmaRow[] | null>,
     getOutcomesMetrics('NT'),
   ]);
 

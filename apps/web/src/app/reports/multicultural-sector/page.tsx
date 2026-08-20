@@ -99,7 +99,7 @@ async function getReport() {
         WHERE e.abn IN (${ABNS_SQL})
         ORDER BY a.total_revenue DESC NULLS LAST
       `,
-    })) as Promise<EntityRow[] | null>,
+    }), 'reports/multicultural-sector') as Promise<EntityRow[] | null>,
 
     safe(supabase.rpc('exec_sql', {
       query: `
@@ -115,7 +115,7 @@ async function getReport() {
         ORDER BY ac.contract_value DESC NULLS LAST
         LIMIT 30
       `,
-    })) as Promise<ContractRow[] | null>,
+    }), 'reports/multicultural-sector') as Promise<ContractRow[] | null>,
 
     safe(supabase.rpc('exec_sql', {
       query: `
@@ -139,7 +139,7 @@ async function getReport() {
         HAVING COUNT(DISTINCT te.id) >= 2
         ORDER BY total_boards DESC, cd.person_name
       `,
-    })) as Promise<DirectorRow[] | null>,
+    }), 'reports/multicultural-sector') as Promise<DirectorRow[] | null>,
 
     safe(supabase.rpc('exec_sql', {
       query: `
@@ -163,7 +163,7 @@ async function getReport() {
         ORDER BY pi.max_influence_score DESC NULLS LAST
         LIMIT 20
       `,
-    })) as Promise<InfluenceRow[] | null>,
+    }), 'reports/multicultural-sector') as Promise<InfluenceRow[] | null>,
   ]);
 
   const ents = entities ?? [];

@@ -45,12 +45,12 @@ export async function POST(request: NextRequest) {
 
   // Get source funding total
   const sourceQuery = getSourceQuery(source as Source, stateWhere);
-  const sourceData = await safe(supabase.rpc('exec_sql', { query: sourceQuery }));
+  const sourceData = await safe(supabase.rpc('exec_sql', { query: sourceQuery }), 'api/scenarios');
   const sourceTotal = Number((sourceData as Array<{ total: number }> | null)?.[0]?.total) || 0;
 
   // Get current target funding total
   const targetQuery = getTargetQuery(target as Target, stateWhere, stateWhereJf);
-  const targetData = await safe(supabase.rpc('exec_sql', { query: targetQuery }));
+  const targetData = await safe(supabase.rpc('exec_sql', { query: targetQuery }), 'api/scenarios');
   const targetTotal = Number((targetData as Array<{ total: number; orgs: number }> | null)?.[0]?.total) || 0;
   const targetOrgs = Number((targetData as Array<{ total: number; orgs: number }> | null)?.[0]?.orgs) || 0;
 
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     ${state ? `AND state = '${state}'` : ''}
     ORDER BY desert_score DESC
     LIMIT 20`;
-  const deserts = await safe(supabase.rpc('exec_sql', { query: desertQuery })) as Array<{
+  const deserts = await safe(supabase.rpc('exec_sql', { query: desertQuery }), 'api/scenarios') as Array<{
     lga_name: string; state: string; remoteness: string; desert_score: number;
     entity_count: number; total_funding: number; funding_per_entity: number;
   }> | null;
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
          AND ${entityFilter}
          ORDER BY lga_name, canonical_name
          LIMIT 30`,
-    }));
+    }), 'api/scenarios');
     benefitingEntities = (entityData as typeof benefitingEntities) || [];
   }
 

@@ -50,7 +50,7 @@ async function getAllowedPersonIds() {
         AND r.relationship_type = 'directorship'
         AND src.gs_id LIKE 'GS-PERSON-%'
     `,
-  })) as Array<{ gs_id: string }> | null;
+  }), 'share/fecca-eccv/people/[slug]') as Array<{ gs_id: string }> | null;
   return new Set((data ?? []).map(r => r.gs_id));
 }
 
@@ -75,7 +75,7 @@ async function getPersonProfile(gsId: string) {
           AND r.relationship_type IN ('directorship', 'shared_director', 'trustee_of', 'affiliated_with')
         ORDER BY te.canonical_name
       `,
-    })) as Promise<BoardRow[] | null>,
+    }), 'share/fecca-eccv/people/[slug]') as Promise<BoardRow[] | null>,
     safe(supabase.rpc('exec_sql', {
       query: `
         SELECT pi.board_count, pi.total_procurement::bigint, pi.total_contracts,
@@ -87,7 +87,7 @@ async function getPersonProfile(gsId: string) {
         WHERE e.gs_id = '${safeId}'
         LIMIT 1
       `,
-    })) as Promise<InfluenceRow[] | null>,
+    }), 'share/fecca-eccv/people/[slug]') as Promise<InfluenceRow[] | null>,
   ]);
   return { boards: boards ?? [], influence: influence?.[0] || null };
 }
@@ -97,7 +97,7 @@ async function getPersonName(gsId: string) {
   const safeId = gsId.replace(/'/g, "''");
   const data = await safe(supabase.rpc('exec_sql', {
     query: `SELECT canonical_name FROM public.gs_entities WHERE gs_id = '${safeId}' LIMIT 1`,
-  })) as Array<{ canonical_name: string }> | null;
+  }), 'share/fecca-eccv/people/[slug]') as Array<{ canonical_name: string }> | null;
   return data?.[0]?.canonical_name || null;
 }
 
