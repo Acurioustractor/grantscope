@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getServiceSupabase } from '@/lib/supabase';
 import { whitelist } from '@/lib/sql';
 import { rateLimit } from '@/lib/rate-limit';
+import { NON_RECIPIENT_SQL_ARRAY, STATE_CODES_SQL } from '@/lib/grant-place-capture';
 
 export const dynamic = 'force-dynamic';
 
@@ -134,6 +135,50 @@ export async function GET(request: Request) {
         WHERE e.lga_name IS NOT NULL
         GROUP BY 1, 2
       ),
+      capture_lga AS MATERIALIZED (
+        -- Place capture at council grain, from v_grant_place_capture. The view holds
+        -- the four exclusions (see migrations/2026-08-19-grant-place-capture.sql and
+        -- lib/grant-place-capture.ts); do not restate them here.
+        --
+        -- Denominator is the RESOLVED base — awards whose recipient postcode also
+        -- resolves to a single trustworthy council. 6,259 covered awards ($10.69bn)
+        -- do not, and counting those as delivered off-site is what turns an 87.3%
+        -- national dollar share into 59.6%. Unresolved is not off-site.
+        --
+        -- Councils under 20 resolved awards report NULL rather than a confident
+        -- percentage on noise, which the layer paints as "not measured".
+        SELECT delivery_lga AS lga_name, delivery_state AS state,
+               count(*)::int AS capture_awards,
+               sum(value_aud)::numeric AS capture_dollars,
+               CASE WHEN count(*) FILTER (WHERE recipient_lga IS NOT NULL) >= 20
+                    THEN ROUND(100.0 * sum(value_aud) FILTER (WHERE captured_locally)
+                         / NULLIF(sum(value_aud) FILTER (WHERE recipient_lga IS NOT NULL), 0), 1)
+               END AS capture_pct_dollars,
+               CASE WHEN count(*) FILTER (WHERE recipient_lga IS NOT NULL) >= 20
+                    THEN ROUND(100.0 * count(*) FILTER (WHERE captured_locally)
+                         / NULLIF(count(*) FILTER (WHERE recipient_lga IS NOT NULL), 0), 1)
+               END AS capture_pct_awards
+        FROM v_grant_place_capture
+        GROUP BY 1, 2
+      ),
+      capture_state AS MATERIALIZED (
+        -- The same measure at state grain, across nearly the whole register: states
+        -- are recorded directly, so none of the postcode exclusions apply. Only the
+        -- multi-state, 'National' and 'Overseas' delivery strings drop out, which is
+        -- why this covers $200bn where the council path covers $33.75bn.
+        SELECT delivery_state AS state,
+               ROUND(100.0 * sum(value_aud) FILTER (WHERE recipient_state = delivery_state)
+                    / NULLIF(sum(value_aud) FILTER (WHERE recipient_state IN (${STATE_CODES_SQL})), 0), 1)
+                 AS state_capture_pct_dollars,
+               ROUND(100.0 * count(*) FILTER (WHERE recipient_state = delivery_state)
+                    / NULLIF(count(*) FILTER (WHERE recipient_state IN (${STATE_CODES_SQL})), 0), 1)
+                 AS state_capture_pct_awards
+        FROM grantconnect_awards
+        WHERE value_aud > 0
+          AND delivery_state IN (${STATE_CODES_SQL})
+          AND lower(btrim(recipient_name)) <> ALL (${NON_RECIPIENT_SQL_ARRAY})
+        GROUP BY 1
+      ),
       alma AS MATERIALIZED (
         SELECT e.lga_name, UPPER(e.state) AS state,
                COUNT(*)::int AS alma_linked
@@ -150,6 +195,9 @@ export async function GET(request: Request) {
              jt.justice_total AS justice_funding_total,
              gr.grants_total AS grants_awarded_total,
              COALESCE(al.alma_linked, 0) AS alma_linked_count,
+             cl.capture_pct_dollars, cl.capture_pct_awards,
+             cl.capture_awards, cl.capture_dollars,
+             cs.state_capture_pct_dollars, cs.state_capture_pct_awards,
              COALESCE(un.unplaced, 0) AS unplaced_count,
              un.unplaced_reasons,
              COALESCE(pl.placed, 0) AS placed_count,
@@ -165,6 +213,8 @@ export async function GET(request: Request) {
       LEFT JOIN justice jt ON jt.lga_name = lc.lga_name AND jt.state = lc.state
       LEFT JOIN grants gr ON gr.lga_name = lc.lga_name AND gr.state = lc.state
       LEFT JOIN alma al ON al.lga_name = lc.lga_name AND al.state = lc.state
+      LEFT JOIN capture_lga cl ON cl.lga_name = lc.lga_name AND cl.state = lc.state
+      LEFT JOIN capture_state cs ON cs.state = lc.state
       WHERE dd.desert_score IS NOT NULL OR COALESCE(un.unplaced, 0) > 0
       ORDER BY dd.desert_score DESC NULLS LAST`,
       }),
@@ -192,6 +242,15 @@ export async function GET(request: Request) {
       // join ran for every council here — zero is a real answer for it.
       grants_awarded_total: number | null;
       alma_linked_count: number;
+      // Null on capture means not measured — no covered awards, or too few
+      // resolved ones to report a share. Never coerce it to zero: a blank
+      // council has not been shown to keep nothing.
+      capture_pct_dollars: number | null;
+      capture_pct_awards: number | null;
+      capture_awards: number | null;
+      capture_dollars: number | null;
+      state_capture_pct_dollars: number | null;
+      state_capture_pct_awards: number | null;
       unplaced_reasons: Record<string, number> | null;
     }>;
 

@@ -52,6 +52,22 @@ export interface AtlasFeature {
    * organisation placed in this council. Zero is a real answer (the join ran
    * and found none); null/absent means the payload predates the field. */
   alma_linked_count?: number | null;
+  /** Share of grant DOLLARS delivered into this council that were received by an
+   * organisation placed here, of the awards whose recipient location also resolves.
+   * Null means not measured — either no covered awards, or too few to report.
+   * Optional for the same cached-payload reason as unplaced_reasons. */
+  capture_pct_dollars?: number | null;
+  /** The same share counted as AWARDS rather than dollars. It moves differently and
+   * both belong on screen: nationally 85.1% of awards but 59.6% of dollars stay put. */
+  capture_pct_awards?: number | null;
+  /** Awards and dollars behind this council's capture figures — the covered minority,
+   * never the whole grant record. */
+  capture_awards?: number | null;
+  capture_dollars?: number | null;
+  /** Capture at STATE grain for the state this council sits in, repeated on every
+   * council of that state. Near-complete coverage, unlike the council figures. */
+  state_capture_pct_dollars?: number | null;
+  state_capture_pct_awards?: number | null;
   /** Null when the council has no point coordinates; it still renders where a
    * boundary matches its name. Coordinates only drive bounds-fitting. */
   lat: number | null;
@@ -465,6 +481,80 @@ const whatsWorking: AtlasLiveLayer = {
   format: v => (v === 0 ? 'None yet' : `${v.toFixed(0)} linked`),
 };
 
+// Place capture: of the money delivered into a place, how much does the place
+// keep? Two layers, two geographies, two very different coverage stories — see
+// lib/grant-place-capture.ts for the four exclusions and their measured cost.
+//
+// Both paint the DOLLAR share. The award share moves differently (nationally
+// 85.1% of awards against 59.6% of dollars) and rides in the payload for the
+// place panel; the caveats say so, because either number alone misleads.
+const captureScale: AtlasScaleStop[] = [
+  { min: 90, color: '#1040C0', fillOpacity: 0.3, label: '90% or more stays' },
+  { min: 75, color: '#4CB876', fillOpacity: 0.4, label: '75–90%' },
+  { min: 50, color: '#F0C020', fillOpacity: 0.5, label: '50–75%' },
+  { min: 25, color: '#E06C18', fillOpacity: 0.6, label: '25–50%' },
+  { min: 0, color: '#D02020', fillOpacity: 0.7, label: 'Under 25% stays' },
+];
+
+const grantCaptureLga: AtlasLiveLayer = {
+  key: 'grant-capture-lga',
+  status: 'live',
+  kind: 'choropleth',
+  group: 'money',
+  name: 'Money the council keeps',
+  unit: '% of delivered grant dollars received by an organisation here',
+  caveat:
+    'Of the grant money GrantConnect records as delivered INTO this council, the share ' +
+    'received by an organisation based here. It covers a well-measured minority of the ' +
+    'register — 85,898 awards and $33.75bn of 291,264 awards and $230bn — because both ' +
+    'the delivery and the recipient postcode must resolve to a single trustworthy ' +
+    'council, and multi-site grants are excluded rather than counted as delivered away. ' +
+    'Counted as dollars; the share of separate awards kept locally runs far higher ' +
+    '(85.1% against 59.6% nationally), so this layer shows where the money goes, not ' +
+    'how many opportunities a place holds. Blank means not measured, never zero.',
+  honestAt: 'council',
+  honestAtNote:
+    'Council level, and only for awards where both ends resolve to one council. Councils ' +
+    'with fewer than 20 resolved awards are left blank rather than painted on noise.',
+  consent: 'public',
+  scale: captureScale,
+  scaleNote:
+    'Bands are plain quarters of the share, not quantiles: a place keeping under a ' +
+    'quarter of what is delivered into it reads red wherever it sits.',
+  noDataLabel: 'Not measured here',
+  value: f => num(f.capture_pct_dollars),
+  format: v => `${v.toFixed(0)}% stays`,
+};
+
+const grantCaptureState: AtlasLiveLayer = {
+  key: 'grant-capture-state',
+  status: 'live',
+  kind: 'choropleth',
+  group: 'money',
+  name: 'Money the state keeps',
+  unit: '% of delivered grant dollars received in the same state',
+  caveat:
+    'Of the grant money delivered into this state, the share received by an organisation ' +
+    'based in the same state. Unlike the council layer this covers nearly the whole ' +
+    'register — 281,016 awards and $200bn — because states are recorded directly and need ' +
+    'no postcode lookup; only multi-state, National and Overseas delivery strings drop out. ' +
+    'Every council of a state is painted the same, because the number is about the state. ' +
+    'State borders are a coarse test: money can cross the country inside one state and ' +
+    'still count as kept.',
+  honestAt: 'state',
+  honestAtNote:
+    'State grain repeated across the state, not a council figure. It says nothing about ' +
+    'which places within a state receive the money.',
+  consent: 'public',
+  scale: captureScale,
+  scaleNote:
+    'Same bands as the council layer so the two can be read against each other. Most ' +
+    'states sit high: the interesting question is which council keeps it, not which state.',
+  noDataLabel: 'Not measured here',
+  value: f => num(f.state_capture_pct_dollars),
+  format: v => `${v.toFixed(0)}% stays`,
+};
+
 /** Communities whose in-person consent to appear on the PUBLIC Goods layer
  * has been gathered and recorded. Adding a community name here is the whole
  * flip: the layer's consent tier derives from this list, and the server feed
@@ -522,6 +612,8 @@ const goodsDelivered: AtlasPointLayer = {
 export const ATLAS_LAYERS: readonly AtlasLayer[] = [
   fundingDeserts,
   grantsAwarded,
+  grantCaptureLga,
+  grantCaptureState,
   moneyRecorded,
   justiceFunding,
   renewalCliff,
