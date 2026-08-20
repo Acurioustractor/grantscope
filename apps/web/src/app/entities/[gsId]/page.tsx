@@ -340,6 +340,7 @@ export default async function EntityDossierPage({
       query: `SELECT donation_to, SUM(amount)::bigint as total, COUNT(*)::int as count,
                      array_agg(DISTINCT financial_year ORDER BY financial_year) as years
               FROM political_donations WHERE donor_abn = '${e.abn}'
+                AND receipt_type = 'donation received'
               GROUP BY donation_to ORDER BY total DESC LIMIT 20`,
     });
     politicalDonations = (donData || []) as DonationRow[];

@@ -117,9 +117,16 @@ export async function GET(
       e.abn
         ? safe(
             supabase.rpc('exec_sql', {
+              // 'other receipt' is 72% of rows and 85% of dollars in political_donations and
+              // is NOT donations — it is party fundraising income, transfers and levies. Without
+              // this filter THIS ENDPOINT reported Westpac as donating $3,478.6m against a real
+              // $82.0m, and Sino Iron Pty Ltd & Korean Steel Pty Ltd as donating $8,108m when
+              // they donated nothing. 1,880 entities were overstated by more than 10x, on a
+              // public API, about named organisations.
               query: `SELECT COALESCE(SUM(amount), 0)::bigint as total,
                              COUNT(*)::int as count
-                        FROM political_donations WHERE donor_abn = '${esc(e.abn)}'`,
+                        FROM political_donations WHERE donor_abn = '${esc(e.abn)}'
+                          AND receipt_type = 'donation received'`,
             })
           )
         : Promise.resolve(null),
