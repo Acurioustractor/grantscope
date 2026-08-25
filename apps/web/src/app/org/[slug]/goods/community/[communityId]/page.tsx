@@ -8,6 +8,8 @@ import {
   type CommunityRelationshipPerson,
   type LocalEntity,
 } from '@/lib/services/goods-community-detail';
+import { getRhdSignalForLga, ratePerHundred } from '@/lib/services/rhd-signal';
+import { getOvercrowdingForRemoteness, overcrowdedPct } from '@/lib/services/overcrowding-signal';
 import { RecordDeploymentButton } from './record-deployment';
 import { PushToGhlButton } from './push-to-ghl-button';
 import { ghlLocationId } from '@/lib/ghl-links';
@@ -37,6 +39,7 @@ export default async function GoodsCommunityPage({
 
   const {
     community,
+    healthSetting,
     mappedBuyers,
     localEntities,
     signals,
@@ -53,6 +56,21 @@ export default async function GoodsCommunityPage({
   const totalDemand = community.demand_beds + community.demand_washers;
   const activeSignals = signals.filter((signal) => ['new', 'reviewing'].includes(signal.status));
   const authorityIds = new Set(operatingModel.authority.candidates.map((entity) => entity.id));
+  const rhd = getRhdSignalForLga(community.lga_name);
+  const remotenessOvercrowding = getOvercrowdingForRemoteness(community.remoteness);
+  const iloc = healthSetting.iloc;
+  const pph = healthSetting.phidu.find((row) => row.indicator === 'pph_admissions_total') ?? null;
+  const medianAgeDeath = healthSetting.phidu.find((row) => row.indicator === 'median_age_death_persons') ?? null;
+  const ilocConditions: Array<[string, number | null]> = iloc
+    ? [
+        ['Mental health condition', iloc.mental_health],
+        ['Asthma', iloc.asthma],
+        ['Diabetes', iloc.diabetes],
+        ['Heart disease', iloc.heart_disease],
+        ['Arthritis', iloc.arthritis],
+        ['Kidney disease', iloc.kidney_disease],
+      ]
+    : [];
   const adjacentEntities = localEntities.filter((entity) => !authorityIds.has(entity.id)).slice(0, 12);
 
   return (
@@ -176,6 +194,110 @@ export default async function GoodsCommunityPage({
                 <RecordDeploymentButton communityId={community.id} communityName={community.community_name} />
                 <Link href={`/org/${slug}/goods`} className="inline-flex min-h-10 items-center rounded-md border border-[var(--ws-border)] px-3 text-xs font-semibold hover:bg-[var(--ws-surface-2)]">Open Goods record</Link>
               </div>
+            </Section>
+
+            <Section title="Health and housing setting" eyebrow="Setting, not outcome" testId="community-health-setting">
+              <p className="mb-4 max-w-3xl text-xs leading-5 text-[var(--ws-text-secondary)]">
+                These figures describe the conditions a bed or washer goes into. They are never a measure of Goods
+                impact, never demand, and dividing anything here by anything else does not produce coverage.
+              </p>
+
+              <div className="grid gap-2 sm:grid-cols-3">
+                {community.overcrowded_pct != null ? (
+                  <CompactFact
+                    label={`Households needing more bedrooms · measured, ILOC${community.overcrowding_as_at ? ` · Census ${new Date(community.overcrowding_as_at).getFullYear()}` : ''}`}
+                    value={`${community.overcrowded_pct}%`}
+                  />
+                ) : remotenessOvercrowding ? (
+                  <CompactFact
+                    label="Households needing more bedrooms · remoteness class, not this community"
+                    value={`${overcrowdedPct(remotenessOvercrowding, 'firstNations')}%`}
+                  />
+                ) : (
+                  <CompactFact label="Households needing more bedrooms" value="Not measured" />
+                )}
+                <CompactFact
+                  label="People per dwelling · derived, approximate"
+                  value={community.persons_per_dwelling != null ? community.persons_per_dwelling.toLocaleString('en-AU') : 'Not measured'}
+                />
+                <CompactFact
+                  label="Occupied dwellings in the ILOC"
+                  value={community.occupied_dwellings != null ? community.occupied_dwellings.toLocaleString('en-AU') : 'No matched ILOC'}
+                />
+              </div>
+              {community.overcrowding_source ? (
+                <p className="mt-2 text-[10px] leading-4 text-[var(--ws-text-tertiary)]">{community.overcrowding_source}</p>
+              ) : (
+                <p className="mt-2 text-[10px] leading-4 text-[var(--ws-text-tertiary)]">
+                  No ABS Indigenous Location maps one-to-one onto this community, so no measured overcrowding figure is
+                  claimed for it — deliberately unmatched rather than confidently wrong.
+                </p>
+              )}
+
+              {iloc ? (
+                <div className="mt-4">
+                  <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[var(--ws-text-tertiary)]">
+                    Self-reported long-term conditions · {iloc.indigenous_persons_counted?.toLocaleString('en-AU') ?? '—'} First Nations people counted, ILOC {iloc.iloc_name}
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {ilocConditions.map(([label, count]) => (
+                      <CompactFact key={label} label={label} value={count != null ? count.toLocaleString('en-AU') : '—'} />
+                    ))}
+                  </div>
+                  <p className="mt-2 text-[10px] leading-4 text-[var(--ws-text-tertiary)]">
+                    ABS Census 2021 Indigenous Profile I12. Self-reported and small-cell randomised: read as a burden
+                    signal, never as clinical prevalence. People can report more than one condition.
+                  </p>
+                </div>
+              ) : null}
+
+              {(pph || medianAgeDeath || rhd) ? (
+                <dl className="mt-4 divide-y divide-[var(--ws-border)] border-t border-[var(--ws-border)]">
+                  {pph?.rate != null ? (
+                    <FactRow
+                      label={`Potentially preventable hospital admissions, whole LGA (${community.lga_name}), ${pph.year}`}
+                      value={`${pph.rate.toLocaleString('en-AU')} ${pph.rate_unit || 'per 100,000'}`}
+                    />
+                  ) : null}
+                  {medianAgeDeath?.number != null ? (
+                    <FactRow
+                      label={`Median age at death, whole LGA (${community.lga_name}), ${medianAgeDeath.year}`}
+                      value={`${medianAgeDeath.number} years`}
+                    />
+                  ) : null}
+                  {rhd ? (
+                    <FactRow
+                      label={`Rheumatic heart disease, ${rhd.region} health region, at ${rhd.asAt}`}
+                      value={`${ratePerHundred(rhd.firstNationsRatePer100k)} in every 100 First Nations people`}
+                    />
+                  ) : null}
+                </dl>
+              ) : null}
+              {(pph || medianAgeDeath) ? (
+                <p className="mt-2 text-[10px] leading-4 text-[var(--ws-text-tertiary)]">
+                  LGA rows cover the whole council area, not this community. Source: PHIDU Social Health Atlas, Torrens
+                  University (CC BY-NC-SA).
+                </p>
+              ) : null}
+              {rhd ? (
+                <p className="mt-1 text-[10px] leading-4 text-[var(--ws-text-tertiary)]">
+                  RHD belongs to the register region, never to this community or council. AIHW table {rhd.sourceTable} (CC BY 4.0).
+                </p>
+              ) : null}
+
+              {(community.dss_health_care_cards != null || community.dss_disability_pension != null || community.dss_jobseeker != null) ? (
+                <div className="mt-4">
+                  <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[var(--ws-text-tertiary)]">
+                    Income support, whole postcode {community.postcode}
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    <CompactFact label="Health Care Cards" value={community.dss_health_care_cards?.toLocaleString('en-AU') ?? '—'} />
+                    <CompactFact label="Disability Support Pension" value={community.dss_disability_pension?.toLocaleString('en-AU') ?? '—'} />
+                    <CompactFact label="JobSeeker" value={community.dss_jobseeker?.toLocaleString('en-AU') ?? '—'} />
+                  </div>
+                  {community.dss_source ? <p className="mt-2 text-[10px] leading-4 text-[var(--ws-text-tertiary)]">{community.dss_source}.</p> : null}
+                </div>
+              ) : null}
             </Section>
 
             <Section title="Adjacent organisations and activity" eyebrow="Useful context, not a lead list" testId="community-adjacent">
