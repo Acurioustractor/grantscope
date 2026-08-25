@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PLACE_REGIONS } from './place-intelligence';
-import { RHD_BY_PLACE_REGION, RHD_REGIONS, getRhdSignalForRegion, ratePerHundred } from './rhd-signal';
+import { RHD_BY_PLACE_REGION, RHD_REGIONS, getRhdSignalForLga, getRhdSignalForRegion, ratePerHundred } from './rhd-signal';
 
 /**
  * These figures are transcribed by hand from a published workbook and shown to
@@ -71,6 +71,14 @@ describe('RHD_REGIONS', () => {
     // caveat is ever dropped the page overstates its own coverage.
     const note = RHD_REGIONS['nt-central-australia'].boundaryNote;
     expect(note).toContain('APY');
+  });
+
+  it('resolves an NT council to its register region, and nothing else', () => {
+    expect(getRhdSignalForLga('Barkly')?.region).toBe('Central Australia');
+    expect(getRhdSignalForLga('west arnhem')?.region).toBe('Northern Territory Top End');
+    // A non-NT council or an unknown one never inherits a register number.
+    expect(getRhdSignalForLga('Ceduna')).toBeNull();
+    expect(getRhdSignalForLga(null)).toBeNull();
   });
 
   it('converts a rate per 100,000 into people per 100', () => {

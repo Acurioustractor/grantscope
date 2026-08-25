@@ -29,6 +29,54 @@ export type CommunityDetail = {
   data_quality_score: number | null;
   last_profiled_at: string | null;
   data_sources: string[] | null;
+  lga_code: string | null;
+  abs_iloc_code: string | null;
+  occupied_dwellings: number | null;
+  overcrowded_dwellings: number | null;
+  overcrowded_pct: number | null;
+  persons_per_dwelling: number | null;
+  /** Full provenance travels with the figure — ILOC code, name, caveats. */
+  overcrowding_source: string | null;
+  overcrowding_as_at: string | null;
+  dss_health_care_cards: number | null;
+  dss_disability_pension: number | null;
+  dss_jobseeker: number | null;
+  dss_source: string | null;
+};
+
+/** ABS Census 2021 long-term conditions for this community's ILOC.
+ * Self-reported and small-cell randomised: a burden signal, never clinical
+ * prevalence. Null when the community has no matched ILOC. */
+export type IlocHealthRow = {
+  iloc_code: string;
+  iloc_name: string;
+  indigenous_persons_counted: number | null;
+  kidney_disease: number | null;
+  heart_disease: number | null;
+  diabetes: number | null;
+  asthma: number | null;
+  mental_health: number | null;
+  arthritis: number | null;
+  no_long_term_condition: number | null;
+  median_age: number | null;
+  median_hh_income_wk: number | null;
+};
+
+/** PHIDU Social Health Atlas rows for this community's LGA. LGA grain — the
+ * whole council area, not the community. CC BY-NC-SA: attribution rendered. */
+export type PhiduHealthRow = {
+  indicator: string;
+  year: string;
+  number: number | null;
+  rate: number | null;
+  rate_unit: string | null;
+  sr: number | null;
+  suppression: string | null;
+};
+
+export type CommunityHealthSetting = {
+  iloc: IlocHealthRow | null;
+  phidu: PhiduHealthRow[];
 };
 
 export type MappedBuyer = {
@@ -197,6 +245,7 @@ export type TimelineEvent = {
 
 export type GoodsCommunityDetail = {
   community: CommunityDetail;
+  healthSetting: CommunityHealthSetting;
   mappedBuyers: MappedBuyer[];
   localEntities: LocalEntity[];
   signals: SignalSummary[];
@@ -307,10 +356,33 @@ export async function getGoodsCommunityDetail(communityId: string, orgProfileId?
 
   const { data: community, error } = await db
     .from('goods_communities')
-    .select('id, community_name, state, postcode, region_label, service_region, remoteness, lga_name, priority, demand_beds, demand_washers, assets_deployed, land_council, local_government, main_language, estimated_population, estimated_households, nearest_staging_hub, freight_corridor, last_mile_method, total_govt_contract_value, total_justice_funding, total_foundation_grants, proof_line, story, data_quality_score, last_profiled_at, data_sources')
+    .select('id, community_name, state, postcode, region_label, service_region, remoteness, lga_name, priority, demand_beds, demand_washers, assets_deployed, land_council, local_government, main_language, estimated_population, estimated_households, nearest_staging_hub, freight_corridor, last_mile_method, total_govt_contract_value, total_justice_funding, total_foundation_grants, proof_line, story, data_quality_score, last_profiled_at, data_sources, lga_code, abs_iloc_code, occupied_dwellings, overcrowded_dwellings, overcrowded_pct, persons_per_dwelling, overcrowding_source, overcrowding_as_at, dss_health_care_cards, dss_disability_pension, dss_jobseeker, dss_source')
     .eq('id', communityId)
     .maybeSingle();
   if (error || !community) return null;
+
+  // Health setting: the community's own ILOC conditions plus its LGA's PHIDU
+  // rows. Both optional — no match means the section says so, not a zero.
+  const [ilocHealthRes, phiduRes] = await Promise.all([
+    community.abs_iloc_code
+      ? db
+          .from('abs_iloc_health')
+          .select('iloc_code, iloc_name, indigenous_persons_counted, kidney_disease, heart_disease, diabetes, asthma, mental_health, arthritis, no_long_term_condition, median_age, median_hh_income_wk')
+          .eq('iloc_code', community.abs_iloc_code)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    community.lga_code
+      ? db
+          .from('phidu_lga_health')
+          .select('indicator, year, number, rate, rate_unit, sr, suppression')
+          .eq('lga_code', community.lga_code)
+          .in('indicator', ['pph_admissions_total', 'median_age_death_persons'])
+      : Promise.resolve({ data: null }),
+  ]);
+  const healthSetting: CommunityHealthSetting = {
+    iloc: (ilocHealthRes.data as IlocHealthRow | null) ?? null,
+    phidu: (phiduRes.data as PhiduHealthRow[] | null) ?? [],
+  };
 
   // Mapped procurement entities at this community
   const { data: mappedBuyersRaw } = await db
@@ -636,6 +708,7 @@ export async function getGoodsCommunityDetail(communityId: string, orgProfileId?
 
   return {
     community: typedCommunity,
+    healthSetting,
     mappedBuyers,
     localEntities,
     signals,

@@ -116,6 +116,21 @@ export function getRhdSignalForRegion(regionKey: string): RhdRegionSignal | null
 }
 
 /**
+ * The register region an NT council belongs to, resolved through the same
+ * proxy-LGA membership the Atlas draws. Non-NT councils, and NT places whose
+ * council is unknown, get null — the register number never stretches past the
+ * geography it was reported for.
+ */
+export function getRhdSignalForLga(lgaName: string | null): RhdRegionSignal | null {
+  if (!lgaName) return null;
+  const wanted = lgaName.trim().toLowerCase();
+  for (const region of Object.values(RHD_REGIONS)) {
+    if (region.proxyLgas.some(lga => lga.toLowerCase() === wanted)) return region;
+  }
+  return null;
+}
+
+/**
  * The prevalence rate as a share of population, which is how a person reads it.
  * 2,902.7 per 100,000 is 2.9 in every 100.
  */

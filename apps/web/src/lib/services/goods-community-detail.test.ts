@@ -36,6 +36,18 @@ const community: CommunityDetail = {
   data_quality_score: null,
   last_profiled_at: null,
   data_sources: null,
+  lga_code: '70420',
+  abs_iloc_code: null,
+  occupied_dwellings: null,
+  overcrowded_dwellings: null,
+  overcrowded_pct: null,
+  persons_per_dwelling: null,
+  overcrowding_source: null,
+  overcrowding_as_at: null,
+  dss_health_care_cards: null,
+  dss_disability_pension: null,
+  dss_jobseeker: null,
+  dss_source: null,
 };
 
 const authorityCandidate: LocalEntity = {
