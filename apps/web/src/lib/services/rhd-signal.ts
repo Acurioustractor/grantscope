@@ -37,6 +37,10 @@ export interface RhdRegionSignal {
   sourceTable: string;
   /** What this region does and does not cover, relative to ours. */
   boundaryNote: string;
+  /** Council polygons used only to draw a transparent visual proxy for the
+   * register region. The observation remains regional. */
+  proxyLgas: string[];
+  labelAt: [number, number];
 }
 
 /**
@@ -59,6 +63,8 @@ export const RHD_REGIONS: Record<string, RhdRegionSignal> = {
     sourceTable: 'D1.06.12',
     boundaryNote:
       'The NT Rheumatic Heart Disease Register reports Central Australia as a health service region. It covers Mparntwe (Alice Springs), the Barkly and the surrounding communities, but not the APY Lands, which are in South Australia and appear on a separate register.',
+    proxyLgas: ['Alice Springs', 'Barkly', 'Central Desert', 'MacDonnell'],
+    labelAt: [-21.5, 133.4],
   },
   'nt-top-end': {
     region: 'Northern Territory Top End',
@@ -71,6 +77,24 @@ export const RHD_REGIONS: Record<string, RhdRegionSignal> = {
     asAt: '31 December 2021',
     sourceTable: 'D1.06.12',
     boundaryNote: 'The northern half of the Northern Territory, as the register defines it.',
+    proxyLgas: [
+      'Belyuen',
+      'Coomalie',
+      'Darwin',
+      'Darwin Waterfront Precinct',
+      'East Arnhem',
+      'Groote Archipelago',
+      'Katherine',
+      'Litchfield',
+      'Palmerston',
+      'Roper Gulf',
+      'Tiwi Islands',
+      'Victoria Daly',
+      'Wagait',
+      'West Arnhem',
+      'West Daly',
+    ],
+    labelAt: [-14.7, 132.2],
   },
 };
 

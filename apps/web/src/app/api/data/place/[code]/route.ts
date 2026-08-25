@@ -20,6 +20,7 @@ const limiter = rateLimit();
 // ran and found none, which each layer's caveat knows how to say.
 
 const LGA_CODE = /^\d{4,5}$/;
+const ORG_ENTITY_FILTER_SQL = "entity_type NOT IN ('person', 'program')";
 
 interface MoneyBlock {
   records: number;
@@ -60,6 +61,7 @@ export async function GET(
         SELECT id, gs_id, canonical_name, entity_type, is_community_controlled, lga_source, abn
         FROM gs_entities
         WHERE lga_code = '${code}' AND lga_name IS NOT NULL
+          AND ${ORG_ENTITY_FILTER_SQL}
       ),
       justice AS (
         SELECT COUNT(*)::int AS records, COALESCE(SUM(jf.amount_dollars), 0)::numeric AS total

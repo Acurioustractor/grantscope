@@ -1,6 +1,5 @@
-// The reason registry is a contract with the database: the six codes here
-// are exactly the lga_source stamps the 2026-08 placement migrations wrote.
-// A code drifting out of sync fails loudly here, not silently on the map.
+// The reason registry is a contract with the database: the stamped codes plus
+// the explicit unstamped repair bucket must render loudly, not silently vanish.
 
 import { describe, expect, it } from 'vitest';
 import {
@@ -15,7 +14,7 @@ import {
 } from './reasons';
 
 describe('the reason registry', () => {
-  it('pins the six lga_source codes the migrations stamp', () => {
+  it('pins the lga_source codes and the unstamped repair bucket', () => {
     expect(UNPLACED_REASONS.map(r => r.code).sort()).toEqual([
       'no_postcode',
       'no_state',
@@ -23,6 +22,7 @@ describe('the reason registry', () => {
       'state_conflict',
       'unknown_postcode',
       'unresolved_multi_lga_postcode',
+      'unstamped',
     ]);
   });
 
@@ -51,10 +51,11 @@ describe('per-council rows', () => {
     const rows = reasonRows({
       unresolved_multi_lga_postcode: 312,
       state_conflict: 40,
+      unstamped: 2,
       postcode_unmapped_in_abs: 0,
       no_state: Number.NaN,
     });
-    expect(rows.map(r => r.code)).toEqual(['unresolved_multi_lga_postcode', 'state_conflict']);
+    expect(rows.map(r => r.code)).toEqual(['unresolved_multi_lga_postcode', 'state_conflict', 'unstamped']);
     expect(rows[0].label).toBe('postcode spans several councils');
   });
 
@@ -102,6 +103,7 @@ describe('export columns', () => {
       'unplaced_postcode_unmapped_in_abs',
       'unplaced_state_conflict',
       'unplaced_no_state',
+      'unplaced_unstamped',
     ]);
   });
 });

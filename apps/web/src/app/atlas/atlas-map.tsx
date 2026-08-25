@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useEffect, useState } from 'react';
-import { MapContainer, TileLayer, GeoJSON, CircleMarker, Tooltip, ZoomControl, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, CircleMarker, Marker, Tooltip, ZoomControl, useMap } from 'react-leaflet';
 import type { FeatureCollection, Feature, Geometry } from 'geojson';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -12,7 +12,9 @@ import {
   type AtlasLiveLayer,
   type AtlasPoint,
   type AtlasPointLayer,
+  type AtlasRegionLayer,
 } from '@/lib/atlas/layers';
+import { RHD_REGIONS } from '@/lib/services/rhd-signal';
 
 interface AtlasMapProps {
   features: AtlasFeature[];
@@ -23,6 +25,9 @@ interface AtlasMapProps {
    * the surface that is allowed to hold it; this component just draws. */
   pointLayer?: AtlasPointLayer | null;
   points?: AtlasPoint[];
+  regionLayer?: AtlasRegionLayer | null;
+  selectedRegionKey?: string | null;
+  onSelectRegion?: (key: string) => void;
 }
 
 const STATE_ABBREV: Record<string, string> = {
@@ -82,7 +87,31 @@ function FitBounds({ features }: { features: AtlasFeature[] }) {
   return null;
 }
 
-export default function AtlasMap({ features, layer, selected, onSelect, pointLayer, points }: AtlasMapProps) {
+function FocusRegions({ active }: { active: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!active) return;
+    map.fitBounds(
+      L.latLngBounds(
+        Object.values(RHD_REGIONS).map(region => region.labelAt)
+      ),
+      { padding: [70, 70], maxZoom: 5 }
+    );
+  }, [active, map]);
+  return null;
+}
+
+export default function AtlasMap({
+  features,
+  layer,
+  selected,
+  onSelect,
+  pointLayer,
+  points,
+  regionLayer,
+  selectedRegionKey,
+  onSelectRegion,
+}: AtlasMapProps) {
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
   const [geoLoading, setGeoLoading] = useState(true);
 
@@ -197,6 +226,46 @@ export default function AtlasMap({ features, layer, selected, onSelect, pointLay
     [selected, features, layer]
   );
 
+  const regionByLga = useMemo(() => {
+    const lookup = new Map<string, string>();
+    for (const [key, region] of Object.entries(RHD_REGIONS)) {
+      for (const lga of region.proxyLgas) lookup.set(lga, key);
+    }
+    return lookup;
+  }, []);
+
+  const regionStyle = useMemo(() => {
+    return (feature: Feature<Geometry, { lga_name: string; state: string }> | undefined) => {
+      const key = feature?.properties ? regionByLga.get(feature.properties.lga_name) : null;
+      const region = key ? RHD_REGIONS[key] : null;
+      if (!key || !region || feature?.properties.state !== 'Northern Territory') {
+        return { fillOpacity: 0, opacity: 0, weight: 0 };
+      }
+      const paint = atlasStyleFor(regionLayer!, region.firstNationsRatePer100k);
+      const selected = key === selectedRegionKey;
+      return {
+        fillColor: paint.color,
+        fillOpacity: selected ? 0.86 : paint.fillOpacity,
+        color: selected ? '#121212' : '#fff',
+        weight: selected ? 1.4 : 0.7,
+        opacity: selected ? 1 : 0.45,
+      };
+    };
+  }, [regionByLga, regionLayer, selectedRegionKey]);
+
+  const onEachRegionFeature = useMemo(() => {
+    return (feature: Feature<Geometry, { lga_name: string; state: string }>, mapLayer: L.Layer) => {
+      const key = regionByLga.get(feature.properties.lga_name);
+      const region = key ? RHD_REGIONS[key] : null;
+      if (!key || !region || feature.properties.state !== 'Northern Territory') return;
+      mapLayer.on('click', () => onSelectRegion?.(key));
+      (mapLayer as L.Path).bindTooltip(
+        `<div class="text-xs"><strong>${region.region}</strong><br/>First Nations RHD prevalence: <strong>${regionLayer!.format(region.firstNationsRatePer100k)}</strong><br/>${region.firstNationsCases.toLocaleString('en-AU')} people on the register</div>`,
+        { sticky: true }
+      );
+    };
+  }, [onSelectRegion, regionByLga, regionLayer]);
+
   return (
     <MapContainer
       center={center}
@@ -222,6 +291,29 @@ export default function AtlasMap({ features, layer, selected, onSelect, pointLay
           onEachFeature={onEachFeature}
         />
       )}
+
+      {regionLayer && geoData && !geoLoading && (
+        <GeoJSON
+          key={`regions-${selectedRegionKey ?? 'none'}`}
+          data={geoData}
+          style={regionStyle}
+          onEachFeature={onEachRegionFeature}
+        />
+      )}
+
+      {regionLayer && Object.entries(RHD_REGIONS).map(([key, region]) => (
+        <Marker
+          key={`region-label-${key}`}
+          position={region.labelAt}
+          icon={L.divIcon({
+            className: '',
+            html: `<button class="border-2 border-black bg-white px-2 py-1 text-[10px] font-black uppercase shadow-[3px_3px_0_0_#121212] whitespace-nowrap">${region.region}</button>`,
+            iconSize: [190, 28],
+            iconAnchor: [95, 14],
+          })}
+          eventHandlers={{ click: () => onSelectRegion?.(key) }}
+        />
+      ))}
 
       {/* Labels tile layer on top of polygons */}
       <TileLayer
@@ -295,7 +387,8 @@ export default function AtlasMap({ features, layer, selected, onSelect, pointLay
         );
       })}
 
-      <FitBounds features={features} />
+      {!regionLayer && <FitBounds features={features} />}
+      <FocusRegions active={Boolean(regionLayer)} />
       <InvalidateOnResize />
     </MapContainer>
   );

@@ -12,8 +12,10 @@ import {
   isPointLayer,
   visibleAtlasLayers,
   type AtlasFeature,
+  type AtlasDeclaredLayer,
   type AtlasLayer,
   type AtlasLiveLayer,
+  type AtlasRegionLayer,
 } from './layers';
 
 function feature(overrides: Partial<AtlasFeature> = {}): AtlasFeature {
@@ -188,6 +190,8 @@ describe('consent tiers gate surfaces', () => {
       'justice-funding',
       'renewal-cliff',
       'seifa-disadvantage',
+      'household-overcrowding',
+      'health-outcomes',
       'whats-working',
       ...(GOODS_PUBLIC_PLACES.length > 0 ? ['goods-delivered'] : []),
       'unplaced-orgs',
@@ -202,6 +206,27 @@ describe('consent tiers gate surfaces', () => {
     expect(getAtlasLayer('unplaced-orgs')!.group).toBe('data-quality');
     // data-quality is the LAST group the picker renders.
     expect(ATLAS_GROUP_ORDER[ATLAS_GROUP_ORDER.length - 1]).toBe('data-quality');
+  });
+});
+
+describe('Goods health need layers', () => {
+  it('maps overcrowding from remoteness rather than pretending it is council-grain', () => {
+    const layer = getAtlasLayer('household-overcrowding') as AtlasLiveLayer | null;
+    expect(layer).not.toBeNull();
+    expect(layer!.group).toBe('need');
+    expect(layer!.consent).toBe('public');
+    expect(layer!.value(feature({ remoteness: 'Very Remote Australia' }))).toBe(31.3);
+    expect(layer!.value(feature({ remoteness: null }))).toBeNull();
+    expect(layer!.honestAtNote).toContain('Remoteness class only');
+  });
+
+  it('maps RHD at health-region grain without reading a council value', () => {
+    const layer = getAtlasLayer('health-outcomes') as AtlasRegionLayer | null;
+    expect(layer).not.toBeNull();
+    expect(layer!.status).toBe('live');
+    expect(layer!.kind).toBe('regions');
+    expect(layer!.honestAt).toBe('health-region');
+    expect(layer!.caveat).toContain('never to an individual council');
   });
 });
 
