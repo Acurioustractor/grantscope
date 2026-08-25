@@ -9,13 +9,18 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-08-25T04:35:00Z
+**Updated:** 2026-08-25T05:30:00Z
 **Goal:** Goods x CivicGraph data alignment — **COMPLETE 2026-08-25.** All PRs merged (Goods #232; grantscope #394–#401), all migrations applied, decision-read surface live. Remaining items are fieldwork-blocked or Tier-3 cleanup only.
 **Branch:** main (all work lands via short-lived branches; never commit to main)
 **Test:** Goods: cd v2 && npx vitest run src/lib/data && npx tsc --noEmit · grantscope: bash scripts/precheck.sh
 
 ### Now
 [->] Stream closed. Only open: Tier-3 Goods cleanup (delete remote branches feat/data-page-v2 + fix/utopia-health-row, remove stale worktree /private/tmp/goods-utopia — Ben's verb) and fieldwork-blocked waste columns.
+
+### This Session (2026-08-25, post-close addendum)
+- [x] Goods #233 (merged 7934173d): expansion-need.ts — measured ABS overcrowding beside all 16 expansion targets (14 measured, Groote + Torres Strait stated gaps); rendered on /funders/[slug]/communities + /admin/communities; guards 6/6. FLAG FOR BEN: measured contradicts the ranking — Galiwin'ku 63.8% and Ngukurr 62.9% both exceed Wadeye 53.7% (priority 1 "worst overcrowding"); re-ranking is his call. Built in a worktree off origin/main (Goods main tree is another session's codex branch).
+- [x] grantscope #403 (merged 9190061f) + migration APPLIED + issue #301 CLOSED: the 10 no-ABS-evidence SA3-shaped postcode_geo rows adjudicated against Australia Post — all are PO-box/institutional postcodes; 9 correct, 2052 (UNSW Kensington) was stamped Sydney → repaired to Randwick 16550, 49 UNSW campus entities re-stamped sa3_residue_external_evidence (backup _backup_pc2052_20260825). Full table on #301.
+- [x] goodsoncountry.com/data scoping call: canon-scoped and complete — the 25 new SA/NSW/VIC measured communities do NOT belong there (not canon); expansion-need was the right surface instead.
 
 ### This Session (2026-08-25, close-out session)
 - [x] Took over + landed the stalled rhd-signal session's uncommitted work (#399, merged d174bc57): two Atlas need layers (First Nations overcrowding by remoteness class; NT RHD at health-region grain via new AtlasRegionLayer), org-only map/place API counts (entity_type filter), 'unstamped' reason bucket + backlog migration 20260824111000 (applied), goods hub pagination past the 1,000-row cap + hydration fix. Fixed their palette-ratchet breach (8 raw greys → text-bauhaus-muted).
@@ -37,7 +42,8 @@ status: active
 ### Next on resume
 - [ ] Tier-3 Goods cleanup (Ben's verb): delete remote branches feat/data-page-v2 + fix/utopia-health-row; `git worktree remove /private/tmp/goods-utopia` then delete the local branch
 - [ ] Waste-supply columns (est_plastic_waste_tpa etc.) stay NULL — needs fieldwork, not ingest
-- [ ] Optional: PHIDU deeper sheets (risk factors are suppressed for remote LGAs — Census/PPH lanes only); goodsoncountry.com/data could now read the 25 new SA/NSW/VIC measured communities
+- [ ] Wadeye-vs-Galiwin'ku expansion priority question (measured ILOC data vs researched ranking) — Ben's call, evidence in Goods expansion-need.ts header
+- [ ] Optional: PHIDU deeper sheets (risk factors are suppressed for remote LGAs — Census/PPH lanes only)
 - [ ] Watch: only 2 of 100 justice_funding-reading files reference measure_kind — unrelated standing debt, not this stream's
 
 ### Decisions
