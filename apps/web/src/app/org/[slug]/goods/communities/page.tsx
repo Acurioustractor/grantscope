@@ -4,13 +4,16 @@ import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/servic
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsCommunitiesHub, type CommunityHubRow } from '@/lib/services/goods-communities-hub';
 
-export const revalidate = 300;
+// This is a live operational register. Caching the route can leave the initial
+// HTML on an older component shape than the streamed RSC tree during local
+// development, which produces a hydration mismatch as well as stale counts.
+export const dynamic = 'force-dynamic';
 
-function relAgo(iso: string | null): string {
+function relAgo(iso: string | null, nowMs: number): string {
   if (!iso) return '—';
   const t = new Date(iso).getTime();
   if (isNaN(t)) return '—';
-  const days = Math.round((Date.now() - t) / 86_400_000);
+  const days = Math.round((nowMs - t) / 86_400_000);
   if (days < 1) return 'today';
   if (days < 30) return `${days}d ago`;
   if (days < 365) return `${Math.round(days / 30)}mo ago`;
@@ -43,6 +46,7 @@ export default async function GoodsCommunitiesHubPage({
     search: sp.q,
     sort,
   });
+  const renderedAtMs = Date.now();
 
   // Sort toggle hrefs that preserve scope / state / search.
   const baseParams = new URLSearchParams();
@@ -91,7 +95,7 @@ export default async function GoodsCommunitiesHubPage({
           <Pill href={`/org/${slug}/goods/communities`} active={scope === 'active'} label={`Active (lead+active+warm)`} />
           <Pill href={`/org/${slug}/goods/communities?scope=lead`} active={scope === 'lead'} label="Lead only" />
           <Pill href={`/org/${slug}/goods/communities?scope=with_deployments`} active={scope === 'with_deployments'} label="With deployments" />
-          <Pill href={`/org/${slug}/goods/communities?scope=all`} active={scope === 'all'} label="All 1546" />
+          <Pill href={`/org/${slug}/goods/communities?scope=all`} active={scope === 'all'} label="All communities" />
 
           <span className="ml-4 font-black uppercase tracking-wider">State:</span>
           <Pill href={`/org/${slug}/goods/communities${scope !== 'active' ? `?scope=${scope}` : ''}`} active={!sp.state} label="All" />
@@ -133,7 +137,7 @@ export default async function GoodsCommunitiesHubPage({
               {communities.length === 0 ? (
                 <tr><td colSpan={10} className="px-3 py-6 text-center text-gray-500">No communities match this filter.</td></tr>
               ) : (
-                communities.map((c, i) => <Row key={c.id} c={c} alt={i % 2 === 1} orgSlug={slug} />)
+                communities.map((c, i) => <Row key={c.id} c={c} alt={i % 2 === 1} orgSlug={slug} renderedAtMs={renderedAtMs} />)
               )}
             </tbody>
           </table>
@@ -156,7 +160,7 @@ export default async function GoodsCommunitiesHubPage({
 function Cell({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
   return (
     <div className={`border-4 border-bauhaus-black ${accent ? 'bg-bauhaus-yellow' : 'bg-white'} p-3`}>
-      <div className="text-2xl font-black">{value.toLocaleString()}</div>
+      <div className="text-2xl font-black">{value.toLocaleString('en-AU')}</div>
       <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-gray-700">{label}</div>
     </div>
   );
@@ -177,7 +181,7 @@ function Th({ children, align }: { children: React.ReactNode; align?: 'left' | '
   return <th className={`border-b-2 border-bauhaus-black px-2 py-1.5 text-left font-black uppercase tracking-wider text-[10px] ${align === 'right' ? 'text-right' : ''}`}>{children}</th>;
 }
 
-function Row({ c, alt, orgSlug }: { c: CommunityHubRow; alt: boolean; orgSlug: string }) {
+function Row({ c, alt, orgSlug, renderedAtMs }: { c: CommunityHubRow; alt: boolean; orgSlug: string; renderedAtMs: number }) {
   const pBg = c.priority === 'lead' ? 'bg-bauhaus-red text-white' :
     c.priority === 'active' ? 'bg-bauhaus-yellow' :
     c.priority === 'warm' ? 'bg-bauhaus-canvas' : 'bg-gray-200';
@@ -243,7 +247,7 @@ function Row({ c, alt, orgSlug }: { c: CommunityHubRow; alt: boolean; orgSlug: s
         <span className="font-black">{c.mapped_buyer_count}</span>
         {c.ghl_linked_buyer_count > 0 && <span className="text-bauhaus-yellow bg-bauhaus-black px-1 ml-1 font-mono text-[9px]">{c.ghl_linked_buyer_count}↗</span>}
       </td>
-      <td className="border-b border-gray-300 px-2 py-1.5 align-top">{relAgo(c.last_action_at)}</td>
+      <td className="border-b border-gray-300 px-2 py-1.5 align-top">{relAgo(c.last_action_at, renderedAtMs)}</td>
     </tr>
   );
 }

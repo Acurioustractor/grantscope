@@ -12,12 +12,14 @@ import {
   isChoroplethLayer,
   isLiveLayer,
   isPointLayer,
+  isRegionLayer,
   visibleAtlasLayers,
   type AtlasFeature,
   type AtlasLiveLayer,
   type AtlasPoint,
   type AtlasSurface,
 } from '@/lib/atlas/layers';
+import { RHD_REGIONS } from '@/lib/services/rhd-signal';
 import {
   buildAtlasUrl,
   councilCsv,
@@ -129,6 +131,7 @@ export default function AtlasClient({
   const [failed, setFailed] = useState(false);
   const [stateFilter, setStateFilter] = useState('ALL');
   const [selected, setSelected] = useState<AtlasFeature | null>(null);
+  const [selectedRegionKey, setSelectedRegionKey] = useState<string | null>(null);
   // The layer being read (caveat card) can be declared or point-grain; the
   // layer painting the choropleth is always the last choropleth pick.
   const [activeKey, setActiveKey] = useState(() => {
@@ -177,6 +180,13 @@ export default function AtlasClient({
     setActiveKey(key);
     const layer = getAtlasLayer(key);
     if (layer && isChoroplethLayer(layer)) setMapKey(key);
+    if (layer && isRegionLayer(layer)) {
+      setStateFilter('NT');
+      setSelected(null);
+      setSelectedRegionKey(selectedRegionKey ?? Object.keys(RHD_REGIONS)[0] ?? null);
+    } else {
+      setSelectedRegionKey(null);
+    }
   }
 
   function selectPlace(f: AtlasFeature) {
@@ -343,6 +353,8 @@ export default function AtlasClient({
   // The active layer's points, when it is point-grain and this surface holds
   // data for it. A public instance passes no points, so nothing renders.
   const activePointLayer = isPointLayer(activeLayer) ? activeLayer : null;
+  const activeRegionLayer = isRegionLayer(activeLayer) ? activeLayer : null;
+  const selectedRegion = selectedRegionKey ? RHD_REGIONS[selectedRegionKey] ?? null : null;
   const activePoints = useMemo(
     () => (activePointLayer ? pointsByLayer?.[activePointLayer.key] ?? [] : []),
     [activePointLayer, pointsByLayer]
@@ -425,6 +437,9 @@ export default function AtlasClient({
             onSelect={selectPlace}
             pointLayer={activePointLayer}
             points={activePoints}
+            regionLayer={activeRegionLayer}
+            selectedRegionKey={selectedRegionKey}
+            onSelectRegion={setSelectedRegionKey}
           />
         )}
       </div>
@@ -566,6 +581,39 @@ export default function AtlasClient({
             </p>
           )}
 
+          {activeRegionLayer && selectedRegion && (
+            <div className="mt-3 border-2 border-bauhaus-black bg-white p-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-red">
+                Selected health region
+              </p>
+              <h3 className="mt-1 text-sm font-black uppercase tracking-wider">
+                {selectedRegion.region}
+              </h3>
+              <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest text-bauhaus-muted">First Nations cases</p>
+                  <p className="text-lg font-black tabular-nums">{selectedRegion.firstNationsCases.toLocaleString('en-AU')}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest text-bauhaus-muted">Prevalence</p>
+                  <p className="text-lg font-black tabular-nums">{activeRegionLayer.format(selectedRegion.firstNationsRatePer100k)}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest text-bauhaus-muted">Non-Indigenous cases</p>
+                  <p className="font-black tabular-nums">{selectedRegion.nonIndigenousCases.toLocaleString('en-AU')}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest text-bauhaus-muted">Rate disparity</p>
+                  <p className="font-black tabular-nums">{selectedRegion.rateRatio}×</p>
+                </div>
+              </div>
+              <p className="mt-2 text-[10px] leading-snug text-bauhaus-muted">{selectedRegion.boundaryNote}</p>
+              <p className="mt-2 text-[9px] uppercase tracking-widest text-bauhaus-muted">
+                As at {selectedRegion.asAt} · AIHW table {selectedRegion.sourceTable}
+              </p>
+            </div>
+          )}
+
           {/* The colour scale lives WITH the caveat: what the number contains
               and what the colours mean are one explanation. */}
           {(() => {
@@ -599,7 +647,9 @@ export default function AtlasClient({
                   </p>
                 )}
                 <p className="text-[10px] text-gray-400 mt-1.5 leading-snug">
-                  {filtered.length} councils{undrawn > 0 ? `; ${undrawn} hold no coordinates and render only where a boundary name matches` : ''}.
+                  {activeRegionLayer
+                    ? `${Object.keys(RHD_REGIONS).length} health regions with held observations.`
+                    : `${filtered.length} councils${undrawn > 0 ? `; ${undrawn} hold no coordinates and render only where a boundary name matches` : ''}.`}
                 </p>
               </div>
             );
@@ -999,6 +1049,35 @@ export default function AtlasClient({
             </div>
           ) : (
             <div>
+              {activeRegionLayer ? (
+                <>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-bauhaus-muted mb-2">
+                    Health regions held
+                  </p>
+                  <div className="space-y-2">
+                    {Object.entries(RHD_REGIONS).map(([key, region]) => (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedRegionKey(key)}
+                        className={`w-full border-2 px-3 py-2 text-left transition-colors cursor-pointer ${
+                          selectedRegionKey === key
+                            ? 'border-bauhaus-red bg-bauhaus-red text-white'
+                            : 'border-bauhaus-black bg-white hover:bg-bauhaus-black hover:text-white'
+                        }`}
+                      >
+                        <span className="block text-[11px] font-black uppercase tracking-wider">{region.region}</span>
+                        <span className="mt-1 block text-xs tabular-nums">
+                          {activeRegionLayer.format(region.firstNationsRatePer100k)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-[10px] leading-snug text-bauhaus-muted">
+                    These are health-service observations. Council search and rankings return when you choose a council layer.
+                  </p>
+                </>
+              ) : (
+                <>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Find a place</p>
               <input
                 type="text"
@@ -1048,6 +1127,8 @@ export default function AtlasClient({
                   ))}
                 </div>
               </div>
+                </>
+              )}
             </div>
           )}
         </aside>

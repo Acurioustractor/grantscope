@@ -25,6 +25,11 @@
 // client-side. The registry itself holds no figures, only the contract.
 
 import { money } from '@/lib/format';
+import {
+  getOvercrowdingForRemoteness,
+  overcrowdedPct,
+} from '@/lib/services/overcrowding-signal';
+import { RHD_REGIONS } from '@/lib/services/rhd-signal';
 
 /** One row of the /api/data/map payload. */
 export interface AtlasFeature {
@@ -80,7 +85,13 @@ export type AtlasConsentTier = 'public' | 'org' | 'withheld';
 /** The geography a layer's number is honest at — not the finest grain the
  * data could be sliced to, but the coarsest one at which the claim survives
  * its own caveat. */
-export type AtlasGeography = 'national' | 'state' | 'council' | 'postcode' | 'community';
+export type AtlasGeography =
+  | 'national'
+  | 'state'
+  | 'health-region'
+  | 'council'
+  | 'postcode'
+  | 'community';
 
 /** Picker groups. Substantive layers lead; the map's own error bars sit
  * last under "How sure are we" — uncertainty qualifies the other layers,
@@ -151,6 +162,17 @@ export interface AtlasPointLayer extends AtlasLayerCommon {
   format(value: number): string;
 }
 
+/** A layer whose observation and selection grain is a named administrative
+ * region rather than a council. Geometry membership lives with the source
+ * signal so the map cannot accidentally read these values from council rows. */
+export interface AtlasRegionLayer extends AtlasLayerCommon {
+  status: 'live';
+  kind: 'regions';
+  scale: AtlasScaleStop[];
+  noDataLabel: string;
+  format(value: number): string;
+}
+
 /** One point of an AtlasPointLayer, produced server-side by the surface that
  * is allowed to see it. */
 export interface AtlasPoint {
@@ -168,9 +190,11 @@ export interface AtlasDeclaredLayer extends AtlasLayerCommon {
   waitingOn: string;
 }
 
-export type AtlasLayer = AtlasLiveLayer | AtlasPointLayer | AtlasDeclaredLayer;
+export type AtlasLayer = AtlasLiveLayer | AtlasPointLayer | AtlasRegionLayer | AtlasDeclaredLayer;
 
-export function isLiveLayer(layer: AtlasLayer): layer is AtlasLiveLayer | AtlasPointLayer {
+export function isLiveLayer(
+  layer: AtlasLayer
+): layer is AtlasLiveLayer | AtlasPointLayer | AtlasRegionLayer {
   return layer.status === 'live';
 }
 
@@ -183,6 +207,10 @@ export function isChoroplethLayer(layer: AtlasLayer): layer is AtlasLiveLayer {
 
 export function isPointLayer(layer: AtlasLayer): layer is AtlasPointLayer {
   return layer.status === 'live' && layer.kind === 'points';
+}
+
+export function isRegionLayer(layer: AtlasLayer): layer is AtlasRegionLayer {
+  return layer.status === 'live' && layer.kind === 'regions';
 }
 
 /** Style painted for places a live layer holds nothing about. */
@@ -381,6 +409,69 @@ const seifaDisadvantage: AtlasLiveLayer = {
   // One decimal, trailing zero trimmed: Ceduna's 2.52 must read "decile 2.5",
   // not round up to a softer "decile 3" (Ben, 2026-08-10).
   format: v => `decile ${v.toFixed(1).replace(/\.0$/, '')}`,
+};
+
+const householdOvercrowding: AtlasLiveLayer = {
+  key: 'household-overcrowding',
+  status: 'live',
+  kind: 'choropleth',
+  group: 'need',
+  name: 'Household overcrowding',
+  unit: '% of First Nations households overcrowded',
+  caveat:
+    'First Nations households needing one or more additional bedrooms under the ' +
+    "Canadian National Occupancy Standard, from the Health Performance Framework's " +
+    '2021 Census table by remoteness. Every council in the same remoteness class ' +
+    'gets the same value: this is a need signal a bed responds to, not a measured ' +
+    'council overcrowding rate. CNOS also does not fully account for extended ' +
+    'family obligations in First Nations households, so read the figure as a floor.',
+  honestAt: 'national',
+  honestAtNote:
+    'Remoteness class only. It can distinguish major city, regional, remote and very ' +
+    'remote councils, but it cannot say which community or council has the higher local rate.',
+  consent: 'public',
+  scale: [
+    { min: 30, color: '#D02020', fillOpacity: 0.7, label: '30% or more' },
+    { min: 15, color: '#E06C18', fillOpacity: 0.6, label: '15–30%' },
+    { min: 10, color: '#F0C020', fillOpacity: 0.5, label: '10–15%' },
+    { min: 8, color: '#4CB876', fillOpacity: 0.4, label: '8–10%' },
+    { min: 0, color: '#1040C0', fillOpacity: 0.3, label: 'Under 8%' },
+  ],
+  scaleNote:
+    'Bands follow the published remoteness rates: very remote Australia is the only class above 30%.',
+  noDataLabel: 'No remoteness class held',
+  value: f => {
+    const signal = getOvercrowdingForRemoteness(f.remoteness);
+    return signal ? overcrowdedPct(signal, 'firstNations') : null;
+  },
+  format: v => `${v.toFixed(1).replace(/\.0$/, '')}%`,
+};
+
+const healthOutcomes: AtlasRegionLayer = {
+  key: 'health-outcomes',
+  status: 'live',
+  kind: 'regions',
+  group: 'need',
+  name: 'Rheumatic heart disease',
+  unit: 'First Nations prevalence per 100,000 people',
+  caveat:
+    'People living with rheumatic heart disease on the NT register at 31 December 2021. ' +
+    'The number belongs to the health service region, never to an individual council. ' +
+    'The overlay assembles council polygons as a visual proxy for the two service regions; ' +
+    'unincorporated NT is left unpainted where it cannot be assigned safely.',
+  honestAt: 'health-region',
+  honestAtNote:
+    'Honest for the two 2021 NT register regions held here: Central Australia and Top End. ' +
+    'Region boundaries are a labelled council-polygon proxy, not an official boundary file.',
+  consent: 'public',
+  scale: [
+    { min: 3100, color: '#D02020', fillOpacity: 0.72, label: '3,100 or more per 100,000' },
+    { min: 2800, color: '#E06C18', fillOpacity: 0.62, label: '2,800–3,099 per 100,000' },
+    { min: 0, color: '#1040C0', fillOpacity: 0.35, label: 'Under 2,800 per 100,000' },
+  ],
+  scaleNote: `${Object.keys(RHD_REGIONS).length} NT register regions held; no colour means no region-level observation held.`,
+  noDataLabel: 'No regional RHD observation held',
+  format: v => `${v.toLocaleString('en-AU', { maximumFractionDigits: 1 })} per 100,000`,
 };
 
 const unplacedOrgs: AtlasLiveLayer = {
@@ -618,6 +709,8 @@ export const ATLAS_LAYERS: readonly AtlasLayer[] = [
   justiceFunding,
   renewalCliff,
   seifaDisadvantage,
+  householdOvercrowding,
+  healthOutcomes,
   whatsWorking,
   goodsDelivered,
   unplacedOrgs,

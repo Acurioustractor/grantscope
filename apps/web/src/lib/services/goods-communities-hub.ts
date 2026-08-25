@@ -45,6 +45,7 @@ export type CommunitiesHubResult = {
 };
 
 const ACTIVE_PRIORITIES = ['lead', 'active', 'warm'];
+const COMMUNITY_PAGE_SIZE = 1000;
 
 async function fetchChunked(db: any, table: string, columns: string, ids: string[], chunkSize = 100, optional = false): Promise<any[]> {
   if (ids.length === 0) return [];
@@ -61,6 +62,30 @@ async function fetchChunked(db: any, table: string, columns: string, ids: string
   return results.flat();
 }
 
+export async function fetchGoodsCommunityRows(
+  db: any,
+  filters: { scope: 'active' | 'lead' | 'all' | 'with_deployments'; state?: string }
+): Promise<any[]> {
+  const rows: any[] = [];
+  for (let from = 0; ; from += COMMUNITY_PAGE_SIZE) {
+    let page = db
+      .from('goods_communities')
+      .select('id, community_name, state, postcode, region_label, priority, demand_beds, demand_washers, assets_deployed, land_council')
+      .order('id', { ascending: true });
+
+    if (filters.scope === 'active') page = page.in('priority', ACTIVE_PRIORITIES);
+    else if (filters.scope === 'lead') page = page.eq('priority', 'lead');
+    else if (filters.scope === 'with_deployments') page = page.gt('assets_deployed', 0);
+    if (filters.state) page = page.eq('state', filters.state);
+
+    const { data, error } = await page.range(from, from + COMMUNITY_PAGE_SIZE - 1);
+    if (error) throw new Error(`communities fetch: ${error.message}`);
+    const batch = Array.isArray(data) ? data : [];
+    rows.push(...batch);
+    if (batch.length < COMMUNITY_PAGE_SIZE) return rows;
+  }
+}
+
 export async function getGoodsCommunitiesHub({
   scope = 'active',
   state,
@@ -74,22 +99,7 @@ export async function getGoodsCommunitiesHub({
 } = {}): Promise<CommunitiesHubResult> {
   const db = getServiceSupabase();
 
-  let q = db
-    .from('goods_communities')
-    .select('id, community_name, state, postcode, region_label, priority, demand_beds, demand_washers, assets_deployed, land_council')
-    .limit(2000);
-
-  if (scope === 'active') q = q.in('priority', ACTIVE_PRIORITIES);
-  else if (scope === 'lead') q = q.eq('priority', 'lead');
-  else if (scope === 'with_deployments') q = q.gt('assets_deployed', 0);
-  // 'all' = no filter
-
-  if (state) q = q.eq('state', state);
-
-  const { data: rawCommunities, error } = await q;
-  if (error) throw new Error(`communities fetch: ${error.message}`);
-
-  let communities = (rawCommunities || []) as any[];
+  let communities = await fetchGoodsCommunityRows(db, { scope, state });
   if (search) {
     const s = search.toLowerCase();
     communities = communities.filter(c =>

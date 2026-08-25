@@ -1,10 +1,9 @@
 // Why an organisation sits on no council's count — the reason codes.
 //
-// Every gs_entities row without a council carries exactly one lga_source
-// reason code (stamped by the 2026-08 placement migrations; zero unstamped
-// rows, verified live). The Atlas reads them live so "cannot place" is never
-// one opaque percentage: the caveat card and the place panel both say WHY,
-// with counts.
+// Every organisation-like gs_entities row without a council should carry one
+// lga_source reason code. New imports can still arrive unstamped between
+// placement passes, so the Atlas treats "unstamped" as an explicit repair
+// bucket instead of hiding it behind a fallback label.
 //
 // Two kinds of reason:
 //  - councilPossible: the organisation's postcode ties it to candidate
@@ -32,6 +31,7 @@ export const UNPLACED_REASONS: readonly UnplacedReason[] = [
   { code: 'unknown_postcode', label: 'postcode we do not recognise', councilPossible: false },
   { code: 'state_conflict', label: 'recorded state disagrees with the postcode', councilPossible: true },
   { code: 'no_state', label: 'no state on the record', councilPossible: true },
+  { code: 'unstamped', label: 'unstamped', councilPossible: true },
 ];
 
 /** Label for a code, including codes this registry has not met — a new stamp

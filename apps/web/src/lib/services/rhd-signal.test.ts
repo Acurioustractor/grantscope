@@ -36,6 +36,18 @@ describe('RHD_REGIONS', () => {
     }
   });
 
+  it('carries non-overlapping council proxies and label positions for the Atlas', () => {
+    const seen = new Set<string>();
+    for (const [key, signal] of regions) {
+      expect(signal.proxyLgas.length, key).toBeGreaterThan(0);
+      expect(signal.labelAt, key).toHaveLength(2);
+      for (const lga of signal.proxyLgas) {
+        expect(seen.has(lga), `${lga} belongs to more than one region proxy`).toBe(false);
+        seen.add(lga);
+      }
+    }
+  });
+
   it('only maps place regions that actually exist', () => {
     for (const [placeKey, rhdKey] of Object.entries(RHD_BY_PLACE_REGION)) {
       expect(PLACE_REGIONS[placeKey], `${placeKey} is not a place region`).toBeDefined();

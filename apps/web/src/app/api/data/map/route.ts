@@ -11,6 +11,7 @@ const limiter = rateLimit();
 
 const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'] as const;
 const METRICS = ['desert_score', 'unplaced_share'] as const;
+const ORG_ENTITY_FILTER_SQL = "entity_type NOT IN ('person', 'program')";
 
 const schema = z.object({
   state: z.string().optional(),
@@ -95,6 +96,7 @@ export async function GET(request: Request) {
         SELECT postcode, COALESCE(lga_source, 'unstamped') AS reason, COUNT(*) AS n
         FROM gs_entities
         WHERE lga_name IS NULL AND postcode IS NOT NULL
+          AND ${ORG_ENTITY_FILTER_SQL}
         GROUP BY 1, 2
       ),
       council_pc AS MATERIALIZED (
@@ -117,6 +119,7 @@ export async function GET(request: Request) {
         SELECT lga_name, UPPER(state) AS state, COUNT(*)::int AS placed
         FROM gs_entities
         WHERE lga_name IS NOT NULL
+          AND ${ORG_ENTITY_FILTER_SQL}
         GROUP BY 1, 2
       ),
       justice AS MATERIALIZED (
@@ -224,6 +227,7 @@ export async function GET(request: Request) {
                COUNT(*)::int AS n
         FROM gs_entities
         WHERE lga_name IS NULL
+          AND ${ORG_ENTITY_FILTER_SQL}
         GROUP BY 1, 2`,
       }),
     ]);
@@ -255,7 +259,7 @@ export async function GET(request: Request) {
     }>;
 
     // The live why-tally rides the summary: (state, reason, n) rows the
-    // client scopes to its state filter. ~40 rows, six reason codes.
+    // client scopes to its state filter.
     const unplacedReasons = (reasonResult.data || []) as Array<{
       state: string | null; reason: string; n: number;
     }>;
