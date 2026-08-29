@@ -1,0 +1,49 @@
+# Local dependencies and build caches
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+**/.next.stale.*/
+dist/
+**/dist/
+*.tsbuildinfo
+**/*.tsbuildinfo
+.vercel/
+
+# Local credentials and environment files
+.env
+.env.local
+.env.*.local
+.env.bak*
+
+# Test, browser, and design tooling artifacts
+.playwright-mcp/
+.playwright-cli/
+.superdesign/
+.gstack/
+.tldr/
+apps/web/playwright-report/
+apps/web/test-results/
+
+# Generated reports, media, logs, and scratch data
+output/
+outputs/
+logs/
+tmp/
+apps/web/output/
+apps/video/out/
+goods-buyers-*.jpeg
+goods-buyers-*.md
+
+# Downloaded source datasets that are not application build inputs
+data/abr/
+data/acnc/
+data/annual-reports/
+data/asic/
+data/charity-annual-reports/
+data/grantconnect/
+data/lga/
+data/opensanctions/
+data/prf-reports/
+data/state-procurement/
+data/nsw-etendering/full.jsonl
