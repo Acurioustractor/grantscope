@@ -75,7 +75,7 @@ export async function createOpportunity(opts: {
 
 export async function updateOpportunity(
   opportunityId: string,
-  updates: { pipelineStageId?: string; status?: string; monetaryValue?: number }
+  updates: { pipelineStageId?: string; status?: string; monetaryValue?: number; contactId?: string }
 ) {
   return ghlFetch(`/opportunities/${opportunityId}`, {
     method: 'PUT',
