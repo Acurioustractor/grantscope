@@ -51,10 +51,11 @@ export default async function ProjectFundingPage({ params }: { params: Promise<{
               </div>
               <FundingSystemReconcileButton automaticActions={controlPlane.summary.automaticActions} />
             </div>
-            <dl className="grid grid-cols-2 border-y border-[#365947] bg-[#10271b] sm:grid-cols-4 lg:grid-cols-8">
+            <dl className="grid grid-cols-2 border-y border-[#365947] bg-[#10271b] sm:grid-cols-3 lg:grid-cols-9">
               {[
                 ['Projects', controlPlane.summary.activeProjects],
                 ['Profiles', `${controlPlane.summary.profileCoverage}/${controlPlane.summary.activeProjects}`],
+                ['Compiled', `${controlPlane.summary.compiledProfiles}/${controlPlane.summary.activeProjects}`],
                 ['Ready', controlPlane.summary.decisionReadyProfiles],
                 ['Matches', controlPlane.summary.evidenceSafeMatches],
                 ['Opportunities', controlPlane.summary.uniqueOpportunities],
@@ -89,6 +90,7 @@ export default async function ProjectFundingPage({ params }: { params: Promise<{
                       </td>
                       <td className="px-4 py-3">
                         <span className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase ${project.profileStatus === 'decision_ready' ? 'bg-[#dcfce7] text-[#166534]' : project.profileStatus === 'partial' ? 'bg-[#fef3c7] text-[#92400e]' : 'bg-[#e2e8f0] text-[#475569]'}`}>{project.profileStatus.replace('_', ' ')}</span>
+                        <span className={`ml-2 text-[9px] font-bold uppercase ${project.compiled ? 'text-[#166534]' : 'text-[#b45309]'}`}>{project.compiled ? 'compiled' : 'compile pending'}</span>
                         {project.unresolvedDecisions ? <span className="ml-2 text-[#64748b]">{project.unresolvedDecisions} gaps</span> : null}
                       </td>
                       <td className="px-4 py-3 font-mono font-bold">{project.evidenceSafeMatches}</td>

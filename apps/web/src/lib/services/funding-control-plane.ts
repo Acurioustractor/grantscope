@@ -1,12 +1,17 @@
-import { createHash } from 'node:crypto';
 import { getServiceSupabase } from '@/lib/supabase';
 import { isActSlug } from '@/lib/services/fast-local-org';
 import { createOrUpdateFundingBrief } from '@/lib/services/funding-notion';
+import {
+  compileFundingProfile,
+  isFundingProfileCompiled,
+  type FundingProfileCompilerOrg,
+} from '@/lib/services/funding-profile-compiler';
 
 export type FundingProfileStatus = 'missing' | 'baseline' | 'partial' | 'decision_ready';
 export type FundingReconciliationActionType =
   | 'assign_project_code'
   | 'ensure_profile'
+  | 'compile_profile'
   | 'complete_profile'
   | 'repair_handoff'
   | 'repair_ghl_link'
@@ -28,6 +33,7 @@ export interface FundingControlPlaneProject {
   projectSlug: string;
   profileStatus: FundingProfileStatus;
   profileVersion: string | null;
+  compiled: boolean;
   unresolvedDecisions: number;
   evidenceSafeMatches: number;
   decisions: number;
@@ -48,6 +54,7 @@ export interface FundingControlPlane {
   summary: {
     activeProjects: number;
     profileCoverage: number;
+    compiledProfiles: number;
     decisionReadyProfiles: number;
     evidenceSafeMatches: number;
     uniqueOpportunities: number;
@@ -70,6 +77,7 @@ interface RawProject {
   category?: string | null;
   parent_project_id?: string | null;
   status?: string | null;
+  abn?: string | null;
   metadata?: Record<string, unknown> | null;
   org_profile_id?: string;
 }
@@ -79,6 +87,7 @@ interface RawProfile {
   profile_version: string;
   completeness_status: Exclude<FundingProfileStatus, 'missing'>;
   profile: Record<string, unknown>;
+  provenance?: unknown;
 }
 
 interface RawRecommendation {
@@ -102,6 +111,7 @@ interface RawHandoff {
 }
 
 interface FundingControlPlaneInput {
+  org?: FundingProfileCompilerOrg;
   projects: RawProject[];
   profiles: RawProfile[];
   recommendations: RawRecommendation[];
@@ -145,6 +155,7 @@ export function buildFundingControlPlane(input: FundingControlPlaneInput): Fundi
     const recommendations = code ? recommendationsByProject.get(code) || [] : [];
     const decisions = code ? decisionsByProject.get(code) || [] : [];
     const handoffs = code ? handoffsByProject.get(code) || [] : [];
+    const compiled = Boolean(profile && input.org && isFundingProfileCompiled(profile.profile, input.org, project));
 
     if (!code) {
       actions.push({
@@ -164,15 +175,27 @@ export function buildFundingControlPlane(input: FundingControlPlaneInput): Fundi
         opportunityId: null,
         label: `Create the baseline funding profile for ${project.name}.`,
       });
-    } else if (profile.completeness_status !== 'decision_ready') {
-      actions.push({
-        key: `project:${code}:complete-profile`,
-        type: 'complete_profile',
-        mode: 'human',
-        projectCode: code,
-        opportunityId: null,
-        label: `Complete ${project.name}'s applicant, place, funding-block and evidence facts.`,
-      });
+    } else {
+      if (!compiled) {
+        actions.push({
+          key: `project:${code}:compile-profile`,
+          type: 'compile_profile',
+          mode: 'automatic',
+          projectCode: code,
+          opportunityId: null,
+          label: `Compile canonical organisation and project facts into ${project.name}'s funding profile.`,
+        });
+      }
+      if (profile.completeness_status !== 'decision_ready') {
+        actions.push({
+          key: `project:${code}:complete-profile`,
+          type: 'complete_profile',
+          mode: 'human',
+          projectCode: code,
+          opportunityId: null,
+          label: `Complete ${project.name}'s applicant, place, funding-block and evidence facts.`,
+        });
+      }
     }
 
     const missingLegacyHandoffs = decisions.filter(
@@ -224,6 +247,7 @@ export function buildFundingControlPlane(input: FundingControlPlaneInput): Fundi
       projectSlug: project.slug,
       profileStatus: profile?.completeness_status || 'missing',
       profileVersion: profile?.profile_version || null,
+      compiled,
       unresolvedDecisions: unresolvedCount(profile?.profile),
       evidenceSafeMatches: recommendations.length,
       decisions: decisions.length,
@@ -257,6 +281,7 @@ export function buildFundingControlPlane(input: FundingControlPlaneInput): Fundi
     summary: {
       activeProjects: projects.length,
       profileCoverage: projects.filter(project => project.profileStatus !== 'missing').length,
+      compiledProfiles: projects.filter(project => project.compiled).length,
       decisionReadyProfiles: projects.filter(project => project.profileStatus === 'decision_ready').length,
       evidenceSafeMatches: input.recommendations.length,
       uniqueOpportunities: uniqueOpportunities.size,
@@ -276,19 +301,19 @@ async function loadFundingControlPlaneInput(slug: string): Promise<FundingContro
   const db = getServiceSupabase();
   const { data: org, error: orgError } = await db
     .from('org_profiles')
-    .select('id')
+    .select('id, name, abn, additional_abns, org_type, org_status, auspice_org_name, geographic_focus')
     .eq('slug', 'act')
     .single();
   if (orgError || !org) throw new Error(orgError?.message || 'ACT org profile not found');
 
   const [projectsResult, profilesResult] = await Promise.all([
     db.from('org_projects')
-      .select('id, code, name, slug, description, category, parent_project_id, status, metadata, org_profile_id')
+      .select('id, code, name, slug, description, category, parent_project_id, status, abn, metadata, org_profile_id')
       .eq('org_profile_id', org.id)
       .eq('status', 'active')
       .order('sort_order'),
     db.from('project_funding_profiles')
-      .select('org_project_id, profile_version, completeness_status, profile')
+      .select('org_project_id, profile_version, completeness_status, profile, provenance')
       .eq('org_profile_id', org.id)
       .eq('is_current', true),
   ]);
@@ -323,6 +348,7 @@ async function loadFundingControlPlaneInput(slug: string): Promise<FundingContro
   }
 
   return {
+    org: org as FundingProfileCompilerOrg,
     projects,
     profiles: (profilesResult.data || []) as RawProfile[],
     recommendations,
@@ -336,67 +362,25 @@ export async function getFundingControlPlane(slug = 'act') {
   return input ? buildFundingControlPlane(input) : null;
 }
 
-function baselineProfile(project: RawProject) {
-  const aliases = Array.isArray(project.metadata?.aliases) ? project.metadata.aliases : [];
-  return {
-    schemaVersion: 'project-funding-profile-v1',
-    identity: {
-      orgProjectId: project.id,
-      projectCode: project.code,
-      projectName: project.name,
-      slug: project.slug,
-      aliases,
-      category: project.category || null,
-      parentProjectId: project.parent_project_id || null,
-    },
-    purpose: {
-      publicSummary: project.description || null,
-      outcomes: [],
-      maturity: project.status || 'active',
-    },
-    entities: [],
-    partnerPathways: [],
-    geographies: [],
-    beneficiaries: [],
-    evidence: [],
-    fundingNeed: { currency: 'AUD', amountMin: null, amountMax: null, blocks: [] },
-    acceptedInstruments: [],
-    constraints: [],
-    relationships: [],
-    unresolvedDecisions: [
-      'Confirm applicant and contracting entities.',
-      'Confirm delivery places and eligible geographies.',
-      'Define costed funding blocks and acceptable instruments.',
-      'Attach evidence for outcomes, authority and community benefit.',
-    ],
-  };
-}
-
 export async function reconcileFundingSystem(slug = 'act') {
   const input = await loadFundingControlPlaneInput(slug);
   if (!input) throw new Error('Funding control plane is unavailable');
   const before = buildFundingControlPlane(input);
   const db = getServiceSupabase();
-  const missingProfileCodes = new Set(
+  if (!input.org) throw new Error('Funding organisation context is unavailable');
+  const profileCodes = new Set(
     before.actions
-      .filter(action => action.type === 'ensure_profile' && action.projectCode)
+      .filter(action => ['ensure_profile', 'compile_profile'].includes(action.type) && action.projectCode)
       .map(action => action.projectCode as string)
   );
+  const profilesByProject = new Map(input.profiles.map(profile => [profile.org_project_id, profile]));
   const profileRows = input.projects.flatMap(project => {
-    if (!project.code || !project.org_profile_id || !missingProfileCodes.has(project.code)) return [];
-    const profile = baselineProfile(project);
-    const hash = createHash('sha256').update(JSON.stringify(profile)).digest('hex').slice(0, 12);
-    return [{
-      org_project_id: project.id,
-      org_profile_id: project.org_profile_id,
-      schema_version: 'project-funding-profile-v1',
-      profile_version: `${project.code.toLowerCase()}-${hash}`,
-      completeness_status: 'baseline',
-      profile,
-      provenance: [{ type: 'table', table: 'org_projects', id: project.id }],
-      created_by: 'funding-control-plane',
-      is_current: true,
-    }];
+    if (!project.code || !project.org_profile_id || !profileCodes.has(project.code)) return [];
+    return [compileFundingProfile({
+      org: input.org as FundingProfileCompilerOrg,
+      project,
+      existing: profilesByProject.get(project.id),
+    })];
   });
 
   let profilesCreated = 0;

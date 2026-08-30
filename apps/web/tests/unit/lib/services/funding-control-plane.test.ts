@@ -1,19 +1,41 @@
 import { describe, expect, it } from 'vitest';
 import { buildFundingControlPlane } from '@/lib/services/funding-control-plane';
+import { compileFundingProfile } from '@/lib/services/funding-profile-compiler';
 
 describe('buildFundingControlPlane', () => {
   it('aligns every project and separates automatic reconciliation from human decisions', () => {
+    const org = {
+      id: 'org-act',
+      name: 'A Curious Tractor',
+      abn: '21591780066',
+      additional_abns: ['73669029341'],
+      org_type: 'Social Enterprise Ecosystem',
+      org_status: 'incorporated',
+      auspice_org_name: null,
+      geographic_focus: ['Queensland'],
+    };
+    const goods = { id: 'project-goods', code: 'ACT-GD', name: 'Goods', slug: 'goods' };
+    const compiledGoods = compileFundingProfile({
+      org,
+      project: goods,
+      existing: {
+        profile_version: 'goods-v1',
+        completeness_status: 'partial',
+        profile: { unresolvedDecisions: ['Confirm applicant'], entities: [{ id: 'applicant' }] },
+      },
+    });
     const controlPlane = buildFundingControlPlane({
       generatedAt: '2026-08-30T00:00:00.000Z',
+      org,
       projects: [
-        { id: 'project-goods', code: 'ACT-GD', name: 'Goods', slug: 'goods' },
+        goods,
         { id: 'project-harvest', code: 'ACT-HV', name: 'The Harvest', slug: 'harvest' },
       ],
       profiles: [{
         org_project_id: 'project-goods',
-        profile_version: 'goods-v1',
-        completeness_status: 'partial',
-        profile: { unresolvedDecisions: ['Confirm applicant'] },
+        profile_version: compiledGoods.profile_version,
+        completeness_status: compiledGoods.completeness_status,
+        profile: compiledGoods.profile,
       }],
       recommendations: [
         { project_code: 'ACT-GD', opportunity_id: 'opportunity-1' },
@@ -44,6 +66,7 @@ describe('buildFundingControlPlane', () => {
     expect(controlPlane.summary).toMatchObject({
       activeProjects: 2,
       profileCoverage: 1,
+      compiledProfiles: 1,
       evidenceSafeMatches: 2,
       uniqueOpportunities: 2,
       ghlLinked: 1,
