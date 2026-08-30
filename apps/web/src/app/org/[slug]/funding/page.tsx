@@ -51,7 +51,7 @@ export default async function ProjectFundingPage({ params }: { params: Promise<{
               </div>
               <FundingSystemReconcileButton automaticActions={controlPlane.summary.automaticActions} />
             </div>
-            <dl className="grid grid-cols-2 border-y border-[#365947] bg-[#10271b] sm:grid-cols-3 lg:grid-cols-9">
+            <dl className="grid grid-cols-2 border-y border-[#365947] bg-[#10271b] sm:grid-cols-3 lg:grid-cols-10">
               {[
                 ['Projects', controlPlane.summary.activeProjects],
                 ['Profiles', `${controlPlane.summary.profileCoverage}/${controlPlane.summary.activeProjects}`],
@@ -59,6 +59,7 @@ export default async function ProjectFundingPage({ params }: { params: Promise<{
                 ['Ready', controlPlane.summary.decisionReadyProfiles],
                 ['Matches', controlPlane.summary.evidenceSafeMatches],
                 ['Opportunities', controlPlane.summary.uniqueOpportunities],
+                ['Historic wins', controlPlane.summary.historicalWins],
                 ['GHL pursued', controlPlane.summary.ghlLinked],
                 ['Notion briefs', controlPlane.summary.notionLinked],
                 ['Review batches', controlPlane.summary.humanActions],
@@ -76,6 +77,7 @@ export default async function ProjectFundingPage({ params }: { params: Promise<{
                     <th className="px-4 py-3">Project</th>
                     <th className="px-4 py-3">Profile</th>
                     <th className="px-4 py-3">Evidence-safe matches</th>
+                    <th className="px-4 py-3">Historic wins</th>
                     <th className="px-4 py-3">GHL pursued</th>
                     <th className="px-4 py-3">Notion workspaces</th>
                     <th className="px-4 py-3">System batches</th>
@@ -94,6 +96,7 @@ export default async function ProjectFundingPage({ params }: { params: Promise<{
                         {project.unresolvedDecisions ? <span className="ml-2 text-[#64748b]">{project.unresolvedDecisions} gaps</span> : null}
                       </td>
                       <td className="px-4 py-3 font-mono font-bold">{project.evidenceSafeMatches}</td>
+                      <td className="px-4 py-3 font-mono font-bold">{project.historicalWins}</td>
                       <td className="px-4 py-3 font-mono font-bold">{project.ghlLinked}</td>
                       <td className="px-4 py-3 font-mono font-bold">{project.notionLinked}</td>
                       <td className="px-4 py-3">

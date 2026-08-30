@@ -157,7 +157,8 @@ export const getOrgPipelineData = cache(async function getOrgPipelineData(
       .range(0, 9999),
     supabase
       .from('act_grant_recommendation_decisions')
-      .select('project_code, opportunity_id, decision, decided_at, notes, grant_opportunity_id'),
+      .select('project_code, opportunity_id, decision, decided_at, notes, grant_opportunity_id')
+      .eq('decision_scope', 'operational'),
     supabase
       .from('act_grant_recommendation_projects')
       .select('project_code, notes')

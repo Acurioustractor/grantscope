@@ -104,7 +104,7 @@ export async function GET(request: Request) {
   // 3. ACT decisions on this funder's grants
   const { data: decisions } = await supabase
     .from('act_grant_recommendation_decisions')
-    .select('decision, decided_at, notes, opportunity_id, project_code, alma_funding_opportunities!inner(name, funder_name)')
+    .select('decision, decision_scope, decided_at, notes, opportunity_id, project_code, alma_funding_opportunities!inner(name, funder_name)')
     .eq('alma_funding_opportunities.funder_name', funder)
     .order('decided_at', { ascending: false })
     .limit(40);
@@ -114,7 +114,7 @@ export async function GET(request: Request) {
     events.push({
       date: d.decided_at,
       type: 'decision',
-      label: `${d.decision.toUpperCase()}: ${opp?.name ?? 'grant'}`,
+      label: `${d.decision_scope === 'historical_evidence' ? 'HISTORICAL ' : ''}${d.decision.toUpperCase()}: ${opp?.name ?? 'grant'}`,
       detail: `${d.project_code}${d.notes ? ` — ${d.notes.slice(0, 80)}` : ''}`,
     });
   }

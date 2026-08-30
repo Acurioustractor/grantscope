@@ -178,6 +178,8 @@ async function syncOne(rec, decision) {
         project_code: rec.project_code,
         opportunity_id: rec.opportunity_id,
         decision: decision?.decision ?? 'discovered',
+        decision_scope: decision?.decision_scope ?? 'operational',
+        decision_origin: decision?.decision_origin ?? 'notion_sync',
         decided_by: decision?.decided_by ?? null,
         decided_at: decision?.decided_at ?? new Date().toISOString(),
         notes: decision?.notes ?? null,
@@ -207,7 +209,8 @@ export async function runSync({ dryRun = false, includeUndecided = false } = {})
 
   const { data: decisions } = await supabase
     .from('act_grant_recommendation_decisions')
-    .select('project_code, opportunity_id, decision, decided_at, decided_by, notes, notion_page_id, grant_opportunity_id');
+    .select('project_code, opportunity_id, decision, decided_at, decided_by, notes, notion_page_id, grant_opportunity_id, decision_scope, decision_origin')
+    .eq('decision_scope', 'operational');
 
   const decisionMap = new Map(
     (decisions ?? []).map((d) => [`${d.project_code}|${d.opportunity_id}`, d])

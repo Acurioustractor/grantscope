@@ -52,6 +52,14 @@ describe('buildFundingControlPlane', () => {
           opportunity_id: 'opportunity-3',
           decision: 'submitted',
         },
+        {
+          project_code: 'ACT-GD',
+          opportunity_id: 'historical-opportunity',
+          decision: 'won',
+          decision_scope: 'historical_evidence',
+          decision_origin: 'xero_invoices',
+          notes: 'Backfilled from xero_invoices · paid invoice',
+        },
       ],
       handoffs: [{
         project_code: 'ACT-GD',
@@ -69,6 +77,7 @@ describe('buildFundingControlPlane', () => {
       compiledProfiles: 1,
       evidenceSafeMatches: 2,
       uniqueOpportunities: 2,
+      historicalWins: 1,
       ghlLinked: 1,
       notionLinked: 0,
       automaticActions: 2,
@@ -90,6 +99,7 @@ describe('buildFundingControlPlane', () => {
       evidenceSafeMatches: 1,
       ghlLinked: 1,
       notionLinked: 0,
+      historicalWins: 1,
       attention: 2,
     });
   });

@@ -17,7 +17,7 @@
  * would be mostly noise and would churn on every unrelated migration.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -49,8 +49,13 @@ const sql = `SELECT c.relname||'|'||string_agg(a.attname, ',' ORDER BY a.attname
    AND a.attnum > 0 AND NOT a.attisdropped AND c.relname IN (${list})
  GROUP BY c.relname ORDER BY c.relname`;
 
-const out = execSync(
-  `node --env-file=${join(here, '../../../.env')} ${join(here, '../../../scripts/gsql.mjs')} ${JSON.stringify(sql)}`,
+const out = execFileSync(
+  process.execPath,
+  [
+    `--env-file=${join(here, '../../../.env')}`,
+    join(here, '../../../scripts/gsql.mjs'),
+    sql,
+  ],
   { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
 );
 

@@ -118,6 +118,8 @@ export async function POST(request: Request) {
         project_code: projectCode,
         opportunity_id: opportunityId,
         decision,
+        decision_scope: 'operational',
+        decision_origin: 'manual_admin',
         decided_by: auth.user.id,
         decided_at: new Date().toISOString(),
         notes,

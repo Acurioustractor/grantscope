@@ -280,7 +280,8 @@ export const getProjectFundingPortfolio = cache(async function getProjectFunding
       .limit(1000),
     db.from('act_grant_recommendation_decisions')
       .select('project_code, opportunity_id, decision')
-      .in('project_code', projectCodes),
+      .in('project_code', projectCodes)
+      .eq('decision_scope', 'operational'),
   ]);
 
   for (const result of [recommendationsResult, decisionsResult]) {

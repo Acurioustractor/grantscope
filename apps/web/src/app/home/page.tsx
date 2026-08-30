@@ -456,7 +456,8 @@ export default async function HomePage({
       .order('fit_score', { ascending: false })
       .range(0, 999),
     db.from('act_grant_recommendation_decisions')
-      .select('project_code, opportunity_id, decision'),
+      .select('project_code, opportunity_id, decision')
+      .eq('decision_scope', 'operational'),
     db.from('funder_context_snapshot')
       .select('funder_name, relationship_score'),
   ]);

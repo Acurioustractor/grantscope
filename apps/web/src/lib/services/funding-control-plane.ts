@@ -37,6 +37,7 @@ export interface FundingControlPlaneProject {
   unresolvedDecisions: number;
   evidenceSafeMatches: number;
   decisions: number;
+  historicalWins: number;
   pursued: number;
   ghlLinked: number;
   notionLinked: number;
@@ -58,6 +59,7 @@ export interface FundingControlPlane {
     decisionReadyProfiles: number;
     evidenceSafeMatches: number;
     uniqueOpportunities: number;
+    historicalWins: number;
     pursued: number;
     ghlLinked: number;
     notionLinked: number;
@@ -99,6 +101,9 @@ interface RawDecision {
   project_code: string;
   opportunity_id: string;
   decision: string;
+  decision_scope?: 'operational' | 'historical_evidence';
+  decision_origin?: string;
+  notes?: string | null;
 }
 
 interface RawHandoff {
@@ -121,6 +126,13 @@ interface FundingControlPlaneInput {
 }
 
 const OPERATIONAL_DECISIONS = new Set(['pursuing', 'applied', 'submitted', 'won']);
+
+function isHistoricalEvidence(decision: RawDecision) {
+  return decision.decision_scope === 'historical_evidence'
+    || (!decision.decision_scope
+      && decision.decision === 'won'
+      && decision.notes?.startsWith('Backfilled from xero_invoices'));
+}
 
 function unresolvedCount(profile: Record<string, unknown> | undefined) {
   return Array.isArray(profile?.unresolvedDecisions) ? profile.unresolvedDecisions.length : 0;
@@ -154,6 +166,10 @@ export function buildFundingControlPlane(input: FundingControlPlaneInput): Fundi
     const code = project.code;
     const recommendations = code ? recommendationsByProject.get(code) || [] : [];
     const decisions = code ? decisionsByProject.get(code) || [] : [];
+    const operationalDecisions = decisions.filter(decision => !isHistoricalEvidence(decision));
+    const historicalWins = decisions.filter(
+      decision => isHistoricalEvidence(decision) && decision.decision === 'won'
+    );
     const handoffs = code ? handoffsByProject.get(code) || [] : [];
     const compiled = Boolean(profile && input.org && isFundingProfileCompiled(profile.profile, input.org, project));
 
@@ -198,7 +214,7 @@ export function buildFundingControlPlane(input: FundingControlPlaneInput): Fundi
       }
     }
 
-    const missingLegacyHandoffs = decisions.filter(
+    const missingLegacyHandoffs = operationalDecisions.filter(
       decision => OPERATIONAL_DECISIONS.has(decision.decision)
         && !handoffs.some(handoff => handoff.opportunity_id === decision.opportunity_id)
     );
@@ -251,6 +267,7 @@ export function buildFundingControlPlane(input: FundingControlPlaneInput): Fundi
       unresolvedDecisions: unresolvedCount(profile?.profile),
       evidenceSafeMatches: recommendations.length,
       decisions: decisions.length,
+      historicalWins: historicalWins.length,
       pursued: handoffs.length,
       ghlLinked: handoffs.filter(row => row.sync_status === 'succeeded' && row.ghl_opportunity_id).length,
       notionLinked: handoffs.filter(row => row.notion_brief_url).length,
@@ -285,6 +302,9 @@ export function buildFundingControlPlane(input: FundingControlPlaneInput): Fundi
       decisionReadyProfiles: projects.filter(project => project.profileStatus === 'decision_ready').length,
       evidenceSafeMatches: input.recommendations.length,
       uniqueOpportunities: uniqueOpportunities.size,
+      historicalWins: input.decisions.filter(
+        decision => isHistoricalEvidence(decision) && decision.decision === 'won'
+      ).length,
       pursued: input.handoffs.length,
       ghlLinked: input.handoffs.filter(row => row.sync_status === 'succeeded' && row.ghl_opportunity_id).length,
       notionLinked: input.handoffs.filter(row => row.notion_brief_url).length,
@@ -333,7 +353,7 @@ async function loadFundingControlPlaneInput(slug: string): Promise<FundingContro
         .in('project_code', projectCodes)
         .eq('is_strong_fit', true),
       db.from('act_grant_recommendation_decisions')
-        .select('project_code, opportunity_id, decision')
+        .select('project_code, opportunity_id, decision, decision_scope, decision_origin, notes')
         .in('project_code', projectCodes),
       db.from('funding_ghl_handoffs')
         .select('project_code, opportunity_id, ghl_opportunity_id, notion_brief_url, sync_status, last_error')

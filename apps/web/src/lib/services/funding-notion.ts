@@ -176,13 +176,14 @@ export async function createOrUpdateFundingBrief(projectCode: string, opportunit
 
   const { data: decision, error: decisionError } = await db
     .from('act_grant_recommendation_decisions')
-    .select('id, decision, notion_page_id')
+    .select('id, decision, decision_scope, notion_page_id')
     .eq('project_code', projectCode)
     .eq('opportunity_id', opportunityId)
     .single();
   if (
     decisionError ||
     !decision ||
+    decision.decision_scope !== 'operational' ||
     !['pursuing', 'applied', 'submitted', 'won'].includes(decision.decision)
   ) {
     throw new Error('A current pursue decision is required');
