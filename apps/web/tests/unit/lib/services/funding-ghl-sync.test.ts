@@ -50,14 +50,13 @@ describe('funding GHL scheduled sync', () => {
     });
   });
 
-  it('preserves an existing project alignment when a legacy GHL row lacks the governed field', () => {
+  it('does not preserve a legacy local project code when GHL lacks governed evidence', () => {
     const row = normalizeFundingGhlOpportunity({
       opportunity: { id: 'opp-legacy', pipelineStageId: 'stage-identified' },
       contract,
       syncedAt: '2026-08-30T02:00:00.000Z',
-      existingProjectCode: 'ACT-GD',
     });
-    expect(row?.project_code).toBe('ACT-GD');
+    expect(row?.project_code).toBeNull();
   });
 
   it('is idempotent but detects operational stage changes', () => {

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
+import { runFundingGhlAlignment } from '@/lib/services/funding-ghl-alignment';
 import { runFundingGhlSync } from '@/lib/services/funding-ghl-sync';
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function GET(request: Request) {
   const expected = process.env.CRON_SECRET || process.env.API_SECRET_KEY;
@@ -10,10 +11,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {
-    return NextResponse.json(await runFundingGhlSync('cron'));
+    const sync = await runFundingGhlSync('cron');
+    const alignment = sync.status === 'succeeded'
+      ? await runFundingGhlAlignment('cron', { createInbox: true, applySafe: true })
+      : null;
+    return NextResponse.json({ sync, alignment });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'GHL funding sync failed' },
+      { error: error instanceof Error ? error.message : 'Funding reconciliation failed' },
       { status: 500 }
     );
   }

@@ -127,7 +127,6 @@ export function normalizeFundingGhlOpportunity(input: {
   opportunity: GhlOpportunity;
   contract: Pick<FundingGhlContractStatus, 'pipelineId' | 'pipelineName' | 'stageIds' | 'fieldIds'>;
   syncedAt: string;
-  existingProjectCode?: string | null;
 }): MirrorRow | null {
   const { opportunity, contract, syncedAt } = input;
   const ghlId = String(opportunity.id || opportunity._id || '').trim();
@@ -151,7 +150,7 @@ export function normalizeFundingGhlOpportunity(input: {
     ghl_updated_at: isoOrNull(opportunity.updatedAt || opportunity.dateUpdated),
     last_synced_at: syncedAt,
     updated_at: syncedAt,
-    project_code: projectCode || input.existingProjectCode || null,
+    project_code: projectCode,
     last_stage_change_at: isoOrNull(opportunity.lastStageChangeAt),
     last_status_change_at: isoOrNull(opportunity.lastStatusChangeAt),
     sync_status: 'synced',
@@ -432,7 +431,6 @@ export async function runFundingGhlSync(trigger: FundingGhlSyncTrigger): Promise
         opportunity,
         contract,
         syncedAt,
-        existingProjectCode: localMirrors.get(id)?.project_code,
       });
       return row ? [row] : [];
     });
