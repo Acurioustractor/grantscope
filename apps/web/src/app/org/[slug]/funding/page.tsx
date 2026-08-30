@@ -6,6 +6,7 @@ import { getFundingControlPlane } from '@/lib/services/funding-control-plane';
 import { getFundingApplicantRegistry, toApplicantRouteOption } from '@/lib/services/funding-applicant-registry';
 import { FUNDING_GHL_FIELDS, FUNDING_GHL_STAGES, getFundingGhlContractStatus } from '@/lib/services/funding-ghl-contract';
 import { getFundingGhlAlignmentStatus } from '@/lib/services/funding-ghl-alignment';
+import { getFundingGhlAlignmentReviewQueue } from '@/lib/services/funding-ghl-alignment-review';
 import { PursueFundingForm } from './pursue-funding-form';
 import { CorrectionForm } from './correction-form';
 import { FundingSystemReconcileButton } from './funding-system-reconcile-button';
@@ -21,13 +22,14 @@ function money(value: number | null): string {
 
 export default async function ProjectFundingPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [portfolio, digest, controlPlane, applicantRegistry, ghlContract, ghlAlignment] = await Promise.all([
+  const [portfolio, digest, controlPlane, applicantRegistry, ghlContract, ghlAlignment, ghlAlignmentReview] = await Promise.all([
     getProjectFundingPortfolio(slug),
     getLatestFundingWeeklyDigest(slug),
     getFundingControlPlane(slug),
     getFundingApplicantRegistry(slug),
     getFundingGhlContractStatus(),
     getFundingGhlAlignmentStatus().catch(() => null),
+    getFundingGhlAlignmentReviewQueue().catch(() => null),
   ]);
   if (!portfolio) notFound();
 
@@ -149,7 +151,10 @@ export default async function ProjectFundingPage({ params }: { params: Promise<{
           <h2 id="ghl-alignment-title" className="mt-2 text-xl font-black">Relate once in Notion; operate everywhere</h2>
           <p className="mt-2 max-w-4xl text-sm leading-6 text-[#475569]">Every unambiguous GHL grant receives a stable Notion inbox page. Project relations chosen in Notion flow into GHL on the scheduled sync, while collisions and conflicts are held in an auditable review queue.</p>
           <div className="mt-5 border-t border-[#dbe4df] pt-5">
-            <FundingGhlAlignmentManager latestRun={ghlAlignment?.runs?.[0] || null} />
+            <FundingGhlAlignmentManager
+              latestRun={ghlAlignment?.runs?.[0] || null}
+              reviewQueue={ghlAlignmentReview}
+            />
           </div>
         </section>
         {applicantRegistry ? (

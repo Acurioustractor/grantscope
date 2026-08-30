@@ -87,6 +87,14 @@ export type FundingGhlAlignmentResult = {
   durationMs: number;
 };
 
+export type FundingNotionProjectRelationResult = {
+  ghlOpportunityId: string;
+  projectCode: string;
+  notionPageId: string | null;
+  notionPageUrl: string | null;
+  error: string | null;
+};
+
 function wait(milliseconds: number) {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
@@ -308,6 +316,82 @@ async function loadActiveProjectCodes(): Promise<Set<string>> {
   return new Set((result.data || []).map(row => String(row.code || '').trim()).filter(Boolean));
 }
 
+export async function applyFundingNotionProjectRelations(
+  assignments: Array<{ ghlOpportunityId: string; projectCode: string }>
+): Promise<FundingNotionProjectRelationResult[]> {
+  const token = process.env.NOTION_TOKEN;
+  if (!token) throw new Error('NOTION_TOKEN is required for approved funding project relations');
+  const fundingDataSourceId = process.env.NOTION_FUNDERS_OPPORTUNITIES_DATA_SOURCE_ID || ACT_FUNDING_DATA_SOURCE_ID;
+  const projectsDataSourceId = process.env.NOTION_PROJECTS_DATA_SOURCE_ID || ACT_PROJECTS_DATA_SOURCE_ID;
+  const [opportunities, projectPages, fundingPages] = await Promise.all([
+    loadCurrentGhlMirrors(),
+    queryAllNotionPages(token, projectsDataSourceId),
+    queryAllNotionPages(token, fundingDataSourceId),
+  ]);
+  const opportunityById = new Map(opportunities.map(opportunity => [opportunity.ghl_id, opportunity]));
+  const projectsByCode = new Map<string, NotionProject[]>();
+  for (const project of projectPages.map(toNotionProject)) {
+    if (!project.code) continue;
+    const matches = projectsByCode.get(project.code) || [];
+    matches.push(project);
+    projectsByCode.set(project.code, matches);
+  }
+  const fundingByGhlId = new Map<string, NotionFunding[]>();
+  for (const page of fundingPages.map(toNotionFunding)) {
+    if (!page.ghlOpportunityId) continue;
+    const matches = fundingByGhlId.get(page.ghlOpportunityId) || [];
+    matches.push(page);
+    fundingByGhlId.set(page.ghlOpportunityId, matches);
+  }
+
+  const syncedAt = new Date().toISOString();
+  const results: FundingNotionProjectRelationResult[] = [];
+  for (const assignment of assignments) {
+    let notionPage: NotionFunding | null = null;
+    try {
+      const opportunity = opportunityById.get(assignment.ghlOpportunityId);
+      if (!opportunity) throw new Error('Current GHL Grants opportunity was not found');
+      const projectMatches = projectsByCode.get(assignment.projectCode) || [];
+      if (projectMatches.length !== 1) {
+        throw new Error(`Expected one Notion project page for ${assignment.projectCode}; found ${projectMatches.length}`);
+      }
+      const project = projectMatches[0];
+      const fundingMatches = fundingByGhlId.get(assignment.ghlOpportunityId) || [];
+      if (fundingMatches.length > 1) {
+        throw new Error(`Multiple Notion funding pages carry GHL ID ${assignment.ghlOpportunityId}`);
+      }
+      notionPage = fundingMatches[0] || await createNotionInboxPage(token, opportunity, syncedAt);
+      if (notionPage.projectPageIds.length) {
+        const alreadySelected = notionPage.projectPageIds.length === 1 && notionPage.projectPageIds[0] === project.pageId;
+        if (!alreadySelected) throw new Error('Notion project relation changed after review; no overwrite was attempted');
+      } else {
+        await notion(token, 'PATCH', `/pages/${notionPage.pageId}`, {
+          properties: {
+            '🗂️ Projects': { relation: [{ id: project.pageId }] },
+          },
+        });
+        await wait(NOTION_WRITE_INTERVAL_MS);
+      }
+      results.push({
+        ghlOpportunityId: assignment.ghlOpportunityId,
+        projectCode: assignment.projectCode,
+        notionPageId: notionPage.pageId,
+        notionPageUrl: notionPage.pageUrl,
+        error: null,
+      });
+    } catch (error) {
+      results.push({
+        ghlOpportunityId: assignment.ghlOpportunityId,
+        projectCode: assignment.projectCode,
+        notionPageId: notionPage?.pageId || null,
+        notionPageUrl: notionPage?.pageUrl || null,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  return results;
+}
+
 export async function getFundingGhlAlignmentStatus() {
   const db = getServiceSupabase();
   const [state, runs] = await Promise.all([
@@ -499,6 +583,9 @@ export async function runFundingGhlAlignment(
             pageUrl: page.pageUrl,
             title: page.title,
             ghlOpportunityId: page.ghlOpportunityId,
+            relatedProjects: page.projectPageIds.map(pageId => (
+              projectByPageId.get(pageId) || { pageId, name: '', code: null }
+            )),
           })),
           relatedProjects,
           remoteNotionUrl: remoteNotionUrl || null,
