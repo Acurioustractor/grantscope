@@ -4,10 +4,12 @@ import { getProjectFundingPortfolio } from '@/lib/services/project-funding-servi
 import { getLatestFundingWeeklyDigest } from '@/lib/services/funding-weekly-digest';
 import { getFundingControlPlane } from '@/lib/services/funding-control-plane';
 import { getFundingApplicantRegistry, toApplicantRouteOption } from '@/lib/services/funding-applicant-registry';
+import { FUNDING_GHL_FIELDS, FUNDING_GHL_STAGES, getFundingGhlContractStatus } from '@/lib/services/funding-ghl-contract';
 import { PursueFundingForm } from './pursue-funding-form';
 import { CorrectionForm } from './correction-form';
 import { FundingSystemReconcileButton } from './funding-system-reconcile-button';
 import { ApplicantRegistryManager } from './applicant-registry-manager';
+import { FundingGhlContractManager } from './funding-ghl-contract-manager';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,11 +19,12 @@ function money(value: number | null): string {
 
 export default async function ProjectFundingPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [portfolio, digest, controlPlane, applicantRegistry] = await Promise.all([
+  const [portfolio, digest, controlPlane, applicantRegistry, ghlContract] = await Promise.all([
     getProjectFundingPortfolio(slug),
     getLatestFundingWeeklyDigest(slug),
     getFundingControlPlane(slug),
     getFundingApplicantRegistry(slug),
+    getFundingGhlContractStatus(),
   ]);
   if (!portfolio) notFound();
 
@@ -112,6 +115,32 @@ export default async function ProjectFundingPage({ params }: { params: Promise<{
             </div>
           </section>
         ) : null}
+        <section aria-labelledby="ghl-contract-title" className="overflow-hidden rounded-xl border border-[#183426] bg-[#183426] text-white shadow-sm">
+          <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+            <div>
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[#b7e4cc]">GHL operating contract</p>
+              <h2 id="ghl-contract-title" className="mt-2 text-xl font-black">One governed Grants pipeline</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-[#dbe9e1]">Pursued funding carries a canonical project code, typed GrantScope source, applicant, native GHL owner, next action and Notion workspace. Legacy discovery records stay visible but cannot become governed handoffs through fuzzy matching.</p>
+            </div>
+            <FundingGhlContractManager ready={ghlContract.ready} />
+          </div>
+          <dl className="grid grid-cols-2 border-t border-[#365947] bg-[#10271b] sm:grid-cols-3 lg:grid-cols-7">
+            {[
+              ['Contract', ghlContract.ready ? 'Ready' : 'Needs repair'],
+              ['Stages', `${FUNDING_GHL_STAGES.length - ghlContract.missingStages.length}/${FUNDING_GHL_STAGES.length}`],
+              ['Identity fields', `${FUNDING_GHL_FIELDS.length - ghlContract.missingFields.length}/${FUNDING_GHL_FIELDS.length}`],
+              ['Native owners', ghlContract.users.length],
+              ['Governed pursued', ghlContract.metrics.governedHandoffs],
+              ['Funder contacts', `${ghlContract.metrics.foundationLinksWithContact}/${ghlContract.metrics.projectFoundationLinks}`],
+              ['Legacy unaligned', ghlContract.metrics.unalignedLegacy],
+            ].map(([label, value]) => <div key={label} className="border-r border-b border-[#365947] p-4"><dt className="font-mono text-[9px] uppercase tracking-wide text-[#b7c8be]">{label}</dt><dd className="mt-1 text-lg font-black">{value}</dd></div>)}
+          </dl>
+          {!ghlContract.ready ? <div className="border-t border-[#365947] bg-[#fff7ed] p-4 text-xs leading-5 text-[#9a3412]">
+            {ghlContract.error ? <p><strong>Connection:</strong> {ghlContract.error}</p> : null}
+            {ghlContract.missingStages.length ? <p><strong>Missing stages:</strong> {ghlContract.missingStages.join(', ')}</p> : null}
+            {ghlContract.missingFields.length ? <p><strong>Missing fields:</strong> {ghlContract.missingFields.join(', ')}</p> : null}
+          </div> : null}
+        </section>
         {applicantRegistry ? (
           <section aria-labelledby="applicant-registry-title" className="overflow-hidden rounded-xl border border-[#b8d2c5] bg-white shadow-sm">
             <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
@@ -201,7 +230,7 @@ export default async function ProjectFundingPage({ params }: { params: Promise<{
                       <Link href={`/org/${slug}/${item.projectSlug}/funding`} className="min-h-11 rounded-lg border border-[#cbd5e1] px-3 py-3 hover:border-[#2f8f64]">Review project route</Link>
                       {item.sourceUrl ? <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="min-h-11 rounded-lg border border-[#cbd5e1] px-3 py-3 hover:border-[#2f8f64]">Official evidence ↗</a> : null}
                     </div>
-                    <PursueFundingForm projectCode={item.projectCode} opportunityId={item.opportunityId} projectSlug={item.projectSlug} orgSlug={slug} applicantRoutes={applicantRoutes} />
+                    <PursueFundingForm projectCode={item.projectCode} opportunityId={item.opportunityId} projectSlug={item.projectSlug} orgSlug={slug} applicantRoutes={applicantRoutes} ghlUsers={ghlContract.ready ? ghlContract.users : []} />
                     <CorrectionForm projectCode={item.projectCode} opportunityId={item.opportunityId} opportunityName={item.opportunityName} />
                   </div>
                   <dl className="rounded-lg bg-[#f1f8f5] p-4 text-sm">

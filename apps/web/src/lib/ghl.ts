@@ -28,26 +28,35 @@ const PIPELINE_NAMES = {
   goodsDemand: 'Goods — Demand Register',
 } as const;
 
-async function ghlFetch(endpoint: string, options: RequestInit = {}) {
+async function ghlFetch(endpoint: string, options: RequestInit = {}, version = '2021-07-28') {
   const apiKey = process.env.GHL_API_KEY;
   if (!apiKey) throw new Error('GHL_API_KEY not set');
 
-  const res = await fetch(`${BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      Version: '2021-07-28',
-      ...options.headers,
-    },
-  });
-
-  if (!res.ok) {
+  const method = options.method || 'GET';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(`${BASE_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        Version: version,
+        ...options.headers,
+      },
+    });
+    if (res.ok) return res.json();
     const text = await res.text();
+    const transientReadFailure = method === 'GET' && (
+      res.status === 429 ||
+      res.status >= 500 ||
+      (res.status === 401 && /timed out/i.test(text))
+    );
+    if (transientReadFailure && attempt < 2) {
+      await new Promise(resolve => setTimeout(resolve, 250 * (2 ** attempt)));
+      continue;
+    }
     throw new Error(`GHL API ${res.status}: ${text}`);
   }
-
-  return res.json();
+  throw new Error('GHL API read failed after retries');
 }
 
 export async function createOpportunity(opts: {
@@ -57,8 +66,11 @@ export async function createOpportunity(opts: {
   pipelineId: string;
   pipelineStageId: string;
   contactId?: string;
+  assignedTo?: string;
+  customFields?: Array<{ id: string; fieldValue: string }>;
 }) {
   const locationId = process.env.GHL_LOCATION_ID;
+  const apiVersion = opts.assignedTo || opts.customFields?.length ? 'v3' : '2021-07-28';
   return ghlFetch('/opportunities/', {
     method: 'POST',
     body: JSON.stringify({
@@ -69,17 +81,27 @@ export async function createOpportunity(opts: {
       status: 'open',
       monetaryValue: opts.monetaryValue ?? 0,
       ...(opts.contactId && { contactId: opts.contactId }),
+      ...(opts.assignedTo && { assignedTo: opts.assignedTo }),
+      ...(opts.customFields?.length && { customFields: opts.customFields }),
     }),
-  });
+  }, apiVersion);
 }
 
 export async function updateOpportunity(
   opportunityId: string,
-  updates: { pipelineStageId?: string; status?: string; monetaryValue?: number; contactId?: string }
+  updates: {
+    pipelineStageId?: string;
+    status?: string;
+    monetaryValue?: number;
+    contactId?: string;
+    assignedTo?: string;
+    customFields?: Array<{ id: string; fieldValue: string }>;
+  }
 ) {
+  const customFields = updates.customFields?.map(field => ({ id: field.id, field_value: field.fieldValue }));
   return ghlFetch(`/opportunities/${opportunityId}`, {
     method: 'PUT',
-    body: JSON.stringify(updates),
+    body: JSON.stringify({ ...updates, ...(customFields?.length && { customFields }) }),
   });
 }
 
@@ -93,6 +115,53 @@ export async function getOpportunities(pipelineId: string) {
 export async function getPipelines() {
   const locationId = process.env.GHL_LOCATION_ID;
   return ghlFetch(`/opportunities/pipelines?locationId=${locationId}`);
+}
+
+export type GhlCustomField = {
+  id: string;
+  name: string;
+  fieldKey?: string;
+  dataType?: string;
+  model?: string;
+};
+
+export type GhlLocationUser = {
+  id: string;
+  name: string;
+  email?: string;
+  deleted?: boolean;
+  roles?: { role?: string };
+};
+
+export async function getOpportunityCustomFields(): Promise<GhlCustomField[]> {
+  const locationId = process.env.GHL_LOCATION_ID;
+  if (!locationId) throw new Error('GHL_LOCATION_ID not set');
+  const payload = await ghlFetch(`/locations/${locationId}/customFields?model=opportunity`, {}, 'v3');
+  return Array.isArray(payload?.customFields) ? payload.customFields as GhlCustomField[] : [];
+}
+
+export async function createOpportunityCustomField(input: {
+  name: string;
+  dataType: 'TEXT' | 'LARGE_TEXT' | 'DATE';
+}): Promise<GhlCustomField> {
+  const locationId = process.env.GHL_LOCATION_ID;
+  if (!locationId) throw new Error('GHL_LOCATION_ID not set');
+  const payload = await ghlFetch(`/locations/${locationId}/customFields`, {
+    method: 'POST',
+    body: JSON.stringify({ ...input, model: 'opportunity' }),
+  }, 'v3');
+  const field = payload?.customField as GhlCustomField | undefined;
+  if (!field?.id) throw new Error(`GHL did not return the custom field ${input.name}`);
+  return field;
+}
+
+export async function getLocationUsers(): Promise<GhlLocationUser[]> {
+  const locationId = process.env.GHL_LOCATION_ID;
+  if (!locationId) throw new Error('GHL_LOCATION_ID not set');
+  const payload = await ghlFetch(`/users/?locationId=${encodeURIComponent(locationId)}`, {}, '2023-02-21');
+  return Array.isArray(payload?.users)
+    ? (payload.users as GhlLocationUser[]).filter(user => user.id && !user.deleted)
+    : [];
 }
 
 export function findPipelineByName<T extends { name?: string }>(
@@ -126,14 +195,14 @@ export async function addTagToContact(contactId: string, tag: string) {
   const { data: contact } = await sb
     .from('ghl_contacts')
     .select('tags')
-    .eq('id', contactId)
+    .eq('ghl_id', contactId)
     .single();
   const existing: string[] = contact?.tags || [];
   if (!existing.includes(tag)) {
     await sb
       .from('ghl_contacts')
       .update({ tags: [...existing, tag] })
-      .eq('id', contactId);
+      .eq('ghl_id', contactId);
   }
 }
 
@@ -153,13 +222,13 @@ export async function removeTagFromContact(contactId: string, tag: string) {
   const { data: contact } = await sb
     .from('ghl_contacts')
     .select('tags')
-    .eq('id', contactId)
+    .eq('ghl_id', contactId)
     .single();
   const existing: string[] = contact?.tags || [];
   await sb
     .from('ghl_contacts')
     .update({ tags: existing.filter((t) => t !== tag) })
-    .eq('id', contactId);
+    .eq('ghl_id', contactId);
 }
 
 export async function findContactByEmail(email: string): Promise<{ id: string } | null> {
@@ -213,17 +282,25 @@ export async function upsertContact(opts: {
     process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '',
     process.env.SUPABASE_SERVICE_ROLE_KEY || ''
   );
-  await sb.from('ghl_contacts').upsert(
+  const firstName = data.contact.firstName || opts.firstName || null;
+  const lastName = data.contact.lastName || opts.lastName || null;
+  const fullName = data.contact.name || [firstName, lastName].filter(Boolean).join(' ') || null;
+  const mirror = await sb.from('ghl_contacts').upsert(
     {
-      id: contactId,
+      ghl_id: contactId,
+      ghl_location_id: locationId,
       email: opts.email,
-      first_name: opts.firstName || null,
-      last_name: opts.lastName || null,
-      company_name: opts.companyName || null,
+      first_name: firstName,
+      last_name: lastName,
+      full_name: fullName,
+      company_name: data.contact.companyName || opts.companyName || null,
       tags: data.contact.tags || opts.tags || [],
+      last_synced_at: new Date().toISOString(),
+      sync_status: 'synced',
     },
-    { onConflict: 'id' }
+    { onConflict: 'ghl_id' }
   );
+  if (mirror.error) throw new Error(`GHL contact mirror failed: ${mirror.error.message}`);
 
   return { id: contactId };
 }
