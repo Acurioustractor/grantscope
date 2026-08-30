@@ -246,22 +246,47 @@ export const getProjectFundingPortfolio = cache(async function getProjectFunding
 ): Promise<ProjectFundingPortfolio | null> {
   if (!isActSlug(slug)) return null;
   const db = getServiceSupabase();
-  const [projectsResult, profilesResult, recommendationsResult, decisionsResult] = await Promise.all([
-    db.from('org_projects').select('id, code, name, slug, description').eq('status', 'active').order('sort_order'),
-    db.from('project_funding_profiles').select('org_project_id, profile_version, completeness_status, profile').eq('is_current', true),
-    db.from('act_grant_recommendations_current')
-      .select('project_code, opportunity_id, opportunity_name, funder_name, deadline, max_grant_amount, fit_score, eligibility_score, source_url, application_url')
-      .eq('is_strong_fit', true)
-      .order('fit_score', { ascending: false })
-      .limit(1000),
-    db.from('act_grant_recommendation_decisions').select('project_code, opportunity_id, decision'),
+  const orgResult = await db.from('org_profiles').select('id').eq('slug', 'act').single();
+  if (orgResult.error || !orgResult.data) {
+    throw new Error(`Project funding data unavailable: ${orgResult.error?.message || 'ACT org profile not found'}`);
+  }
+
+  const [projectsResult, profilesResult] = await Promise.all([
+    db.from('org_projects')
+      .select('id, code, name, slug, description')
+      .eq('org_profile_id', orgResult.data.id)
+      .eq('status', 'active')
+      .order('sort_order'),
+    db.from('project_funding_profiles')
+      .select('org_project_id, profile_version, completeness_status, profile')
+      .eq('org_profile_id', orgResult.data.id)
+      .eq('is_current', true),
   ]);
 
-  for (const result of [projectsResult, profilesResult, recommendationsResult, decisionsResult]) {
+  for (const result of [projectsResult, profilesResult]) {
     if (result.error) throw new Error(`Project funding data unavailable: ${result.error.message}`);
   }
 
   const projects = (projectsResult.data || []) as RawProject[];
+  const projectCodes = projects
+    .map(project => project.code)
+    .filter((code): code is string => Boolean(code));
+  const [recommendationsResult, decisionsResult] = await Promise.all([
+    db.from('act_grant_recommendations_current')
+      .select('project_code, opportunity_id, opportunity_name, funder_name, deadline, max_grant_amount, fit_score, eligibility_score, source_url, application_url')
+      .in('project_code', projectCodes)
+      .eq('is_strong_fit', true)
+      .order('fit_score', { ascending: false })
+      .limit(1000),
+    db.from('act_grant_recommendation_decisions')
+      .select('project_code, opportunity_id, decision')
+      .in('project_code', projectCodes),
+  ]);
+
+  for (const result of [recommendationsResult, decisionsResult]) {
+    if (result.error) throw new Error(`Project funding data unavailable: ${result.error.message}`);
+  }
+
   const rawProfiles = (profilesResult.data || []) as RawProfile[];
   const projectById = new Map(projects.map(project => [project.id, project]));
   const profiles = rawProfiles.flatMap((row): ProjectFundingProfileSummary[] => {
