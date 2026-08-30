@@ -3,9 +3,11 @@ import { notFound } from 'next/navigation';
 import { getProjectFundingPortfolio } from '@/lib/services/project-funding-service';
 import { getLatestFundingWeeklyDigest } from '@/lib/services/funding-weekly-digest';
 import { getFundingControlPlane } from '@/lib/services/funding-control-plane';
+import { getFundingApplicantRegistry, toApplicantRouteOption } from '@/lib/services/funding-applicant-registry';
 import { PursueFundingForm } from './pursue-funding-form';
 import { CorrectionForm } from './correction-form';
 import { FundingSystemReconcileButton } from './funding-system-reconcile-button';
+import { ApplicantRegistryManager } from './applicant-registry-manager';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,10 +17,11 @@ function money(value: number | null): string {
 
 export default async function ProjectFundingPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [portfolio, digest, controlPlane] = await Promise.all([
+  const [portfolio, digest, controlPlane, applicantRegistry] = await Promise.all([
     getProjectFundingPortfolio(slug),
     getLatestFundingWeeklyDigest(slug),
     getFundingControlPlane(slug),
+    getFundingApplicantRegistry(slug),
   ]);
   if (!portfolio) notFound();
 
@@ -109,6 +112,41 @@ export default async function ProjectFundingPage({ params }: { params: Promise<{
             </div>
           </section>
         ) : null}
+        {applicantRegistry ? (
+          <section aria-labelledby="applicant-registry-title" className="overflow-hidden rounded-xl border border-[#b8d2c5] bg-white shadow-sm">
+            <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+              <div>
+                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[#2f8f64]">Canonical applicant registry</p>
+                <h2 id="applicant-registry-title" className="mt-2 text-xl font-black">One legal route reused across the portfolio</h2>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-[#475569]">Projects inherit a governed applicant contract. Opportunity-specific ABN, organisation-type and DGR requirements are checked again before any GHL write.</p>
+              </div>
+              <dl className="grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="rounded bg-[#f1f8f5] p-3"><dt className="text-[#64748b]">Verified entities</dt><dd className="mt-1 text-lg font-black">{applicantRegistry.summary.verifiedEntities}/{applicantRegistry.summary.entities}</dd></div>
+                <div className="rounded bg-[#f1f8f5] p-3"><dt className="text-[#64748b]">Ready defaults</dt><dd className="mt-1 text-lg font-black">{applicantRegistry.summary.readyDefaultRoutes}/{applicantRegistry.summary.activeProjects}</dd></div>
+                <div className="rounded bg-[#fff7ed] p-3"><dt className="text-[#9a3412]">DGR endorsed</dt><dd className="mt-1 text-lg font-black text-[#9a3412]">{applicantRegistry.summary.dgrEndorsedEntities}</dd></div>
+              </dl>
+            </div>
+            <div className="overflow-x-auto border-t border-[#dbe4df]">
+              <table className="w-full min-w-[760px] text-left text-xs">
+                <thead className="bg-[#f8fafc] text-[10px] uppercase tracking-wide text-[#64748b]"><tr><th className="px-4 py-3">Project</th><th className="px-4 py-3">Default applicant</th><th className="px-4 py-3">Legal ID</th><th className="px-4 py-3">Route</th><th className="px-4 py-3">DGR</th><th className="px-4 py-3">Guardrail</th></tr></thead>
+                <tbody className="divide-y divide-[#e2e8f0]">
+                  {applicantRegistry.routes.filter(route => route.isDefault).map(route => <tr key={route.id}>
+                    <td className="px-4 py-3"><Link href={`/org/${slug}/${route.projectSlug}/funding`} className="font-bold text-[#183426] hover:underline">{route.projectName}</Link><div className="font-mono text-[9px] text-[#64748b]">{route.projectCode}</div></td>
+                    <td className="px-4 py-3 font-bold">{route.entity.name}</td>
+                    <td className="px-4 py-3 font-mono">{route.entity.abn ? `ABN ${route.entity.abn}` : 'ABN missing'}</td>
+                    <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase ${route.status === 'ready' ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#fef3c7] text-[#92400e]'}`}>{route.routeType} · {route.status}</span></td>
+                    <td className="px-4 py-3 font-bold uppercase text-[#92400e]">{route.entity.dgrStatus.replace('_', ' ')}</td>
+                    <td className="max-w-sm px-4 py-3 text-[#64748b]">{route.constraints[0] || 'Opportunity eligibility still requires review.'}</td>
+                  </tr>)}
+                </tbody>
+              </table>
+            </div>
+            <ApplicantRegistryManager
+              entities={applicantRegistry.entities.map(entity => ({ id: entity.id, name: entity.name, verificationStatus: entity.verificationStatus, dgrStatus: entity.dgrStatus }))}
+              projects={[...new Map(applicantRegistry.routes.map(route => [route.projectCode, { code: route.projectCode, name: route.projectName }])).values()]}
+            />
+          </section>
+        ) : null}
         <section aria-labelledby="weekly-cycle-title" className="rounded-xl border border-[#b8d2c5] bg-[#183426] p-5 text-white shadow-sm">
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_2fr]">
             <div>
@@ -131,8 +169,16 @@ export default async function ProjectFundingPage({ params }: { params: Promise<{
             <time className="hidden font-mono text-[10px] text-[#64748b] sm:block" dateTime={portfolio.generatedAt}>Generated {new Date(portfolio.generatedAt).toLocaleString('en-AU')}</time>
           </div>
           <div className="mt-4 grid gap-3">
-            {portfolio.weeklyQueue.map((item, index) => (
-              <article key={item.opportunityId} className="rounded-xl border border-[#dbe4df] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+            {portfolio.weeklyQueue.map((item, index) => {
+              const routeEvidence = {
+                ...(item.eligibilityEvidence || {}),
+                eligibility_decision: item.eligibilityDecision,
+                profile_completeness: item.profileCompleteness,
+              };
+              const applicantRoutes = (applicantRegistry?.routes || [])
+                .filter(route => route.projectCode === item.projectCode)
+                .map(route => toApplicantRouteOption(route, routeEvidence));
+              return <article key={item.opportunityId} className="rounded-xl border border-[#dbe4df] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                 <div className="grid gap-4 lg:grid-cols-[52px_minmax(0,1fr)_180px] lg:items-start">
                   <div className="grid h-11 w-11 place-items-center rounded-lg bg-[#e7ef65] font-mono text-sm font-black text-[#183426]">{index + 1}</div>
                   <div>
@@ -155,7 +201,7 @@ export default async function ProjectFundingPage({ params }: { params: Promise<{
                       <Link href={`/org/${slug}/${item.projectSlug}/funding`} className="min-h-11 rounded-lg border border-[#cbd5e1] px-3 py-3 hover:border-[#2f8f64]">Review project route</Link>
                       {item.sourceUrl ? <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="min-h-11 rounded-lg border border-[#cbd5e1] px-3 py-3 hover:border-[#2f8f64]">Official evidence ↗</a> : null}
                     </div>
-                    <PursueFundingForm projectCode={item.projectCode} opportunityId={item.opportunityId} projectSlug={item.projectSlug} orgSlug={slug} />
+                    <PursueFundingForm projectCode={item.projectCode} opportunityId={item.opportunityId} projectSlug={item.projectSlug} orgSlug={slug} applicantRoutes={applicantRoutes} />
                     <CorrectionForm projectCode={item.projectCode} opportunityId={item.opportunityId} opportunityName={item.opportunityName} />
                   </div>
                   <dl className="rounded-lg bg-[#f1f8f5] p-4 text-sm">
@@ -166,8 +212,8 @@ export default async function ProjectFundingPage({ params }: { params: Promise<{
                     <dd className="mt-1 font-black">{money(item.maxAmount)}</dd>
                   </dl>
                 </div>
-              </article>
-            ))}
+              </article>;
+            })}
             {portfolio.weeklyQueue.length === 0 ? <div className="rounded-xl border border-dashed border-[#94a3b8] bg-white p-8 text-sm text-[#475569]">No evidence-safe, undecided opportunities currently meet the weekly queue contract.</div> : null}
           </div>
         </section>

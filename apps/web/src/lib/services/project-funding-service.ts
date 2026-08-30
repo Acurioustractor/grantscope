@@ -32,6 +32,7 @@ export interface WeeklyFundingQueueItem {
   applicationUrl: string | null;
   eligibilityDecision: 'eligible_direct' | 'eligible_partner_led' | 'needs_verification';
   eligibilityReason: string;
+  profileCompleteness: FundingProfileCompleteness;
   daysRemaining: number;
   lexicalScore?: number;
   semanticScore?: number;
@@ -167,6 +168,7 @@ export function buildWeeklyFundingQueue({
       applicationUrl: recommendation.application_url,
       eligibilityDecision,
       eligibilityReason,
+      profileCompleteness: profile.completeness,
       daysRemaining,
       rank: recommendation.fit_score + urgencyBoost - readinessPenalty,
     } satisfies WeeklyFundingQueueItem & { rank: number };
@@ -221,6 +223,7 @@ export function buildHybridWeeklyQueue({
         : match.eligibility_decision === 'eligible_partner_led'
           ? 'A DGR, auspice or eligible delivery partner is required for this route.'
           : `${profile.projectName} still has ${profile.unresolvedDecisions.length} unresolved profile decision${profile.unresolvedDecisions.length === 1 ? '' : 's'}.`,
+      profileCompleteness: profile.completeness,
       daysRemaining,
       lexicalScore: match.lexical_score,
       semanticScore: match.semantic_score,

@@ -16,6 +16,25 @@ const org = {
   geographic_focus: ['Queensland', 'Palm Island'],
 };
 
+const directApplicantRoute = {
+  id: 'route-act-default',
+  applicant_entity_id: 'entity-act',
+  route_type: 'direct',
+  status: 'ready',
+  is_default: true,
+  eligible_instruments: ['grant_non_dgr', 'contract'],
+  constraints: ['DGR requires another route.'],
+  entity: {
+    id: 'entity-act',
+    name: 'A Curious Tractor',
+    entity_type: 'company',
+    status: 'active',
+    abn: '21591780066',
+    dgr_status: 'unknown',
+    verification_status: 'verified',
+  },
+};
+
 describe('compileFundingProfile', () => {
   it('compiles canonical metadata without inventing applicant, place, budget or authority facts', () => {
     const project = {
@@ -88,15 +107,49 @@ describe('compileFundingProfile', () => {
           unresolvedDecisions: ['Confirm applicant route.'],
         },
       },
+      applicantRoutes: [directApplicantRoute],
     });
 
     expect(result.completeness_status).toBe('partial');
     expect(result.profile).toMatchObject({
       purpose: { publicSummary: 'A deliberate evidence-rich Goods summary.' },
-      entities: [{ id: 'charity' }],
       geographies: ['AU-NT'],
       themes: ['circular economy'],
     });
+    const compiledEntities = result.profile.entities as Array<Record<string, unknown>>;
+    expect(compiledEntities).toHaveLength(2);
+    expect(compiledEntities[0]).toEqual({ id: 'charity' });
+    expect(compiledEntities.find(entity => entity.registryEntityId === 'entity-act')).toMatchObject({
+      registryEntityId: 'entity-act',
+      registryRouteId: 'route-act-default',
+    });
     expect(result.provenance[0]).toEqual({ type: 'file', path: 'goods.json' });
+  });
+
+  it('resolves the generic applicant gap from one canonical project route', () => {
+    const project = {
+      id: 'project-jh',
+      org_profile_id: org.id,
+      code: 'ACT-JH',
+      name: 'JusticeHub',
+      slug: 'justicehub',
+      description: 'Justice data infrastructure.',
+    };
+    const result = compileFundingProfile({ org, project, applicantRoutes: [directApplicantRoute] });
+    expect(result.completeness_status).toBe('partial');
+    expect(result.profile).toMatchObject({
+      organisationContext: {
+        applicantRouteStatus: 'ready',
+        defaultApplicantName: 'A Curious Tractor',
+      },
+      entities: [{
+        legalName: 'A Curious Tractor',
+        registryEntityId: 'entity-act',
+        routeStatus: 'ready',
+      }],
+    });
+    expect(result.profile.unresolvedDecisions).not.toContain('Confirm applicant and contracting entities.');
+    expect(isFundingProfileCompiled(result.profile, org, project, [directApplicantRoute])).toBe(true);
+    expect(isFundingProfileCompiled(result.profile, org, project)).toBe(false);
   });
 });

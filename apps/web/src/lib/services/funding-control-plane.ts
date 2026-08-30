@@ -4,6 +4,7 @@ import { createOrUpdateFundingBrief } from '@/lib/services/funding-notion';
 import {
   compileFundingProfile,
   isFundingProfileCompiled,
+  type FundingProfileCompilerApplicantRoute,
   type FundingProfileCompilerOrg,
 } from '@/lib/services/funding-profile-compiler';
 
@@ -115,6 +116,13 @@ interface RawHandoff {
   last_error: string | null;
 }
 
+type RawApplicantEntity = FundingProfileCompilerApplicantRoute['entity'];
+
+interface RawApplicantRoute extends Omit<FundingProfileCompilerApplicantRoute, 'entity'> {
+  org_project_id: string;
+  entity: FundingProfileCompilerApplicantRoute['entity'];
+}
+
 interface FundingControlPlaneInput {
   org?: FundingProfileCompilerOrg;
   projects: RawProject[];
@@ -122,6 +130,7 @@ interface FundingControlPlaneInput {
   recommendations: RawRecommendation[];
   decisions: RawDecision[];
   handoffs: RawHandoff[];
+  applicantRoutes: RawApplicantRoute[];
   generatedAt?: string;
 }
 
@@ -143,6 +152,7 @@ export function buildFundingControlPlane(input: FundingControlPlaneInput): Fundi
   const recommendationsByProject = new Map<string, RawRecommendation[]>();
   const decisionsByProject = new Map<string, RawDecision[]>();
   const handoffsByProject = new Map<string, RawHandoff[]>();
+  const applicantRoutesByProject = new Map<string, RawApplicantRoute[]>();
 
   for (const recommendation of input.recommendations) {
     const rows = recommendationsByProject.get(recommendation.project_code) || [];
@@ -159,6 +169,11 @@ export function buildFundingControlPlane(input: FundingControlPlaneInput): Fundi
     rows.push(handoff);
     handoffsByProject.set(handoff.project_code, rows);
   }
+  for (const route of input.applicantRoutes) {
+    const rows = applicantRoutesByProject.get(route.org_project_id) || [];
+    rows.push(route);
+    applicantRoutesByProject.set(route.org_project_id, rows);
+  }
 
   const actions: FundingReconciliationAction[] = [];
   const projects = input.projects.map(project => {
@@ -171,7 +186,8 @@ export function buildFundingControlPlane(input: FundingControlPlaneInput): Fundi
       decision => isHistoricalEvidence(decision) && decision.decision === 'won'
     );
     const handoffs = code ? handoffsByProject.get(code) || [] : [];
-    const compiled = Boolean(profile && input.org && isFundingProfileCompiled(profile.profile, input.org, project));
+    const applicantRoutes = applicantRoutesByProject.get(project.id) || [];
+    const compiled = Boolean(profile && input.org && isFundingProfileCompiled(profile.profile, input.org, project, applicantRoutes));
 
     if (!code) {
       actions.push({
@@ -203,13 +219,16 @@ export function buildFundingControlPlane(input: FundingControlPlaneInput): Fundi
         });
       }
       if (profile.completeness_status !== 'decision_ready') {
+        const hasReadyDefaultApplicant = applicantRoutes.some(route => route.is_default && route.status === 'ready');
         actions.push({
           key: `project:${code}:complete-profile`,
           type: 'complete_profile',
           mode: 'human',
           projectCode: code,
           opportunityId: null,
-          label: `Complete ${project.name}'s applicant, place, funding-block and evidence facts.`,
+          label: hasReadyDefaultApplicant
+            ? `Complete ${project.name}'s place, funding-block, evidence and any alternate applicant-route facts.`
+            : `Complete ${project.name}'s applicant, place, funding-block and evidence facts.`,
         });
       }
     }
@@ -326,7 +345,7 @@ async function loadFundingControlPlaneInput(slug: string): Promise<FundingContro
     .single();
   if (orgError || !org) throw new Error(orgError?.message || 'ACT org profile not found');
 
-  const [projectsResult, profilesResult] = await Promise.all([
+  const [projectsResult, profilesResult, applicantEntitiesResult, applicantRoutesResult] = await Promise.all([
     db.from('org_projects')
       .select('id, code, name, slug, description, category, parent_project_id, status, abn, metadata, org_profile_id')
       .eq('org_profile_id', org.id)
@@ -336,12 +355,26 @@ async function loadFundingControlPlaneInput(slug: string): Promise<FundingContro
       .select('org_project_id, profile_version, completeness_status, profile, provenance')
       .eq('org_profile_id', org.id)
       .eq('is_current', true),
+    db.from('org_applicant_entities')
+      .select('id, name, entity_type, status, abn, dgr_status, verification_status')
+      .eq('org_profile_id', org.id)
+      .neq('status', 'archived'),
+    db.from('project_applicant_routes')
+      .select('id, org_project_id, applicant_entity_id, route_type, status, is_default, eligible_instruments, constraints')
+      .eq('org_profile_id', org.id),
   ]);
-  for (const result of [projectsResult, profilesResult]) {
+  for (const result of [projectsResult, profilesResult, applicantEntitiesResult, applicantRoutesResult]) {
     if (result.error) throw new Error(`Funding control plane unavailable: ${result.error.message}`);
   }
 
   const projects = (projectsResult.data || []) as RawProject[];
+  const applicantEntitiesById = new Map(
+    ((applicantEntitiesResult.data || []) as RawApplicantEntity[]).map(entity => [entity.id, entity])
+  );
+  const applicantRoutes = (applicantRoutesResult.data || []).flatMap((route): RawApplicantRoute[] => {
+    const entity = applicantEntitiesById.get(route.applicant_entity_id);
+    return entity ? [{ ...route, entity } as RawApplicantRoute] : [];
+  });
   const projectCodes = projects.flatMap(project => project.code ? [project.code] : []);
   let recommendations: RawRecommendation[] = [];
   let decisions: RawDecision[] = [];
@@ -374,6 +407,7 @@ async function loadFundingControlPlaneInput(slug: string): Promise<FundingContro
     recommendations,
     decisions,
     handoffs,
+    applicantRoutes,
   };
 }
 
@@ -400,17 +434,18 @@ export async function reconcileFundingSystem(slug = 'act') {
       org: input.org as FundingProfileCompilerOrg,
       project,
       existing: profilesByProject.get(project.id),
+      applicantRoutes: input.applicantRoutes.filter(route => route.org_project_id === project.id),
     })];
   });
 
   let profilesCreated = 0;
   if (profileRows.length) {
-    const { data, error } = await db
-      .from('project_funding_profiles')
-      .upsert(profileRows, { onConflict: 'org_project_id,profile_version' })
-      .select('id');
+    const replacementRows = profileRows.map(({ is_current: _isCurrent, ...row }) => row);
+    const { data, error } = await db.rpc('replace_current_project_funding_profiles', {
+      p_rows: replacementRows,
+    });
     if (error) throw new Error(`Funding profile reconciliation failed: ${error.message}`);
-    profilesCreated = data?.length || 0;
+    profilesCreated = Array.isArray(data) ? data.length : 0;
     if (profilesCreated !== profileRows.length) {
       throw new Error(`Funding profile reconciliation attempted ${profileRows.length} but wrote ${profilesCreated}`);
     }

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-export const FUNDING_PROFILE_COMPILER_VERSION = 'portfolio-v1';
+export const FUNDING_PROFILE_COMPILER_VERSION = 'portfolio-v2';
 
 export interface FundingProfileCompilerOrg {
   id: string;
@@ -25,6 +25,25 @@ export interface FundingProfileCompilerProject {
   status?: string | null;
   abn?: string | null;
   metadata?: Record<string, unknown> | null;
+}
+
+export interface FundingProfileCompilerApplicantRoute {
+  id: string;
+  applicant_entity_id: string;
+  route_type: string;
+  status: string;
+  is_default: boolean;
+  eligible_instruments: string[] | null;
+  constraints: string[] | null;
+  entity: {
+    id: string;
+    name: string;
+    entity_type: string;
+    status: string;
+    abn: string | null;
+    dgr_status: string;
+    verification_status: string;
+  };
 }
 
 export interface ExistingFundingProfile {
@@ -97,6 +116,7 @@ function relevantMetadata(metadata: Record<string, unknown>) {
 export function fundingProfileSourceHash(
   org: FundingProfileCompilerOrg,
   project: FundingProfileCompilerProject,
+  applicantRoutes: FundingProfileCompilerApplicantRoute[] = [],
 ) {
   return hash({
     org: {
@@ -121,6 +141,17 @@ export function fundingProfileSourceHash(
       abn: project.abn,
       metadata: relevantMetadata(asRecord(project.metadata)),
     },
+    applicantRoutes: [...applicantRoutes]
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .map(route => ({
+        id: route.id,
+        routeType: route.route_type,
+        status: route.status,
+        isDefault: route.is_default,
+        eligibleInstruments: route.eligible_instruments || [],
+        constraints: route.constraints || [],
+        entity: route.entity,
+      })),
   });
 }
 
@@ -128,10 +159,11 @@ export function isFundingProfileCompiled(
   profile: Record<string, unknown>,
   org: FundingProfileCompilerOrg,
   project: FundingProfileCompilerProject,
+  applicantRoutes: FundingProfileCompilerApplicantRoute[] = [],
 ) {
   const system = asRecord(profile._system);
   return system.compilerVersion === FUNDING_PROFILE_COMPILER_VERSION
-    && system.sourceHash === fundingProfileSourceHash(org, project);
+    && system.sourceHash === fundingProfileSourceHash(org, project, applicantRoutes);
 }
 
 function baselineProfile(project: FundingProfileCompilerProject) {
@@ -181,6 +213,49 @@ function completeness(profile: Record<string, unknown>) {
   return 'baseline' as const;
 }
 
+function canonicalEntityKey(value: unknown) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/\b(pty|ltd|limited|company|incorporated|inc)\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function mergeApplicantEntities(
+  currentEntities: unknown[],
+  routes: FundingProfileCompilerApplicantRoute[],
+) {
+  const merged = currentEntities.map(entity => asRecord(entity));
+  for (const route of routes) {
+    const key = canonicalEntityKey(route.entity.name);
+    const index = merged.findIndex(entity => canonicalEntityKey(entity.legalName || entity.name) === key);
+    const registryFields = {
+      registryEntityId: route.entity.id,
+      registryRouteId: route.id,
+      registrySource: 'org_applicant_entities',
+      routeType: route.route_type,
+      routeStatus: route.status,
+      isDefaultRoute: route.is_default,
+      abn: route.entity.abn,
+      dgrStatus: route.entity.dgr_status,
+      verificationStatus: route.entity.verification_status,
+    };
+    if (index >= 0) {
+      merged[index] = { ...merged[index], ...registryFields };
+    } else {
+      merged.push({
+        id: `registry:${route.entity.id}`,
+        legalName: route.entity.name,
+        legalType: route.entity.entity_type,
+        acceptedInstruments: route.eligible_instruments || [],
+        constraints: route.constraints || [],
+        ...registryFields,
+      });
+    }
+  }
+  return merged;
+}
+
 export function fundingProfileText(profile: Record<string, unknown>) {
   const identity = asRecord(profile.identity);
   const purpose = asRecord(profile.purpose);
@@ -199,6 +274,16 @@ export function fundingProfileText(profile: Record<string, unknown>) {
     ...asStringArray(profile.geographies),
     ...asStringArray(profile.beneficiaries),
     ...asStringArray(profile.acceptedInstruments),
+    ...asArray(profile.entities).flatMap(entity => {
+      const row = asRecord(entity);
+      return [
+        asString(row.legalName) || asString(row.name),
+        asString(row.legalType),
+        asString(row.routeType),
+        asString(row.dgrStatus),
+        ...asStringArray(row.acceptedInstruments),
+      ];
+    }),
     ...asArray(fundingNeed.blocks).flatMap(block => {
       const row = asRecord(block);
       return [asString(row.label), ...asStringArray(row.keywords)];
@@ -210,8 +295,9 @@ export function compileFundingProfile(input: {
   org: FundingProfileCompilerOrg;
   project: FundingProfileCompilerProject;
   existing?: ExistingFundingProfile;
+  applicantRoutes?: FundingProfileCompilerApplicantRoute[];
 }) {
-  const { org, project, existing } = input;
+  const { org, project, existing, applicantRoutes = [] } = input;
   if (!project.code) throw new Error(`${project.name} needs a canonical project code`);
   const metadata = asRecord(project.metadata);
   const current: Record<string, unknown> = existing?.profile || baselineProfile(project);
@@ -228,7 +314,14 @@ export function compileFundingProfile(input: {
     ...asStringArray(metadata.aliases),
   ]);
 
-  const sourceHash = fundingProfileSourceHash(org, project);
+  const sourceHash = fundingProfileSourceHash(org, project, applicantRoutes);
+  const defaultApplicantRoute = applicantRoutes.find(route => route.is_default);
+  const applicantRouteReady = defaultApplicantRoute?.status === 'ready'
+    && defaultApplicantRoute.entity.status === 'active'
+    && defaultApplicantRoute.entity.verification_status === 'verified';
+  const unresolvedDecisions = asStringArray(current.unresolvedDecisions).filter(
+    decision => !(applicantRouteReady && decision === 'Confirm applicant and contracting entities.')
+  );
   const profile: Record<string, unknown> = {
     ...current,
     schemaVersion: 'project-funding-profile-v1',
@@ -248,7 +341,7 @@ export function compileFundingProfile(input: {
       outcomes: asStringArray(currentPurpose.outcomes),
       maturity: project.status || 'active',
     },
-    entities: asArray(current.entities),
+    entities: mergeApplicantEntities(asArray(current.entities), applicantRoutes),
     partnerPathways: asArray(current.partnerPathways),
     geographies: asStringArray(current.geographies),
     beneficiaries: asStringArray(current.beneficiaries),
@@ -263,7 +356,7 @@ export function compileFundingProfile(input: {
     acceptedInstruments: asStringArray(current.acceptedInstruments),
     constraints: asStringArray(current.constraints),
     relationships: asArray(current.relationships),
-    unresolvedDecisions: asStringArray(current.unresolvedDecisions),
+    unresolvedDecisions,
     themes: unique([...asStringArray(current.themes), ...asStringArray(metadata.funding_tags)]),
     organisationContext: {
       orgProfileId: org.id,
@@ -275,7 +368,10 @@ export function compileFundingProfile(input: {
       auspiceOrgName: org.auspice_org_name,
       geographicFocus: org.geographic_focus || [],
       projectAbn: project.abn || null,
-      applicantRouteStatus: 'requires_project_decision',
+      applicantRouteStatus: applicantRouteReady ? 'ready' : 'requires_project_decision',
+      defaultApplicantEntityId: defaultApplicantRoute?.entity.id || null,
+      defaultApplicantRouteId: defaultApplicantRoute?.id || null,
+      defaultApplicantName: defaultApplicantRoute?.entity.name || null,
     },
     searchContext: {
       ...currentSearchContext,
@@ -307,7 +403,7 @@ export function compileFundingProfile(input: {
   const profileVersion = `${project.code.toLowerCase()}-${hash(profile)}`;
   const previousProvenance = (Array.isArray(existing?.provenance) ? existing.provenance : []).filter(item => {
     const row = asRecord(item);
-    return !(row.type === 'table' && ['org_profiles', 'org_projects'].includes(String(row.table || '')));
+    return !(row.type === 'table' && ['org_profiles', 'org_projects', 'org_applicant_entities', 'project_applicant_routes'].includes(String(row.table || '')));
   });
   return {
     org_project_id: project.id,
@@ -321,6 +417,10 @@ export function compileFundingProfile(input: {
       ...previousProvenance,
       { type: 'table', table: 'org_profiles', id: org.id },
       { type: 'table', table: 'org_projects', id: project.id, sourceHash },
+      ...applicantRoutes.flatMap(route => [
+        { type: 'table', table: 'project_applicant_routes', id: route.id },
+        { type: 'table', table: 'org_applicant_entities', id: route.entity.id },
+      ]),
     ],
     created_by: 'funding-profile-compiler',
     is_current: true,

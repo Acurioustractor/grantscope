@@ -69,6 +69,7 @@ describe('buildFundingControlPlane', () => {
         sync_status: 'succeeded',
         last_error: null,
       }],
+      applicantRoutes: [],
     });
 
     expect(controlPlane.summary).toMatchObject({
