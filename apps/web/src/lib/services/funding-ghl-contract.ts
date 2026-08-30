@@ -119,8 +119,8 @@ export function buildFundingGhlContractSnapshot(input: {
 async function loadMetrics(): Promise<FundingGhlContractStatus['metrics']> {
   const db = getServiceSupabase();
   const [grants, unaligned, handoffs, foundationLinks, foundationContacts] = await Promise.all([
-    db.from('ghl_opportunities').select('id', { count: 'exact', head: true }).ilike('pipeline_name', 'Grants'),
-    db.from('ghl_opportunities').select('id', { count: 'exact', head: true }).ilike('pipeline_name', 'Grants').is('project_code', null),
+    db.from('ghl_opportunities').select('id', { count: 'exact', head: true }).ilike('pipeline_name', 'Grants').eq('sync_status', 'synced'),
+    db.from('ghl_opportunities').select('id', { count: 'exact', head: true }).ilike('pipeline_name', 'Grants').eq('sync_status', 'synced').is('project_code', null),
     db.from('funding_ghl_handoffs').select('id', { count: 'exact', head: true }),
     db.from('org_project_foundations').select('id', { count: 'exact', head: true }),
     db.from('org_project_foundations').select('id', { count: 'exact', head: true }).not('ghl_contact_id', 'is', null),

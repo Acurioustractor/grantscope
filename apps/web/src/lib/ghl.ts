@@ -105,11 +105,93 @@ export async function updateOpportunity(
   });
 }
 
-export async function getOpportunities(pipelineId: string) {
+export type GhlOpportunityCustomField = {
+  id: string;
+  fieldValueString?: unknown;
+  fieldValueNumber?: unknown;
+  fieldValueDate?: unknown;
+  fieldValue?: unknown;
+  field_value?: unknown;
+  value?: unknown;
+};
+
+export type GhlOpportunityContact = {
+  id?: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  companyName?: string;
+  tags?: string[];
+  customFields?: GhlOpportunityCustomField[];
+  createdAt?: string;
+  updatedAt?: string;
+  dateAdded?: string;
+  dateUpdated?: string;
+};
+
+export type GhlOpportunity = {
+  id: string;
+  _id?: string;
+  name?: string;
+  contactId?: string;
+  contact?: GhlOpportunityContact;
+  pipelineId?: string;
+  pipelineStageId?: string;
+  assignedTo?: string;
+  status?: string;
+  monetaryValue?: number | string;
+  customFields?: GhlOpportunityCustomField[];
+  createdAt?: string;
+  updatedAt?: string;
+  dateAdded?: string;
+  dateUpdated?: string;
+  lastStageChangeAt?: string;
+  lastStatusChangeAt?: string;
+};
+
+export type GhlOpportunitySearchPage = {
+  opportunities: GhlOpportunity[];
+  meta?: {
+    total?: number;
+    nextPage?: boolean;
+    nextPageUrl?: string;
+    startAfter?: number | string;
+    startAfterId?: string;
+  };
+};
+
+export async function searchOpportunitiesPage(input: {
+  pipelineId: string;
+  startAfter?: number | string;
+  startAfterId?: string;
+  limit?: number;
+}): Promise<GhlOpportunitySearchPage> {
   const locationId = process.env.GHL_LOCATION_ID;
-  return ghlFetch(
-    `/opportunities/search?location_id=${locationId}&pipeline_id=${pipelineId}&limit=100`
-  );
+  if (!locationId) throw new Error('GHL_LOCATION_ID not set');
+  const query = new URLSearchParams({
+    locationId,
+    pipelineId: input.pipelineId,
+    status: 'all',
+    limit: String(Math.min(Math.max(input.limit || 100, 1), 100)),
+  });
+  if (input.startAfter !== undefined) query.set('startAfter', String(input.startAfter));
+  if (input.startAfterId) query.set('startAfterId', input.startAfterId);
+  const payload = await ghlFetch(`/opportunities/search?${query.toString()}`, {}, 'v3');
+  return {
+    opportunities: Array.isArray(payload?.opportunities)
+      ? payload.opportunities as GhlOpportunity[]
+      : [],
+    meta: payload?.meta && typeof payload.meta === 'object'
+      ? payload.meta as GhlOpportunitySearchPage['meta']
+      : undefined,
+  };
+}
+
+export async function getOpportunities(pipelineId: string): Promise<GhlOpportunitySearchPage> {
+  return searchOpportunitiesPage({ pipelineId, limit: 100 });
 }
 
 export async function getPipelines() {
