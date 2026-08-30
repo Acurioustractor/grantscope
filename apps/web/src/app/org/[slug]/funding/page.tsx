@@ -2,8 +2,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getProjectFundingPortfolio } from '@/lib/services/project-funding-service';
 import { getLatestFundingWeeklyDigest } from '@/lib/services/funding-weekly-digest';
+import { getFundingControlPlane } from '@/lib/services/funding-control-plane';
 import { PursueFundingForm } from './pursue-funding-form';
 import { CorrectionForm } from './correction-form';
+import { FundingSystemReconcileButton } from './funding-system-reconcile-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +15,11 @@ function money(value: number | null): string {
 
 export default async function ProjectFundingPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [portfolio, digest] = await Promise.all([getProjectFundingPortfolio(slug), getLatestFundingWeeklyDigest(slug)]);
+  const [portfolio, digest, controlPlane] = await Promise.all([
+    getProjectFundingPortfolio(slug),
+    getLatestFundingWeeklyDigest(slug),
+    getFundingControlPlane(slug),
+  ]);
   if (!portfolio) notFound();
 
   return (
@@ -35,6 +41,69 @@ export default async function ProjectFundingPage({ params }: { params: Promise<{
       </header>
 
       <div className="mx-auto grid max-w-7xl gap-8 px-5 py-8 lg:px-10">
+        {controlPlane ? (
+          <section aria-labelledby="funding-system-title" className="overflow-hidden rounded-xl border border-[#183426] bg-[#183426] text-white shadow-sm">
+            <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+              <div>
+                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[#b7e4cc]">Portfolio control plane</p>
+                <h2 id="funding-system-title" className="mt-2 text-2xl font-black">One funding system across every project</h2>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-[#dbe9e1]">GrantScope discovers and matches. GHL owns pursued relationships, stages, owners and next actions. Notion holds application writing. Supabase keeps the IDs and reconciliation trail aligned.</p>
+              </div>
+              <FundingSystemReconcileButton automaticActions={controlPlane.summary.automaticActions} />
+            </div>
+            <dl className="grid grid-cols-2 border-y border-[#365947] bg-[#10271b] sm:grid-cols-4 lg:grid-cols-8">
+              {[
+                ['Projects', controlPlane.summary.activeProjects],
+                ['Profiles', `${controlPlane.summary.profileCoverage}/${controlPlane.summary.activeProjects}`],
+                ['Ready', controlPlane.summary.decisionReadyProfiles],
+                ['Matches', controlPlane.summary.evidenceSafeMatches],
+                ['Opportunities', controlPlane.summary.uniqueOpportunities],
+                ['GHL pursued', controlPlane.summary.ghlLinked],
+                ['Notion briefs', controlPlane.summary.notionLinked],
+                ['Review batches', controlPlane.summary.humanActions],
+              ].map(([label, value]) => (
+                <div key={label} className="border-r border-b border-[#365947] p-3 last:border-r-0 sm:p-4">
+                  <dt className="font-mono text-[9px] uppercase tracking-wide text-[#b7c8be]">{label}</dt>
+                  <dd className="mt-1 text-lg font-black text-white">{value}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="overflow-x-auto bg-white text-[#0f172a]">
+              <table className="w-full min-w-[760px] text-left text-xs">
+                <thead className="border-b border-[#dbe4df] bg-[#f1f8f5] text-[10px] uppercase tracking-wide text-[#475569]">
+                  <tr>
+                    <th className="px-4 py-3">Project</th>
+                    <th className="px-4 py-3">Profile</th>
+                    <th className="px-4 py-3">Evidence-safe matches</th>
+                    <th className="px-4 py-3">GHL pursued</th>
+                    <th className="px-4 py-3">Notion workspaces</th>
+                    <th className="px-4 py-3">System batches</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#e2e8f0]">
+                  {controlPlane.projects.map(project => (
+                    <tr key={project.projectId}>
+                      <td className="px-4 py-3">
+                        <Link href={`/org/${slug}/${project.projectSlug}/funding`} className="font-bold text-[#183426] hover:underline">{project.projectName}</Link>
+                        <div className="font-mono text-[9px] text-[#64748b]">{project.projectCode || 'CODE REQUIRED'}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase ${project.profileStatus === 'decision_ready' ? 'bg-[#dcfce7] text-[#166534]' : project.profileStatus === 'partial' ? 'bg-[#fef3c7] text-[#92400e]' : 'bg-[#e2e8f0] text-[#475569]'}`}>{project.profileStatus.replace('_', ' ')}</span>
+                        {project.unresolvedDecisions ? <span className="ml-2 text-[#64748b]">{project.unresolvedDecisions} gaps</span> : null}
+                      </td>
+                      <td className="px-4 py-3 font-mono font-bold">{project.evidenceSafeMatches}</td>
+                      <td className="px-4 py-3 font-mono font-bold">{project.ghlLinked}</td>
+                      <td className="px-4 py-3 font-mono font-bold">{project.notionLinked}</td>
+                      <td className="px-4 py-3">
+                        <span className={project.attention ? 'font-bold text-[#b45309]' : 'font-bold text-[#166534]'}>{project.attention ? `${project.attention} batch${project.attention === 1 ? '' : 'es'}` : 'Aligned'}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : null}
         <section aria-labelledby="weekly-cycle-title" className="rounded-xl border border-[#b8d2c5] bg-[#183426] p-5 text-white shadow-sm">
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_2fr]">
             <div>
