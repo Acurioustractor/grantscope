@@ -124,9 +124,11 @@ public read path. `gs_entities` has a deliberate `Public read` policy. Legacy JW
 (a call with the old anon JWT returns 401 "Legacy API keys are disabled") `[V]`; `supabase-env.ts` already prefers the
 publishable and secret keys, so the app works, but `NEXT_PUBLIC_SUPABASE_ANON_KEY` is still in `.env` as a trap for scripts.
 
-**One correctness bug of the RLS class.** `/home` reads `source_frontier` through the cookie (authenticated) client
-(`apps/web/src/app/home/page.tsx:236`); that table has RLS on and no policy, so the panel renders empty for every logged-in
-user `[V]`. It is the only one of the eight tables the SSR client touches without a read policy.
+**The RLS-on-no-policy class has no live victim that I found.** I first read `/home`'s `source_frontier` calls as going through
+the cookie client; on tracing the file they use `getServiceSupabase()` (`apps/web/src/app/home/page.tsx:211`), so the panel
+works. The cookie client there is used only for the session. The 280 no-policy tables remain a trap for any future SSR or
+browser read, to be handled with a policy or a service read when such a read is written, not now. (Corrected 2026-09-05
+after first reporting it as a live bug.)
 
 **Edge functions** `[V]`: 13 on the project, deployed from five different local paths, including `~/Downloads/witta-swot-analysis`
 (`app-user-sync`) and `~/Code/CRM` (`embeddings`, `query`). `ghl-webhook` and `intake` run with `verify_jwt = false`.
@@ -252,7 +254,7 @@ the command center's 231 server routes, and the sync scripts), so nothing of Ben
 the four publishable-key probes in the header: they must return 0 rows.
 
 Same week, no SQL: delete `NEXT_PUBLIC_SUPABASE_ANON_KEY` from every `.env` and from Vercel, run `/config-truth` on the
-publishable key in production, and give `source_frontier` a read policy or move that read to the service client.
+publishable key in production.
 
 ### Phase 1, this month: one migrations home
 
