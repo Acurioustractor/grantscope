@@ -2,7 +2,7 @@
 date: 2026-09-05
 topic: How CivicGraph, JusticeHub, Empathy Ledger, Harvest, Goods and ACT's business systems use Supabase, and how to make the grants focus sustainable
 method: single-session review against the live project (catalog queries, advisor dumps, read-only REST probes with the publishable key) plus greps across six local repos
-status: findings and a sequenced plan; Phase 0 remediation SQL drafted, NOT applied
+status: findings and a sequenced plan; Phase 0 remediation APPLIED 2026-09-05 (Ben's verb), verified by catalog post-check and publishable-key re-probe
 remediation: supabase/migrations/20260905120000_close_private_view_and_anon_rebuild_exposure.sql
 ---
 
@@ -244,7 +244,7 @@ giving, receiving, contracting, boards and place" in one call; the `/api/data/en
 
 ### Phase 0, this week: close the exposure (one migration, Ben's verb)
 
-`supabase/migrations/20260905120000_close_private_view_and_anon_rebuild_exposure.sql` on this branch, not applied. It flips
+`supabase/migrations/20260905120000_close_private_view_and_anon_rebuild_exposure.sql`, **applied 2026-09-05 with `psql -f`**. Post-check: 0 private definer views readable by anon, 0 anon-writable views, 0 anon-or-authenticated rebuild functions, 0 permissive policies left. Re-probe with the publishable key: the seven private views now return 401 `permission denied`; `gs_entities` and `justice_funding_clean` still serve rows as intended. Service-role reads of the same views still work, so the desk is unaffected. It flips
 the 15 private definer views to `security_invoker` and revokes anon on them; revokes anon writes on the 48 updatable views and
 authenticated writes on the private 31; makes the three rebuild functions service-role only; drops the five `USING (true)`
 policies on the GHL, comms, Xero and applications tables. Every ACT reader uses the service role (verified for grantscope,
