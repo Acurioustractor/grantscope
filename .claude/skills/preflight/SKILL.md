@@ -11,6 +11,7 @@ node --env-file=.env scripts/preflight.mjs
 
 2. Report the results to the user. If any checks fail, suggest fixes:
    - **Database:** Check `.env` has `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+   - **Private exposure:** `scripts/check-private-exposure.mjs`. Red names an ACT-owned object the public key can read that is not on the allowlist; close it through `/db-apply` the same day.
    - **Migration parity:** `supabase/migrations/` vs the database tracker. Red means something was applied with no committed file (commit it with the same version); "draft(s) awaiting /db-apply" is normal while Ben has not said apply.
    - **Environment:** List missing env vars and where to get them
    - **Git:** Show uncommitted files, offer to commit

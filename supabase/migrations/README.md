@@ -44,5 +44,6 @@ pre-baseline versions, and resetting those would erase the only record of what t
 - Nothing under `xero_*`, `ghl_*`, `linkedin_*`, `communications_*`, `email_*`, `receipt*`,
   `project_funding_*`, `project_pipelines`, `goods_relationships` is ever granted to `anon`.
 - Functions set `search_path = public, extensions, pg_temp`.
-- `schema_ownership` gets a row for every new object (owner, consumers, evidence) in the same migration.
+- `schema_ownership` gets a row for every new object (owner, consumers, evidence) in the same migration. An ACT-owned object
+  with no row is invisible to `scripts/check-private-exposure.mjs`, which is the gate that keeps private data off the public key.
 - Money surfaces run `/money-audit` before shipping; that is unchanged.
