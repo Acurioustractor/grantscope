@@ -435,3 +435,20 @@ created by `supabase_admin`, which nothing here uses. The 48 anon-writable views
 **Not started in Phase 1:** the shared types package consumed by JusticeHub and Empathy Ledger (CivicGraph has the file;
 wiring `Database` into the clients is Phase 3 work), and the CI job for `check-migration-parity.mjs --strict` (CI has no
 service-role secret today; only the legacy anon key, which is dead).
+
+**Legibility slice (same day, after the applies).** `/ops/schema` renders the register live: one row per relation with
+owner, consumers, size, kind, definer flag and whether the public key can read it, and a red count of private objects
+readable by anon (must be 0). `scripts/classify-changes.sh` no longer counts a symlinked `node_modules` as a changed
+file (two false VISIBLE verdicts on 2026-09-05). CI gains a `Migration Parity` job that runs `check-migration-parity.mjs`
+(`--strict` on main) once `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` exist as repo secrets, and warns until then.
+`/preflight` runs the parity check. `20260905150000_act_finance_aggregate_views_anon_revoke.sql` is drafted for the five
+ACT finance aggregates that still carry definer + anon grants (0 rows today, wrong shape). PR #408 (three server actions
+reading the connection through `supabase-env`) waits for a preview check of the feedback, get-a-report and partner forms.
+
+**What the register page measured on its first run.** By RLS state, 42 private-owner objects are open to the public key:
+33 tables with a permissive anon policy, 1 matview, 8 definer views. 36 are meant to be: consent- and approval-gated
+publishing rows (Empathy Ledger stories, quotes, storytellers with consent; Harvest approved businesses and events; studio
+approved media and reviews; ACT's public key-people and PMPP knowledge). The remaining six are ACT context or ops with a
+plain "Public read" policy or a bare matview grant, drafted as `20260905151000_act_context_tables_anon_revoke.sql`, and
+the five ACT finance definer views drafted as `20260905150000`. Grant alone is not exposure: 288 objects carry an anon
+SELECT grant that RLS blocks, 140 of them private; the page shows those as "grant, RLS blocks", never red.

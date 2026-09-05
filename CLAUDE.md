@@ -22,6 +22,18 @@ Everything older lives in `supabase/migrations_history/` and is never applied. M
 or via the MCP `apply_migration` tool must be committed here with the same version in the same session; the parity
 check names the ones that were not. Generated types: `supabase/types/database.types.ts`. Edge functions: `supabase/functions/`.
 
+## How a change goes live (the whole path, decided 2026-09-05)
+
+1. **Branch off `main`** (`git switch -c <type>/<slug>`). Never commit on `main`. One session per checkout.
+2. **Database change?** Write `supabase/migrations/<version>_<name>.sql`, then `/db-apply` (Ben's verb). Nothing else
+   touches the schema. `node --env-file=.env scripts/check-migration-parity.mjs` says whether the folder and the
+   database agree. The data itself is legible at **`/ops/schema`** (owner, consumers, size, public-key exposure).
+3. **Land with `/ship-merge`.** It runs the gate (`scripts/precheck.sh`), pushes, opens the PR, classifies:
+   SAFE paths (`scripts/`, `supabase/`, `docs/`, `thoughts/`, `.github/`, `.claude/`, `lib/`, `api/`, `ops/`,
+   `admin/`, tests) merge themselves on green; anything a visitor can render waits for Ben's preview and the word "merge".
+4. **Merged = deployed.** Vercel builds `main`; `/config-truth` when something is set but inert.
+5. **Nothing else.** No worktrees for Ben, no manual pushes, no MCP `apply_migration` without a committed file.
+
 ## Rule #2: Verify Schema Before Writing Queries
 
 Never guess column names. Check `data/schema-cache.md` first — it has full schemas for the top 8 tables. For other tables:

@@ -46,6 +46,21 @@ async function checkDb() {
   return { ok: true, detail: `${tableCount} tables, ${entityCount} entities` };
 }
 
+async function checkMigrationParity() {
+  // supabase/migrations vs supabase_migrations.schema_migrations (scripts/check-migration-parity.mjs).
+  // Exit 1 there means something was applied to the database with no committed file: the 2026-09-05 orphan class.
+  try {
+    const out = execSync('node scripts/check-migration-parity.mjs', { cwd: ROOT, encoding: 'utf8', env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
+    const summary = out.split('\n').find((l) => l.startsWith('✓')) || out.trim().split('\n')[0] || 'ok';
+    const pending = (out.match(/^\s+\d{14}_.+\.sql$/gm) || []).length;
+    return { ok: true, detail: pending ? `${summary} (${pending} draft(s) awaiting /db-apply)` : summary };
+  } catch (e) {
+    const out = (e.stdout || '') + (e.stderr || '');
+    const orphan = out.split('\n').find((l) => l.includes('NO file'));
+    return { ok: false, detail: orphan ? orphan.trim() : `parity check failed: ${(e.message || '').split('\n')[0]}` };
+  }
+}
+
 function checkEnv() {
   const required = ['DATABASE_PASSWORD', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
   const optional = ['ABN_LOOKUP_GUID', 'OPENAI_API_KEY', 'STRIPE_SECRET_KEY'];
@@ -106,6 +121,7 @@ console.log('\n  GrantScope Preflight Check\n');
 
 const results = await Promise.all([
   check('Database', checkDb),
+  check('Migration parity', checkMigrationParity),
   Promise.resolve(check('Environment', checkEnv)),
   Promise.resolve(check('Git', checkGit)),
   Promise.resolve(check('Port 3003', checkPort)),

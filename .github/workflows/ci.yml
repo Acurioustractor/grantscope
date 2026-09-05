@@ -84,3 +84,28 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+  migration-parity:
+    name: Migration Parity
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Fails when the database holds a post-baseline migration with no committed file, and (strict, on main)
+      # when a committed file was never applied. Needs the two repo secrets above; until Ben adds them this
+      # step reports "skipped" rather than pretending to have checked.
+      - name: Parity (folder vs supabase_migrations.schema_migrations)
+        if: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        run: node scripts/check-migration-parity.mjs ${{ github.ref == 'refs/heads/main' && '--strict' || '' }}
+      - name: Parity skipped (no SUPABASE_SERVICE_ROLE_KEY secret)
+        if: ${{ env.SUPABASE_SERVICE_ROLE_KEY == '' }}
+        run: echo "::warning::migration parity not checked; add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY as repo secrets"
