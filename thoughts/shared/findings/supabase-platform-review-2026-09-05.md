@@ -449,6 +449,9 @@ reading the connection through `supabase-env`) waits for a preview check of the 
 33 tables with a permissive anon policy, 1 matview, 8 definer views. 36 are meant to be: consent- and approval-gated
 publishing rows (Empathy Ledger stories, quotes, storytellers with consent; Harvest approved businesses and events; studio
 approved media and reviews; ACT's public key-people and PMPP knowledge). The remaining six are ACT context or ops with a
-plain "Public read" policy or a bare matview grant, drafted as `20260905151000_act_context_tables_anon_revoke.sql`, and
-the five ACT finance definer views drafted as `20260905150000`. Grant alone is not exposure: 288 objects carry an anon
+plain "Public read" policy or a bare matview grant, closed by `20260905151000_act_context_tables_anon_revoke.sql`, and
+the five ACT finance definer views by `20260905150000`, both applied 2026-09-05 on Ben's verb; the register's open-private
+count went from 42 to 31, all 31 consent-gated publishing rows by design. The same day the ACT Context block was re-synced
+into seven repos with a "Shared Supabase project" section carrying the six rules (the sync template had fallen behind the
+downstream copies and would have dropped the 19 July Harvest decision; fixed on act-global branch `sync/shared-supabase-rules`). Grant alone is not exposure: 288 objects carry an anon
 SELECT grant that RLS blocks, 140 of them private; the page shows those as "grant, RLS blocks", never red.
