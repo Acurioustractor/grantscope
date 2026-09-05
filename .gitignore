@@ -123,3 +123,6 @@ outputs/
 .claude/skills/writing-for-agents
 .claude/skills/writing-fragments
 .claude/skills/writing-shape
+
+# Supabase CLI link state (created by `supabase link`; machine-local)
+supabase/.temp/

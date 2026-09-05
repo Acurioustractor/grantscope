@@ -2,7 +2,7 @@
 /**
  * Emit the ingest migration for a resolved grantee file. The last hand-written step of a wave.
  *
- * The migration shape is settled (see migrations/2026-08-17-hmst-grantees-ingest.sql) and its two
+ * The migration shape is settled (see supabase/migrations_history/legacy-date-named/2026-08-17-hmst-grantees-ingest.sql) and its two
  * non-obvious details are the ones worth never retyping:
  *
  *   1. `source_record_id` = name|year|rownum. Without the rownum a funder that gave the same org

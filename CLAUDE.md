@@ -10,11 +10,17 @@ Use the GrantScope Supabase MCP only when it is configured for project `tednluwf
 # SELECT queries — use gsql.mjs
 node --env-file=.env scripts/gsql.mjs "SELECT COUNT(*) FROM gs_entities"
 
-# DDL/migrations — use psql
-source .env && PGPASSWORD="$DATABASE_PASSWORD" psql -h aws-0-ap-southeast-2.pooler.supabase.com -p 5432 -U "postgres.tednluwflfhxyucgwigh" -d postgres -f <file.sql>
+# DDL/migrations — ONE home, ONE apply path (decided 2026-09-05, see supabase/migrations/README.md)
+#   write supabase/migrations/<14-digit-version>_<name>.sql, then:
+scripts/db-apply.sh supabase/migrations/<version>_<name>.sql     # psql -f + tracker insert; Tier 3, Ben's verb
+node --env-file=.env scripts/check-migration-parity.mjs          # folder vs supabase_migrations.schema_migrations
 ```
 
-**Warning:** gsql.mjs `-c` flag mangles `$$` dollar-quoting — use `psql -f` for migrations with PL/pgSQL functions.
+**Warning:** gsql.mjs `-c` flag mangles `$$` dollar-quoting — db-apply.sh uses `psql -f`, which does not.
+**The baseline is `supabase/migrations/20260905130000_baseline_remote_schema.sql`** (the live schema, dumped 2026-09-05).
+Everything older lives in `supabase/migrations_history/` and is never applied. Migrations applied from OTHER repos
+or via the MCP `apply_migration` tool must be committed here with the same version in the same session; the parity
+check names the ones that were not. Generated types: `supabase/types/database.types.ts`. Edge functions: `supabase/functions/`.
 
 ## Rule #2: Verify Schema Before Writing Queries
 
@@ -80,7 +86,7 @@ Before building or prioritising any SE-registry/procurement/giving feature, chec
 ## Project Structure
 
 - **Monorepo:** `apps/web` (Next.js 15, Tailwind 4), `scripts/` (data pipeline agents)
-- **Agent registry:** `scripts/lib/agent-registry.mjs` (45 agents, 8 categories)
+- **Agent registry:** `scripts/lib/agent-registry.mjs` (185 agents, 14 categories, measured 2026-09-05)
 - **Orchestrator:** `scripts/agent-orchestrator.mjs`
 - **Mission Control:** `apps/web/src/app/mission-control/`
 

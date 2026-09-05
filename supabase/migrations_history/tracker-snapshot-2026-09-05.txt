@@ -1,0 +1,423 @@
+version        | name                                                     | created_by                                                                  
+---------------+----------------------------------------------------------+-----------------------------------------------------------------------------
+20260105090233 | ghl_sync_schema                                          |                                                                             
+20260120000000 | project_updates                                          |                                                                             
+20260121000000 | communications_history                                   |                                                                             
+20260121000001 | voice_notes                                              |                                                                             
+20260121000010 | agent_audit_log                                          |                                                                             
+20260121000011 | cultural_triggers                                        |                                                                             
+20260121000012 | api_usage                                                |                                                                             
+20260121000013 | unified_entities                                         |                                                                             
+20260121000014 | decision_traces                                          |                                                                             
+20260121300000 | agent_command_center                                     |                                                                             
+20260121400000 | executing_agents                                         |                                                                             
+20260122000000 | farmhand_migration_tables                                |                                                                             
+20260122000001 | fix_embedding_dimensions                                 |                                                                             
+20260122100000 | agentic_workflow                                         |                                                                             
+20260122100001 | fix_agentic_triggers                                     |                                                                             
+20260122200000 | agentic_projects                                         |                                                                             
+20260122300000 | project_knowledge                                        |                                                                             
+20260122400000 | calendar_events                                          |                                                                             
+20260123000001 | xero_integration                                         |                                                                             
+20260123000002 | agent_learnings                                          |                                                                             
+20260123000003 | cultural_review_queue                                    |                                                                             
+20260123100000 | multi_agent_coordination                                 |                                                                             
+20260124000000 | receipt_reconciliation                                   |                                                                             
+20260124100000 | goals_2026                                               |                                                                             
+20260125000000 | goals_health_system                                      |                                                                             
+20260126000000 | goal_position_ordering                                   |                                                                             
+20260127000000 | subscriptions                                            |                                                                             
+20260127000001 | project_health                                           |                                                                             
+20260127000002 | grants                                                   |                                                                             
+20260128000000 | subscription_discovery                                   |                                                                             
+20260130000000 | imessage_sync                                            |                                                                             
+20260131000000 | memory_lifecycle                                         |                                                                             
+20260131100000 | knowledge_graph                                          |                                                                             
+20260131200000 | episodic_working_memory                                  |                                                                             
+20260131300000 | hybrid_retrieval                                         |                                                                             
+20260131400000 | procedural_memory                                        |                                                                             
+20260201000000 | learning_system                                          |                                                                             
+20260201100000 | integration_events                                       |                                                                             
+20260201500000 | fix_nic_emails_contacts                                  |                                                                             
+20260202000000 | communication_intelligence                               |                                                                             
+20260203000000 | drop_legacy_tables                                       |                                                                             
+20260204000000 | reminders                                                |                                                                             
+20260204000001 | repo_project_links                                       |                                                                             
+20260204100000 | project_summaries                                        |                                                                             
+20260205000000 | daily_reflections                                        |                                                                             
+20260205000001 | fix_ghl_contacts_source                                  |                                                                             
+20260206000000 | goods_newsletter                                         |                                                                             
+20260206100000 | goods_content_library                                    |                                                                             
+20260206200000 | ghl_contacts_website                                     |                                                                             
+20260207000000 | combined_apply                                           |                                                                             
+20260207000001 | strategic_systems                                        |                                                                             
+20260207100000 | combined_xero_and_strategic                              |                                                                             
+20260209000001 | financial_dashboards                                     |                                                                             
+20260209100000 | ecosystem_alignment                                      |                                                                             
+20260210100000 | cross_domain_views                                       |                                                                             
+20260212000001 | add_canonical_entity_link                                |                                                                             
+20260213000001 | enhance_relationship_health                              |                                                                             
+20260213100000 | add_source_to_calendar_events                            |                                                                             
+20260213200000 | add_tags_to_calendar_events                              |                                                                             
+20260214000001 | contact_ranking                                          |                                                                             
+20260214100000 | canonical_projects_table                                 |                                                                             
+20260214200000 | vendor_rules_and_financials                              |                                                                             
+20260214300000 | add_status_to_knowledge                                  |                                                                             
+20260214400000 | grant_discovery                                          |                                                                             
+20260214500000 | grant_assets_and_pipeline                                |                                                                             
+20260214600000 | grant_funder_documents                                   |                                                                             
+20260215000001 | insight_votes                                            |                                                                             
+20260218000001 | telegram_state                                           |                                                                             
+20260218000002 | communication_user_actions                               |                                                                             
+20260222000000 | sprint_items                                             |                                                                             
+20260223000000 | grant_ghl_link                                           |                                                                             
+20260224000000 | grant_enrichment                                         |                                                                             
+20260224000001 | sprint_suggestions                                       |                                                                             
+20260226000000 | notion_agent_trials                                      |                                                                             
+20260227000000 | gmail_push_and_event_reactor                             |                                                                             
+20260228000000 | fix_need_to_respond                                      |                                                                             
+20260228000001 | grant_engine_sources                                     |                                                                             
+20260301000000 | agent_intelligence                                       |                                                                             
+20260301000001 | financial_clarity                                        |                                                                             
+20260301000002 | opportunity_pipeline                                     |                                                                             
+20260301000003 | pm2_cron_status                                          |                                                                             
+20260301000004 | project_intelligence                                     |                                                                             
+20260301000005 | sync_status                                              |                                                                             
+20260303000000 | dext_forwarded_emails                                    |                                                                             
+20260303000001 | stripe_revenue_tracking                                  |                                                                             
+20260304000000 | meeting_transcripts                                      |                                                                             
+20260304000001 | receipt_pipeline                                         |                                                                             
+20260306000000 | grant_deadline_alerts                                    |                                                                             
+20260306000001 | organization_claims                                      | codex                                                                       
+20260309112930 | add_person_identity_map_indexes                          | hi@act.place                                                                
+20260309195757 | justice_funding_dedup_constraint                         | hi@act.place                                                                
+20260309205824 | gs_entity_bridge                                         | hi@act.place                                                                
+20260311015859 | new_vendor_rules_and_dext_setup                          | hi@act.place                                                                
+20260311032533 | new_vendor_rules_and_dext_supplier_status                | hi@act.place                                                                
+20260311032805 | procurement_workspace                                    | hi@act.place                                                                
+20260311034109 | dext_receipts                                            | hi@act.place                                                                
+20260311070123 | governed_proof_control_plane                             | hi@act.place                                                                
+20260311221339 | page_gallery_config                                      | hi@act.place                                                                
+20260312004340 | relationship_pipeline                                    | hi@act.place                                                                
+20260312004938 | idea_board                                               | hi@act.place                                                                
+20260314010253 | intervention_yj_classification                           | hi@act.place                                                                
+20260314054359 | secure_agent_sql                                         | hi@act.place                                                                
+20260314054426 | fix_agent_sql_role                                       | hi@act.place                                                                
+20260315123725 | passion_scoring                                          | hi@act.place                                                                
+20260315124023 | opposition_tracking                                      | hi@act.place                                                                
+20260315124240 | tracked_posts                                            | hi@act.place                                                                
+20260315130649 | community_reflections                                    | hi@act.place                                                                
+20260315225556 | fix_power_concentration_filter                           | hi@act.place                                                                
+20260315231349 | fix_power_concentration_blank_filter                     | hi@act.place                                                                
+20260315231625 | fix_power_concentration_exclude_expenditure              | hi@act.place                                                                
+20260315231822 | fix_overview_exclude_expenditure_aggregates              | hi@act.place                                                                
+20260315232251 | power_concentration_include_abns                         | hi@act.place                                                                
+20260315232537 | fix_top_recipients_exclude_aggregates                    | hi@act.place                                                                
+20260315232622 | fix_all_justice_funding_rpcs_exclude_aggregates          | hi@act.place                                                                
+20260315232650 | fix_organizations_rpc_exclude_aggregates                 | hi@act.place                                                                
+20260316001129 | lga_cross_system_stats                                   | hi@act.place                                                                
+20260317235140 | update_project_tiers                                     | hi@act.place                                                                
+20260318011415 | add_art_tier                                             | hi@act.place                                                                
+20260318033312 | dream_journal                                            | hi@act.place                                                                
+20260318195116 | site_config                                              | hi@act.place                                                                
+20260318200310 | synced_stories_slug                                      | hi@act.place                                                                
+20260318215620 | add_last_campaign_sent_at_to_newsletter_subscriptions    | hi@act.place                                                                
+20260319210400 | add_metadata_to_newsletter_subscriptions                 | hi@act.place                                                                
+20260320044655 | collections_actions                                      | hi@act.place                                                                
+20260320044737 | strategic_alignment                                      | hi@act.place                                                                
+20260320051240 | fix_grant_tracking_fk                                    | hi@act.place                                                                
+20260321075126 | xero_bank_accounts                                       | hi@act.place                                                                
+20260321113833 | program_intervention_linkage_function                    | hi@act.place                                                                
+20260321120213 | create_civic_intelligence_tables                         | hi@act.place                                                                
+20260321122940 | create_ministerial_charter_commitments                   | hi@act.place                                                                
+20260321125411 | add_sent_at_to_civic_alerts                              | hi@act.place                                                                
+20260321202716 | create_civic_digests                                     | hi@act.place                                                                
+20260322090508 | add_chase_status_to_invoice_project_map                  | hi@act.place                                                                
+20260322195114 | archive_unused_tables_phase1                             | hi@act.place                                                                
+20260322195146 | archive_unused_tables_phase2                             | hi@act.place                                                                
+20260322195625 | create_notion_sync_tables                                | hi@act.place                                                                
+20260324085116 | create_pulse_reports_table                               | hi@act.place                                                                
+20260324092335 | youth_opportunities                                      | hi@act.place                                                                
+20260324101733 | network_memberships                                      | hi@act.place                                                                
+20260324103027 | peer_validations                                         | hi@act.place                                                                
+20260325025905 | add_member_hub_indexes                                   | hi@act.place                                                                
+20260325210910 | create_member_actions                                    | hi@act.place                                                                
+20260326035834 | create_justice_funding_clean_view                        | hi@act.place                                                                
+20260327044756 | create_funder_profiles                                   | hi@act.place                                                                
+20260327054521 | add_dgr_status_to_foundations                            | hi@act.place                                                                
+20260327213309 | add_org_control_type                                     | hi@act.place                                                                
+20260327222536 | add_media_sentiment_columns                              | hi@act.place                                                                
+20260328025639 | add_alma_conversations                                   | hi@act.place                                                                
+20260328220932 | power_map_rpcs                                           | hi@act.place                                                                
+20260412221856 | wiki_search_index                                        | hi@act.place                                                                
+20260413050016 | add_rd_eligible_to_bank_statement_lines                  | hi@act.place                                                                
+20260423193337 | create_llm_usage_table                                   | hi@act.place                                                                
+20260428195405 | add_lane_and_lcaa_phase_to_bank_statement_lines          | hi@act.place                                                                
+20260429101903 | lock_down_sensitive_columns_2026_04_29                   | hi@act.place                                                                
+20260429105458 | cleanup_orphans_dupes_rls_2026_04_29                     | hi@act.place                                                                
+20260429105709 | enable_rls_profiles_2026_04_29                           | hi@act.place                                                                
+20260429110048 | tune_autovacuum_heavy_tables_2026_04_29                  | hi@act.place                                                                
+20260429110154 | enable_rls_blog_posts_with_public_read_2026_04_29        | hi@act.place                                                                
+20260429110310 | wrap_auth_uid_in_subselect_batch1_2026_04_29             | hi@act.place                                                                
+20260429110513 | wrap_auth_uid_batch2_2026_04_29                          | hi@act.place                                                                
+20260429110639 | wrap_auth_uid_batch3_procedural_2026_04_29               | hi@act.place                                                                
+20260429194422 | create_extensions_schema_2026_04_30                      | hi@act.place                                                                
+20260429194459 | pin_function_search_path_2026_04_30                      | hi@act.place                                                                
+20260429194543 | move_extensions_to_dedicated_schema_2026_04_30           | hi@act.place                                                                
+20260429194737 | drop_redundant_service_role_policies_2026_04_30          | hi@act.place                                                                
+20260429200222 | wrap_auth_role_in_subselect_2026_04_30                   | hi@act.place                                                                
+20260429200342 | revoke_matviews_from_anon_2026_04_30                     | hi@act.place                                                                
+20260429200458 | drop_largest_unused_indexes_2026_04_30                   | hi@act.place                                                                
+20260429204302 | drop_unused_indexes_batch2_2026_04_30                    | hi@act.place                                                                
+20260429204752 | consolidate_permissive_policies_batch1_2026_04_30        | hi@act.place                                                                
+20260429210357 | c2_batch1_security_invoker_views_2026_04_30              | hi@act.place                                                                
+20260429210417 | c2_batch2_security_invoker_views_2026_04_30              | hi@act.place                                                                
+20260429210437 | c2_batch3_security_invoker_views_2026_04_30              | hi@act.place                                                                
+20260429210459 | c2_batch4_security_invoker_views_2026_04_30              | hi@act.place                                                                
+20260429210600 | enable_rls_notion_server_only_2026_04_30                 | hi@act.place                                                                
+20260429211240 | enable_rls_gmail_server_only_2026_04_30                  | hi@act.place                                                                
+20260429211250 | enable_rls_agent_infrastructure_2026_04_30               | hi@act.place                                                                
+20260429211750 | enable_rls_finance_xero_server_only_2026_04_30           | hi@act.place                                                                
+20260429211802 | enable_rls_supporting_infra_server_only_2026_04_30       | hi@act.place                                                                
+20260429212205 | enable_rls_agent_proposals_2026_04_30                    | hi@act.place                                                                
+20260429212413 | enable_rls_b3_user_facing_2026_04_30                     | hi@act.place                                                                
+20260429213604 | enable_rls_b6_longtail_50_tables_2026_04_30              | hi@act.place                                                                
+20260503000049 | fix_match_grants_search_path                             | hi@act.place                                                                
+20260504003705 | qld_kickstarter_round1_2024_25_seed                      | hi@act.place                                                                
+20260504003752 | qld_kickstarter_round1_resolve_entities                  | hi@act.place                                                                
+20260504003827 | qld_kickstarter_round1_cleanup_duplicates                | hi@act.place                                                                
+20260505054620 | contained_intel_summary_rpc                              | hi@act.place                                                                
+20260505082944 | community_outcome_definitions_align_columns              | hi@act.place                                                                
+20260505084213 | community_outcome_definitions_add_metadata               | hi@act.place                                                                
+20260505202047 | add_pile_column_to_opportunities                         | hi@act.place                                                                
+20260505202520 | backfill_remaining_grant_pile_tags                       | hi@act.place                                                                
+20260505204110 | link_grants_to_foundations_via_provider_map              | hi@act.place                                                                
+20260505204308 | witta_contributions                                      | hi@act.place                                                                
+20260505204526 | add_provider_org_id_column                               | hi@act.place                                                                
+20260505205001 | link_top_provider_orgs                                   | hi@act.place                                                                
+20260505220945 | add_ghl_stage_change_columns                             | hi@act.place                                                                
+20260505221157 | image_overrides                                          | hi@act.place                                                                
+20260505221728 | archive_past_deadline_grants                             | hi@act.place                                                                
+20260505232130 | add_vendor_project_rules_table                           | hi@act.place                                                                
+20260505232300 | grant_vendor_project_rules_access                        | hi@act.place                                                                
+20260505232345 | fix_auto_tag_invoice_search_path                         | hi@act.place                                                                
+20260505234018 | add_xero_payments_table                                  | hi@act.place                                                                
+20260506024641 | editable_content                                         | hi@act.place                                                                
+20260513000000 | ghl_alignment                                            |                                                                             
+20260514201512 | civic_intelligence_claims                                | hi@act.place                                                                
+20260514201528 | civic_org_classifications                                | hi@act.place                                                                
+20260514201541 | civic_meeting_tags                                       | hi@act.place                                                                
+20260514215721 | civic_funding_yj_classifications                         | hi@act.place                                                                
+20260516002403 | money_command_state                                      | hi@act.place                                                                
+20260516010425 | money_command_state_v2_tighter_grant_prob                | hi@act.place                                                                
+20260516012715 | money_command_state_v3_zero_grant_identified             | hi@act.place                                                                
+20260516073801 | finance_ai_routing_suggestions                           | hi@act.place                                                                
+20260516093644 | idea_lifecycle                                           | hi@act.place                                                                
+20260516094422 | idea_stage_entered_at                                    | hi@act.place                                                                
+20260516215838 | finance_ai_routing_xero_writeback                        | hi@act.place                                                                
+20260516233616 | ack_tables_2026_05_18                                    | hi@act.place                                                                
+20260519224855 | alma_org_profile_completeness                            | hi@act.place                                                                
+20260519224925 | alma_outreach_log_and_claim_consent                      | hi@act.place                                                                
+20260519233110 | alma_org_enrichment_candidates                           | hi@act.place                                                                
+20260520204607 | project_funding_allocations                              | hi@act.place                                                                
+20260520204703 | mv_project_quarter_position                              | hi@act.place                                                                
+20260520232823 | mv_project_quarter_position_exclude_transfers_v2         | hi@act.place                                                                
+20260521012453 | v_funder_warmth_v2                                       | hi@act.place                                                                
+20260521014914 | project_funding_allocations_next_report                  | hi@act.place                                                                
+20260521015027 | v_project_funding_position_with_reports_v2               | hi@act.place                                                                
+20260523003555 | jr_evaluations                                           | hi@act.place                                                                
+20260523003559 | youth_survey_results                                     | hi@act.place                                                                
+20260523003602 | scag_communiques                                         | hi@act.place                                                                
+20260523004054 | aihw_youth_justice_stats                                 | hi@act.place                                                                
+20260523004100 | bocsar_youth_offending                                   | hi@act.place                                                                
+20260523004104 | children_commissioner_reports                            | hi@act.place                                                                
+20260523004629 | auditor_general_audits                                   | hi@act.place                                                                
+20260523004632 | abs_indigenous_lga                                       | hi@act.place                                                                
+20260523004711 | aihw_yj_stats_source_format                              | hi@act.place                                                                
+20260523004742 | aihw_yj_stats_extra_cols                                 | hi@act.place                                                                
+20260523005524 | organizations_acco_certified                             | hi@act.place                                                                
+20260523033120 | v_entity_360                                             | hi@act.place                                                                
+20260523034627 | foundation_grantees_yj_classification                    | hi@act.place                                                                
+20260523040310 | gov_programs_evidence_community_led                      | hi@act.place                                                                
+20260523040732 | civic_claim_evidence                                     | hi@act.place                                                                
+20260523043445 | exhibition_search_indexes_v2                             | hi@act.place                                                                
+20260523043539 | exhibition_search_v3                                     | hi@act.place                                                                
+20260523043604 | create_telegram_mutes_table                              | hi@act.place                                                                
+20260523044558 | exhibition_search_yj_ranking                             | hi@act.place                                                                
+20260523044717 | exhibition_service_submissions                           | hi@act.place                                                                
+20260523052521 | state_foundation_flows                                   | hi@act.place                                                                
+20260523053230 | create_newsletter_candidates_and_drafts                  | hi@act.place                                                                
+20260523053442 | civic_claims_source_year                                 | hi@act.place                                                                
+20260523061509 | kiosk_subscribers                                        | hi@act.place                                                                
+20260523062659 | kiosk_hero_photo                                         | hi@act.place                                                                
+20260523064358 | create_supporters_intelligence_table                     | hi@act.place                                                                
+20260523064640 | kiosk_control_signals                                    | hi@act.place                                                                
+20260523070051 | supporters_intelligence_add_opp_columns                  | hi@act.place                                                                
+20260523070353 | project_pipelines_table_and_view                         | hi@act.place                                                                
+20260523070454 | data_sufficiency_layer                                   | hi@act.place                                                                
+20260523071259 | data_agent_findings                                      | hi@act.place                                                                
+20260523073312 | supporter_comms_summary_table                            | hi@act.place                                                                
+20260523074919 | people_backbone                                          | hi@act.place                                                                
+20260523075147 | funder_briefs_table                                      | hi@act.place                                                                
+20260527021339 | create_pending_form_submissions                          | hi@act.place                                                                
+20260527033122 | contact_project_links_ghl_contact_id                     | hi@act.place                                                                
+20260528075156 | add_matrix_embeddings                                    | hi@act.place                                                                
+20260528075644 | matrix_nearest_neighbour_rpcs                            | hi@act.place                                                                
+20260528190628 | alma_evidence_embedding_vector                           | hi@act.place                                                                
+20260528192259 | justice_matrix_search_evidence_rpc                       | hi@act.place                                                                
+20260528201901 | justice_matrix_evidence_consent_gate                     | hi@act.place                                                                
+20260528224514 | justice_matrix_related_for_evidence_rpcs                 | hi@act.place                                                                
+20260528225420 | justice_matrix_search_cases_add_verified                 | hi@act.place                                                                
+20260529045533 | ghl_contacts_audience_segments                           | hi@act.place                                                                
+20260529045720 | matrix_human_review_provenance                           | hi@act.place                                                                
+20260529045739 | alma_evidence_consent_governance                         | hi@act.place                                                                
+20260530034155 | justice_matrix_issues                                    | hi@act.place                                                                
+20260530043149 | justice_matrix_issues_surface                            | hi@act.place                                                                
+20260602224658 | tagging_sweep_runs                                       | hi@act.place                                                                
+20260606030532 | community_directory_orgs                                 | hi@act.place                                                                
+20260610200828 | org_claims_and_members_adapted                           | hi@act.place                                                                
+20260611044922 | create_missing_campaign_capture_tables                   | hi@act.place                                                                
+20260611204634 | campaign_nomination_upvotes                              | hi@act.place                                                                
+20260613034308 | create_contained_capture_log                             | hi@act.place                                                                
+20260613073250 | jm_search_cases_human_confirmed                          | hi@act.place                                                                
+20260613084603 | justice_matrix_hybrid_search                             | hi@act.place                                                                
+20260613084859 | justice_matrix_hybrid_search_v3                          | hi@act.place                                                                
+20260613085010 | justice_matrix_hybrid_search_v4                          | hi@act.place                                                                
+20260614050216 | justice_matrix_gaps                                      | hi@act.place                                                                
+20260614052801 | justice_matrix_external_id                               | hi@act.place                                                                
+20260615105701 | jr_sites_registry                                        | hi@act.place                                                                
+20260615203645 | enable_rls_and_remove_public_writes                      | hi@act.place                                                                
+20260615214028 | jr_sites_publish_gate                                    | hi@act.place                                                                
+20260616001228 | jr_site_metrics                                          | hi@act.place                                                                
+20260616003512 | jr_site_metrics_grants                                   | hi@act.place                                                                
+20260616020112 | grant_exec_sql_to_service_role                           | hi@act.place                                                                
+20260616021608 | drop_redundant_sql_exec_helpers                          | hi@act.place                                                                
+20260616073021 | 20260617000001_event_registrations_mentor_columns        | hi@act.place                                                                
+20260616073035 | 20260617000002_event_registrations_mentor_columns_grants | hi@act.place                                                                
+20260616073045 | 20260617000003_create_mentor_profiles                    | hi@act.place                                                                
+20260616073053 | 20260617000004_mentor_profiles_grants                    | hi@act.place                                                                
+20260616073112 | 20260617000005_create_mentorships                        | hi@act.place                                                                
+20260616073119 | 20260617000006_mentorships_grants                        | hi@act.place                                                                
+20260616081023 | 20260617000007_mentor_profiles_pii_lockdown              | hi@act.place                                                                
+20260616093245 | 20260618000001_mentor_profiles_moderation_hardening      | hi@act.place                                                                
+20260616192959 | jr_metrics_validation_audit                              | hi@act.place                                                                
+20260621081335 | performance_integration_stabilization                    | hi@act.place                                                                
+20260621211238 | restrict_xero_invoices_remove_anon_read                  | hi@act.place                                                                
+20260621211529 | drop_ghl_contacts_anon_read                              | hi@act.place                                                                
+20260626221343 | receipt_paper_lost_states                                | hi@act.place                                                                
+20260628205019 | justice_matrix_case_campaign_links                       | hi@act.place                                                                
+20260701195018 | justice_matrix_hybrid_widen_candidate_pool               | hi@act.place                                                                
+20260701204655 | justice_matrix_fts_widen                                 | hi@act.place                                                                
+20260702091834 | jm_answers_and_signals                                   | hi@act.place                                                                
+20260702100501 | jm_watches                                               | hi@act.place                                                                
+20260702205349 | jm_external_cache                                        | hi@act.place                                                                
+20260703004445 | jm_external_ids                                          | hi@act.place                                                                
+20260703014215 | jm_discovered_demand_count                               | hi@act.place                                                                
+20260703020224 | jm_stage_discovery_atomic                                | hi@act.place                                                                
+20260703022205 | jm_rate_limits                                           | hi@act.place                                                                
+20260703095314 | jm_research_page                                         | hi@act.place                                                                
+20260703101124 | enable_rls_on_graph_completeness_and_person_identities   | hi@act.place                                                                
+20260703111231 | jm_link_health                                           | hi@act.place                                                                
+20260705231449 | create_community_submissions                             | hi@act.place                                                                
+20260705232749 | grant_community_submissions_service_role                 | hi@act.place                                                                
+20260705233338 | create_pulse_responses                                   | hi@act.place                                                                
+20260706000758 | grant_community_submissions_postgres                     | hi@act.place                                                                
+20260709032718 | opportunity_context_events                               | hi@act.place                                                                
+20260709033114 | grant_opportunity_context_events_service_role            | hi@act.place                                                                
+20260712045652 | ghl_opportunities_sync_status                            | hi@act.place                                                                
+20260713080644 | jr_story_source_and_soft_removal                         | hi@act.place                                                                
+20260713081646 | jr_story_source_identity                                 | hi@act.place                                                                
+20260714074705 | restrict_jr_site_metrics_public_drafts                   | hi@act.place                                                                
+20260714074716 | restrict_story_links_to_published_jr_sites               | hi@act.place                                                                
+20260714074730 | restore_organization_sync_log                            | hi@act.place                                                                
+20260714124021 | jr_outcomes_governance_contract                          |                                                                             
+20260714132908 | jr_evidence_drafts                                       |                                                                             
+20260714134647 | jr_review_promotion_and_publication                      |                                                                             
+20260714222740 | jr_shared_learning_snapshot_scope                        |                                                                             
+20260714225627 | jr_publication_withdrawal_hardening                      |                                                                             
+20260715013129 | jr_site_authority_verification                           |                                                                             
+20260720043047 | social_posts_ledger                                      | hi@act.place                                                                
+20260720043116 | social_posts_ledger_grants                               | hi@act.place                                                                
+20260720045813 | harvest_public_content_views                             | hi@act.place                                                                
+20260729031616 | contained_crm_organization_links                         | hi@act.place                                                                
+20260729061826 | org_funding_summaries                                    | hi@act.place                                                                
+20260729061902 | org_geocode_precision                                    | hi@act.place                                                                
+20260729075347 | funding_ingest_sources                                   | hi@act.place                                                                
+20260729080713 | justice_funding_link_basis                               | hi@act.place                                                                
+20260729120518 | organization_merge_support                               | hi@act.place                                                                
+20260729120549 | merge_duplicate_organizations_fn                         | hi@act.place                                                                
+20260729122333 | indigenous_org_basis                                     | hi@act.place                                                                
+20260729125216 | alma_intervention_evidence_read_policies                 | hi@act.place                                                                
+20260729225158 | merge_organization_pair                                  | hi@act.place                                                                
+20260731075356 | media_articles_publishable_view                          | hi@act.place                                                                
+20260731083028 | intervention_coordinate_precision                        | hi@act.place                                                                
+20260731095745 | data_catalogue                                           | hi@act.place                                                                
+20260731114956 | data_catalogue_source_portal                             | hi@act.place                                                                
+20260731122140 | coordinate_precision_fabricated                          | hi@act.place                                                                
+20260731124526 | org_governance_view                                      | hi@act.place                                                                
+20260731124918 | canonical_organizations_view                             | hi@act.place                                                                
+20260801093931 | goods_capital_relationship_workspace                     | hi@act.place                                                                
+20260801094734 | relational_opportunity_reviews                           | hi@act.place                                                                
+20260801095817 | goods_capital_workspace_service_role_grants              | hi@act.place                                                                
+20260801100340 | goods_capital_workspace_fk_indexes                       | hi@act.place                                                                
+20260801105403 | goods_network_people_and_pathways                        | hi@act.place                                                                
+20260802234615 | pulse_editorial_workflow                                 | hi@act.place                                                                
+20260802234750 | pulse_report_link_permissions                            | hi@act.place                                                                
+20260803054727 | funding_weekly_cycles                                    | hi@act.place                                                                
+20260803081643 | jm_record_feedback_context                               | hi@act.place                                                                
+20260804004753 | jm_edge_trust_and_proposals                              | hi@act.place                                                                
+20260804011920 | assertions_ledger                                        | hi@act.place                                                                
+20260805062559 | program_detail_deliverers_strongest_claim                | hi@act.place                                                                
+20260805072837 | program_detail_deliverers_read_date                      | hi@act.place                                                                
+20260806050357 | act_communities                                          | hi@act.place                                                                
+20260806053400 | jr_site_research                                         | hi@act.place                                                                
+20260806054124 | jr_research_findability                                  | hi@act.place                                                                
+20260807112744 | rolling_funding_lane                                     | hi@act.place                                                                
+20260807114423 | foundation_evidence_grade                                | hi@act.place                                                                
+20260807120821 | reconcile_act_project_registries                         | hi@act.place                                                                
+20260807124428 | strong_fit_requires_place_or_scale                       | hi@act.place                                                                
+20260807150233 | geography_exclusion_and_program_dedupe                   | hi@act.place                                                                
+20260807150349 | infer_state_from_government_funder_name                  | hi@act.place                                                                
+20260807222924 | backfill_opportunity_tags_from_text                      | hi@act.place                                                                
+20260807223112 | restore_discriminating_arts_terms                        | hi@act.place                                                                
+20260807223628 | add_project_rank_for_best_available                      | hi@act.place                                                                
+20260807224116 | primary_funding_route_per_project                        | hi@act.place                                                                
+20260808052150 | assertions_close_anon_insert                             | hi@act.place                                                                
+20260808052234 | assertions_d2_scoped_read                                | hi@act.place                                                                
+20260808070824 | org_profile_rpc_quarantines_ai_generated                 | hi@act.place                                                                
+20260808070904 | assertions_widen_asserter_kind                           | hi@act.place                                                                
+20260808072035 | org_profile_is_indigenous_reads_the_register             | hi@act.place                                                                
+20260808074150 | record_grants_capability_tokens                          | hi@act.place                                                                
+20260808085855 | jr_money_by_measure_rpc                                  | hi@act.place                                                                
+20260808103518 | assertions_owner_insert_lead_and_admin                   | hi@act.place                                                                
+20260808104251 | assertions_anon_insert_must_be_unnamed                   | hi@act.place                                                                
+20260809055229 | assertions_widen_asserter_kind                           | hi@act.place                                                                
+20260812090000 | opportunity_promotion_ledger                             |                                                                             
+20260812150000 | funding_operating_report                                 |                                                                             
+20260813090000 | dashboard_aggregate_functions                            |                                                                             
+20260813100000 | refresh_closing_the_gap_state_summary                    |                                                                             
+20260817090520 | admin_estate_snapshot                                    | hi@act.place                                                                
+20260817215445 | coe_admin_only_writes                                    | hi@act.place                                                                
+20260818034537 | funding_system0_policy                                   | hi@act.place                                                                
+20260818034641 | funding_system0_events                                   | hi@act.place                                                                
+20260818034720 | funding_system0_filter_presets                           | hi@act.place                                                                
+20260818034920 | funding_system0_filter_presets_visibility                | hi@act.place                                                                
+20260818034951 | funding_system0_filter_presets_rls                       | hi@act.place                                                                
+20260818051206 | sync_metadata_missing_half                               | hi@act.place                                                                
+20260818073704 | v_justice_funding_state_grants                           | hi@act.place                                                                
+20260819014858 | case_attestations                                        | hi@act.place                                                                
+20260819201742 | system_sparkline_aggregates                              | hi@act.place                                                                
+20260819214612 | research_sessions_owner_only_update                      | hi@act.place                                                                
+20260820020824 | organization_claims_allow_anonymous                      | hi@act.place                                                                
+20260821042846 | verified_means_a_person_checked                          | hi@act.place                                                                
+20260822224312 | jm_link_status_blocked                                   | hi@act.place                                                                
+20260825233430 | el_sync_results                                          | hi@act.place                                                                
+20260830000000 | act_intake                                               |                                                                             
+20260830023617 | act_intake_service_role_grants                           | hi@act.place                                                                
+20260830060946 | price_the_free_provider_chain                            | hi@act.place                                                                
+20260830070858 | estate_cost_measures                                     | hi@act.place                                                                
+20260830071445 | make_open_data_explicit_and_stop_public_delete           | hi@act.place                                                                
+20260830075652 | schema_ownership_and_index_cost                          | hi@act.place                                                                
+20260905120000 | close_private_view_and_anon_rebuild_exposure             | psql -f from grantscope branch findings/supabase-platform-review, 2026-09-05
+
+(419 rows)
