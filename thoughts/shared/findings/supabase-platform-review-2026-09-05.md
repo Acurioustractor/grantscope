@@ -455,3 +455,22 @@ count went from 42 to 31, all 31 consent-gated publishing rows by design. The sa
 into seven repos with a "Shared Supabase project" section carrying the six rules (the sync template had fallen behind the
 downstream copies and would have dropped the 19 July Harvest decision; fixed on act-global branch `sync/shared-supabase-rules`). Grant alone is not exposure: 288 objects carry an anon
 SELECT grant that RLS blocks, 140 of them private; the page shows those as "grant, RLS blocks", never red.
+
+## 11. Phase 4 progress (started 2026-09-05, on "do all")
+
+**One search index over the spine, first slice.** `mv_search_index` (`supabase/migrations/20260905160000`) folds every
+public noun into one row shape: kind, id, name, ABN, state, place, sector, money in and out (from the already-audited
+`mv_entity_total_funding` and `foundations.total_giving_annual`, whose placeholder nature the tier column discloses), tier,
+a one-line meta and the app href. Sources: `gs_entities` (charity, company, indigenous_corp, government_body, program),
+`se_search_index` (social enterprises with contracts), `foundations`, open `grant_opportunities`, `mv_board_interlocks`
+(people), `mv_funding_by_lga` (council areas, slugged the way `placeSlug()` does), published `alma_interventions`. Private
+objects are excluded by construction. Unique `(kind, id)` for concurrent refresh, trigram and tsvector GIN indexes,
+nightly via `mv_refresh_registry`; `mv_entity_total_funding` promoted from `on_demand` to `nightly` because it feeds it.
+
+`search_index_query(q, kinds[], state, limit)` is the one RPC (definer, public civic data, executable by anon): exact and
+prefix name matches first, then trigram similarity plus tsvector rank, ABN when the query is eleven digits. The app fronts
+it with `/api/search/index` and `lib/search/search-index.ts` (input whitelist, tested). The `/search` page moves onto it
+in its own PR because it is a public surface.
+
+Still to do in Phase 4: postcode rows, aliases from `gs_entity_aliases`, retiring the 17 `search_*` functions to wrappers,
+and the semantic path behind the lexical one.
