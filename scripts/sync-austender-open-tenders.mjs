@@ -301,12 +301,13 @@ async function main() {
     return;
   }
 
-  let up = 0, err = 0;
-  for (const row of accepted) {
-    const { error } = await supabase.from('grant_opportunities').upsert(row, { onConflict: 'url' });
-    if (error) { console.error(`  upsert "${row.name.slice(0, 50)}": ${error.message.slice(0, 120)}`); err++; }
-    else up++;
-  }
+  // One write contract for every writer of grant_opportunities (scripts/lib/upsert-grant-opportunities.mjs).
+  // Conflicting on url alone was safe against the url index but not against (source, name): a re-published ATM under
+  // a name already stored would have raised there. The contract resolves both and writes by primary key.
+  const result = await upsertGrantOpportunities(supabase, accepted);
+  const up = result.written;
+  const err = result.failed + result.ambiguous;
+  for (const message of result.errors) console.error(`  ${message.slice(0, 160)}`);
   console.log(`\n✓ Upserted ${up}/${accepted.length} open ATMs (${err} errors).`);
   console.log('Rows are scored inline; nightly score-goods-relevance.mjs --rescore-all reconfirms.');
 }

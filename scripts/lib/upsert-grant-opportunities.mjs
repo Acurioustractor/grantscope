@@ -144,3 +144,37 @@ export async function upsertGrantOpportunities(supabase, rawRows, { chunkSize = 
 
   return { ...tally, droppedInBatch: dropped, ambiguous };
 }
+
+/**
+ * One row, with the id back. Same resolution rule as the batch path, for callers that need the id to link other
+ * records to the round (sync-foundation-programs links a foundation program to the round it produced).
+ *
+ * @returns {Promise<{id: string|null, created: boolean, error: string|null, ambiguous?: boolean}>}
+ */
+export async function upsertOneGrantOpportunity(supabase, row) {
+  const url = typeof row.url === 'string' && row.url.trim() ? row.url.trim() : null;
+  const candidate = { ...row, url };
+
+  const { byUrl, byPair } = await resolveExisting(supabase, [candidate], 1);
+  const urlId = url ? byUrl.get(url) : undefined;
+  const pairId = byPair.get(pairKey(candidate.source, candidate.name));
+  if (urlId && pairId && urlId !== pairId) {
+    return {
+      id: null,
+      created: false,
+      ambiguous: true,
+      error: `url belongs to ${urlId} but "${candidate.source}/${candidate.name}" belongs to ${pairId}; two rows are the same round, skipped pending a merge`,
+    };
+  }
+
+  const existingId = urlId ?? pairId;
+  const payload = existingId ? { ...candidate, id: existingId } : candidate;
+  const { data, error } = await supabase
+    .from('grant_opportunities')
+    .upsert(payload, { onConflict: existingId ? 'id' : 'url', ignoreDuplicates: false })
+    .select('id')
+    .maybeSingle();
+
+  if (error) return { id: null, created: false, error: error.message };
+  return { id: data?.id ?? existingId ?? null, created: !existingId, error: null };
+}

@@ -545,11 +545,58 @@ The pipeline tables the review flagged as near-empty are confirmed: `funding_ghl
 `funding_awards` 5, `funding_programs` 4, `funding_match_recommendations` 3, `funding_sources` 3,
 `alma_funding_applications` 2. `grant_notification_outbox` holds 771 rows and has not been written to since 15 May.
 
+### Every writer is now on the contract (2026-09-05, same day)
+
+All seven converted: `ingest-vic-grants-open`, `ingest-grantconnect-go`, `import-gov-grants`,
+`import-public-discovered-grant-pages`, `scrape-state-grants`, `sync-foundation-programs`,
+`sync-austender-open-tenders`, plus the one-off `ingest-strategic-grants-wrap-2026-07`. Each carried its own retry
+ladder; there is now one. `apps/web/src/lib/grant-write-contract.test.ts` fails the build if a new writer names its own
+conflict key, or if any script writes a round with `url: null`.
+
+**The workaround was worse than the failure.** Two agents dodged the unique index by re-writing the row with
+`url: null`. In `scrape-state-grants` that inserted the same round a second time without its address. In
+`sync-foundation-programs` there were two: the insert path did the same, and the update path **erased the URL from a
+row that already had one** to force the write through. The update path now keeps the stored URL, updates everything
+else, and warns that the pair needs a human merge. 228 rows currently have no URL while the same name exists with one;
+the sampled ones came from `ghl_sync`, a different writer, so the fallbacks' own share of that is unmeasured.
+
+### The scorers, measured
+
+There is **one** working scorer, not four:
+
+| column | populated | reality |
+|---|---|---|
+| `act_grant_recommendations_current.fit_score` | 5,995 rows, 11 ACT projects, range 9-93, mean 23.1 | a real score |
+| `grant_opportunities.relevance_score` | 26,659 of 26,698 are exactly **50**, the column default | not a score |
+| `alma_funding_opportunities.relevance_score` | 13,100 of 13,102 are **0** | dead |
+| `grant_opportunities.fit_score` | 61 of 26,698 (0.2%) | barely populated |
+
+CivicGraph's surfaces all rank by the real one (`act_grant_recommendations_current`). Two consumers rank by a constant
+and therefore return an arbitrary order presented as a ranking: **JusticeHub's funding notification engine**
+(`src/lib/funding/notification-engine.ts:142`, orders `alma_funding_opportunities` by `relevance_score`) and
+**act-global's morning briefing** (`apps/command-center/src/app/api/briefing/morning/route.ts:256`, orders
+`grant_opportunities` by the same). Both are one-line changes in their own repos.
+
+### `alma_funding_opportunities` cannot become a view
+
+The review proposed replacing it with a view over the tables it is promoted from. It has **eleven writers** across
+three repos: two promotion jobs, three enrichment jobs (`backfill-alma-fields`, `auto-classify-llm`,
+`verify-alma-opportunities`), an ops triage route and the GHL handoff service in CivicGraph; an admin route that
+inserts and updates, a matching library that deletes, and a scraper in JusticeHub; and a Xero backfill in act-global.
+A view is read-only, so all eleven would break.
+
+Its rows also carry no link home: `source_id` is **NULL on all 13,102**, so a promoted row cannot be joined back to its
+origin by key. Matching by lower(name) does work: 6,609 of 6,642 promoted-from-grants rows match a `grant_opportunities`
+row, and 6,402 of 6,402 promoted-from-foundation-programs rows match a `foundation_programs` row (by URL it is only
+4,987 of 6,642).
+
+The read-side unified view is being built instead: one row per fundable thing, deduplicated by name against its origin,
+with provenance, leaving every writer alone.
+
 ### Next in Phase 5
 
-Point the other `source,name` agents at the shared contract; decide whether `idx_grant_opp_name_source_id` earns its
-place; make `alma_funding_opportunities` a view over the two tables it is promoted from; then the front-end and scorer
-consolidation the review describes.
+Decide whether `idx_grant_opp_name_source_id` earns its place now that nothing targets it; the two one-line ranking
+fixes in JusticeHub and act-global; then the front-end consolidation the review describes.
 **Two defects found by using it, same day.** (1) `search_index_query` took 2.8 s while the identical SQL with literal
 values took 124 ms. Not the generic plan (`plan_cache_mode = force_custom_plan` changed nothing and stays as
 documentation): the WHERE has four OR branches and one of them, `postcode = <param>`, had no index. With literals the
