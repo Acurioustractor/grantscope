@@ -18,6 +18,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
+import { upsertGrantOpportunities } from './lib/upsert-grant-opportunities.mjs';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -182,41 +183,16 @@ async function main() {
   // (source, name) upsert then trips the url unique index and the whole batch
   // died, taking the run with it. A conflicting url identifies the stored row
   // precisely, so retry those rows as an update keyed on url.
-  let upserted = 0;
-  let retitled = 0;
-  const failedRows = [];
-  for (let i = 0; i < deduped.length; i += 100) {
-    const batch = deduped.slice(i, i + 100);
-    const { error } = await supabase.from('grant_opportunities').upsert(batch, { onConflict: 'source,name', ignoreDuplicates: false });
-    if (!error) {
-      upserted += batch.length;
-      continue;
-    }
-    // Batch had at least one url collision: go row by row so one bad row
-    // cannot take ninety-nine good ones with it.
-    for (const row of batch) {
-      const { error: rowError } = await supabase.from('grant_opportunities').upsert(row, { onConflict: 'source,name', ignoreDuplicates: false });
-      if (!rowError) {
-        upserted += 1;
-        continue;
-      }
-      if (/duplicate key.*url/i.test(rowError.message)) {
-        const { error: updateError } = await supabase.from('grant_opportunities').update(row).eq('url', row.url);
-        if (updateError) {
-          failedRows.push(`${row.name.slice(0, 60)}: ${updateError.message}`);
-        } else {
-          retitled += 1;
-          upserted += 1;
-        }
-      } else {
-        failedRows.push(`${row.name.slice(0, 60)}: ${rowError.message}`);
-      }
-    }
-  }
-  if (retitled > 0) console.log(`  ${retitled} retitled rows updated by url`);
-  if (failedRows.length > 0) {
-    console.log(`  ${failedRows.length} rows failed and were skipped:`);
-    failedRows.slice(0, 5).forEach((m) => console.log(`    ${m}`));
+  // One write contract for every writer of grant_opportunities: it resolves each row against the table by url and by
+  // (source, name) and writes by primary key, so no unique index is crossed. This replaces the hand-rolled
+  // batch/row/update-by-url ladder that used to live here.
+  const result = await upsertGrantOpportunities(supabase, deduped);
+  const upserted = result.written;
+  if (result.droppedInBatch > 0) console.log(`  ${result.droppedInBatch} duplicate row(s) collapsed within the batch`);
+  if (result.ambiguous > 0) console.log(`  ${result.ambiguous} row(s) skipped: they match two different stored rounds`);
+  if (result.errors.length > 0) {
+    console.log(`  ${result.failed} rows failed and were skipped:`);
+    result.errors.slice(0, 5).forEach((m) => console.log(`    ${m}`));
   }
   console.log(`Upserted ${upserted} rows (source=grantconnect)`);
 

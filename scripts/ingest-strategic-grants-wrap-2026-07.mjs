@@ -316,14 +316,10 @@ async function main() {
       continue;
     }
 
-    const { data, error } = await supabase
-      .from('grant_opportunities')
-      .upsert(row, { onConflict: 'name,source_id' })
-      .select('id, name, source_id, aligned_projects')
-      .single();
-
-    if (error) throw error;
-    results.push({ action: 'upserted-source-id', ...data });
+    // One write contract (scripts/lib/upsert-grant-opportunities.mjs), single-row form for the id.
+    const oneResult = await upsertOneGrantOpportunity(supabase, row);
+    if (oneResult.error) throw new Error(oneResult.error);
+    results.push({ action: oneResult.created ? 'inserted' : 'updated-existing', id: oneResult.id, name: row.name, source_id: row.source_id });
   }
 
   console.log(`Processed ${results.length} grant_opportunities rows.`);

@@ -22,6 +22,7 @@ import { createTASGrantsPlugin } from '../packages/grant-engine/src/sources/tas-
 import { createSAGrantsPlugin } from '../packages/grant-engine/src/sources/sa-grants.ts';
 import { createWAGrantsPlugin } from '../packages/grant-engine/src/sources/wa-grants.ts';
 import { createNTGrantsPlugin } from '../packages/grant-engine/src/sources/nt-grants.ts';
+import { upsertGrantOpportunities } from './lib/upsert-grant-opportunities.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -195,45 +196,16 @@ async function main() {
         };
       });
 
-      const { data, error } = await supabase
-        .from('grant_opportunities')
-        .upsert(batch, { onConflict: 'name,source_id', ignoreDuplicates: false });
-
-      if (error) {
-        console.error(`  Upsert error: ${error.message}`);
-        for (const row of batch) {
-          const { error: singleError } = await supabase
-            .from('grant_opportunities')
-            .upsert(row, { onConflict: 'name,source_id', ignoreDuplicates: false });
-
-          if (!singleError) {
-            totalNew++;
-            sourceNew++;
-            continue;
-          }
-
-          if (isDuplicateUrlError(singleError)) {
-            const { error: fallbackError } = await supabase
-              .from('grant_opportunities')
-              .upsert({ ...row, url: null }, { onConflict: 'name,source_id', ignoreDuplicates: false });
-
-            if (!fallbackError) {
-              totalNew++;
-              sourceNew++;
-              continue;
-            }
-
-            errors.push(`${plugin.id} fallback upsert: ${fallbackError.message}`);
-            console.error(`  Fallback upsert error: ${fallbackError.message}`);
-            continue;
-          }
-
-          errors.push(`${plugin.id} single upsert: ${singleError.message}`);
-          console.error(`  Single upsert error: ${singleError.message}`);
-        }
-      } else {
-        totalNew += batch.length;
-        sourceNew += batch.length;
+      // One write contract (scripts/lib/upsert-grant-opportunities.mjs). It replaces a three-step ladder whose last
+      // step retried the row with `url: null` when the url index bit, which pushed the round in a second time under a
+      // second identity and threw the URL away. Resolving by url and by (source, name) and writing by primary key
+      // means that collision cannot happen, so nothing has to be discarded to get a row in.
+      const result = await upsertGrantOpportunities(supabase, batch);
+      totalNew += result.written;
+      sourceNew += result.written;
+      for (const message of result.errors) {
+        errors.push(`${plugin.id}: ${message}`);
+        console.error(`  ${message}`);
       }
     }
 

@@ -17,6 +17,7 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
+import { upsertGrantOpportunities } from './lib/upsert-grant-opportunities.mjs';
 
 const AGENT_ID = 'import-public-discovered-grant-pages';
 const AGENT_NAME = 'Import Public Discovered Grant Pages';
@@ -344,11 +345,14 @@ async function main() {
     let upserted = 0;
     let cleaned = 0;
     if (!DRY_RUN && rows.length > 0) {
-      const { error } = await db
-        .from('grant_opportunities')
-        .upsert(rows, { onConflict: 'name,source_id', ignoreDuplicates: false });
-      if (error) throw error;
-      upserted = rows.length;
+      // One write contract (scripts/lib/upsert-grant-opportunities.mjs): resolves by url and by (source, name),
+      // writes by primary key, so the table's three unique indexes cannot collide.
+      const result = await upsertGrantOpportunities(db, rows);
+      if (result.failed + result.ambiguous > 0) {
+        console.error(`${result.failed + result.ambiguous} row(s) not written:`);
+        result.errors.slice(0, 3).forEach((m) => console.error(`  ${m}`));
+      }
+      upserted = result.written;
       cleaned = await markObsoleteRows(new Set(rows.map(row => row.source_id)));
       if (cleaned > 0) console.log(`Marked ${cleaned} obsolete public-discovered rows as duplicate`);
     }

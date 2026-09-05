@@ -22,6 +22,7 @@ import { createClient } from '@supabase/supabase-js';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { logStart, logComplete } from './lib/log-agent-run.mjs';
+import { upsertOneGrantOpportunity } from './lib/upsert-grant-opportunities.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -811,22 +812,27 @@ async function main() {
 
       if (updateError) {
         if (isDuplicateUrlError(updateError)) {
-          const fallbackGrant = { ...grant, url: null, updated_at: new Date().toISOString() };
-          const { error: fallbackUpdateError } = await supabase
+          // The program's new URL already belongs to a DIFFERENT row: the two rows are the same round. This used to
+          // retry the update with `url: null`, which erased the URL from a row that had one to force the write
+          // through. Keep the stored URL instead and update everything else, so nothing is lost while the duplicate
+          // pair waits for a human merge.
+          const { url: _collidingUrl, ...withoutUrl } = grant;
+          const { error: keepUrlError } = await supabase
             .from('grant_opportunities')
-            .update(fallbackGrant)
+            .update({ ...withoutUrl, updated_at: new Date().toISOString() })
             .eq('id', existingGrant.id);
 
-          if (fallbackUpdateError) {
-            console.error(`  Error updating "${program.name}": ${fallbackUpdateError.message}`);
+          if (keepUrlError) {
+            console.error(`  Error updating "${program.name}": ${keepUrlError.message}`);
             errors++;
             recordFoundationSyncStat(foundationSyncStats, foundation.id, 'errors');
           } else {
+            console.warn(`  "${program.name}": its url is already stored on another round; kept the existing url and updated the rest`);
             updated++;
             if (existingGrant.name && existingGrant.name !== grant.name) {
               existingByKey.delete(`${foundation.id}::${existingGrant.name}`);
             }
-            const merged = { ...existingGrant, ...grant, url: null };
+            const merged = { ...existingGrant, ...withoutUrl };
             existingByKey.set(key, merged);
             existingBySourceId.set(String(program.id), merged);
             recordFoundationSyncStat(foundationSyncStats, foundation.id, 'updated');
@@ -853,43 +859,22 @@ async function main() {
 
     // Upsert on (source, name) per partial unique index grant_opportunities_source_name_uniq
     // (added 2026-05-07 in act-global-infrastructure to stop sync-drift bleed).
-    const { data: insertedGrant, error: insertError } = await supabase
-      .from('grant_opportunities')
-      .upsert(grant, { onConflict: 'source,name', ignoreDuplicates: false })
-      .select('id')
-      .single();
+    // One write contract (scripts/lib/upsert-grant-opportunities.mjs), single-row form because the id is needed to
+    // link the foundation program to the round it produced. It resolves by url and by (source, name) and writes by
+    // primary key, so the url index can no longer force the `url: null` fallback below.
+    const oneResult = await upsertOneGrantOpportunity(supabase, grant);
+    const insertedGrant = oneResult.id ? { id: oneResult.id } : null;
+    const insertError = oneResult.error ? { message: oneResult.error } : null;
 
     if (insertError) {
-      if (insertError.message.includes('duplicate') || insertError.message.includes('unique')) {
-        if (isDuplicateUrlError(insertError)) {
-          const fallbackGrant = { ...grant, url: null };
-          const { data: fallbackInsertedGrant, error: fallbackInsertError } = await supabase
-            .from('grant_opportunities')
-            .insert(fallbackGrant)
-            .select('id')
-            .single();
-
-          if (fallbackInsertError) {
-            console.error(`  Error syncing "${program.name}": ${fallbackInsertError.message}`);
-            errors++;
-            recordFoundationSyncStat(foundationSyncStats, foundation.id, 'errors');
-          } else {
-            inserted++;
-            const merged = { ...fallbackGrant, id: fallbackInsertedGrant?.id };
-            existingByKey.set(key, merged);
-            existingBySourceId.set(String(program.id), merged);
-            recordFoundationSyncStat(foundationSyncStats, foundation.id, 'inserted');
-            if (fallbackInsertedGrant?.id) touchedGrantIds.push(fallbackInsertedGrant.id);
-          }
-        } else {
-          skipped++;
-          recordFoundationSyncStat(foundationSyncStats, foundation.id, 'skipped');
-        }
-      } else {
-        console.error(`  Error syncing "${program.name}": ${insertError.message}`);
-        errors++;
-        recordFoundationSyncStat(foundationSyncStats, foundation.id, 'errors');
-      }
+      // The url-collision fallback that used to sit here re-inserted the row with `url: null`, which put the same
+      // round in a second time under a second identity and threw its URL away. The contract resolves by url and by
+      // (source, name) and writes by primary key, so that collision cannot happen and nothing has to be discarded to
+      // get a row in. What remains here is a genuine write error, or a round that matches two stored rows and needs
+      // a human merge (oneResult.ambiguous).
+      console.error(`  Error syncing "${program.name}": ${insertError.message}`);
+      errors++;
+      recordFoundationSyncStat(foundationSyncStats, foundation.id, 'errors');
     } else {
       inserted++;
       const merged = { ...grant, id: insertedGrant?.id };

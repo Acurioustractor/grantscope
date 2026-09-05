@@ -19,6 +19,7 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { parse } from 'csv-parse/sync';
+import { upsertGrantOpportunities } from './lib/upsert-grant-opportunities.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -141,39 +142,15 @@ async function upsertGrants(grants, source) {
     filteredGrants.push(grant);
   }
 
-  // Batch upsert 500 at a time using the concrete unique index the table exposes.
-  // Supabase/PostgREST cannot target the partial unique URL index.
-  const BATCH_SIZE = 500;
-  for (let i = 0; i < filteredGrants.length; i += BATCH_SIZE) {
-    const batch = filteredGrants.slice(i, i + BATCH_SIZE);
-    const { error } = await supabase
-      .from('grant_opportunities')
-      .upsert(batch, { onConflict: 'name,source_id', ignoreDuplicates: false });
-
-    if (error) {
-      console.error(`  Batch upsert error (${source}, offset ${i}): ${error.message}`);
-      // Fallback: individual inserts for this batch only
-      for (const g of batch) {
-        try {
-          const { error: singleErr } = await supabase
-            .from('grant_opportunities')
-            .upsert(g, { onConflict: 'name,source_id', ignoreDuplicates: false });
-          if (singleErr) {
-            if (/duplicate key value/i.test(singleErr.message)) {
-              continue;
-            }
-            stats.errors++;
-            if (stats.errors <= 3) console.error(`  Single upsert error: ${singleErr.message}`);
-          } else {
-            stats.upserted++;
-          }
-        } catch {
-          stats.errors++;
-        }
-      }
-    } else {
-      stats.upserted += batch.length;
-    }
+  // One write contract for every writer of grant_opportunities (scripts/lib/upsert-grant-opportunities.mjs): it
+  // resolves each row by url and by (source, name) and writes by primary key, so the three unique indexes on this
+  // table can no longer collide. It chunks and retries row by row internally.
+  const result = await upsertGrantOpportunities(supabase, filteredGrants);
+  stats.upserted += result.written;
+  stats.errors += result.failed + result.ambiguous;
+  if (result.errors.length > 0) {
+    console.error(`  ${result.failed + result.ambiguous} row(s) not written from ${source}:`);
+    result.errors.slice(0, 3).forEach((m) => console.error(`    ${m}`));
   }
   stats.total += filteredGrants.length;
   console.log(`  Upserted ${filteredGrants.length} grants from ${source}`);
