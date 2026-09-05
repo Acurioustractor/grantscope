@@ -61,6 +61,18 @@ async function checkMigrationParity() {
   }
 }
 
+async function checkPrivateExposure() {
+  // scripts/check-private-exposure.mjs: no ACT-owned object may be open to the public key beyond its allowlist.
+  try {
+    const out = execSync('node scripts/check-private-exposure.mjs', { cwd: ROOT, encoding: 'utf8', env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
+    return { ok: true, detail: (out.split('\n').find((l) => l.startsWith('✓')) || out.trim().split('\n')[0] || 'ok').replace(/^✓ /, '') };
+  } catch (e) {
+    const out = (e.stdout || '') + (e.stderr || '');
+    const first = out.split('\n').find((l) => l.trim().startsWith('✗') || l.includes('failed')) || (e.message || '').split('\n')[0];
+    return { ok: false, detail: first.trim() };
+  }
+}
+
 function checkEnv() {
   const required = ['DATABASE_PASSWORD', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
   const optional = ['ABN_LOOKUP_GUID', 'OPENAI_API_KEY', 'STRIPE_SECRET_KEY'];
@@ -122,6 +134,7 @@ console.log('\n  GrantScope Preflight Check\n');
 const results = await Promise.all([
   check('Database', checkDb),
   check('Migration parity', checkMigrationParity),
+  check('Private exposure', checkPrivateExposure),
   Promise.resolve(check('Environment', checkEnv)),
   Promise.resolve(check('Git', checkGit)),
   Promise.resolve(check('Port 3003', checkPort)),

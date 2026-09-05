@@ -107,6 +107,9 @@ jobs:
       - name: Parity (folder vs supabase_migrations.schema_migrations)
         if: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' }}
         run: node scripts/check-migration-parity.mjs
+      - name: Private exposure (no ACT-owned object open to the public key beyond the allowlist)
+        if: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        run: node scripts/check-private-exposure.mjs
       - name: Parity skipped (no SUPABASE_SERVICE_ROLE_KEY secret)
         if: ${{ env.SUPABASE_SERVICE_ROLE_KEY == '' }}
         run: echo "::warning::migration parity not checked; add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY as repo secrets"
