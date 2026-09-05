@@ -22,7 +22,11 @@ BASE="${1:-origin/main}"
 # this reported "no changes -> SAFE" whenever it ran before the commit — a false SAFE, which is the
 # one answer that must never be wrong, because SAFE is what auto-merges.
 FILES="$(
-  { git diff --name-only "$BASE"...HEAD; git status --porcelain | awk '{print $NF}'; } | sort -u
+  # Untracked files count (a new page not yet committed is still a change), but a symlinked node_modules is not:
+  # .gitignore's `node_modules/` pattern does not match a symlink, so a worktree with linked deps read as VISIBLE
+  # twice on 2026-09-05 for no change at all. The `|| true` matters: under pipefail, grep -v exits 1 when it has
+  # nothing to filter (no untracked files), which silently failed the whole listing on the first version of this line.
+  { git diff --name-only "$BASE"...HEAD; git status --porcelain | awk '{print $NF}' | { grep -vE '(^|/)node_modules$' || true; }; } | sort -u
 )"
 if [[ -z "$FILES" ]]; then
   echo "no changes vs $BASE and nothing uncommitted" >&2
