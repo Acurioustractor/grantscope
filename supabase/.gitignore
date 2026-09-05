@@ -1,8 +1,3 @@
-# Supabase
-.branches
-.temp
-
-# dotenvx
-.env.keys
-.env.local
-.env.*.local
+# Supabase CLI local state (written by `supabase link` and branch tooling); machine-local, never committed
+.temp/
+.branches/
