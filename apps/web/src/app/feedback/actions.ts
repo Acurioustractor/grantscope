@@ -1,10 +1,14 @@
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseSecretKey, getSupabaseUrl } from '@/lib/supabase-env';
 import { pushFeedbackToGHL } from '@/lib/services/feedback-ghl';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// One read site for the connection (lib/supabase-env): prefers the clean NEXT_PUBLIC_* URL and the new secret key,
+// and trims. This file used to read SUPABASE_URL first, which in production carried a trailing newline (/config-truth,
+// 2026-09-05); URL parsing happened to strip it, so nothing broke, but the pattern is the one that blanked 61 report pages.
+const SUPABASE_URL = getSupabaseUrl().trim();
+const SUPABASE_KEY = getSupabaseSecretKey().trim();
 
 export type FeedbackResult = { ok: boolean; id?: string; error?: string };
 
