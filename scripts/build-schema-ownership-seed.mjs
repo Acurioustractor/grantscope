@@ -130,7 +130,10 @@ ALTER TABLE public.schema_ownership ADD CONSTRAINT schema_ownership_owner_check
 
 INSERT INTO public.schema_ownership (object, owner, consumers, evidence, declared_on) VALUES
 `;
-const values = rows.map((r) => `  ('${esc(r.object)}', '${r.owner}', '${esc(r.consumers)}', '${esc(r.evidence)}', '${TODAY}')`).join(',\n');
+// consumers is text[]: emit a Postgres array literal ('{a,b}' or '{}'), never a comma string. Owner labels are
+// [a-z-] only, so no quoting inside the braces is needed.
+const arr = (csv) => `{${String(csv).split(',').filter(Boolean).join(',')}}`;
+const values = rows.map((r) => `  ('${esc(r.object)}', '${r.owner}', '${arr(r.consumers)}', '${esc(r.evidence)}', '${TODAY}')`).join(',\n');
 const footer = `
 ON CONFLICT (object) DO UPDATE SET
   consumers = EXCLUDED.consumers,

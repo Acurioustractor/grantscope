@@ -6,6 +6,8 @@
 -- `public, extensions, pg_temp` keeps every unqualified reference these functions make working: one uses similarity()
 -- unqualified and 14 use the vector <=> operator, both of which live in the extensions schema in Supabase projects.
 -- None of the 59 references auth., net., cron. or vault. objects unqualified (measured 2026-09-05).
+-- One of the 59, refresh_civicgraph_mvs_run(text), is a PROCEDURE (pg_cron CALLs it); ALTER FUNCTION on it fails,
+-- so the statements are generated from prokind. First apply attempt rolled back on exactly that line.
 
 BEGIN;
 ALTER FUNCTION public.act_auto_pass_stale_pipeline() SET search_path = public, extensions, pg_temp;
@@ -56,7 +58,6 @@ ALTER FUNCTION public.justice_matrix_search_cases(query_embedding vector, match_
 ALTER FUNCTION public.justice_matrix_search_evidence(query_embedding vector, match_limit integer, max_distance double precision) SET search_path = public, extensions, pg_temp;
 ALTER FUNCTION public.parse_financial_year(fy text, OUT fy_start smallint, OUT fy_end smallint, OUT fy_open_ended boolean) SET search_path = public, extensions, pg_temp;
 ALTER FUNCTION public.profiles_block_privilege_self_edit() SET search_path = public, extensions, pg_temp;
-ALTER FUNCTION public.refresh_civicgraph_mvs_run(IN p_tier text) SET search_path = public, extensions, pg_temp;
 ALTER FUNCTION public.se_registry_stats() SET search_path = public, extensions, pg_temp;
 ALTER FUNCTION public.search_suppliers(p_q text, p_state text, p_limit integer) SET search_path = public, extensions, pg_temp;
 ALTER FUNCTION public.state_foundation_flows(state_code text) SET search_path = public, extensions, pg_temp;
@@ -67,5 +68,6 @@ ALTER FUNCTION public.update_funding_system0_filter_presets_updated_at() SET sea
 ALTER FUNCTION public.update_funding_system0_policy_updated_at() SET search_path = public, extensions, pg_temp;
 ALTER FUNCTION public.update_updated_at() SET search_path = public, extensions, pg_temp;
 ALTER FUNCTION public.update_updated_at_column() SET search_path = public, extensions, pg_temp;
+ALTER PROCEDURE public.refresh_civicgraph_mvs_run(IN p_tier text) SET search_path = public, extensions, pg_temp;
 
 COMMIT;

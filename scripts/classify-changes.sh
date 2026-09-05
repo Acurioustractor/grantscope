@@ -5,7 +5,7 @@
 # VISIBLE→ the loop pushes and opens the PR, then STOPS so Ben can eyeball the Vercel preview.
 #
 # The distinction is "could a human land on this and see something wrong before we do". Backend,
-# ops/admin, migrations, scripts and docs are SAFE because a mistake there shows up in CI, in the
+# ops/admin, migrations, scripts, docs and .claude/ (skills, rules: agent tooling that never renders) are SAFE because a mistake there shows up in CI, in the
 # data, or on a screen only Ben uses. Anything that renders to a visitor or a buyer is VISIBLE.
 #
 # Deliberately fails toward VISIBLE: an unrecognised path is treated as public. Being asked about
@@ -31,7 +31,7 @@ if [[ -z "$FILES" ]]; then
 fi
 
 # Paths whose changes cannot surprise a visitor.
-SAFE_RE='^(scripts/|migrations/|docs/|thoughts/|supabase/|\.github/|[^/]*\.md$|apps/web/src/lib/|apps/web/src/app/api/|apps/web/src/app/ops/|apps/web/src/app/admin/|apps/web/tests/|.*\.test\.(ts|tsx)$|apps/web/package\.json$|package\.json$)'
+SAFE_RE='^(scripts/|migrations/|docs/|thoughts/|supabase/|\.github/|\.claude/|[^/]*\.md$|apps/web/src/lib/|apps/web/src/app/api/|apps/web/src/app/ops/|apps/web/src/app/admin/|apps/web/tests/|.*\.test\.(ts|tsx)$|apps/web/package\.json$|package\.json$)'
 
 VISIBLE_FILES=()
 while IFS= read -r f; do
