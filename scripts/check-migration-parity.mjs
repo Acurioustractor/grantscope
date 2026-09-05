@@ -36,12 +36,15 @@ const localOnly = [...local.keys()].filter((v) => v >= BASELINE && !remote.has(v
 
 console.log(`tracker: ${remote.size} versions (${preBaseline.length} pre-baseline history) · folder: ${local.size} files`);
 if (remoteOnly.length) {
+  if (process.env.GITHUB_ACTIONS) console.log(`::error title=Migrations applied without a committed file::${remoteOnly.map((v) => `${v} ${remote.get(v)}`).join(', ')}`);
   console.log(`\n✗ ${remoteOnly.length} version(s) applied to the database with NO file in supabase/migrations/:`);
   for (const v of remoteOnly) console.log(`   ${v}  ${remote.get(v)}   ← commit the SQL here with this version, or it is lost`);
 }
 if (localOnly.length) {
   console.log(`\n${STRICT ? '✗' : '·'} ${localOnly.length} file(s) in supabase/migrations/ not yet applied (pending Ben's verb, or applied without db-apply.sh):`);
   for (const v of localOnly) console.log(`   ${local.get(v)}`);
+  // In GitHub Actions, surface pending drafts as annotations so they are visible on the run without failing it.
+  if (process.env.GITHUB_ACTIONS && !STRICT) console.log(`::warning title=Migration drafts pending::${localOnly.map((v) => local.get(v)).join(', ')} committed but not applied; apply with /db-apply`);
 }
 if (!remoteOnly.length && (!localOnly.length || !STRICT)) { console.log(localOnly.length ? '✓ parity: nothing applied is uncommitted (drafts pending)' : '✓ parity: folder and tracker agree on every post-baseline version'); process.exit(0); }
 process.exit(1);

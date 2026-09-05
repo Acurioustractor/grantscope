@@ -100,12 +100,13 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Fails when the database holds a post-baseline migration with no committed file, and (strict, on main)
-      # when a committed file was never applied. Needs the two repo secrets above; until Ben adds them this
+      # Fails when the database holds a post-baseline migration with no committed file. Committed files not yet
+      # applied are drafts awaiting Ben's verb and only warn (they sit on main legitimately; --strict would make
+      # every main push red until he says apply). Needs the two repo secrets above; until Ben adds them this
       # step reports "skipped" rather than pretending to have checked.
       - name: Parity (folder vs supabase_migrations.schema_migrations)
         if: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' }}
-        run: node scripts/check-migration-parity.mjs ${{ github.ref == 'refs/heads/main' && '--strict' || '' }}
+        run: node scripts/check-migration-parity.mjs
       - name: Parity skipped (no SUPABASE_SERVICE_ROLE_KEY secret)
         if: ${{ env.SUPABASE_SERVICE_ROLE_KEY == '' }}
         run: echo "::warning::migration parity not checked; add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY as repo secrets"
