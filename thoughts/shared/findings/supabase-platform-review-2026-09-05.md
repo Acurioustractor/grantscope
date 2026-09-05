@@ -550,3 +550,16 @@ The pipeline tables the review flagged as near-empty are confirmed: `funding_ghl
 Point the other `source,name` agents at the shared contract; decide whether `idx_grant_opp_name_source_id` earns its
 place; make `alma_funding_opportunities` a view over the two tables it is promoted from; then the front-end and scorer
 consolidation the review describes.
+**Two defects found by using it, same day.** (1) `search_index_query` took 2.8 s while the identical SQL with literal
+values took 124 ms. Not the generic plan (`plan_cache_mode = force_custom_plan` changed nothing and stays as
+documentation): the WHERE has four OR branches and one of them, `postcode = <param>`, had no index. With literals the
+planner folds the regex guard to false and drops the branch; with parameters it cannot, and a single unindexable OR
+branch forces a sequential scan of all 440k rows. One partial index took it to **185 ms** (`20260905171000`). Worst
+observed query is now "aboriginal corporation" at 1.6 s, a very broad trigram match, left as a follow-up.
+(2) One globally ranked call bucketed into five lanes starves them: "alice springs" filled all 60 slots with companies
+and returned nothing for grants, foundations, people or places. `/api/global-search` now runs one query per lane in
+parallel, six at ~170 ms, which costs about one call.
+
+**And one in the tooling:** `scripts/ship-watch.mjs` split its `--verify` spec on the first `=`, so any URL with a query
+string was truncated and its expectation became `Number("mission")`. Two landings reported a live-check failure that had
+not happened. It now matches only a trailing three-digit code.

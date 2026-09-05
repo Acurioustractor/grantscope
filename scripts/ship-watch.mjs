@@ -11,8 +11,10 @@
  *
  *   --merge   squash-merge when every check passes. Omit for VISIBLE changes: the watcher then
  *             reports green and stops, leaving the merge to Ben after he has seen the preview.
- *   --verify  URL to curl after the deploy. `=CODE` asserts an exact status; otherwise any
- *             non-5xx counts as alive (an admin route legitimately answers 401/403/307).
+ *   --verify  URL to curl after the deploy. A trailing `=CODE` (three digits) asserts an exact status; otherwise any
+ *             non-5xx counts as alive (an admin route legitimately answers 401/403/307, and civicgraph.app answers
+ *             429 to every HTTP client because of Vercel's JS challenge, which is why 429 counts as alive here).
+ *             Query strings are safe: only a trailing three-digit `=CODE` is treated as an expectation.
  *
  * Never waits on advisory checks — only on what the rollup reports as pending. This repo has
  * no branch protection, so there is no required-check list to consult; every reported check is
@@ -113,7 +115,12 @@ async function checkState() {
 }
 
 async function verifyUrl(spec) {
-  const [url, expected] = spec.split('=');
+  // `URL=CODE`, but only when the tail is a bare 3-digit status. Splitting on the first `=` ate the query string of
+  // every URL that had one: `--verify '.../index?q=mission'` became url `.../index?q` with expected code "mission",
+  // and `Number("mission")` is NaN, so two landings on 2026-09-05 reported a live-check failure that had not happened.
+  const m = spec.match(/^(.*)=(\d{3})$/);
+  const url = m ? m[1] : spec;
+  const expected = m ? m[2] : null;
   try {
     const { stdout } = await exec('curl', ['-s', '-o', '/dev/null', '-w', '%{http_code}', '-L', '--max-time', '30', url]);
     const code = Number(stdout.trim());
