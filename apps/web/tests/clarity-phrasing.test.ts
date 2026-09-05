@@ -20,7 +20,9 @@ import path from 'path';
  */
 
 const REPO = path.resolve(__dirname, '../../..');
-const SEED = path.join(REPO, 'supabase/migrations/20260815000400_clarity_question_seed.sql');
+// Moved to history on 2026-09-05 when the baseline dump became the schema floor; the seed is applied, the file is
+// the record of the phrasing. If the questions are re-seeded, point this at the new migration.
+const SEED = path.join(REPO, 'supabase/migrations_history/pre-baseline-supabase/20260815000400_clarity_question_seed.sql');
 const CLARITY_UI = path.resolve(__dirname, '../src/app/clarity');
 
 /** Read SQL single-quoted strings, honouring '' as an escaped quote. */

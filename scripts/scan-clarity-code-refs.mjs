@@ -11,7 +11,7 @@
  * Method: whole-word ripgrep of every catalogued object name over three source sets in THIS repo —
  *   app        apps/web/src
  *   script     scripts
- *   migration  supabase/migrations + migrations
+ *   migration  supabase/migrations + supabase/migrations_history/* (the pre-baseline history)
  * Functions are scanned by their bare name (the catalogue keys them by full signature).
  * Matching is deliberately GENEROUS (a name in a comment counts): the expensive failure is a
  * false orphan, so the scanner errs toward "used". refs_* = number of referencing files;
@@ -45,7 +45,7 @@ const REPOS = [
     sets: [
       { refClass: 'app', dirs: ['apps/web/src'] },
       { refClass: 'script', dirs: ['scripts'] },
-      { refClass: 'migration', dirs: ['supabase/migrations', 'migrations'] },
+      { refClass: 'migration', dirs: ['supabase/migrations', 'supabase/migrations_history/pre-baseline-supabase', 'supabase/migrations_history/legacy-date-named'] },
     ],
   },
   {

@@ -71,7 +71,7 @@ failure it falls back to the local CSV (no lost run).
 ```bash
 source .env && PGPASSWORD="$DATABASE_PASSWORD" psql -h aws-0-ap-southeast-2.pooler.supabase.com \
   -p 5432 -U "postgres.tednluwflfhxyucgwigh" -d postgres \
-  -f supabase/migrations/20260704000000_grant_classie.sql
+  -f supabase/migrations_history/pre-baseline-supabase/20260704000000_grant_classie.sql   (moved to history 2026-09-05; already applied)
 npx tsx scripts/classify-grants-classie.mjs --dry-run --limit=200
 # then live (deterministic pass, no LLM cost):
 npx tsx scripts/classify-grants-classie.mjs --limit=5000

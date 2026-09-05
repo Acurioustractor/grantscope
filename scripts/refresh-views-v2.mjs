@@ -12,7 +12,7 @@
  *   - per-view timeout                → measured p90 in mv_refresh_log
  *
  * To add a view to the schedule, INSERT it into mv_refresh_registry. Do not
- * edit this file. See migrations/2026-08-14-mv-refresh-registry.sql.
+ * edit this file. See supabase/migrations_history/legacy-date-named/2026-08-14-mv-refresh-registry.sql.
  *
  * Behaviour kept from the previous version:
  *   1. Sequential (no pooler contention from parallel REFRESH)
@@ -65,7 +65,7 @@ async function loadPlan(tier) {
       return { name, depth: Number(depth), concurrent: conc === 't' };
     });
   } catch (err) {
-    // FALLBACK. mv_refresh_plan() ships in migrations/2026-08-14-mv-refresh-registry.sql, which is
+    // FALLBACK. mv_refresh_plan() ships in supabase/migrations_history/legacy-date-named/2026-08-14-mv-refresh-registry.sql, which is
     // an UNAPPLIED deliverable. Until it lands this script must still work — rewriting it to read a
     // registry that does not exist yet would have taken a working nightly tool offline in exchange
     // for a migration nobody had run.
@@ -145,7 +145,7 @@ async function warnDrift() {
     if (rows.length) {
       log(`⚠ ${rows.length} registry drift row(s) — matviews with no schedule, or registry rows for dropped matviews:`);
       for (const r of rows.slice(0, 20)) log(`    ${r.replace(/\|/g, '  ')}`);
-      log('  Fix by INSERTing into mv_refresh_registry (see migrations/2026-08-14-mv-refresh-registry.sql).');
+      log('  Fix by INSERTing into mv_refresh_registry (see supabase/migrations_history/legacy-date-named/2026-08-14-mv-refresh-registry.sql).');
     }
   } catch (e) {
     log(`  drift check skipped: ${e.message}`);

@@ -5,7 +5,7 @@ import { getDirectServiceSupabase } from '@/lib/supabase';
  *
  * The rule (dashboard-shell-buildout.md): never hardcode a year list that rots. Both
  * vocabularies come from `v_vocab_financial_years` / `v_vocab_topics`
- * (migrations/2026-08-16-vocab-views.sql), which carry the same two DB-side grant filters as
+ * (supabase/migrations_history/legacy-date-named/2026-08-16-vocab-views.sql), which carry the same two DB-side grant filters as
  * every money surface — so a year or topic appears here exactly when the money panels have
  * rows for it.
  *
