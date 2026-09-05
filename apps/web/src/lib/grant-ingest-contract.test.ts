@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 // The helper lives with the agents that call it; the test lives where the gate looks (apps/web/vitest.config.ts only
 // collects tests under apps/web). Same arrangement as palette-ratchet.test.ts.
-// @ts-expect-error - plain .mjs helper, no types
 import { dedupeGrantRows, upsertGrantOpportunities } from '../../../../scripts/lib/upsert-grant-opportunities.mjs';
 
 type Row = Record<string, unknown>;
