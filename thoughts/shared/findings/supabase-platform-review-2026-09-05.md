@@ -472,5 +472,13 @@ prefix name matches first, then trigram similarity plus tsvector rank, ABN when 
 it with `/api/search/index` and `lib/search/search-index.ts` (input whitelist, tested). The `/search` page moves onto it
 in its own PR because it is a public surface.
 
-Still to do in Phase 4: postcode rows, aliases from `gs_entity_aliases`, retiring the 17 `search_*` functions to wrappers,
-and the semantic path behind the lexical one.
+Three more builds the same afternoon (`20260905162000`, `163000`, `164000`): structured `source_count`, `closes_at`,
+`amount_min` and `postcode` columns; a twelfth kind, one row per postcode with an ABS-style locality label (3,243 rows);
+ranking by the greatest applicable bonus (the first-branch CASE let "0870 Charles" take the prefix bonus over the
+postcode-row bonus). Each rebuild is about thirteen seconds. Two unique-index rollbacks taught two grain facts:
+`mv_funding_by_lga` is not one row per council (case and whitespace variants), and `mv_gs_entity_stats` is not one row per
+entity. `/api/global-search`, the live lanes behind the header box and `/search`, now makes one call to the RPC instead
+of five separate lanes; the client is unchanged. Council-area rows have no lane in that client yet.
+
+Still to do in Phase 4: aliases from `gs_entity_aliases`, a council lane in the search client, retiring the 17 `search_*`
+functions to wrappers, and the semantic path behind the lexical one.

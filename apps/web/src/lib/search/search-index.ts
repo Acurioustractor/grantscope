@@ -17,6 +17,7 @@ export const SEARCH_KINDS = [
   'person',
   'place',
   'intervention',
+  'postcode',
 ] as const;
 export type SearchKind = (typeof SEARCH_KINDS)[number];
 
@@ -32,6 +33,7 @@ export const KIND_LABEL: Record<SearchKind, string> = {
   person: 'Person',
   place: 'Council area',
   intervention: 'Intervention',
+  postcode: 'Postcode',
 };
 
 export type SearchHit = {
@@ -47,6 +49,10 @@ export type SearchHit = {
   tier: string | null;
   meta: string | null;
   href: string | null;
+  source_count: number | null; // organisations: source systems; people: boards; areas and postcodes: organisations
+  closes_at: string | null; // grant rounds only
+  amount_min: number | null; // grant rounds only
+  postcode: string | null; // postcode rows and social enterprises
   score: number;
 };
 
