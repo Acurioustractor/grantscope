@@ -24,6 +24,7 @@ describe('parseSearchQuery — untrusted input into what the RPC accepts', () =>
   it('lists every kind the index carries', () => {
     expect(SEARCH_KINDS).toContain('grant_round');
     expect(SEARCH_KINDS).toContain('place');
-    expect(SEARCH_KINDS.length).toBe(11);
+    expect(SEARCH_KINDS).toContain('postcode');
+    expect(SEARCH_KINDS.length).toBe(12);
   });
 });
