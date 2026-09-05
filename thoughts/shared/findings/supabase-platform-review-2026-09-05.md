@@ -590,8 +590,26 @@ origin by key. Matching by lower(name) does work: 6,609 of 6,642 promoted-from-g
 row, and 6,402 of 6,402 promoted-from-foundation-programs rows match a `foundation_programs` row (by URL it is only
 4,987 of 6,642).
 
-The read-side unified view is being built instead: one row per fundable thing, deduplicated by name against its origin,
-with provenance, leaving every writer alone.
+**Built instead: `v_funding_opportunities`** (`20260905180000`, deduped in `181000`). One row per fundable thing across
+the canonical rounds in `grant_opportunities` (26,698), foundation programs never promoted into it (2,533 of 4,457), and
+the ALMA-native rows (58 of 13,102; the other 13,044 are promotions and would double-count). **29,289 rows, 25,046 open,
+53 ms.** `security_invoker`, granted to authenticated and service_role only, so it cannot widen what any reader may see.
+Every source table keeps its writers untouched.
+
+Deduplication is by `lower(trim(name))` because there is no key to use. ALMA's verification rides along on the canonical
+row (`verification_status`, `in_alma`) rather than as a second row.
+
+Two things the first build taught, both now in the migration headers:
+- 13 foundation programs matched a stored round by name while carrying no `source_id` link to it, and appeared twice.
+  Suppressed by name, the same way the ALMA-native rows already were. Cross-origin duplicates are now zero.
+- **87 duplicate name+funder pairs already exist inside `grant_opportunities`**, mostly case-varying names ("Rio Tinto
+  Community Giving Program" against "...program"). The three unique indexes are case-sensitive and do not catch them.
+  The view leaves them visible rather than hiding them, because merging two stored rounds is a human call, the same
+  rule the write contract follows.
+
+Read it through `apps/web/src/lib/funding/opportunities.ts` or `GET /api/data/funding-opportunities`, which is also the
+path JusticeHub, Empathy Ledger and act-global should use instead of their own SQL. It does not rank: ordering by
+`relevance_score` orders by a constant.
 
 ### Next in Phase 5
 
