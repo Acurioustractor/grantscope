@@ -482,3 +482,17 @@ of five separate lanes; the client is unchanged. Council-area rows have no lane 
 
 Still to do in Phase 4: aliases from `gs_entity_aliases`, a council lane in the search client, retiring the 17 `search_*`
 functions to wrappers, and the semantic path behind the lexical one.
+
+**Two defects found by using it, same day.** (1) `search_index_query` took 2.8 s while the identical SQL with literal
+values took 124 ms. Not the generic plan (`plan_cache_mode = force_custom_plan` changed nothing and stays as
+documentation): the WHERE has four OR branches and one of them, `postcode = <param>`, had no index. With literals the
+planner folds the regex guard to false and drops the branch; with parameters it cannot, and a single unindexable OR
+branch forces a sequential scan of all 440k rows. One partial index took it to **185 ms** (`20260905171000`). Worst
+observed query is now "aboriginal corporation" at 1.6 s, a very broad trigram match, left as a follow-up.
+(2) One globally ranked call bucketed into five lanes starves them: "alice springs" filled all 60 slots with companies
+and returned nothing for grants, foundations, people or places. `/api/global-search` now runs one query per lane in
+parallel, six at ~170 ms, which costs about one call.
+
+**And one in the tooling:** `scripts/ship-watch.mjs` split its `--verify` spec on the first `=`, so any URL with a query
+string was truncated and its expectation became `Number("mission")`. Two landings reported a live-check failure that had
+not happened. It now matches only a trailing three-digit code.
