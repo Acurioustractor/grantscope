@@ -628,3 +628,25 @@ parallel, six at ~170 ms, which costs about one call.
 **And one in the tooling:** `scripts/ship-watch.mjs` split its `--verify` spec on the first `=`, so any URL with a query
 string was truncated and its expectation became `Number("mission")`. Two landings reported a live-check failure that had
 not happened. It now matches only a trailing three-digit code.
+
+### Grant names were abstracts (fixed 2026-09-05)
+
+Using the unified view exposed it: 8,343 of 26,698 grant names ran past 120 characters because the ingest put the whole
+abstract in the name field (arc-grants 5,598, brisbane-grants 1,878, Lotterywest 734). Every surface listing a grant
+showed an abstract where a title belongs, including 7,418 rows of `mv_search_index`.
+
+The shape is "Title. Abstract...", so the title is the first sentence. `20260905190000` renames the rows that split
+cleanly at a sentence boundary (10-200 characters, ending in `.`/`!`/`?`, followed by a capital):
+
+| measure | before | after |
+|---|---|---|
+| grant names over 120 chars | 8,343 | 2,654 |
+| search index names over 120 chars | 7,418 | 3,309 |
+| rows renamed | | 5,754 |
+
+Renaming rows in this table is not cosmetic, because two of its three unique indexes are on `name`. Measured first: no
+new name collided with an existing row on `(source, name)` or `(name, source_id)`, and the 4 rows that would have
+collided with each other are excluded. The remaining 2,654 long names have no clean sentence boundary and were left
+alone. Nothing is lost and it is reversible: the full original is in `metadata->>'original_name'` on all 5,754 rows, the
+54 rows that had no description got the original text as their description, and the rollback statement is in the
+migration footer.
