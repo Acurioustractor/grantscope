@@ -483,6 +483,73 @@ of five separate lanes; the client is unchanged. Council-area rows have no lane 
 Still to do in Phase 4: aliases from `gs_entity_aliases`, a council lane in the search client, retiring the 17 `search_*`
 functions to wrappers, and the semantic path behind the lexical one.
 
+## 12. Phase 5 progress (started 2026-09-05)
+
+Phase 5 was framed as consolidating four grant front ends and four scorers. Measuring first moved the priority: the
+grants **intake** had a reproducible bug, and the duplication is smaller and more mechanical than the review assumed.
+
+### The one that was actually broken
+
+`grant_opportunities` carries THREE unique indexes and the ingest agents target one each:
+
+| index | agents targeting it |
+|---|---|
+| `grant_opportunities_url_idx` (url) | `sync-austender-open-tenders` |
+| `grant_opportunities_source_name_full_uniq` (source, name) | `ingest-grantconnect-go`, `ingest-vic-grants-open`, `sync-foundation-programs` |
+| `idx_grant_opp_name_source_id` (name, source_id) | five importers |
+
+`ON CONFLICT` resolves exactly the index it names, so an agent that targets one key still raises a duplicate-key error
+on either of the others. **"VIC Grants Gateway (Open)" failed 51 of 57 nightly runs** on the url index: those Victorian
+grants had been ingested earlier under the source label "Victorian Government / Regional Development VIC" and kept their
+URLs, so the (source, name) upsert tried to INSERT and hit the url index `[V]`.
+
+Switching the conflict target to `url` was tried and moved the failure rather than fixing it: a re-published grant
+arrives with a new URL under a name already taken, which then violates (source, name). Measured on the live source:
+29 of 30 rows written, one failure of the mirror-image kind.
+
+`scripts/lib/upsert-grant-opportunities.mjs` is now the one write path. It de-duplicates inside the batch, resolves each
+row against the table by url and by (source, name) in bulk, then writes **by primary key**, so no unique index is ever
+crossed. A row that resolves to two different existing rows is a genuine duplicate pair already in the table; it is
+reported, not guessed at, because merging them is a human call. Chunked, with row-by-row retry so one bad row cannot
+cost the run, and failures returned rather than thrown so the agent logs a partial.
+
+Proven on the live source, in `agent_runs`:
+
+| run | result |
+|---|---|
+| 02:01, old code | `failed`, 0 rows |
+| 08:10, url-key attempt | 30 found, 29 written, 1 duplicate-key error |
+| 08:14, resolve-then-write | 30 found, **30 written, no errors** |
+
+### Two corrections to what the run log looks like it says
+
+- **`timed_out` is not a timeout.** `scripts/scheduler.mjs` has a janitor (`cleanupStaleRuns`) that marks any run still
+  `running` after four hours as `timed_out`. 227 of the last 30 days' runs carry it, including 71 for the nightly grant
+  orchestrator. It means the process was interrupted (or crashed before logging completion), not that the agent failed.
+  The orchestrator's registry timeout is already 60 minutes, so the scheduler is not killing it.
+- **"Sync Foundation Programs" is not failing.** It is marked `partial` because of embedding errors (560 in the latest
+  run) while its ingest works: 936 found, 42 new. Counting `partial` as failure overstated the breakage. The embedding
+  errors are a separate, unexamined problem.
+
+### The duplication, measured
+
+`alma_funding_opportunities` (13,102 rows) is **99.5% a copy**: 6,642 rows are `promotion-from-grant_opportunities` and
+6,402 are `promotion-from-foundation-programs`, leaving 58 rows of its own (26 unlabelled, 21 a manual seed, 9 from an
+oracle research run, 2 smoke-test rows) `[V]`. Merging it is therefore a view or a promotion job, not a data migration.
+
+`grant_opportunities` itself is dominated by two sources: `brisbane-grants` 12,271 and `arc-grants` 5,598 of 26,695
+(75% between them), so "22,691 open grant rounds" is mostly Brisbane City Council and ARC research grants. That is a
+number to qualify before putting it on a public surface.
+
+The pipeline tables the review flagged as near-empty are confirmed: `funding_ghl_handoffs` 0, `opportunity_decisions` 7,
+`funding_awards` 5, `funding_programs` 4, `funding_match_recommendations` 3, `funding_sources` 3,
+`alma_funding_applications` 2. `grant_notification_outbox` holds 771 rows and has not been written to since 15 May.
+
+### Next in Phase 5
+
+Point the other `source,name` agents at the shared contract; decide whether `idx_grant_opp_name_source_id` earns its
+place; make `alma_funding_opportunities` a view over the two tables it is promoted from; then the front-end and scorer
+consolidation the review describes.
 **Two defects found by using it, same day.** (1) `search_index_query` took 2.8 s while the identical SQL with literal
 values took 124 ms. Not the generic plan (`plan_cache_mode = force_custom_plan` changed nothing and stays as
 documentation): the WHERE has four OR branches and one of them, `postcode = <param>`, had no index. With literals the

@@ -13,6 +13,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
+import { upsertGrantOpportunities } from './lib/upsert-grant-opportunities.mjs';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -152,13 +153,24 @@ async function main() {
     return;
   }
 
-  // The canonical table contract is one row per source/name. Refresh a
-  // republished grant's URL and source_id instead of inserting a duplicate.
-  const { error } = await supabase.from('grant_opportunities').upsert(rows, { onConflict: 'source,name', ignoreDuplicates: false });
-  if (error) throw new Error(`upsert failed: ${error.message}`);
-  console.log(`Upserted ${rows.length} rows (source=vic-grants-gateway)`);
+  // One contract for every writer of grant_opportunities: a URL identifies a round, whatever source label it was
+  // ingested under. This agent used to upsert on (source, name) and failed 51 of 57 nightly runs, because these same
+  // Victorian grants already existed under an older source label and kept their URLs, so the insert hit the separate
+  // unique index on url. See scripts/lib/upsert-grant-opportunities.mjs.
+  const result = await upsertGrantOpportunities(supabase, rows);
+  console.log(
+    `Upserted ${result.written} rows (source=vic-grants-gateway)` +
+      (result.droppedInBatch ? `, ${result.droppedInBatch} duplicate(s) collapsed in the batch` : '') +
+      (result.failed ? `, ${result.failed} FAILED` : ''),
+  );
+  for (const err of result.errors) console.error(`  ! ${err}`);
+  if (result.failed && !result.written) throw new Error(`every row failed: ${result.errors[0] ?? 'unknown'}`);
 
-  await logComplete(supabase, activeRun.id, { items_found: hits.length, items_new: rows.length });
+  await logComplete(supabase, activeRun.id, {
+    items_found: hits.length,
+    items_new: result.written,
+    errors: result.errors.length ? result.errors.map((message) => ({ time: new Date().toISOString(), message })) : undefined,
+  });
 }
 
 main().catch(async (err) => {
