@@ -1,7 +1,3 @@
-// Generated 2026-09-05 from the shared Supabase project tednluwflfhxyucgwigh via the Supabase MCP
-// (equivalent to `supabase gen types typescript --linked`). Regenerate after every migration; CI parity
-// (scripts/check-migration-parity.mjs) reports when the schema moved and this file did not.
-
 export type Json =
   | string
   | number
@@ -15,6 +11,31 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -447,6 +468,156 @@ export type Database = {
         }
         Relationships: []
       }
+      _backup_gs_entities_merge_20260906: {
+        Row: {
+          abn: string | null
+          acn: string | null
+          canonical_name: string | null
+          cc_confidence: number | null
+          community_controlled_tier: string | null
+          confidence: string | null
+          contact_source: string | null
+          created_at: string | null
+          description: string | null
+          email: string | null
+          embedded_at: string | null
+          embedding: string | null
+          entity_type: string | null
+          financial_year: string | null
+          first_seen: string | null
+          gs_id: string | null
+          id: string | null
+          is_community_controlled: boolean | null
+          is_supply_nation_certified: boolean | null
+          last_seen: string | null
+          latest_assets: number | null
+          latest_revenue: number | null
+          latest_tax_payable: number | null
+          lga_code: string | null
+          lga_name: string | null
+          lga_source: string | null
+          metadata: Json | null
+          oric_employee_band: string | null
+          oric_icn: string | null
+          oric_income_band: string | null
+          oric_matched_by: string | null
+          oric_sector: string | null
+          oric_size: string | null
+          oric_status: string | null
+          phone: string | null
+          postcode: string | null
+          remoteness: string | null
+          sa2_code: string | null
+          sector: string | null
+          seifa_irsd_decile: number | null
+          source_count: number | null
+          source_datasets: string[] | null
+          state: string | null
+          sub_sector: string | null
+          tags: string[] | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          abn?: string | null
+          acn?: string | null
+          canonical_name?: string | null
+          cc_confidence?: number | null
+          community_controlled_tier?: string | null
+          confidence?: string | null
+          contact_source?: string | null
+          created_at?: string | null
+          description?: string | null
+          email?: string | null
+          embedded_at?: string | null
+          embedding?: string | null
+          entity_type?: string | null
+          financial_year?: string | null
+          first_seen?: string | null
+          gs_id?: string | null
+          id?: string | null
+          is_community_controlled?: boolean | null
+          is_supply_nation_certified?: boolean | null
+          last_seen?: string | null
+          latest_assets?: number | null
+          latest_revenue?: number | null
+          latest_tax_payable?: number | null
+          lga_code?: string | null
+          lga_name?: string | null
+          lga_source?: string | null
+          metadata?: Json | null
+          oric_employee_band?: string | null
+          oric_icn?: string | null
+          oric_income_band?: string | null
+          oric_matched_by?: string | null
+          oric_sector?: string | null
+          oric_size?: string | null
+          oric_status?: string | null
+          phone?: string | null
+          postcode?: string | null
+          remoteness?: string | null
+          sa2_code?: string | null
+          sector?: string | null
+          seifa_irsd_decile?: number | null
+          source_count?: number | null
+          source_datasets?: string[] | null
+          state?: string | null
+          sub_sector?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          abn?: string | null
+          acn?: string | null
+          canonical_name?: string | null
+          cc_confidence?: number | null
+          community_controlled_tier?: string | null
+          confidence?: string | null
+          contact_source?: string | null
+          created_at?: string | null
+          description?: string | null
+          email?: string | null
+          embedded_at?: string | null
+          embedding?: string | null
+          entity_type?: string | null
+          financial_year?: string | null
+          first_seen?: string | null
+          gs_id?: string | null
+          id?: string | null
+          is_community_controlled?: boolean | null
+          is_supply_nation_certified?: boolean | null
+          last_seen?: string | null
+          latest_assets?: number | null
+          latest_revenue?: number | null
+          latest_tax_payable?: number | null
+          lga_code?: string | null
+          lga_name?: string | null
+          lga_source?: string | null
+          metadata?: Json | null
+          oric_employee_band?: string | null
+          oric_icn?: string | null
+          oric_income_band?: string | null
+          oric_matched_by?: string | null
+          oric_sector?: string | null
+          oric_size?: string | null
+          oric_status?: string | null
+          phone?: string | null
+          postcode?: string | null
+          remoteness?: string | null
+          sa2_code?: string | null
+          sector?: string | null
+          seifa_irsd_decile?: number | null
+          source_count?: number | null
+          source_datasets?: string[] | null
+          state?: string | null
+          sub_sector?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
       _backup_gs_entities_sa3_20260819: {
         Row: {
           canonical_name: string | null
@@ -601,6 +772,66 @@ export type Database = {
         Relationships: []
       }
       _backup_gs_rel_merge_20260821: {
+        Row: {
+          amount: number | null
+          confidence: string | null
+          created_at: string | null
+          currency: string | null
+          dataset: string | null
+          end_date: string | null
+          first_seen: string | null
+          id: string | null
+          last_seen: string | null
+          properties: Json | null
+          relationship_type: string | null
+          source_entity_id: string | null
+          source_record_id: string | null
+          source_url: string | null
+          start_date: string | null
+          target_entity_id: string | null
+          year: number | null
+        }
+        Insert: {
+          amount?: number | null
+          confidence?: string | null
+          created_at?: string | null
+          currency?: string | null
+          dataset?: string | null
+          end_date?: string | null
+          first_seen?: string | null
+          id?: string | null
+          last_seen?: string | null
+          properties?: Json | null
+          relationship_type?: string | null
+          source_entity_id?: string | null
+          source_record_id?: string | null
+          source_url?: string | null
+          start_date?: string | null
+          target_entity_id?: string | null
+          year?: number | null
+        }
+        Update: {
+          amount?: number | null
+          confidence?: string | null
+          created_at?: string | null
+          currency?: string | null
+          dataset?: string | null
+          end_date?: string | null
+          first_seen?: string | null
+          id?: string | null
+          last_seen?: string | null
+          properties?: Json | null
+          relationship_type?: string | null
+          source_entity_id?: string | null
+          source_record_id?: string | null
+          source_url?: string | null
+          start_date?: string | null
+          target_entity_id?: string | null
+          year?: number | null
+        }
+        Relationships: []
+      }
+      _backup_gs_rel_merge_20260906: {
         Row: {
           amount: number | null
           confidence: string | null
@@ -981,6 +1212,42 @@ export type Database = {
           sex?: string | null
           source?: string
           state?: string | null
+        }
+        Relationships: []
+      }
+      abs_lga_population: {
+        Row: {
+          area_sqkm: number | null
+          erp_2018: number | null
+          erp_2021: number | null
+          erp_2023: number
+          lga_code: string
+          lga_name: string
+          loaded_at: string
+          source: string
+          state: string
+        }
+        Insert: {
+          area_sqkm?: number | null
+          erp_2018?: number | null
+          erp_2021?: number | null
+          erp_2023: number
+          lga_code: string
+          lga_name: string
+          loaded_at?: string
+          source?: string
+          state: string
+        }
+        Update: {
+          area_sqkm?: number | null
+          erp_2018?: number | null
+          erp_2021?: number | null
+          erp_2023?: number
+          lga_code?: string
+          lga_name?: string
+          loaded_at?: string
+          source?: string
+          state?: string
         }
         Relationships: []
       }
@@ -15778,6 +16045,7 @@ export type Database = {
           last_check_at: string | null
           last_deployment_at: string | null
           name: string
+          project_code: string | null
           response_time_ms: number | null
           slug: string
           ssl_expires_at: string | null
@@ -15800,6 +16068,7 @@ export type Database = {
           last_check_at?: string | null
           last_deployment_at?: string | null
           name: string
+          project_code?: string | null
           response_time_ms?: number | null
           slug: string
           ssl_expires_at?: string | null
@@ -15822,6 +16091,7 @@ export type Database = {
           last_check_at?: string | null
           last_deployment_at?: string | null
           name?: string
+          project_code?: string | null
           response_time_ms?: number | null
           slug?: string
           ssl_expires_at?: string | null
@@ -27901,6 +28171,33 @@ export type Database = {
         ]
       }
       gs_entity_merge_map_20260821: {
+        Row: {
+          loser_gs_id: string | null
+          loser_id: string
+          merge_class: string
+          name: string | null
+          winner_gs_id: string | null
+          winner_id: string
+        }
+        Insert: {
+          loser_gs_id?: string | null
+          loser_id: string
+          merge_class: string
+          name?: string | null
+          winner_gs_id?: string | null
+          winner_id: string
+        }
+        Update: {
+          loser_gs_id?: string | null
+          loser_id?: string
+          merge_class?: string
+          name?: string | null
+          winner_gs_id?: string | null
+          winner_id?: string
+        }
+        Relationships: []
+      }
+      gs_entity_merge_map_20260906: {
         Row: {
           loser_gs_id: string | null
           loser_id: string
@@ -56118,14 +56415,14 @@ export type Database = {
           },
           {
             foreignKeyName: "community_programs_profiles_public_profile_id_fkey"
-            columns: ["profile_id"]
+            columns: ["public_profile_id"]
             isOneToOne: false
             referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "community_programs_profiles_public_profile_id_fkey"
-            columns: ["public_profile_id"]
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "public_profiles"
             referencedColumns: ["id"]
@@ -56923,6 +57220,46 @@ export type Database = {
         }
         Relationships: []
       }
+      mv_charity_trajectory: {
+        Row: {
+          abn: string | null
+          charity_name: string | null
+          charity_size: string | null
+          deficit_years_last3: number | null
+          donation_share_first_pct: number | null
+          donation_share_last_pct: number | null
+          donations_first: number | null
+          donations_last: number | null
+          first_year: number | null
+          fte_first: number | null
+          fte_last: number | null
+          gov_dependent: boolean | null
+          gov_revenue_last: number | null
+          gov_share_first_pct: number | null
+          gov_share_last_pct: number | null
+          gs_id: string | null
+          last_year: number | null
+          lga_code: string | null
+          lga_name: string | null
+          margin_last_pct: number | null
+          net_assets_last: number | null
+          peak_revenue: number | null
+          refreshed_at: string | null
+          reserve_months: number | null
+          revenue_cagr_pct: number | null
+          revenue_change_pct: number | null
+          revenue_change_yoy_pct: number | null
+          revenue_first: number | null
+          revenue_last: number | null
+          revenue_prev: number | null
+          state: string | null
+          three_year_deficit: boolean | null
+          trend: string | null
+          volunteers_last: number | null
+          years_reported: number | null
+        }
+        Relationships: []
+      }
       mv_clarity_flow: {
         Row: {
           amount_recorded: number | null
@@ -57656,6 +57993,47 @@ export type Database = {
         }
         Relationships: []
       }
+      mv_lga_allocation: {
+        Row: {
+          area_sqkm: number | null
+          charities: number | null
+          charities_reporting: number | null
+          charity_donations: number | null
+          charity_fte: number | null
+          charity_gov_revenue: number | null
+          charity_revenue: number | null
+          charity_volunteers: number | null
+          community_controlled: number | null
+          contract_count: number | null
+          contract_value: number | null
+          contract_value_24m: number | null
+          cw_grant_count: number | null
+          cw_grant_value: number | null
+          cw_grant_value_24m: number | null
+          cw_grants_24m_per_head: number | null
+          donations_per_head: number | null
+          erp_2018: number | null
+          gov_revenue_per_head: number | null
+          irsd_decile: number | null
+          irsd_score: number | null
+          jf_grant_count: number | null
+          jf_grant_value: number | null
+          lga_code: string | null
+          lga_name: string | null
+          min_irsd_decile: number | null
+          org_count: number | null
+          orgs_per_10k: number | null
+          placed_share_pct: number | null
+          population: number | null
+          postcode_count: number | null
+          postcodes_with_seifa: number | null
+          refreshed_at: string | null
+          remoteness: string | null
+          state: string | null
+          unplaced_sharing_postcodes: number | null
+        }
+        Relationships: []
+      }
       mv_lga_indigenous_proxy_score: {
         Row: {
           community_controlled_share_pct: number | null
@@ -58222,6 +58600,29 @@ export type Database = {
           sa2_name: string | null
           seifa_decile: number | null
           total_funding: number | null
+        }
+        Relationships: []
+      }
+      mv_search_index: {
+        Row: {
+          abn: string | null
+          amount_min: number | null
+          built_at: string | null
+          closes_at: string | null
+          href: string | null
+          id: string | null
+          kind: string | null
+          meta: string | null
+          money_in: number | null
+          money_out: number | null
+          name: string | null
+          place: string | null
+          postcode: string | null
+          sector: string | null
+          source_count: number | null
+          state: string | null
+          tier: string | null
+          tsv: unknown
         }
         Relationships: []
       }
@@ -61843,6 +62244,37 @@ export type Database = {
           record_count: number | null
           script_path: string | null
           unregistered: boolean | null
+        }
+        Relationships: []
+      }
+      v_funding_opportunities: {
+        Row: {
+          alma_opportunity_type: string | null
+          amount_max: number | null
+          amount_min: number | null
+          categories: string[] | null
+          closes_at: string | null
+          created_at: string | null
+          description: string | null
+          eligible_org_types: string[] | null
+          focus_areas: string[] | null
+          foundation_id: string | null
+          funder: string | null
+          grant_type: string | null
+          href: string | null
+          in_alma: boolean | null
+          is_national: boolean | null
+          is_open: boolean | null
+          jurisdictions: string[] | null
+          name: string | null
+          opportunity_key: string | null
+          origin: string | null
+          origin_id: string | null
+          requires_dgr: boolean | null
+          source: string | null
+          updated_at: string | null
+          url: string | null
+          verification_status: string | null
         }
         Relationships: []
       }
@@ -68371,6 +68803,33 @@ export type Database = {
           url: string
         }[]
       }
+      search_index_query: {
+        Args: {
+          kinds?: string[]
+          p_limit?: number
+          p_state?: string
+          q: string
+        }
+        Returns: {
+          abn: string
+          amount_min: number
+          closes_at: string
+          href: string
+          id: string
+          kind: string
+          meta: string
+          money_in: number
+          money_out: number
+          name: string
+          place: string
+          postcode: string
+          score: number
+          sector: string
+          source_count: number
+          state: string
+          tier: string
+        }[]
+      }
       search_interventions_unified: {
         Args: {
           p_consent_level?: string
@@ -69016,6 +69475,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       analysis_job_status_enum: ["queued", "processing", "completed", "failed"],

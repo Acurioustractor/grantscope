@@ -57,7 +57,6 @@ export const TREND_LABEL: Record<TrajectoryRow['trend'], string> = {
 export interface CohortStat {
   trend: TrajectoryRow['trend'];
   n: number;
-  revenue_last: number;
   gov_dependent: number;
   three_year_deficit: number;
 }
@@ -96,32 +95,30 @@ export async function trajectoryLists(state: string, limit = 25): Promise<Trajec
     if (state) q = q.eq('state', state);
     return q;
   };
-  const cohortQ = (() => {
-    let q = db.from('mv_charity_trajectory').select('trend, revenue_last, gov_dependent, three_year_deficit');
+  // Cohort counts are exact head-counts, one per trend and flag. Selecting the rows and counting in
+  // JS silently stopped at PostgREST's 1,000-row cap and printed "1,000 charities" (caught 2026-09-06).
+  const TRENDS: TrajectoryRow['trend'][] = ['growing', 'steady', 'shrinking', 'lapsed', 'single_year'];
+  const countWhere = async (trend: TrajectoryRow['trend'], flag?: 'gov_dependent' | 'three_year_deficit') => {
+    let q = db.from('mv_charity_trajectory').select('abn', { count: 'exact', head: true }).eq('trend', trend);
     if (state) q = q.eq('state', state);
-    return q.limit(100000);
-  })();
-  const [cohortRes, shrink, grow, gov, deficit, shift] = await Promise.all([
-    cohortQ,
+    if (flag) q = q.eq(flag, true);
+    const { count, error } = await q;
+    if (error) throw new Error(error.message);
+    return count ?? 0;
+  };
+  const [counts, shrink, grow, gov, deficit, shift] = await Promise.all([
+    Promise.all(TRENDS.map(async (t) => {
+      const [n, g, d] = await Promise.all([countWhere(t), countWhere(t, 'gov_dependent'), countWhere(t, 'three_year_deficit')]);
+      return { trend: t, n, gov_dependent: g, three_year_deficit: d } satisfies CohortStat;
+    })),
     base().eq('trend', 'shrinking').gte('peak_revenue', 1_000_000).order('revenue_change_pct', { ascending: true, nullsFirst: false }).limit(limit),
     base().eq('trend', 'growing').gte('revenue_first', 1_000_000).order('revenue_cagr_pct', { ascending: false, nullsFirst: false }).limit(limit),
     base().eq('gov_dependent', true).gte('revenue_last', 1_000_000).order('gov_share_last_pct', { ascending: false, nullsFirst: false }).order('revenue_last', { ascending: false }).limit(limit),
     base().eq('three_year_deficit', true).order('revenue_last', { ascending: false, nullsFirst: false }).limit(limit),
     base().gte('revenue_last', 1_000_000).gte('years_reported', 4).not('donation_share_first_pct', 'is', null).order('donation_share_last_pct', { ascending: false, nullsFirst: false }).limit(400),
   ]);
-  for (const r of [cohortRes, shrink, grow, gov, deficit, shift]) if (r.error) throw new Error(r.error.message);
-
-  const acc = new Map<string, CohortStat>();
-  for (const r of (cohortRes.data ?? []) as Pick<TrajectoryRow, 'trend' | 'revenue_last' | 'gov_dependent' | 'three_year_deficit'>[]) {
-    const c = acc.get(r.trend) ?? { trend: r.trend, n: 0, revenue_last: 0, gov_dependent: 0, three_year_deficit: 0 };
-    c.n += 1;
-    c.revenue_last += Number(r.revenue_last) || 0;
-    if (r.gov_dependent) c.gov_dependent += 1;
-    if (r.three_year_deficit) c.three_year_deficit += 1;
-    acc.set(r.trend, c);
-  }
-  const order: TrajectoryRow['trend'][] = ['growing', 'steady', 'shrinking', 'lapsed', 'single_year'];
-  const cohort = order.map((t) => acc.get(t)).filter((c): c is CohortStat => !!c);
+  for (const r of [shrink, grow, gov, deficit, shift]) if (r.error) throw new Error(r.error.message);
+  const cohort = counts.filter((c) => c.n > 0);
 
   // Donation shift is computed here rather than sorted in SQL: the interesting rows are the ones
   // whose share moved most in either direction, which is |last - first|, not a column.

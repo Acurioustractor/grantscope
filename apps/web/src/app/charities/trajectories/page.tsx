@@ -78,7 +78,7 @@ export default async function TrajectoriesPage({ searchParams }: { searchParams:
                     {c.n.toLocaleString('en-AU')}
                     <span className="ml-2 text-[12px] font-bold" style={{ color: '#777' }}>{total ? Math.round((100 * c.n) / total) : 0}%</span>
                   </div>
-                  <div className="text-[12px]" style={{ color: '#555' }}>{money(c.revenue_last)} latest revenue · {c.gov_dependent.toLocaleString('en-AU')} government-dependent</div>
+                  <div className="text-[12px]" style={{ color: '#555' }}>{c.gov_dependent.toLocaleString('en-AU')} government-dependent · {c.three_year_deficit.toLocaleString('en-AU')} three-year deficits</div>
                 </div>
               ))}
             </div>
