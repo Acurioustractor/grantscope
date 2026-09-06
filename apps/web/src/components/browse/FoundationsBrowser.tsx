@@ -221,8 +221,7 @@ export default function FoundationsBrowser({
       </div>
       <p className="mt-2 font-mono text-[11px]" style={{ color: 'var(--shell-muted)' }}>
         {rows.length} shown of {total.toLocaleString('en-AU')} · &ldquo;Granted&rdquo; and
-        &ldquo;Assets&rdquo; are the latest ACNC return; &ldquo;Giving&rdquo; can mix grantmaking
-        with program spend · the type beside each name is the organisation&rsquo;s own kind, and
+        &ldquo;Assets&rdquo; are the latest ACNC return; &ldquo;Giving&rdquo; is the grants and donations made in that return for most rows (the guessed $25k/$100k/$500k figures were replaced on 7 Sep 2026), and a scraped figure that can mix grantmaking with program spend for the 955 that carry one · the type beside each name is the organisation&rsquo;s own kind, and
         this list deliberately includes givers that are not foundations (universities, service
         delivery, peak bodies) · Grantees and Board are sparse by nature: they need a matched grant
         record or a matched director, which exist for only a handful of funders so far
