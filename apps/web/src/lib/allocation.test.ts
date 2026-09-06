@@ -11,12 +11,24 @@ const row = (o: Partial<AllocationRow>): AllocationRow => ({
 
 describe('parseAllocationFilters', () => {
   it('falls back to defaults on anything unrecognised', () => {
-    expect(parseAllocationFilters({ state: 'XX', sort: 'drop table', decile: '99', remoteness: 'Mars' }))
-      .toEqual({ state: '', remoteness: '', decile: '', sort: 'need' });
+    expect(parseAllocationFilters({ state: 'XX', sort: 'drop table', decile: '99', remoteness: 'Mars', dir: 'sideways', sure: '50' }))
+      .toEqual({ state: '', remoteness: '', decile: '', sort: 'need', dir: 'asc', q: '', sure: '' });
   });
   it('keeps recognised values', () => {
     expect(parseAllocationFilters({ state: 'NT', sort: 'sure', decile: '1-2' }).sort).toBe('sure');
     expect(parseAllocationFilters({ state: 'NT' }).state).toBe('NT');
+  });
+  it('gives each column its natural first direction and lets dir override it', () => {
+    expect(parseAllocationFilters({ sort: 'population' }).dir).toBe('desc');
+    expect(parseAllocationFilters({ sort: 'population', dir: 'asc' }).dir).toBe('asc');
+    expect(parseAllocationFilters({ sort: 'name' }).dir).toBe('asc');
+  });
+  it('still understands the old one-way keys', () => {
+    expect(parseAllocationFilters({ sort: 'gov_per_head_asc' })).toMatchObject({ sort: 'gov_per_head', dir: 'asc' });
+  });
+  it('keeps the name search short and the sure chip binary', () => {
+    expect(parseAllocationFilters({ q: '  Alice ' }).q).toBe('Alice');
+    expect(parseAllocationFilters({ sure: '80' }).sure).toBe('80');
   });
 });
 

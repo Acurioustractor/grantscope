@@ -54,21 +54,30 @@ export interface AllocationRow {
   placed_share_pct: number | null;
 }
 
+/**
+ * Every column the table shows is sortable both ways. `defaultDir` is the direction a first click gives:
+ * need ascending (most disadvantaged first), names ascending, every money and count column descending.
+ * The old one-way keys (`gov_per_head_asc`, `donations_per_head_asc`) still parse, as sort + dir.
+ */
 export const ALLOCATION_SORTS = {
-  need: { column: 'irsd_decile', ascending: true, label: 'most disadvantaged first' },
-  gov_per_head: { column: 'gov_revenue_per_head', ascending: false, label: 'government revenue per head' },
-  gov_per_head_asc: { column: 'gov_revenue_per_head', ascending: true, label: 'least government revenue per head' },
-  donations_per_head: { column: 'donations_per_head', ascending: false, label: 'donations per head' },
-  donations_per_head_asc: { column: 'donations_per_head', ascending: true, label: 'least donations per head' },
-  grants_per_head: { column: 'cw_grants_24m_per_head', ascending: false, label: 'Commonwealth grants per head' },
-  delivered_per_head: { column: 'cw_delivery_24m_per_head', ascending: false, label: 'Commonwealth grants delivered here, per head' },
-  shrinking: { column: 'shrinking_share_pct', ascending: false, label: 'share of charities shrinking' },
-  population: { column: 'population', ascending: false, label: 'population' },
-  orgs: { column: 'org_count', ascending: false, label: 'organisations' },
-  sure: { column: 'placed_share_pct', ascending: true, label: 'least sure first' },
-  name: { column: 'lga_name', ascending: true, label: 'name' },
+  name: { column: 'lga_name', defaultDir: 'asc', label: 'name' },
+  remoteness: { column: 'remoteness', defaultDir: 'asc', label: 'remoteness' },
+  need: { column: 'irsd_decile', defaultDir: 'asc', label: 'need' },
+  population: { column: 'population', defaultDir: 'desc', label: 'population' },
+  orgs: { column: 'org_count', defaultDir: 'desc', label: 'organisations' },
+  gov_per_head: { column: 'gov_revenue_per_head', defaultDir: 'desc', label: 'government revenue per head' },
+  donations_per_head: { column: 'donations_per_head', defaultDir: 'desc', label: 'donations per head' },
+  grants_per_head: { column: 'cw_grants_24m_per_head', defaultDir: 'desc', label: 'Commonwealth grants per head' },
+  delivered_per_head: { column: 'cw_delivery_24m_per_head', defaultDir: 'desc', label: 'Commonwealth grants delivered here, per head' },
+  shrinking: { column: 'shrinking_share_pct', defaultDir: 'desc', label: 'share of charities shrinking' },
+  sure: { column: 'placed_share_pct', defaultDir: 'asc', label: 'how sure' },
 } as const;
 export type AllocationSort = keyof typeof ALLOCATION_SORTS;
+export type SortDir = 'asc' | 'desc';
+const LEGACY_SORTS: Record<string, [AllocationSort, SortDir]> = {
+  gov_per_head_asc: ['gov_per_head', 'asc'],
+  donations_per_head_asc: ['donations_per_head', 'asc'],
+};
 
 export const REMOTENESS_BANDS = [
   'Major Cities of Australia',
@@ -86,6 +95,11 @@ export interface AllocationFilters {
   /** '1-2', '3-5', '6-10' or '' */
   decile: string;
   sort: AllocationSort;
+  dir: SortDir;
+  /** Council name contains, case-insensitive. */
+  q: string;
+  /** '80' keeps rows placed at 80% or better; '' keeps all. */
+  sure: string;
 }
 
 const DECILE_BANDS: Record<string, [number, number]> = { '1-2': [0, 2.5], '3-5': [2.5, 5.5], '6-10': [5.5, 11] };
@@ -96,9 +110,18 @@ export function parseAllocationFilters(sp: Record<string, string | string[] | un
   const state = (STATES as readonly string[]).includes(one('state')) ? one('state') : '';
   const remoteness = (REMOTENESS_BANDS as readonly string[]).includes(one('remoteness')) ? one('remoteness') : '';
   const decile = one('decile') in DECILE_BANDS ? one('decile') : '';
-  const sort = (one('sort') in ALLOCATION_SORTS ? one('sort') : 'need') as AllocationSort;
-  return { state, remoteness, decile, sort };
+  let sort: AllocationSort = 'need';
+  let dir: SortDir | '' = '';
+  if (one('sort') in LEGACY_SORTS) [sort, dir] = LEGACY_SORTS[one('sort')];
+  else if (one('sort') in ALLOCATION_SORTS) sort = one('sort') as AllocationSort;
+  if (one('dir') === 'asc' || one('dir') === 'desc') dir = one('dir') as SortDir;
+  if (!dir) dir = ALLOCATION_SORTS[sort].defaultDir;
+  const q = one('q').trim().slice(0, 60);
+  const sure = one('sure') === '80' ? '80' : '';
+  return { state, remoteness, decile, sort, dir, q, sure };
 }
+
+export const UNFILTERED: AllocationFilters = { state: '', remoteness: '', decile: '', sort: 'need', dir: 'asc', q: '', sure: '' };
 
 export async function listAllocation(f: AllocationFilters): Promise<AllocationRow[]> {
   const db = getDirectServiceSupabase();
@@ -110,8 +133,10 @@ export async function listAllocation(f: AllocationFilters): Promise<AllocationRo
     const [lo, hi] = DECILE_BANDS[f.decile];
     q = q.gte('irsd_decile', lo).lt('irsd_decile', hi);
   }
+  if (f.q) q = q.ilike('lga_name', `%${f.q.replace(/[%_]/g, '')}%`);
+  if (f.sure === '80') q = q.gte('placed_share_pct', 80);
   // Nulls last on every sort: a council with no SEIFA or no population must not lead the list.
-  q = q.order(s.column, { ascending: s.ascending, nullsFirst: false }).order('lga_name', { ascending: true });
+  q = q.order(s.column, { ascending: f.dir === 'asc', nullsFirst: false }).order('lga_name', { ascending: true });
   const { data, error } = await q.limit(600);
   if (error) throw new Error(error.message);
   return (data ?? []) as AllocationRow[];

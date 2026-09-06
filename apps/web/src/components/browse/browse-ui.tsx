@@ -65,12 +65,12 @@ export function SortHeader({
   return (
     <Link
       href={qs({ sort: sortKey })}
-      title={title}
-      className={`${width ?? 'min-w-0 flex-1'} ${align === 'right' ? 'text-right' : ''} shrink-0 truncate hover:underline`}
+      title={title ? `${title}. Click to sort by this column.` : `Sort by ${label.toLowerCase()}`}
+      className={`${width ?? 'min-w-0 flex-1'} ${align === 'right' ? 'text-right' : ''} shrink-0 truncate whitespace-nowrap hover:underline`}
       style={{ color: active ? '#121212' : undefined }}
     >
       {label}
-      {active ? ' ▾' : ''}
+      <span className="ml-[2px]" style={{ color: active ? '#D02020' : '#C0C0C0' }}>{active ? '▾' : '⇅'}</span>
     </Link>
   );
 }
