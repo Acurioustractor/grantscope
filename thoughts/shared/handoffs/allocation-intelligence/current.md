@@ -11,11 +11,11 @@ status: active
 <!-- This section is extracted by SessionStart hook for quick resume -->
 **Updated:** 2026-09-07T05:00:00+10:00
 **Goal:** Two surfaces that read the whole register: disadvantage versus dollars per council (`/allocation`) and seven-year charity trajectories (`/charities/trajectories`), plus three grounded posts for the Philanthropy Australia conference (Brisbane, 8 to 10 Sept 2026). Done when both pages are live and verified, and the posts have no unverified claim.
-**Branch:** feat/allocation-delivery-lane (PR #437, VISIBLE, open)
+**Branch:** feat/allocation-delivery-lane (PR #437, VISIBLE, applied + verified, awaiting merge)
 **Test:** `bash scripts/precheck.sh` · `node --env-file=.env scripts/check-migration-parity.mjs` · `node --env-file=.env scripts/check-private-exposure.mjs`
 
 ### Now
-[->] PR #437 open, waits on two things in order: (1) Ben's `/db-apply supabase/migrations/20260907090000_mv_lga_allocation_delivery_and_trajectory.sql` (recreates mv_lga_allocation with the delivery lane + trajectory rollups; dry-run passed, ~12s); (2) regenerate `supabase/types/database.types.ts` onto the branch; then Ben eyeballs the preview and says merge. Merging before the apply breaks /allocation.
+[->] PR #437: migration APPLIED (tracker 20260907090000, parity green), types regenerated and pushed (`b965464d`), all three pages verified on local dev against the live view. CI running. Waits on Ben's preview look and the word "merge". Merge with `gh pr merge 437 --squash --delete-branch` (auto-merge not allowed on this repo).
 
 ### This Session
 - [x] #435 and #436 confirmed merged, branches gone.
