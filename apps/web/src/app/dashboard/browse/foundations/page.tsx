@@ -10,6 +10,11 @@ import { redirect } from 'next/navigation';
  *
  * Temporary (307): nothing has burned this path, and the detail page below it still lives here.
  */
-export default function MovedBrowseFoundations() {
-  redirect('/foundations');
+export default async function MovedBrowseFoundations({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  // Keep the query string: a filter or sort link built against the old path must land filtered, not reset.
+  const sp = await searchParams;
+  const p = new URLSearchParams();
+  for (const [k, v] of Object.entries(sp)) if (typeof v === 'string' && v) p.set(k, v);
+  const s = p.toString();
+  redirect(`/foundations${s ? `?${s}` : ''}`);
 }

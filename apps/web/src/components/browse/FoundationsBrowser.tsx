@@ -24,13 +24,18 @@ export interface BrowseRow {
   total_assets: number | null;
 }
 
+/** foundations.type values with enough rows to be worth a chip (measured 2026-09-07; 'philanthropic_foundation' had none). */
 const TYPES: [string, string][] = [
+  ['corporate_foundation', 'Corporate foundations'],
+  ['trust', 'Trusts'],
   ['grantmaker', 'Grantmakers'],
   ['private_ancillary_fund', 'Private ancillary funds'],
   ['public_ancillary_fund', 'Public ancillary funds'],
-  ['trust', 'Trusts'],
-  ['corporate_foundation', 'Corporate foundations'],
-  ['philanthropic_foundation', 'Philanthropic foundations'],
+  ['service_delivery', 'Service delivery'],
+  ['religious_organisation', 'Religious'],
+  ['international_aid', 'International aid'],
+  ['education_body', 'Education'],
+  ['university', 'Universities'],
 ];
 
 function money(n: number | null): string {
@@ -116,12 +121,12 @@ export default function FoundationsBrowser({
       else p.delete(k);
     }
     const s = p.toString();
-    return `/dashboard/browse/foundations${s ? `?${s}` : ''}`;
+    return `/foundations${s ? `?${s}` : ''}`;
   };
 
   return (
     <>
-      <form className="mt-4 flex flex-wrap items-center gap-2" action="/dashboard/browse/foundations">
+      <form className="mt-4 flex flex-wrap items-center gap-2" action="/foundations">
         <input
           name="q"
           defaultValue={q}
