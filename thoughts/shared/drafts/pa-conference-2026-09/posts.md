@@ -1,8 +1,7 @@
 # Three posts for Philanthropy Australia, Brisbane, 8 to 10 September 2026
 
 Drafts, ACT voice. Every figure has a row in `posts.provenance.md`. The two surfaces they point at
-(`/allocation`, `/charities/trajectories`) are built on this branch and go live once the three
-migrations are applied and the PR is merged. Do not post until the links resolve.
+(`/allocation`, `/charities/trajectories`) are live as of 7 September 2026 (PRs #430, #433, #437).
 
 Posture, from the PA brief: accountability partner, never vendor. "We sell foundations nothing and
 represent none of them." Confessions stays the conscience, not the pitch.
@@ -31,6 +30,15 @@ Queensland, all Aboriginal shires: Torres Strait Island, Aurukun, Palm Island, D
 Vale, Kowanyama, Cherbourg, Yarrabah. Their rows read between 1% and 25% sure. Read that as a
 statement about the record, not about the place. Money follows the recipient's address, and the
 address is usually somewhere else.
+
+We tried the other lane. GrantConnect lets an agency say where a grant will be delivered, and some
+do. The Australian Research Council gives a delivery postcode on every dollar. In the last two years
+the National Indigenous Australians Agency published $3.84 billion of grants, with a delivery state
+on every one and a delivery postcode on none: 79 say "Multiple", the rest are blank. Health,
+Disability and Ageing gave a postcode on 2% of its $21.4 billion. The agencies that fund the places
+at the bottom of this list are the ones that do not say where the money lands. So the gap between
+the hub and the community stays a story told by address, and we print the coverage beside the
+figure so you can see how much of it is the record staying quiet.
 
 If you fund in those places, tell us which organisation is yours. The council page has a form.
 We will correct the row and say who corrected it.
