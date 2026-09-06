@@ -9,13 +9,13 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-09-07T09:30:00+10:00
+**Updated:** 2026-09-07T09:50:00+10:00
 **Goal:** Two surfaces that read the whole register: disadvantage versus dollars per council (`/allocation`) and seven-year charity trajectories (`/charities/trajectories`), plus three grounded posts for the Philanthropy Australia conference (Brisbane, 8 to 10 Sept 2026). Done when both pages are live and verified, and the posts have no unverified claim.
 **Branch:** main
 **Test:** `bash scripts/precheck.sh` · `node --env-file=.env scripts/check-migration-parity.mjs` · `node --env-file=.env scripts/check-private-exposure.mjs`
 
 ### Now
-[->] Nothing in progress. Stream closed: #446 (Giving column) merged `c609a725`; NSW FaCS table-of-contents rows deleted (migration 20260907140000, #442 closed). Open only: 523 pre-mid-2023 charities with no AIS in 2023 or 2024 (ACNC side), and the 955 scraped Giving figures that can mix program spend.
+[->] Nothing in progress. Everything from 2026-09-07 is merged and live (#437 #441 #444 #446 #447; migrations 20260907090000 to 20260907140000 applied; #440 #442 closed). Ben cleared at 09:50. Pick from Next.
 
 ### This Session
 - [x] #446 merged `c609a725`: foundations.total_giving_annual placeholders (9,242 rows, $731m of guesses) replaced by latest AIS grants made ($3.33bn); 843 NULL where no return; old value in metadata.placeholder_giving. Root cause: refresh-acnc-ais.mjs enriches via exec_sql (SELECT-only), never wrote.
@@ -39,9 +39,19 @@ status: active
 - [x] PR #433 merged `375c7809`: `/allocation/[lga_code]`, a page for all 546 councils (tiles, low-sure warning, charities largest first with direction, neighbours by need); index links every council; `/allocation/*` chromeless. Dev server stopped.
 
 ### Next
-- [ ] The delivery-lane finding (NIAA states no delivery postcode on $3.84bn) is a post-worthy claim; ground it before use.
+- [ ] **Widen the AIS year now that 2024 is loaded (53,939 rows).** mv_charity_trajectory is pinned 2017-2023 and mv_lga_allocation's acnc block to ais_year=2023; /allocation and the posts say "2023". Moving to 2024 is one migration (recreate both) plus copy on three pages and a re-ground of posts.provenance.md. mv_acnc_latest and foundation_browse already read 2024 automatically.
+- [ ] **refresh-acnc-ais.mjs enrich step is dead code.** enrichFoundations() writes through exec_sql (SELECT-only): never updated total_giving_annual, never added new grant-making charities to foundations. Rewrite as Supabase JS updates or drop it and say so in the header; otherwise the next AIS year re-creates the placeholder problem for new rows.
+- [ ] **$20.4m of qgip justice_funding rows have an empty recipient_name (500 rows).** Filtered out of browse lists but attributed to nobody; check the source spreadsheet for a recipient column offset.
+- [ ] **Delete the two .bak files** (apps/web/.env.local.bak-20260905, .claude/settings.local.json.bak-20260905) on Ben's "delete": untracked, but they make classify-changes.sh call every PR VISIBLE.
+- [ ] Filter chips are now hand-rolled four times (OrgBrowser, GrantBrowser, ContractSideBrowser, FoundationsBrowser). A shared ChipRow in browse-ui.tsx when the next filter is added, not before.
+- [ ] ACNC side, no action here: 523 charities registered before mid-2023 with no statement in 2023 or 2024; 955 scraped Giving figures that mix program spend (World Vision $514m).
+- [ ] The NIAA delivery-postcode finding is grounded and in post 1; if it becomes a talk line, the register table has no ACNC revocation status, so "no return" cannot be split into late vs revoked.
 
 ### Decisions
+- **Zero is a figure, null is a gap.** A dash for $0 on the foundations table read as missing data; $0 prints as $0 and 'no return filed' names the gap (2026-09-07).
+- **Filters are IN (subquery), never correlated EXISTS, in the browse RPCs.** 75s vs 1.6s on suppliers, measured in the dry run.
+- **Two-way sort lives in the RPC (p_dir), not the client.** The RPCs return the top 200 of a ranking; reversing that client-side shows the smallest of the largest.
+- **Delete junk rows, do not filter them, when the ingest was a one-off** (the NSW FaCS table of contents). Filters are for things that come back.
 - **New matview, not a fix to mv_funding_deserts.** The old one is name-keyed off postcode_geo, which the LGA rebuild found wrong; the new one stands on `gs_entities.lga_code` and ABS population.
 - **Money follows the recipient's address, and the page says so.** Remote councils at $0/head are a statement about the record; the how-sure column (placed share) is on every row.
 - **Cohort counts are exact head-counts.** Selecting rows and counting in JS hit PostgREST's 1,000-row cap and printed "1,000 charities".
