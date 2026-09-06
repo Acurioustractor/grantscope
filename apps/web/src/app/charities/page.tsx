@@ -69,6 +69,10 @@ export default async function CharityList({
             What the register shows
           </Link>
           {' · '}
+          <Link href="/charities/trajectories" style={{ color: '#1040C0' }}>
+            Seven years of statements: who grew, who shrank
+          </Link>
+          {' · '}
           <Link href="/charities/claim" style={{ color: '#1040C0' }}>
             Claim your organisation
           </Link>

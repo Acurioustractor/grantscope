@@ -428,6 +428,12 @@ export default async function FundingDesertsReport() {
         </section>
       )}
 
+      {/* The council-keyed successor: every council on one line, with population and how sure each row is. */}
+      <p className="mb-8 border-4 border-bauhaus-black bg-white p-4 text-sm">
+        <span className="font-black uppercase tracking-widest">Now per council:</span>{' '}
+        <a href="/allocation" className="underline" style={{ color: '#1040C0' }}>Disadvantage versus dollars for all 546 councils</a>, on the rebuilt council keys, with ABS population and a how-sure column on every row.
+      </p>
+
       <ReportCTA reportSlug="funding-deserts" reportTitle="Funding Deserts Geographic Analysis" variant="inline" />
 
       {/* Section 2: By Remoteness */}
