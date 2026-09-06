@@ -37,6 +37,7 @@ export default function GrantBrowser({
   state,
   topic,
   sort,
+  dir = '',
   statsLine,
   coverageLine,
   topicLine,
@@ -47,6 +48,8 @@ export default function GrantBrowser({
   state: string;
   topic: string;
   sort: string;
+  /** 'asc' | 'desc' | '' (natural) */
+  dir?: string;
   statsLine: string;
   /** Coverage skew — stated up front, not buried in the caveat. UX audit pass 2, F1. */
   coverageLine?: string;
@@ -57,7 +60,7 @@ export default function GrantBrowser({
   const drawer = useDrawer<RecipientDetail>();
   const detail = drawer.detail;
   const open = (key: string) => drawer.open(key, `/api/browse/grant-recipient?key=${encodeURIComponent(key)}`);
-  const qs = makeQs('/dashboard/browse/grants', { q, state, topic, sort });
+  const qs = makeQs('/dashboard/browse/grants', { q, state, topic, sort, dir });
 
   return (
     <>
@@ -83,6 +86,7 @@ export default function GrantBrowser({
         {state ? <input type="hidden" name="state" value={state} /> : null}
         {topic ? <input type="hidden" name="topic" value={topic} /> : null}
         {sort ? <input type="hidden" name="sort" value={sort} /> : null}
+        {dir ? <input type="hidden" name="dir" value={dir} /> : null}
       </form>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <Link href={qs({ state: '' })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={state === '' ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
@@ -104,11 +108,11 @@ export default function GrantBrowser({
 
       <div className="mt-4 shell-card">
         <div className="flex items-baseline gap-3 px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest" style={{ borderBottom: '1px solid var(--shell-line)', color: 'var(--shell-muted)' }}>
-          <SortHeader label="Recipient" sortKey="name" current={sort} qs={qs} />
+          <SortHeader label="Recipient" sortKey="name" current={sort} dir={dir} qs={qs} />
           <span className="w-[110px] shrink-0">States</span>
-          <SortHeader label="Years" sortKey="recent" current={sort} qs={qs} width="w-[120px]" title="most recent grant year first" />
-          <SortHeader label="Grants" sortKey="grants" current={sort} qs={qs} width="w-[64px]" align="right" />
-          <SortHeader label="Total $" sortKey="total" current={sort} qs={qs} width="w-[92px]" align="right" />
+          <SortHeader label="Years" sortKey="recent" current={sort} dir={dir} qs={qs} width="w-[120px]" title="most recent grant year first" />
+          <SortHeader label="Grants" sortKey="grants" current={sort} dir={dir} qs={qs} width="w-[64px]" align="right" />
+          <SortHeader label="Total $" sortKey="total" current={sort} dir={dir} qs={qs} width="w-[92px]" align="right" />
         </div>
         {rows.map((r) => (
           <button key={r.key} onClick={() => open(r.key)} className="flex w-full items-baseline gap-3 px-4 py-2 text-left hover:bg-[#FAFAF8]" style={{ borderBottom: '1px solid var(--shell-line)' }}>

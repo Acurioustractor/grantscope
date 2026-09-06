@@ -49,19 +49,22 @@ export default function PersonBrowser({
   rows,
   q,
   sort,
+  dir = '',
   statsLine,
   exclusionNote,
 }: {
   rows: PersonRow[];
   q: string;
   sort: string;
+  /** 'asc' | 'desc' | '' (natural) */
+  dir?: string;
   statsLine: string;
   exclusionNote: string;
 }) {
   const drawer = useDrawer<PersonDetail>();
   const detail = drawer.detail;
   const open = (norm: string) => drawer.open(norm, `/api/browse/person?norm=${encodeURIComponent(norm)}`);
-  const qs = makeQs('/dashboard/people', { q, sort });
+  const qs = makeQs('/dashboard/people', { q, sort, dir });
 
   return (
     <>
@@ -76,19 +79,20 @@ export default function PersonBrowser({
           className="w-full max-w-[360px] bg-white px-3 py-2 font-mono text-[13px] shell-control"
         />
         {sort ? <input type="hidden" name="sort" value={sort} /> : null}
+        {dir ? <input type="hidden" name="dir" value={dir} /> : null}
       </form>
       <div className="mt-4 shell-card">
         <div className="flex items-baseline gap-3 px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest" style={{ borderBottom: '1px solid var(--shell-line)', color: 'var(--shell-muted)' }}>
-          <SortHeader label="Name" sortKey="name" current={sort} qs={qs} />
-          <SortHeader label="Influence" sortKey="influence" current={sort} qs={qs} width="w-[92px]" align="right" title="boards × attributed money, the default order" />
+          <SortHeader label="Name" sortKey="name" current={sort} dir={dir} qs={qs} />
+          <SortHeader label="Influence" sortKey="influence" current={sort} dir={dir} qs={qs} width="w-[92px]" align="right" title="boards × attributed money, the default order" />
           {/* The 10 is a ceiling, not a measurement (person_browse: board_count <= 10). The
               exclusion note says so, but it sits below 200 rows — by the time a reader has
               scrolled past a column of identical 10s they have already read them as counts. */}
-          <SortHeader label="Boards ≤10" sortKey="boards" current={sort} qs={qs} width="w-[96px]" align="right" title="a ceiling, not a count: identities credited with more than 10 boards are excluded, because above that a shared name usually means several people" />
-          <SortHeader label="Systems" sortKey="systems" current={sort} qs={qs} width="w-[64px]" align="right" />
-          <SortHeader label="Contracts $" sortKey="procurement" current={sort} qs={qs} width="w-[92px]" align="right" />
-          <SortHeader label="Grants $" sortKey="justice" current={sort} qs={qs} width="w-[92px]" align="right" />
-          <SortHeader label="Donations $" sortKey="donations" current={sort} qs={qs} width="w-[92px]" align="right" />
+          <SortHeader label="Boards ≤10" sortKey="boards" current={sort} dir={dir} qs={qs} width="w-[96px]" align="right" title="a ceiling, not a count: identities credited with more than 10 boards are excluded, because above that a shared name usually means several people" />
+          <SortHeader label="Systems" sortKey="systems" current={sort} dir={dir} qs={qs} width="w-[64px]" align="right" />
+          <SortHeader label="Contracts $" sortKey="procurement" current={sort} dir={dir} qs={qs} width="w-[92px]" align="right" />
+          <SortHeader label="Grants $" sortKey="justice" current={sort} dir={dir} qs={qs} width="w-[92px]" align="right" />
+          <SortHeader label="Donations $" sortKey="donations" current={sort} dir={dir} qs={qs} width="w-[92px]" align="right" />
         </div>
         {rows.map((r) => (
           <button key={r.key} onClick={() => open(r.norm)} className="flex w-full items-baseline gap-3 px-4 py-2 text-left hover:bg-[#FAFAF8]" style={{ borderBottom: '1px solid var(--shell-line)' }}>

@@ -66414,6 +66414,7 @@ export type Database = {
       capture_estate_snapshot: { Args: never; Returns: string }
       charity_browse: {
         Args: {
+          p_dir?: string
           p_limit?: number
           p_q?: string
           p_size?: string
@@ -66758,6 +66759,7 @@ export type Database = {
       contract_browse_stats: { Args: { p_from_year?: number }; Returns: Json }
       contract_buyer_browse: {
         Args: {
+          p_dir?: string
           p_from_year?: number
           p_limit?: number
           p_offset?: number
@@ -66779,6 +66781,7 @@ export type Database = {
       }
       contract_supplier_browse: {
         Args: {
+          p_dir?: string
           p_from_year?: number
           p_limit?: number
           p_offset?: number
@@ -66900,6 +66903,7 @@ export type Database = {
       donation_browse_stats: { Args: { p_from_fy?: string }; Returns: Json }
       donation_donor_browse: {
         Args: {
+          p_dir?: string
           p_from_fy?: string
           p_limit?: number
           p_offset?: number
@@ -67013,6 +67017,7 @@ export type Database = {
       }
       foundation_browse: {
         Args: {
+          p_dir?: string
           p_limit?: number
           p_q?: string
           p_sort?: string
@@ -67724,6 +67729,7 @@ export type Database = {
       grant_browse_stats: { Args: never; Returns: Json }
       grant_recipient_browse: {
         Args: {
+          p_dir?: string
           p_limit?: number
           p_offset?: number
           p_q?: string
@@ -68391,6 +68397,7 @@ export type Database = {
       }
       person_browse: {
         Args: {
+          p_dir?: string
           p_limit?: number
           p_offset?: number
           p_q?: string
@@ -68413,6 +68420,7 @@ export type Database = {
       person_detail: { Args: { p_norm: string }; Returns: Json }
       place_browse: {
         Args: {
+          p_dir?: string
           p_limit?: number
           p_offset?: number
           p_q?: string
@@ -68602,6 +68610,7 @@ export type Database = {
       }
       se_browse: {
         Args: {
+          p_dir?: string
           p_limit?: number
           p_q?: string
           p_sort?: string

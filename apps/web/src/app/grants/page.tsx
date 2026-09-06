@@ -38,6 +38,7 @@ export default async function GrantsBrowsePage({
   const state = typeof sp.state === 'string' ? sp.state : '';
   const topic = typeof sp.topic === 'string' ? sp.topic : '';
   const sort = typeof sp.sort === 'string' && sp.sort ? sp.sort : 'total';
+  const dir = sp.dir === 'asc' || sp.dir === 'desc' ? sp.dir : '';
 
   const supabase = getDirectServiceSupabase();
   let rows: RecipientRow[] = [];
@@ -52,7 +53,7 @@ export default async function GrantsBrowsePage({
           p_q: q || null,
           p_state: state || null,
           p_topic: topic || null,
-          p_sort: sort,
+          p_sort: sort, p_dir: dir || null,
           p_limit: 200,
         }),
       ),
@@ -129,7 +130,7 @@ export default async function GrantsBrowsePage({
             q={q}
             state={state}
             topic={topic}
-            sort={sort}
+            sort={sort} dir={dir}
             statsLine={statsLine}
             coverageLine={coverageLine}
             topicLine={topicLine}

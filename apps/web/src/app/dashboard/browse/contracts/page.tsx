@@ -8,10 +8,10 @@ export const metadata: Metadata = { title: 'Contract suppliers — CivicGraph' }
 
 // The rollup scans up to 767K rows (~3.5s): cache per (q, from, sort) for an hour.
 const load = unstable_cache(
-  async (q: string, from: number, sort: string) => {
+  async (q: string, from: number, sort: string, dir: string) => {
     const supabase = getDirectServiceSupabase();
     const [browse, stats] = await Promise.all([
-      supabase.rpc('contract_supplier_browse', { p_q: q || null, p_from_year: from, p_sort: sort, p_limit: 200 }),
+      supabase.rpc('contract_supplier_browse', { p_q: q || null, p_from_year: from, p_sort: sort, p_dir: dir || null, p_limit: 200 }),
       supabase.rpc('contract_browse_stats', { p_from_year: from }),
     ]);
     if (browse.error) throw new Error(browse.error.message);
@@ -31,12 +31,13 @@ export default async function ContractsBrowsePage({
   const q = typeof sp.q === 'string' ? sp.q.trim() : '';
   const from = typeof sp.from === 'string' && /^\d{4}$/.test(sp.from) ? parseInt(sp.from, 10) : 2020;
   const sort = typeof sp.sort === 'string' && sp.sort ? sp.sort : 'total';
+  const dir = sp.dir === 'asc' || sp.dir === 'desc' ? sp.dir : '';
 
   let rows: SideRow[] = [];
   let statsLine = '';
   let why: string | null = null;
   try {
-    const { rows: data, stats } = await load(q, from, sort);
+    const { rows: data, stats } = await load(q, from, sort, dir);
     rows = (data as {
       supplier_key: string;
       supplier_name: string;
@@ -73,7 +74,7 @@ export default async function ContractsBrowsePage({
           cfg={{ side: 'supplier', basePath: '/dashboard/browse/contracts', counterpartyLabel: 'Buyers', detailApi: '/api/browse/contract-supplier', counterpartySortKey: 'buyers' }}
           q={q}
           fromYear={String(from)}
-          sort={sort}
+          sort={sort} dir={dir}
           statsLine={statsLine}
           caveat="AusTender: Commonwealth contracts only — state contracts live in their own registers. Suppliers are grouped by ABN where recorded, else by a normalised name — case, punctuation and the company suffix (PTY LTD / PTY LIMITED / P/L) are treated as the same word. The since-year floor is applied in the query; contracts with junk start dates are excluded by it."
         />

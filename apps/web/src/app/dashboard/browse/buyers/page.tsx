@@ -7,10 +7,10 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Government buyers — CivicGraph' };
 
 const load = unstable_cache(
-  async (q: string, from: number, sort: string) => {
+  async (q: string, from: number, sort: string, dir: string) => {
     const supabase = getDirectServiceSupabase();
     const [browse, stats] = await Promise.all([
-      supabase.rpc('contract_buyer_browse', { p_q: q || null, p_from_year: from, p_sort: sort, p_limit: 200 }),
+      supabase.rpc('contract_buyer_browse', { p_q: q || null, p_from_year: from, p_sort: sort, p_dir: dir || null, p_limit: 200 }),
       supabase.rpc('contract_browse_stats', { p_from_year: from }),
     ]);
     if (browse.error) throw new Error(browse.error.message);
@@ -30,12 +30,13 @@ export default async function BuyersBrowsePage({
   const q = typeof sp.q === 'string' ? sp.q.trim() : '';
   const from = typeof sp.from === 'string' && /^\d{4}$/.test(sp.from) ? parseInt(sp.from, 10) : 2020;
   const sort = typeof sp.sort === 'string' && sp.sort ? sp.sort : 'total';
+  const dir = sp.dir === 'asc' || sp.dir === 'desc' ? sp.dir : '';
 
   let rows: SideRow[] = [];
   let statsLine = '';
   let why: string | null = null;
   try {
-    const { rows: data, stats } = await load(q, from, sort);
+    const { rows: data, stats } = await load(q, from, sort, dir);
     rows = (data as {
       buyer_key: string;
       buyer_name: string;
@@ -71,7 +72,7 @@ export default async function BuyersBrowsePage({
           cfg={{ side: 'buyer', basePath: '/dashboard/browse/buyers', counterpartyLabel: 'Suppliers', detailApi: '/api/browse/contract-buyer', counterpartySortKey: 'suppliers' }}
           q={q}
           fromYear={String(from)}
-          sort={sort}
+          sort={sort} dir={dir}
           statsLine={statsLine}
           caveat="AusTender: Commonwealth agencies only. A buyer's supplier mix is the procurement story a supply-side pitch lands into. The since-year floor is applied in the query."
         />

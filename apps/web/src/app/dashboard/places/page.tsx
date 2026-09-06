@@ -26,6 +26,7 @@ export default async function PlacesPage({
   const q = typeof sp.q === 'string' ? sp.q.trim() : '';
   const state = typeof sp.state === 'string' ? sp.state : '';
   const sort = typeof sp.sort === 'string' && sp.sort ? sp.sort : 'funding';
+  const dir = sp.dir === 'asc' || sp.dir === 'desc' ? sp.dir : '';
 
   const supabase = getDirectServiceSupabase();
   let rows: PlaceRow[] = [];
@@ -33,7 +34,7 @@ export default async function PlacesPage({
   let why: string | null = null;
   try {
     const [{ data, error }, s] = await Promise.all([
-      supabase.rpc('place_browse', { p_q: q || null, p_state: state || null, p_sort: sort, p_limit: 200 }),
+      supabase.rpc('place_browse', { p_q: q || null, p_state: state || null, p_sort: sort, p_dir: dir || null, p_limit: 200 }),
       stats(),
     ]);
     if (error) throw new Error(error.message);
@@ -74,7 +75,7 @@ export default async function PlacesPage({
           rows={rows}
           q={q}
           state={state}
-          sort={sort}
+          sort={sort} dir={dir}
           statsLine={statsLine}
           caveat="Funding attaches to an organisation's address, so head-office council areas collect their branches' figures. SEIFA decile 1 = most disadvantaged. The Unfunded column measures what funders and providers have NOT delivered against an area's measured need — it describes funding behaviour, not the community. Higher means less money and fewer providers reached an area with more measured need; metro councils sit around 50–70, and the extreme tail runs past 150."
         />

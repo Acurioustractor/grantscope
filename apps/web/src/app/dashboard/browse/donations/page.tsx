@@ -9,10 +9,10 @@ export const metadata: Metadata = { title: 'Political donors — CivicGraph' };
 const FY_OPTIONS = ['1998-1999', '2014-15', '2019-20', '2022-23'];
 
 const load = unstable_cache(
-  async (q: string, from: string, sort: string) => {
+  async (q: string, from: string, sort: string, dir: string) => {
     const supabase = getDirectServiceSupabase();
     const [browse, stats] = await Promise.all([
-      supabase.rpc('donation_donor_browse', { p_q: q || null, p_from_fy: from, p_sort: sort, p_limit: 200 }),
+      supabase.rpc('donation_donor_browse', { p_q: q || null, p_from_fy: from, p_sort: sort, p_dir: dir || null, p_limit: 200 }),
       supabase.rpc('donation_browse_stats', { p_from_fy: from }),
     ]);
     if (browse.error) throw new Error(browse.error.message);
@@ -32,13 +32,14 @@ export default async function DonationsBrowsePage({
   const q = typeof sp.q === 'string' ? sp.q.trim() : '';
   const from = typeof sp.from === 'string' && FY_OPTIONS.includes(sp.from) ? sp.from : '2014-15';
   const sortParam = typeof sp.sort === 'string' && sp.sort ? sp.sort : 'total';
+  const dir = sp.dir === 'asc' || sp.dir === 'desc' ? sp.dir : '';
   const rpcSort = sortParam === 'contracts' ? 'donations' : sortParam;
 
   let rows: SideRow[] = [];
   let statsLine = '';
   let why: string | null = null;
   try {
-    const { rows: data, stats } = await load(q, from, rpcSort);
+    const { rows: data, stats } = await load(q, from, rpcSort, dir);
     rows = (data as {
       donor_key: string;
       donor_name: string;
@@ -83,7 +84,7 @@ export default async function DonationsBrowsePage({
           }}
           q={q}
           fromYear={from}
-          sort={sortParam}
+          sort={sortParam} dir={dir}
           statsLine={statsLine}
           caveat="AEC declared receipts, 'donation received' only — the far larger 'other receipt' category (investment returns, transfers between branches) is excluded in the query. Donors are grouped by ABN where declared, else by a normalised name — case, punctuation and the company suffix (PTY LTD / PTY LIMITED / P/L / PROPRIETARY LIMITED) are treated as the same word, so one declarer is one row. Two genuinely different spellings of a name that never declares an ABN still appear twice. In the drawer's donation list the small line shows the financial year."
         />
