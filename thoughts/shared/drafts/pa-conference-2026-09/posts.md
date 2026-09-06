@@ -75,8 +75,7 @@ pretending". So here is the un-pretended version of our own money.
 Goods makes beds and washing machines with remote communities so the making, and the margin, stay
 there. The grant and philanthropic receipts on the books this month total $556,330, from The Snow
 Foundation, the Vincent Fairfax Family Foundation, QIC and The John Villiers Trust. Nothing is
-signed for the next round. [Ben: true at the 25 July CRM snapshot; confirm before posting.] We say
-that every time, because the alternative is a deck with a pipeline slide.
+signed for the next round. We say that every time, because the alternative is a deck with a pipeline slide.
 
 The single most useful thing a foundation did for Goods this year was pay an invoice. Centrecorp
 Foundation bought 130 beds, two orders, $123,332, delivered to Utopia. On 5 September we moved that
