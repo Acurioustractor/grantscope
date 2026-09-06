@@ -22,6 +22,7 @@ const ALLOWLIST = {
   partner_storytellers: 'consent-filtered ("Public can view public storytellers")',
   pmpp_knowledge: 'published knowledge only ("Active PMPP is viewable by everyone")',
   newsletter_subscriptions: 'admin-filtered ("Admins can read newsletter subscriptions"); anon sees no rows',
+  ecosystem_sites: 'public by decision (PR #429, 2026-09-06): 18 rows of site names, URLs, Vercel ids and timestamps; no write policy',
 };
 
 const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
