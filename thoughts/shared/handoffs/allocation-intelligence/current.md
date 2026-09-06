@@ -11,13 +11,15 @@ status: active
 <!-- This section is extracted by SessionStart hook for quick resume -->
 **Updated:** 2026-09-07T05:15:00+10:00
 **Goal:** Two surfaces that read the whole register: disadvantage versus dollars per council (`/allocation`) and seven-year charity trajectories (`/charities/trajectories`), plus three grounded posts for the Philanthropy Australia conference (Brisbane, 8 to 10 Sept 2026). Done when both pages are live and verified, and the posts have no unverified claim.
-**Branch:** main
+**Branch:** feat/browse-sort-filters (PR #441, VISIBLE, open)
 **Test:** `bash scripts/precheck.sh` · `node --env-file=.env scripts/check-migration-parity.mjs` · `node --env-file=.env scripts/check-private-exposure.mjs`
 
 ### Now
-[->] Nothing in progress. #437 merged `1fa759ba`, Vercel success, all three routes read live in a browser (Alice Springs tiles, QLD shrinking councils table, NT index columns + 11% tile). Stream closed unless Ben picks a Next item.
+[->] PR #441 open (VISIBLE): nav links, table width, two-way sort on every browse table + /allocation search/sure chip. Migration 20260907110000 (p_dir on nine browse RPCs) APPLIED, parity green, types regenerated, all nine tables verified both ways on local dev. Waits on Ben's look and "merge". Dev server may still be on 3013.
 
 ### This Session
+- [x] #439 merged `d79c8445`: grounded NIAA paragraph in post 1 (NIAA: delivery state on all, postcode on none, 79 'Multiple'; Health 2%).
+- [x] #440 filed (browse sort + filters), sort half built in #441; #442 filed (junk names at the bottom of rankings).
 - [x] #435 and #436 confirmed merged, branches gone.
 - [x] PR #437 merged `1fa759ba` and verified live. Migration 20260907090000 applied, parity green, types regenerated.
 - [x] Delivery-postcode lane + per-council trajectory rollups built (migration + /allocation, /allocation/[lga_code], /charities/trajectories), PR #437. Finding: delivery postcodes cover 11% of 24m recipient-lane money, by agency (NIAA none, Health 2%, ARC 100%); the lane shows where the record is silent.
