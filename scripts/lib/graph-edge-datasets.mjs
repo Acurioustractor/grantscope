@@ -123,29 +123,11 @@ export const GRAPH_EDGE_DATASETS = [
      WHERE c.supplier_abn IS NOT NULL
        AND regexp_replace(c.supplier_abn, '\\s', '', 'g') ~ '^[0-9]{11}$'`,
   },
-  {
-    dataset: 'grant_opportunities',
-    relationshipType: 'grant',
-    label: 'Grant relationships',
-    sourceTable: 'grant_opportunities',
-    cols: '(source_entity_id, target_entity_id, relationship_type, amount, dataset, source_record_id, confidence, properties)',
-    prelude: '',
-    // self-ref edge on the foundation entity (foundation offers grant); amount = max || min.
-    selectSql: `SELECT
-       f_ent.id AS source_entity_id, f_ent.id AS target_entity_id, 'grant' AS relationship_type, coalesce(g.amount_max, g.amount_min),
-       'grant_opportunities', g.id::text AS source_record_id, 'registry',
-       jsonb_build_object(
-         'grant_name', g.name,
-         'categories', array_to_string(g.categories, ', '),
-         'closes_at',  g.closes_at,
-         'provider',   g.provider)
-     FROM grant_opportunities g
-     JOIN foundations f
-       ON f.id = g.foundation_id AND f.acnc_abn IS NOT NULL
-     JOIN gs_entities f_ent
-       ON f_ent.gs_id = 'AU-ABN-' || regexp_replace(f.acnc_abn, '\\s', '', 'g')
-     WHERE g.foundation_id IS NOT NULL`,
-  },
+  // `grant_opportunities` was RETIRED as an edge dataset on 2026-09-06. Its only derivation was a
+  // self-loop (foundation -> itself, one per program), which the 2026-08-20 self-loop migration
+  // deleted (6,229 rows) and now forbids via gs_relationships_no_judged_selfloops. Left in place, the
+  // build phase could only violate that constraint and the completeness gate counted 5,468 forbidden
+  // edges as "missing". A program is not a counterparty; it needs its own node before it can be an edge.
   {
     dataset: 'foundations',
     relationshipType: 'subsidiary_of',

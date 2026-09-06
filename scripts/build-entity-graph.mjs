@@ -754,9 +754,9 @@ async function buildContractRelationships() {
 // ─── Phase 2b2: Grant opportunities → relationships ─────────────────────────
 
 async function buildGrantRelationships() {
-  log('\nPhase 2b2: Grant relationships...');
-  const d = edgeDataset('grant_opportunities');
-  await buildRelationshipsSetBased(d.label, d.cols, d.selectSql, d.prelude);
+  // Retired 2026-09-06: the only derivation was a foundation self-loop, forbidden since the
+  // 2026-08-20 self-loop migration. See the note in graph-edge-datasets.mjs.
+  log("\nPhase 2b2: Grant relationships... skipped (retired: self-loop derivation, see graph-edge-datasets.mjs)");
 }
 
 // ─── Phase 2c: Cross-registry links ──────────────────────────────────────────
