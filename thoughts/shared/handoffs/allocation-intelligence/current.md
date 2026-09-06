@@ -9,15 +9,17 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-09-07T05:15:00+10:00
+**Updated:** 2026-09-07T08:05:00+10:00
 **Goal:** Two surfaces that read the whole register: disadvantage versus dollars per council (`/allocation`) and seven-year charity trajectories (`/charities/trajectories`), plus three grounded posts for the Philanthropy Australia conference (Brisbane, 8 to 10 Sept 2026). Done when both pages are live and verified, and the posts have no unverified claim.
 **Branch:** main
 **Test:** `bash scripts/precheck.sh` · `node --env-file=.env scripts/check-migration-parity.mjs` · `node --env-file=.env scripts/check-private-exposure.mjs`
 
 ### Now
-[->] Nothing in progress. #441 merged `f576e801`, verified live (charities ascending, ⇅ hints, sidebar links). Open: #440 filter half (state on contracts/buyers/donors, sector + remoteness on charities/SEs, year ranges on grants/donations, state on foundations; needs rollup columns + a migration), #442 junk names at the bottom of rankings.
+[->] Nothing in progress. #444 merged `dd7ec00e`, verified live (foundations trust+QLD with state chips, $0 and 'no return filed'; charities Health + Very Remote). Open: #442 fragments at the bottom of ascending grants ('and Community Services Cluster'), Giving / yr placeholder on 9,242 foundations (script's enrich step writes via exec_sql, which is read-only), 523 pre-mid-2023 charities with no return in 2023 or 2024.
 
 ### This Session
+- [x] #444 merged `dd7ec00e` and live: filters on six browse tables (sector/remoteness, sector, FY range, supplier state, donor party + until-year, foundation state), junk names out, foundations $0 vs 'no return filed', foundation type chips fixed (linked to the redirecting old path). Migration 20260907120000 applied.
+- [x] ACNC AIS 2024 loaded: 53,939 rows. The data.gov.au file changed shape (lowercase headers, no year column, y/n, dd/mm/yyyy, one duplicate ABN); refresh-acnc-ais.mjs fixed. Foundations with no return 2,224 -> 1,864 (1,341 registered after Jun 2023).
 - [x] #441 merged `f576e801` and live: two-way sort on all nine browse tables + /allocation, allocation search + sure chip, sidebar links, table width. Migration 20260907110000 applied.
 - [x] #439 merged `d79c8445`: grounded NIAA paragraph in post 1 (NIAA: delivery state on all, postcode on none, 79 'Multiple'; Health 2%).
 - [x] #440 filed (browse sort + filters), sort half built in #441; #442 filed (junk names at the bottom of rankings).
