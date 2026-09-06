@@ -88,7 +88,7 @@ export default async function TrajectoriesPage({ searchParams }: { searchParams:
 
             <Table
               title="Large charities that have shrunk most"
-              note="Peak revenue over $1m, revenue down more than a fifth from first to latest statement. Sorted by the size of the fall."
+              note="Peak revenue over $1m, revenue down more than a fifth from first to latest statement, still reporting some revenue. Sorted by the size of the fall. Charities at $0 are dormant or mid-wind-up and sit in the deficit and lapsed lists instead."
               rows={lists.shrinkingLarge}
               cols={[
                 { h: 'First → latest', r: (r) => `${money(r.revenue_first)} → ${money(r.revenue_last)}`, right: true },

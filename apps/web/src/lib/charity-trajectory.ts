@@ -111,7 +111,7 @@ export async function trajectoryLists(state: string, limit = 25): Promise<Trajec
       const [n, g, d] = await Promise.all([countWhere(t), countWhere(t, 'gov_dependent'), countWhere(t, 'three_year_deficit')]);
       return { trend: t, n, gov_dependent: g, three_year_deficit: d } satisfies CohortStat;
     })),
-    base().eq('trend', 'shrinking').gte('peak_revenue', 1_000_000).order('revenue_change_pct', { ascending: true, nullsFirst: false }).limit(limit),
+    base().eq('trend', 'shrinking').gte('peak_revenue', 1_000_000).gt('revenue_last', 0).order('revenue_change_pct', { ascending: true, nullsFirst: false }).limit(limit),
     base().eq('trend', 'growing').gte('revenue_first', 1_000_000).order('revenue_cagr_pct', { ascending: false, nullsFirst: false }).limit(limit),
     base().eq('gov_dependent', true).gte('revenue_last', 1_000_000).order('gov_share_last_pct', { ascending: false, nullsFirst: false }).order('revenue_last', { ascending: false }).limit(limit),
     base().eq('three_year_deficit', true).order('revenue_last', { ascending: false, nullsFirst: false }).limit(limit),
