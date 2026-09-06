@@ -466,7 +466,9 @@ async function buildEntities() {
   log('  Loading political parties...');
   const partyRows = await selectJsonRows('political party recipients',
     `SELECT DISTINCT donation_to FROM political_donations WHERE donation_to IS NOT NULL`);
-  const uniqueParties = partyRows.map((r) => r.donation_to).filter(Boolean);
+  // Whitespace-only recipient names reach here from the AEC feed; makeGsId throws on them, and one such row
+  // used to abort the whole nightly build (4 of the last 10 runs). Trim and drop them instead.
+  const uniqueParties = [...new Set(partyRows.map((r) => (r.donation_to ?? "").trim()).filter(Boolean))];
 
   if (!dryRun) {
     const partyEntities = uniqueParties.map((name) => ({

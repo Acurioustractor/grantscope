@@ -339,7 +339,7 @@ export const AGENTS = {
     displayName: 'Import Gov Grants',
     category: 'import',
     defaultPriority: 3,
-    timeoutMs: 600_000,
+    timeoutMs: 1_800_000,
     dependencies: [],
   },
   'ingest-abr-bulk': {
@@ -476,7 +476,7 @@ export const AGENTS = {
     displayName: 'Grant pipeline · ingest and promote',
     category: 'discovery',
     defaultPriority: 2,
-    timeoutMs: 1_200_000,
+    timeoutMs: 2_400_000,
     dependencies: [],
   },
   'nightly-grant-pipeline-enrich': {
@@ -484,7 +484,7 @@ export const AGENTS = {
     displayName: 'Grant pipeline · classify, enrich and verify',
     category: 'enrichment',
     defaultPriority: 3,
-    timeoutMs: 1_200_000,
+    timeoutMs: 2_400_000,
     dependencies: [],
   },
   'nightly-grant-pipeline-finalize': {

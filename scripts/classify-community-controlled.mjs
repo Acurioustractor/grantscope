@@ -13,7 +13,8 @@
  *   node scripts/classify-community-controlled.mjs --apply   # apply changes
  */
 import 'dotenv/config';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
+import { psql } from "./lib/psql.mjs";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
@@ -40,17 +41,15 @@ async function classify() {
   console.log(`[classify] Indigenous corporations (ORIC): ${oricCount}`);
 
   if (apply) {
-    // Previous version used supabase.from().update().eq() which silently
-    // failed on bulk updates >~500 rows (PostgREST client quirk). Use
-    // exec_sql RPC for the bulk update — hits the DB directly.
-    const { error: updateError } = await supabase.rpc('exec_sql', {
-      query: `UPDATE gs_entities
+    // exec_sql is SELECT-only (it wraps the query, so an UPDATE fails with "syntax error at or near SET"),
+    // which means this apply path silently wrote nothing on every scheduled run. psql() goes to the DB directly.
+    try {
+      psql(`UPDATE gs_entities
                 SET is_community_controlled = true
               WHERE entity_type = 'indigenous_corp'
-                AND is_community_controlled = false`,
-    });
-    if (updateError) {
-      console.error('[classify] ORIC bulk update failed:', updateError.message);
+                AND is_community_controlled = false`, { label: "classify-oric" });
+    } catch (err) {
+      console.error("[classify] ORIC bulk update failed:", err.message);
     }
   }
 
@@ -74,16 +73,14 @@ async function classify() {
       nameMatchCount += data.length;
       console.log(`[classify] "${pattern}": ${data.length} matches`);
       if (apply) {
-        // Same pattern — exec_sql for reliable bulk update
-        const { error: updateError } = await supabase.rpc('exec_sql', {
-          query: `UPDATE gs_entities
+        try {
+          psql(`UPDATE gs_entities
                     SET is_community_controlled = true
                   WHERE is_community_controlled = false
                     AND entity_type IN ('charity', 'social_enterprise', 'trust', 'unknown')
-                    AND canonical_name ILIKE '%${pattern.replace(/'/g, "''")}%'`,
-        });
-        if (updateError) {
-          console.error(`[classify] name "${pattern}" update failed:`, updateError.message);
+                    AND canonical_name ILIKE '%${pattern.replace(/'/g, "''")}%'`, { label: "classify-name" });
+        } catch (err) {
+          console.error(`[classify] name "${pattern}" update failed:`, err.message);
         }
       }
     }
