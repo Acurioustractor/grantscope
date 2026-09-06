@@ -9,15 +9,17 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-09-07T08:05:00+10:00
+**Updated:** 2026-09-07T09:30:00+10:00
 **Goal:** Two surfaces that read the whole register: disadvantage versus dollars per council (`/allocation`) and seven-year charity trajectories (`/charities/trajectories`), plus three grounded posts for the Philanthropy Australia conference (Brisbane, 8 to 10 Sept 2026). Done when both pages are live and verified, and the posts have no unverified claim.
 **Branch:** main
 **Test:** `bash scripts/precheck.sh` · `node --env-file=.env scripts/check-migration-parity.mjs` · `node --env-file=.env scripts/check-private-exposure.mjs`
 
 ### Now
-[->] Nothing in progress. #444 merged `dd7ec00e`, verified live (foundations trust+QLD with state chips, $0 and 'no return filed'; charities Health + Very Remote). Open: #442 fragments at the bottom of ascending grants ('and Community Services Cluster'), Giving / yr placeholder on 9,242 foundations (script's enrich step writes via exec_sql, which is read-only), 523 pre-mid-2023 charities with no return in 2023 or 2024.
+[->] Nothing in progress. Stream closed: #446 (Giving column) merged `c609a725`; NSW FaCS table-of-contents rows deleted (migration 20260907140000, #442 closed). Open only: 523 pre-mid-2023 charities with no AIS in 2023 or 2024 (ACNC side), and the 955 scraped Giving figures that can mix program spend.
 
 ### This Session
+- [x] #446 merged `c609a725`: foundations.total_giving_annual placeholders (9,242 rows, $731m of guesses) replaced by latest AIS grants made ($3.33bn); 843 NULL where no return; old value in metadata.placeholder_giving. Root cause: refresh-acnc-ais.mjs enriches via exec_sql (SELECT-only), never wrote.
+- [x] #442 closed: the 'fragments' were the NSW FaCS 2018-19 report's table of contents loaded as 10 grants (page numbers as dollars, $470); deleted by migration 20260907140000 on Ben's "delete". Trap: program_name carried a trailing space, equality on the visible string matched nothing.
 - [x] #444 merged `dd7ec00e` and live: filters on six browse tables (sector/remoteness, sector, FY range, supplier state, donor party + until-year, foundation state), junk names out, foundations $0 vs 'no return filed', foundation type chips fixed (linked to the redirecting old path). Migration 20260907120000 applied.
 - [x] ACNC AIS 2024 loaded: 53,939 rows. The data.gov.au file changed shape (lowercase headers, no year column, y/n, dd/mm/yyyy, one duplicate ABN); refresh-acnc-ais.mjs fixed. Foundations with no return 2,224 -> 1,864 (1,341 registered after Jun 2023).
 - [x] #441 merged `f576e801` and live: two-way sort on all nine browse tables + /allocation, allocation search + sure chip, sidebar links, table width. Migration 20260907110000 applied.
