@@ -20,6 +20,7 @@ export default async function FoundationsList({
   const sp = await searchParams;
   const q = typeof sp.q === 'string' ? sp.q.trim() : '';
   const type = typeof sp.type === 'string' ? sp.type : '';
+  const state = typeof sp.state === 'string' && /^[A-Z]{2,3}$/.test(sp.state) ? sp.state : '';
   const sort = typeof sp.sort === 'string' && sp.sort ? sp.sort : 'giving';
   const dir = sp.dir === 'asc' || sp.dir === 'desc' ? sp.dir : '';
 
@@ -32,6 +33,7 @@ export default async function FoundationsList({
       supabase.rpc('foundation_browse', {
         p_q: q || null,
         p_type: type || null,
+        p_state: state || null,
         p_sort: sort, p_dir: dir || null,
         p_limit: 200,
       }),
@@ -58,7 +60,7 @@ export default async function FoundationsList({
             The list could not be read: {why}. Nothing is estimated in its place.
           </p>
         ) : (
-          <FoundationsBrowser rows={rows} q={q} type={type} sort={sort} dir={dir} total={total} />
+          <FoundationsBrowser rows={rows} q={q} type={type} sort={sort} dir={dir} state={state} total={total} />
         )}
       </div>
     </Shell>

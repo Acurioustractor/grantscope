@@ -28,6 +28,8 @@ export default async function CharityList({
   const q = typeof sp.q === 'string' ? sp.q.trim() : '';
   const state = typeof sp.state === 'string' ? sp.state : '';
   const size = typeof sp.size === 'string' ? sp.size : '';
+  const sector = typeof sp.sector === 'string' ? sp.sector.slice(0, 40) : '';
+  const remoteness = typeof sp.remoteness === 'string' ? sp.remoteness.slice(0, 40) : '';
   const sort = typeof sp.sort === 'string' && sp.sort ? sp.sort : 'known';
   const dir = sp.dir === 'asc' || sp.dir === 'desc' ? sp.dir : '';
 
@@ -37,7 +39,7 @@ export default async function CharityList({
   let why: string | null = null;
   try {
     const [{ data, error }, s] = await Promise.all([
-      retryRpc(() => supabase.rpc('charity_browse', { p_q: q || null, p_state: state || null, p_size: size || null, p_sort: sort, p_dir: dir || null, p_limit: 200 })),
+      retryRpc(() => supabase.rpc('charity_browse', { p_q: q || null, p_state: state || null, p_size: size || null, p_sector: sector || null, p_remoteness: remoteness || null, p_sort: sort, p_dir: dir || null, p_limit: 200 })),
       stats(),
     ]);
     if (error) throw new Error(error.message);
@@ -90,6 +92,8 @@ export default async function CharityList({
               knownLegend: 'facts held: size, state, graph match, financial return, visible money',
               stateFacets: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'],
               sizeFacets: ['Small', 'Medium', 'Large'],
+              sectorFacets: ['Religion', 'Education', 'Social Welfare', 'Health', 'Community', 'Arts & Culture', 'Environment', 'Indigenous', 'Housing'],
+              remotenessFacets: ['Major Cities of Australia', 'Inner Regional Australia', 'Outer Regional Australia', 'Remote Australia', 'Very Remote Australia'],
               moneyCaveat:
                 'Known = facts we hold (size, state, graph match, financial return, visible money) — a short bar is our gap, not theirs.',
             }}
@@ -97,6 +101,8 @@ export default async function CharityList({
             state={state}
             size={size}
             sort={sort} dir={dir}
+            sector={sector}
+            remoteness={remoteness}
             statsLine={statsLine}
           />
         )}

@@ -24,17 +24,24 @@ export interface BrowseRow {
   total_assets: number | null;
 }
 
+/** foundations.type values with enough rows to be worth a chip (measured 2026-09-07; 'philanthropic_foundation' had none). */
 const TYPES: [string, string][] = [
+  ['corporate_foundation', 'Corporate foundations'],
+  ['trust', 'Trusts'],
   ['grantmaker', 'Grantmakers'],
   ['private_ancillary_fund', 'Private ancillary funds'],
   ['public_ancillary_fund', 'Public ancillary funds'],
-  ['trust', 'Trusts'],
-  ['corporate_foundation', 'Corporate foundations'],
-  ['philanthropic_foundation', 'Philanthropic foundations'],
+  ['service_delivery', 'Service delivery'],
+  ['religious_organisation', 'Religious'],
+  ['international_aid', 'International aid'],
+  ['education_body', 'Education'],
+  ['university', 'Universities'],
 ];
 
+/** null is "no figure"; 0 is a figure and prints as $0. A dash for zero read as missing data (Ben, 2026-09-07). */
 function money(n: number | null): string {
-  if (!n) return '—';
+  if (n == null) return '—';
+  if (n === 0) return '$0';
   if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}bn`;
   if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}m`;
   // See browse-ui.tsx: "$0k" for a real amount under $500 is worse than the extra digits.
@@ -74,6 +81,7 @@ export default function FoundationsBrowser({
   type,
   sort,
   dir = '',
+  state = '',
   total,
 }: {
   rows: BrowseRow[];
@@ -82,6 +90,8 @@ export default function FoundationsBrowser({
   sort: string;
   /** 'asc' | 'desc' | '' (natural) */
   dir?: string;
+  /** acnc_charities.state for the foundation's ABN. */
+  state?: string;
   total: number;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
@@ -107,17 +117,18 @@ export default function FoundationsBrowser({
     if (type) p.set('type', type);
     if (sort) p.set('sort', sort);
     if (dir) p.set('dir', dir);
+    if (state) p.set('state', state);
     for (const [k, v] of Object.entries(over)) {
       if (v) p.set(k, v);
       else p.delete(k);
     }
     const s = p.toString();
-    return `/dashboard/browse/foundations${s ? `?${s}` : ''}`;
+    return `/foundations${s ? `?${s}` : ''}`;
   };
 
   return (
     <>
-      <form className="mt-4 flex flex-wrap items-center gap-2" action="/dashboard/browse/foundations">
+      <form className="mt-4 flex flex-wrap items-center gap-2" action="/foundations">
         <input
           name="q"
           defaultValue={q}
@@ -125,6 +136,7 @@ export default function FoundationsBrowser({
           className="w-full max-w-[360px] bg-white px-3 py-2 font-mono text-[13px] shell-control"
         />
         {type ? <input type="hidden" name="type" value={type} /> : null}
+        {state ? <input type="hidden" name="state" value={state} /> : null}
         {sort ? <input type="hidden" name="sort" value={sort} /> : null}
         {dir ? <input type="hidden" name="dir" value={dir} /> : null}
       </form>
@@ -144,6 +156,14 @@ export default function FoundationsBrowser({
             style={type === v ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}
           >
             {label}
+          </Link>
+        ))}
+      </div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+        <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--shell-muted)' }}>state</span>
+        {['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'].map((st) => (
+          <Link key={st} href={qs({ state: state === st ? '' : st })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={state === st ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
+            {st}
           </Link>
         ))}
       </div>
@@ -181,8 +201,14 @@ export default function FoundationsBrowser({
               ) : null}
             </span>
             <span className="w-[92px] shrink-0 text-right font-mono text-[12.5px]">{money(r.giving)}</span>
-            <span className="w-[100px] shrink-0 text-right font-mono text-[12.5px]">{money(r.granted)}</span>
-            <span className="w-[92px] shrink-0 text-right font-mono text-[12.5px]">{money(r.total_assets)}</span>
+            {r.ais_year == null ? (
+              <span className="w-[192px] shrink-0 text-right font-mono text-[10.5px]" style={{ color: 'var(--shell-muted)' }} title="Registered with the ACNC but no Annual Information Statement on file yet; most of these registered after June 2023">no return filed</span>
+            ) : (
+              <>
+                <span className="w-[100px] shrink-0 text-right font-mono text-[12.5px]">{money(r.granted)}</span>
+                <span className="w-[92px] shrink-0 text-right font-mono text-[12.5px]">{money(r.total_assets)}</span>
+              </>
+            )}
             <span className="w-[74px] shrink-0 text-right font-mono text-[12.5px]">{r.grantees || '—'}</span>
             <span className="w-[70px] shrink-0 text-right font-mono text-[12.5px]">{r.board_links || '—'}</span>
           </button>

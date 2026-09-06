@@ -57,6 +57,9 @@ export function isRealRecipient(name: string | null | undefined): boolean {
   // recipient renders as a blank row carrying real dollars.
   const normalised = name.trim().toLowerCase();
   if (normalised === '') return false;
+  // The source glues this prefix onto real names ("No longer usedUSC Spartans Swim Club Inc"), so a
+  // list match cannot catch it. Mirrored in grant_recipient_browse (migration 20260907120000).
+  if (normalised.startsWith('no longer used')) return false;
   return !NON_RECIPIENT_NAMES.has(normalised);
 }
 

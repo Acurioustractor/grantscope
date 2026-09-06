@@ -106,6 +106,72 @@ const CSV_TO_DB = {
   'Incorporated_Association': 'incorporated_association',
 };
 
+/**
+ * The 2024 file (datadotgov_ais24.csv, 2026-09-07) dropped the CamelCase headers for lowercase words, has no
+ * AIS_Year column (the year comes from the dataset), writes flags as y/n and dates as dd/mm/yyyy. Parsed 0
+ * rows against the map above before this. Keyed on the header lower-cased and trimmed.
+ */
+const CSV_TO_DB_LOWER = {
+  'abn': 'abn',
+  'charity name': 'charity_name',
+  'registration status': 'registration_status',
+  'charity website': 'charity_website',
+  'charity size': 'charity_size',
+  'basic religious charity': 'basic_religious_charity',
+  'ais due date': 'ais_due_date',
+  'date ais received': 'date_ais_received',
+  'financial report date received': 'financial_report_date_received',
+  'conducted activities': 'conducted_activities',
+  'why charity did not conduct activities': 'why_not_conducted',
+  'how purposes were pursued': 'how_purposes_pursued',
+  'international activities details': 'international_activities_details',
+  'staff - full time': 'staff_full_time',
+  'staff - part time': 'staff_part_time',
+  'staff - casual': 'staff_casual',
+  'total full time equivalent staff': 'staff_fte',
+  'staff - volunteers': 'staff_volunteers',
+  'cash or accrual': 'cash_or_accrual',
+  'type of financial statement': 'financial_statement_type',
+  'report consolidated with more than one entity': 'report_consolidated',
+  'charity report has a modification': 'report_has_modification',
+  'type of report modification': 'modification_type',
+  'charity has reportable related party transactions': 'has_related_party_transactions',
+  'fin report from': 'fin_report_from',
+  'fin report to': 'fin_report_to',
+  'revenue from government': 'revenue_from_government',
+  'donations and bequests': 'donations_and_bequests',
+  'revenue from goods and services': 'revenue_from_goods_services',
+  'revenue from investments': 'revenue_from_investments',
+  'all other revenue': 'all_other_revenue',
+  'total revenue': 'total_revenue',
+  'other income': 'other_income',
+  'total gross income': 'total_gross_income',
+  'employee expenses': 'employee_expenses',
+  'interest expenses': 'interest_expenses',
+  'grants and donations made for use in australia': 'grants_donations_au',
+  'grants and donations made for use outside australia': 'grants_donations_intl',
+  'all other expenses': 'all_other_expenses',
+  'total expenses': 'total_expenses',
+  'net surplus/deficit': 'net_surplus_deficit',
+  'other comprehensive income': 'other_comprehensive_income',
+  'total comprehensive income': 'total_comprehensive_income',
+  'total current assets': 'total_current_assets',
+  'non-current loans receivable': 'non_current_loans_receivable',
+  'other non-current assets': 'other_non_current_assets',
+  'total non-current assets': 'total_non_current_assets',
+  'total assets': 'total_assets',
+  'total current liabilities': 'total_current_liabilities',
+  'non-current loans payable': 'non_current_loans_payable',
+  'other non-current liabilities': 'other_non_current_liabilities',
+  'total non-current liabilities': 'total_non_current_liabilities',
+  'total liabilities': 'total_liabilities',
+  'net assets/liabilities': 'net_assets_liabilities',
+  'key management personnel': 'has_key_management_personnel',
+  'number of key management personnel': 'num_key_management_personnel',
+  'total paid to key management personnel': 'total_paid_key_management',
+  'incorporated association': 'incorporated_association',
+};
+
 const BOOLEAN_COLS = new Set([
   'basic_religious_charity', 'conducted_activities', 'report_consolidated',
   'report_has_modification', 'has_related_party_transactions',
@@ -135,8 +201,11 @@ const NUMERIC_COLS = new Set([
 
 function parseValue(col, val) {
   if (val === '' || val === null || val === undefined) return null;
-  if (BOOLEAN_COLS.has(col)) return val === 'Y' || val === 'Yes' || val === 'true' || val === '1';
+  if (BOOLEAN_COLS.has(col)) return ['y', 'yes', 'true', '1'].includes(String(val).trim().toLowerCase());
   if (DATE_COLS.has(col)) {
+    // 2024 file writes dd/mm/yyyy; new Date() reads that as mm/dd and returns Invalid Date for day > 12.
+    const dmy = String(val).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
     const d = new Date(val);
     return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
   }
@@ -202,7 +271,7 @@ async function downloadCsv(url, destPath) {
   await pipeline(resp.body, ws);
 }
 
-async function importCsv(csvPath, resourceId) {
+async function importCsv(csvPath, resourceId, datasetYear) {
   return new Promise((resolve, reject) => {
     const rows = [];
     const parser = createReadStream(csvPath).pipe(parse({
@@ -219,6 +288,15 @@ async function importCsv(csvPath, resourceId) {
           row[dbCol] = parseValue(dbCol, csvRow[csvCol]);
         }
       }
+      if (row.abn === undefined) {
+        // 2024-shape file: lowercase headers, no year column.
+        for (const [rawCol, val] of Object.entries(csvRow)) {
+          const dbCol = CSV_TO_DB_LOWER[rawCol.trim().toLowerCase()];
+          if (dbCol) row[dbCol] = parseValue(dbCol, val);
+        }
+      }
+      if (row.abn) row.abn = String(row.abn).replace(/\D/g, '');
+      if (!row.ais_year && datasetYear) row.ais_year = datasetYear;
       if (!row.abn || !row.ais_year) return; // skip invalid
       row.data_source = 'data.gov.au';
       row.resource_id = resourceId;
@@ -226,7 +304,18 @@ async function importCsv(csvPath, resourceId) {
       rows.push(row);
     });
 
-    parser.on('end', () => resolve(rows));
+    parser.on('end', () => {
+      // The 2024 file lists some ABNs twice (a re-lodged statement). One upsert cannot touch the same
+      // (abn, ais_year) twice, so the whole 500-row batch failed. Keep the latest lodgement per ABN.
+      const byAbn = new Map();
+      for (const r of rows) {
+        const prev = byAbn.get(r.abn);
+        if (!prev || (r.date_ais_received ?? '') > (prev.date_ais_received ?? '')) byAbn.set(r.abn, r);
+      }
+      const dupes = rows.length - byAbn.size;
+      if (dupes > 0) console.log(`  Collapsed ${dupes} duplicate ABN rows (kept the latest lodgement)`);
+      resolve([...byAbn.values()]);
+    });
     parser.on('error', reject);
   });
 }
@@ -346,7 +435,7 @@ async function main() {
 
       // Parse CSV
       console.log('  Parsing CSV...');
-      const rows = await importCsv(csvPath, resource.id);
+      const rows = await importCsv(csvPath, resource.id, resource.year);
       console.log(`  Parsed ${rows.length.toLocaleString()} rows`);
 
       // Upsert

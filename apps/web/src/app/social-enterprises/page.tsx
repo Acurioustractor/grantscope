@@ -26,6 +26,7 @@ export default async function SEList({
   const sp = await searchParams;
   const q = typeof sp.q === 'string' ? sp.q.trim() : '';
   const state = typeof sp.state === 'string' ? sp.state : '';
+  const sector = typeof sp.sector === 'string' ? sp.sector.slice(0, 40) : '';
   const sort = typeof sp.sort === 'string' && sp.sort ? sp.sort : 'known';
   const dir = sp.dir === 'asc' || sp.dir === 'desc' ? sp.dir : '';
 
@@ -35,7 +36,7 @@ export default async function SEList({
   let why: string | null = null;
   try {
     const [{ data, error }, s] = await Promise.all([
-      retryRpc(() => supabase.rpc('se_browse', { p_q: q || null, p_state: state || null, p_sort: sort, p_dir: dir || null, p_limit: 200 })),
+      retryRpc(() => supabase.rpc('se_browse', { p_q: q || null, p_state: state || null, p_sector: sector || null, p_sort: sort, p_dir: dir || null, p_limit: 200 })),
       stats(),
     ]);
     if (error) throw new Error(error.message);
@@ -75,6 +76,7 @@ export default async function SEList({
               knownMax: 5,
               knownLegend: 'facts held: ABN, sector, place, web/description, graph match',
               stateFacets: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'],
+              sectorFacets: ['indigenous', 'community', 'education', 'employment', 'environment', 'health', 'civil construction', 'arts', 'retail', 'food'],
               moneyCaveat:
                 'Known = facts we hold (ABN, sector, place, web presence, graph match) — a short bar is our gap, not theirs. Dollars attach to the ABN; branches share their parent\u2019s figures.',
             }}
@@ -82,6 +84,7 @@ export default async function SEList({
             state={state}
             size=""
             sort={sort} dir={dir}
+            sector={sector}
             statsLine={statsLine}
           />
         )}

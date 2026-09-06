@@ -29,6 +29,8 @@ interface RecipientDetail {
 }
 
 const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT', 'FED'];
+/** Justice funding runs 2008-09 to 2026-27; these are the years with enough rows to be worth a chip. */
+const FYS = ['2015-16', '2017-18', '2019-20', '2021-22', '2022-23', '2023-24', '2024-25'];
 const TOPICS = ['child-protection', 'family-services', 'youth-justice', 'indigenous', 'community-led', 'diversion'];
 
 export default function GrantBrowser({
@@ -38,6 +40,8 @@ export default function GrantBrowser({
   topic,
   sort,
   dir = '',
+  fromFy = '',
+  toFy = '',
   statsLine,
   coverageLine,
   topicLine,
@@ -50,6 +54,9 @@ export default function GrantBrowser({
   sort: string;
   /** 'asc' | 'desc' | '' (natural) */
   dir?: string;
+  /** Financial-year bounds on justice_funding.financial_year, inclusive, 'YYYY-YY'. */
+  fromFy?: string;
+  toFy?: string;
   statsLine: string;
   /** Coverage skew — stated up front, not buried in the caveat. UX audit pass 2, F1. */
   coverageLine?: string;
@@ -60,7 +67,7 @@ export default function GrantBrowser({
   const drawer = useDrawer<RecipientDetail>();
   const detail = drawer.detail;
   const open = (key: string) => drawer.open(key, `/api/browse/grant-recipient?key=${encodeURIComponent(key)}`);
-  const qs = makeQs('/dashboard/browse/grants', { q, state, topic, sort, dir });
+  const qs = makeQs('/dashboard/browse/grants', { q, state, topic, from: fromFy, to: toFy, sort, dir });
 
   return (
     <>
@@ -85,6 +92,8 @@ export default function GrantBrowser({
         />
         {state ? <input type="hidden" name="state" value={state} /> : null}
         {topic ? <input type="hidden" name="topic" value={topic} /> : null}
+        {fromFy ? <input type="hidden" name="from" value={fromFy} /> : null}
+        {toFy ? <input type="hidden" name="to" value={toFy} /> : null}
         {sort ? <input type="hidden" name="sort" value={sort} /> : null}
         {dir ? <input type="hidden" name="dir" value={dir} /> : null}
       </form>
@@ -102,6 +111,20 @@ export default function GrantBrowser({
         {TOPICS.map((t) => (
           <Link key={t} href={qs({ topic: topic === t ? '' : t })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={topic === t ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
             {t.replace(/-/g, ' ')}
+          </Link>
+        ))}
+      </div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+        <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--shell-muted)' }}>from</span>
+        {FYS.map((y) => (
+          <Link key={`f${y}`} href={qs({ from: fromFy === y ? '' : y })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={fromFy === y ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
+            {y}
+          </Link>
+        ))}
+        <span className="ml-2 font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--shell-muted)' }}>to</span>
+        {FYS.map((y) => (
+          <Link key={`t${y}`} href={qs({ to: toFy === y ? '' : y })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={toFy === y ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
+            {y}
           </Link>
         ))}
       </div>

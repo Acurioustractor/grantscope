@@ -66417,6 +66417,8 @@ export type Database = {
           p_dir?: string
           p_limit?: number
           p_q?: string
+          p_remoteness?: string
+          p_sector?: string
           p_size?: string
           p_sort?: string
           p_state?: string
@@ -66787,6 +66789,7 @@ export type Database = {
           p_offset?: number
           p_q?: string
           p_sort?: string
+          p_state?: string
         }
         Returns: {
           buyer_count: number
@@ -66909,6 +66912,8 @@ export type Database = {
           p_offset?: number
           p_q?: string
           p_sort?: string
+          p_to?: string
+          p_to_fy?: string
         }
         Returns: {
           donation_count: number
@@ -67021,6 +67026,7 @@ export type Database = {
           p_limit?: number
           p_q?: string
           p_sort?: string
+          p_state?: string
           p_type?: string
         }
         Returns: {
@@ -67730,11 +67736,13 @@ export type Database = {
       grant_recipient_browse: {
         Args: {
           p_dir?: string
+          p_from_fy?: string
           p_limit?: number
           p_offset?: number
           p_q?: string
           p_sort?: string
           p_state?: string
+          p_to_fy?: string
           p_topic?: string
         }
         Returns: {
@@ -68613,6 +68621,7 @@ export type Database = {
           p_dir?: string
           p_limit?: number
           p_q?: string
+          p_sector?: string
           p_sort?: string
           p_state?: string
         }

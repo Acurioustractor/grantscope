@@ -9,10 +9,10 @@ export const metadata: Metadata = { title: 'Political donors — CivicGraph' };
 const FY_OPTIONS = ['1998-1999', '2014-15', '2019-20', '2022-23'];
 
 const load = unstable_cache(
-  async (q: string, from: string, sort: string, dir: string) => {
+  async (q: string, from: string, sort: string, dir: string, toFy: string, to: string) => {
     const supabase = getDirectServiceSupabase();
     const [browse, stats] = await Promise.all([
-      supabase.rpc('donation_donor_browse', { p_q: q || null, p_from_fy: from, p_sort: sort, p_dir: dir || null, p_limit: 200 }),
+      supabase.rpc('donation_donor_browse', { p_q: q || null, p_from_fy: from, p_to_fy: toFy || null, p_to: to || null, p_sort: sort, p_dir: dir || null, p_limit: 200 }),
       supabase.rpc('donation_browse_stats', { p_from_fy: from }),
     ]);
     if (browse.error) throw new Error(browse.error.message);
@@ -33,13 +33,15 @@ export default async function DonationsBrowsePage({
   const from = typeof sp.from === 'string' && FY_OPTIONS.includes(sp.from) ? sp.from : '2014-15';
   const sortParam = typeof sp.sort === 'string' && sp.sort ? sp.sort : 'total';
   const dir = sp.dir === 'asc' || sp.dir === 'desc' ? sp.dir : '';
+  const toFy = typeof sp.to_year === 'string' && FY_OPTIONS.includes(sp.to_year) ? sp.to_year : '';
+  const to = typeof sp.to === 'string' ? sp.to.slice(0, 40) : '';
   const rpcSort = sortParam === 'contracts' ? 'donations' : sortParam;
 
   let rows: SideRow[] = [];
   let statsLine = '';
   let why: string | null = null;
   try {
-    const { rows: data, stats } = await load(q, from, rpcSort, dir);
+    const { rows: data, stats } = await load(q, from, rpcSort, dir, toFy, to);
     rows = (data as {
       donor_key: string;
       donor_name: string;
@@ -81,7 +83,11 @@ export default async function DonationsBrowsePage({
             counterpartySortKey: 'recipients',
             itemLabel: 'donation',
             yearOptions: FY_OPTIONS,
+            toYearOptions: FY_OPTIONS.slice(1),
+            toFacets: ['Labor', 'Liberal', 'National', 'Greens', 'One Nation', 'United Australia', 'Independent'],
           }}
+          toYear={toFy}
+          to={to}
           q={q}
           fromYear={from}
           sort={sortParam} dir={dir}
