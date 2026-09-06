@@ -108,8 +108,13 @@ export const GRAPH_EDGE_DATASETS = [
     // from a merged buyer (216,822 of them, Home Affairs, the AFP, Finance...) fell out of the
     // derivation. Measured 2026-09-06: 147,608 existing edges looked "stale" because the recipe could
     // no longer produce them, and 377 contracts published since the merge had no edge at all.
-    // Resolution order, per distinct buyer key: exact gs_id, else the ONE government entity with that
-    // name. An ambiguous name (two entities) resolves to nothing, as in the entity phase.
+    // Resolution order, per distinct buyer key, identical to govGsId in the entity phase:
+    //   1. exact gs_id AU-GOV-<key>;
+    //   2. the ONE government entity with that name;
+    //   3. (2026-09-06, "link then mint") the ONE non-person entity of any type with that name, so a
+    //      state buyer that already exists under an ABN (universities, TAFE NSW, NSW Police) links to
+    //      that node instead of getting a second one.
+    // An ambiguous name (two entities) resolves to nothing at rungs 2 and 3, as in the entity phase.
     prelude: `CREATE TEMP TABLE austender_buyer_map AS
       WITH keys AS (
         SELECT DISTINCT coalesce(NULLIF(buyer_id, ''), buyer_name) AS key, lower(trim(buyer_name)) AS name_key
@@ -117,11 +122,20 @@ export const GRAPH_EDGE_DATASETS = [
       gov_by_name AS (
         SELECT lower(trim(canonical_name)) AS name_key, (array_agg(id))[1] AS entity_id, count(*) AS n
         FROM gs_entities WHERE entity_type = 'government_body' OR gs_id LIKE 'AU-GOV-%'
+        GROUP BY 1),
+      any_by_name AS (
+        SELECT lower(trim(canonical_name)) AS name_key, (array_agg(id))[1] AS entity_id, count(*) AS n
+        FROM gs_entities
+        WHERE entity_type NOT IN ('person', 'political_party')
+          AND lower(trim(canonical_name)) IN (SELECT name_key FROM keys)
         GROUP BY 1)
-      SELECT k.key, coalesce(g.id, CASE WHEN n.n = 1 THEN n.entity_id END) AS entity_id
+      SELECT k.key, coalesce(g.id,
+                             CASE WHEN n.n = 1 THEN n.entity_id END,
+                             CASE WHEN a.n = 1 THEN a.entity_id END) AS entity_id
       FROM keys k
       LEFT JOIN gs_entities g ON g.gs_id = 'AU-GOV-' || k.key
-      LEFT JOIN gov_by_name n ON n.name_key = k.name_key;
+      LEFT JOIN gov_by_name n ON n.name_key = k.name_key
+      LEFT JOIN any_by_name a ON a.name_key = k.name_key;
       DELETE FROM austender_buyer_map WHERE entity_id IS NULL;
       CREATE INDEX ON austender_buyer_map (key);
       ANALYZE austender_buyer_map;`,

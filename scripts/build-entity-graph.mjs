@@ -334,10 +334,15 @@ async function buildEntities() {
   // only saw buyers present in the first 1000 of ~770K contract rows. Push the DISTINCT to the DB
   // (instant) so every buyer becomes a government_body entity.
   log('  Loading government bodies...');
+  // The key is coalesce(buyer_id, buyer_name), the same key the contract edge recipe uses
+  // (graph-edge-datasets.mjs). Until 2026-09-06 rows without a buyer_id were skipped here, so 725
+  // state and territory buyers (NT infrastructure departments, universities, NSW Police, 25,806
+  // contracts) never had an entity and their contracts never had an edge.
   const buyerRows = await selectJsonRows('government buyers',
-    `SELECT DISTINCT ON (buyer_id) buyer_id, buyer_name
-       FROM austender_contracts
-      WHERE buyer_name IS NOT NULL AND buyer_id IS NOT NULL`);
+    `SELECT DISTINCT ON (key) key AS buyer_id, buyer_name
+       FROM (SELECT coalesce(NULLIF(buyer_id, ''), buyer_name) AS key, buyer_name
+               FROM austender_contracts WHERE buyer_name IS NOT NULL) b
+      ORDER BY key`);
 
   const uniqueBuyers = new Map();
   for (const b of buyerRows) {
@@ -370,12 +375,35 @@ async function buildEntities() {
     existingByName.set(key, existingByName.has(key) ? null : e.gs_id);
   }
 
+  // SECOND RUNG (2026-09-06, Ben's call, option "link then mint"): a buyer with no government
+  // identity may already exist under an ABN, typed company/charity/foundation because it arrived
+  // through an ABN register. The University of Queensland, TAFE NSW, NSW Police Force: 40 such
+  // buyers, 8,488 contracts. Link to that entity rather than mint a second node beside it. Same
+  // ambiguity rule as above: two candidates (Griffith University, NSW DPI) resolve to nothing and
+  // fall through to minting; person clusters are never candidates (Public Trustee).
+  const existingAnyByName = new Map();
+  const anyRows = await selectJsonRows('existing identities by buyer name',
+    `SELECT lower(trim(e.canonical_name)) AS k, count(*) AS n, min(e.gs_id) AS gs_id
+       FROM gs_entities e
+      WHERE e.entity_type NOT IN ('person', 'political_party')
+        AND lower(trim(e.canonical_name)) IN (
+              SELECT DISTINCT lower(trim(buyer_name)) FROM austender_contracts WHERE buyer_name IS NOT NULL)
+      GROUP BY 1`);
+  for (const r of anyRows) existingAnyByName.set(r.k, Number(r.n) === 1 ? r.gs_id : null);
+
   let govReused = 0;
+  let linkedByName = 0;
   function govGsId(buyerId, name) {
-    const existing = existingByName.get(String(name ?? '').trim().toLowerCase());
+    const key = String(name ?? '').trim().toLowerCase();
+    const existing = existingByName.get(key);
     if (existing) {
       govReused += 1;
       return existing;
+    }
+    const linked = existingAnyByName.get(key);
+    if (linked) {
+      linkedByName += 1;
+      return linked;
     }
     return makeGsId({ buyer_id: buyerId });
   }
@@ -397,6 +425,7 @@ async function buildEntities() {
     govEntities.length = 0;
     govEntities.push(...deduped);
     log(`  Government identities reused from existing entities: ${govReused}`);
+    log(`  Buyers linked by name to an existing ABN entity (not minted): ${linkedByName}`);
 
     for (let i = 0; i < govEntities.length; i += 500) {
       const chunk = govEntities.slice(i, i + 500);
