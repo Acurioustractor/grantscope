@@ -168,9 +168,8 @@ export default async function AllocationPage({ searchParams }: { searchParams: P
                   {rows.map((r) => (
                     <tr key={r.lga_code} className="border-b border-[#D0D0D0] hover:bg-[#F7F7F7]">
                       <td className="px-2 py-[6px]">
-                        {councilHref(r.lga_name)
-                          ? <Link href={councilHref(r.lga_name)!} className="font-semibold hover:underline" style={{ color: '#1040C0' }}>{r.lga_name}</Link>
-                          : <span className="font-semibold">{r.lga_name}</span>}
+                        <Link href={`/allocation/${r.lga_code}`} className="font-semibold hover:underline" style={{ color: '#1040C0' }}>{r.lga_name}</Link>
+                        {councilHref(r.lga_name) ? <Link href={councilHref(r.lga_name)!} className="ml-1 font-mono text-[10px] uppercase hover:underline" style={{ color: '#777' }} title="Place page: organisations we could not place, and a correction form">place</Link> : null}
                         <span className="ml-1 font-mono text-[10px]" style={{ color: '#777' }}>{r.state}</span>
                       </td>
                       <td className="px-2 py-[6px] text-[12px]" style={{ color: '#555' }}>{remotenessShort(r.remoteness)}</td>
@@ -203,7 +202,7 @@ export default async function AllocationPage({ searchParams }: { searchParams: P
                 <li>Population is the ABS Estimated Resident Population for 2023. Commonwealth grants are GrantConnect awards approved in the last two years. Nothing on this page reads Xero, GoHighLevel or any private table.</li>
               </ul>
               <p className="mt-3" style={{ color: '#555' }}>
-                Councils shown as links have a <Link href="/place/council" className="underline" style={{ color: '#1040C0' }}>council page</Link> listing the organisations behind the row and the ones we could not place, with a form to correct them. Those pages exist so far only for councils holding remote community-controlled organisations. The earlier narrative on the same question is <Link href="/reports/funding-deserts" className="underline" style={{ color: '#1040C0' }}>Where the Money Doesn&apos;t Go</Link>.
+                Every council links to its own page: the charities placed there, largest first, with their direction, and its neighbours by need. Councils marked <span className="font-mono text-[10px] uppercase">place</span> also have a <Link href="/place/council" className="underline" style={{ color: '#1040C0' }}>place page</Link> listing the organisations we could not place, with a form to correct them. The earlier narrative on the same question is <Link href="/reports/funding-deserts" className="underline" style={{ color: '#1040C0' }}>Where the Money Doesn&apos;t Go</Link>.
               </p>
             </section>
           </>

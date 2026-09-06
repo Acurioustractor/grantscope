@@ -26,6 +26,7 @@ export interface AllocationRow {
   charity_fte: number;
   cw_grant_count: number;
   cw_grant_value_24m: number;
+  jf_grant_count: number;
   jf_grant_value: number;
   contract_value_24m: number;
   unplaced_sharing_postcodes: number;
@@ -124,4 +125,25 @@ export function summariseAllocation(rows: AllocationRow[]): AllocationSummary {
     under_median_disadvantaged: rows.filter((r) => r.irsd_decile != null && r.irsd_decile <= 2.5 && (r.gov_revenue_per_head ?? 0) < median).length,
     median_gov_per_head: median,
   };
+}
+
+export async function allocationForCode(lgaCode: string): Promise<AllocationRow | null> {
+  if (!/^\d{5}$/.test(lgaCode)) return null;
+  const db = getDirectServiceSupabase();
+  const { data, error } = await db.from('mv_lga_allocation').select('*').eq('lga_code', lgaCode).maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as AllocationRow | null) ?? null;
+}
+
+/** Councils in the same state, ordered by need, for the "read the row with its neighbours" strip. */
+export async function stateNeighbours(state: string, limit = 12): Promise<AllocationRow[]> {
+  const db = getDirectServiceSupabase();
+  const { data, error } = await db
+    .from('mv_lga_allocation')
+    .select('lga_code, lga_name, state, remoteness, population, irsd_decile, min_irsd_decile, org_count, community_controlled, charities_reporting, charity_revenue, charity_gov_revenue, charity_donations, charity_fte, cw_grant_count, cw_grant_value_24m, jf_grant_count, jf_grant_value, contract_value_24m, unplaced_sharing_postcodes, gov_revenue_per_head, donations_per_head, cw_grants_24m_per_head, orgs_per_10k, placed_share_pct')
+    .eq('state', state)
+    .order('irsd_decile', { ascending: true, nullsFirst: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as AllocationRow[];
 }
