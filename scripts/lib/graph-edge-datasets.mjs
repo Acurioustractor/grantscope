@@ -101,8 +101,30 @@ export const GRAPH_EDGE_DATASETS = [
     label: 'Contract relationships',
     sourceTable: 'austender_contracts',
     cols: '(source_entity_id, target_entity_id, relationship_type, amount, year, start_date, end_date, dataset, source_record_id, confidence, properties)',
-    prelude: '',
-    // buyer: AU-GOV-<buyer_id> (falls back to buyer_name, matching makeGsId({buyer_id: id||name})).
+    // BUYER RESOLUTION MIRRORS THE ENTITY PHASE (govGsId in build-entity-graph.mjs), not just the gs_id.
+    // The 2026-08-21 gov-entity merge folded 151 AU-GOV-<buyer_id> entities into their ABN-keyed
+    // winners and deleted the losers. The entity phase already resolves a buyer by name against the
+    // surviving government identities; this join used to resolve by gs_id alone, so every contract
+    // from a merged buyer (216,822 of them, Home Affairs, the AFP, Finance...) fell out of the
+    // derivation. Measured 2026-09-06: 147,608 existing edges looked "stale" because the recipe could
+    // no longer produce them, and 377 contracts published since the merge had no edge at all.
+    // Resolution order, per distinct buyer key: exact gs_id, else the ONE government entity with that
+    // name. An ambiguous name (two entities) resolves to nothing, as in the entity phase.
+    prelude: `CREATE TEMP TABLE austender_buyer_map AS
+      WITH keys AS (
+        SELECT DISTINCT coalesce(NULLIF(buyer_id, ''), buyer_name) AS key, lower(trim(buyer_name)) AS name_key
+        FROM austender_contracts WHERE buyer_name IS NOT NULL OR buyer_id IS NOT NULL),
+      gov_by_name AS (
+        SELECT lower(trim(canonical_name)) AS name_key, (array_agg(id))[1] AS entity_id, count(*) AS n
+        FROM gs_entities WHERE entity_type = 'government_body' OR gs_id LIKE 'AU-GOV-%'
+        GROUP BY 1)
+      SELECT k.key, coalesce(g.id, CASE WHEN n.n = 1 THEN n.entity_id END) AS entity_id
+      FROM keys k
+      LEFT JOIN gs_entities g ON g.gs_id = 'AU-GOV-' || k.key
+      LEFT JOIN gov_by_name n ON n.name_key = k.name_key;
+      DELETE FROM austender_buyer_map WHERE entity_id IS NULL;
+      CREATE INDEX ON austender_buyer_map (key);
+      ANALYZE austender_buyer_map;`,
     // supplier: AU-ABN-<abn>. source_record_id mirrors `c.ocid || c.id` (every row has an ocid).
     // supplier_abn filtered to valid 11-digit ABNs (kept in sync with Phase 1e entity creation).
     selectSql: `SELECT
@@ -116,8 +138,10 @@ export const GRAPH_EDGE_DATASETS = [
          'buyer_name',         c.buyer_name,
          'supplier_name',      c.supplier_name)
      FROM austender_contracts c
+     JOIN austender_buyer_map bm
+       ON bm.key = coalesce(NULLIF(c.buyer_id, ''), c.buyer_name)
      JOIN gs_entities buyer
-       ON buyer.gs_id = 'AU-GOV-' || coalesce(NULLIF(c.buyer_id, ''), c.buyer_name)
+       ON buyer.id = bm.entity_id
      JOIN gs_entities supplier
        ON supplier.gs_id = 'AU-ABN-' || regexp_replace(c.supplier_abn, '\\s', '', 'g')
      WHERE c.supplier_abn IS NOT NULL
