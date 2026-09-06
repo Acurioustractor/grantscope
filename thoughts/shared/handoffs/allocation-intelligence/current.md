@@ -11,13 +11,14 @@ status: active
 <!-- This section is extracted by SessionStart hook for quick resume -->
 **Updated:** 2026-09-07T05:15:00+10:00
 **Goal:** Two surfaces that read the whole register: disadvantage versus dollars per council (`/allocation`) and seven-year charity trajectories (`/charities/trajectories`), plus three grounded posts for the Philanthropy Australia conference (Brisbane, 8 to 10 Sept 2026). Done when both pages are live and verified, and the posts have no unverified claim.
-**Branch:** feat/browse-sort-filters (PR #441, VISIBLE, open)
+**Branch:** main
 **Test:** `bash scripts/precheck.sh` · `node --env-file=.env scripts/check-migration-parity.mjs` · `node --env-file=.env scripts/check-private-exposure.mjs`
 
 ### Now
-[->] PR #441 open (VISIBLE): nav links, table width, two-way sort on every browse table + /allocation search/sure chip. Migration 20260907110000 (p_dir on nine browse RPCs) APPLIED, parity green, types regenerated, all nine tables verified both ways on local dev. Waits on Ben's look and "merge". Dev server may still be on 3013.
+[->] Nothing in progress. #441 merged `f576e801`, verified live (charities ascending, ⇅ hints, sidebar links). Open: #440 filter half (state on contracts/buyers/donors, sector + remoteness on charities/SEs, year ranges on grants/donations, state on foundations; needs rollup columns + a migration), #442 junk names at the bottom of rankings.
 
 ### This Session
+- [x] #441 merged `f576e801` and live: two-way sort on all nine browse tables + /allocation, allocation search + sure chip, sidebar links, table width. Migration 20260907110000 applied.
 - [x] #439 merged `d79c8445`: grounded NIAA paragraph in post 1 (NIAA: delivery state on all, postcode on none, 79 'Multiple'; Health 2%).
 - [x] #440 filed (browse sort + filters), sort half built in #441; #442 filed (junk names at the bottom of rankings).
 - [x] #435 and #436 confirmed merged, branches gone.
