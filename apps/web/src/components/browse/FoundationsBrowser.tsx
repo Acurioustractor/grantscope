@@ -38,8 +38,10 @@ const TYPES: [string, string][] = [
   ['university', 'Universities'],
 ];
 
+/** null is "no figure"; 0 is a figure and prints as $0. A dash for zero read as missing data (Ben, 2026-09-07). */
 function money(n: number | null): string {
-  if (!n) return '—';
+  if (n == null) return '—';
+  if (n === 0) return '$0';
   if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}bn`;
   if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}m`;
   // See browse-ui.tsx: "$0k" for a real amount under $500 is worse than the extra digits.
@@ -199,8 +201,14 @@ export default function FoundationsBrowser({
               ) : null}
             </span>
             <span className="w-[92px] shrink-0 text-right font-mono text-[12.5px]">{money(r.giving)}</span>
-            <span className="w-[100px] shrink-0 text-right font-mono text-[12.5px]">{money(r.granted)}</span>
-            <span className="w-[92px] shrink-0 text-right font-mono text-[12.5px]">{money(r.total_assets)}</span>
+            {r.ais_year == null ? (
+              <span className="w-[192px] shrink-0 text-right font-mono text-[10.5px]" style={{ color: 'var(--shell-muted)' }} title="Registered with the ACNC but no Annual Information Statement on file yet; most of these registered after June 2023">no return filed</span>
+            ) : (
+              <>
+                <span className="w-[100px] shrink-0 text-right font-mono text-[12.5px]">{money(r.granted)}</span>
+                <span className="w-[92px] shrink-0 text-right font-mono text-[12.5px]">{money(r.total_assets)}</span>
+              </>
+            )}
             <span className="w-[74px] shrink-0 text-right font-mono text-[12.5px]">{r.grantees || '—'}</span>
             <span className="w-[70px] shrink-0 text-right font-mono text-[12.5px]">{r.board_links || '—'}</span>
           </button>
