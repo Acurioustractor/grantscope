@@ -80,9 +80,9 @@ export default async function CouncilAllocationPage({ params }: { params: Promis
         <section className="mt-8">
           <h2 className="font-display text-[15px] font-black uppercase tracking-widest">Charities placed here, largest first</h2>
           <p className="mt-1 text-[12px]" style={{ color: '#555' }}>
-            {num(charities.total)} with at least one ACNC statement:{' '}
-            {(['growing', 'steady', 'shrinking', 'lapsed', 'single_year'] as TrajectoryRow['trend'][]).filter((t) => charities.byTrend[t] > 0).map((t) => `${charities.byTrend[t]} ${TREND_LABEL[t].toLowerCase()}`).join(' · ')}
-            . Direction is first statement to latest, 2017 to 2023.
+            {charities.total === 0
+              ? 'No charity placed here has filed a financial statement.'
+              : `${num(charities.total)} with at least one ACNC statement: ${(['growing', 'steady', 'shrinking', 'lapsed', 'single_year'] as TrajectoryRow['trend'][]).filter((t) => charities.byTrend[t] > 0).map((t) => `${charities.byTrend[t]} ${TREND_LABEL[t].toLowerCase()}`).join(' · ')}. Direction is first statement to latest, 2017 to 2023.`}
           </p>
           <div className="mt-2 overflow-x-auto border-4 border-bauhaus-black bg-white">
             <table className="w-full min-w-[820px] border-collapse text-[13px]" style={{ fontVariantNumeric: 'tabular-nums' }}>
