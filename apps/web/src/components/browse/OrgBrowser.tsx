@@ -30,6 +30,10 @@ export interface BrowserConfig {
   knownLegend: string;
   stateFacets: string[];
   sizeFacets?: string[];
+  /** Sector chips; matched case-insensitively against gs_entities.sector (charities) or social_enterprises.sector (SEs). */
+  sectorFacets?: string[];
+  /** ABS remoteness bands, from gs_entities.remoteness; charities only. */
+  remotenessFacets?: string[];
   moneyCaveat: string;
 }
 
@@ -79,6 +83,8 @@ export default function OrgBrowser({
   size,
   sort,
   dir = '',
+  sector = '',
+  remoteness = '',
   statsLine,
 }: {
   rows: OrgRow[];
@@ -89,6 +95,8 @@ export default function OrgBrowser({
   sort: string;
   /** 'asc' | 'desc' | '' (natural) */
   dir?: string;
+  sector?: string;
+  remoteness?: string;
   statsLine: string;
 }) {
   const [openAbn, setOpenAbn] = useState<string | null>(null);
@@ -110,7 +118,7 @@ export default function OrgBrowser({
 
   const qs = (over: Record<string, string>) => {
     const p = new URLSearchParams();
-    for (const [k, v] of Object.entries({ q, state, size, sort, dir, ...over })) if (v) p.set(k, v);
+    for (const [k, v] of Object.entries({ q, state, size, sector, remoteness, sort, dir, ...over })) if (v) p.set(k, v);
     const s = p.toString();
     return `${cfg.basePath}${s ? `?${s}` : ''}`;
   };
@@ -129,6 +137,8 @@ export default function OrgBrowser({
         />
         {state ? <input type="hidden" name="state" value={state} /> : null}
         {size ? <input type="hidden" name="size" value={size} /> : null}
+        {sector ? <input type="hidden" name="sector" value={sector} /> : null}
+        {remoteness ? <input type="hidden" name="remoteness" value={remoteness} /> : null}
         {sort ? <input type="hidden" name="sort" value={sort} /> : null}
         {dir ? <input type="hidden" name="dir" value={dir} /> : null}
       </form>
@@ -152,6 +162,30 @@ export default function OrgBrowser({
           </>
         ) : null}
       </div>
+      {cfg.sectorFacets?.length || cfg.remotenessFacets?.length ? (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          {cfg.sectorFacets?.length ? (
+            <>
+              <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--shell-muted)' }}>sector</span>
+              {cfg.sectorFacets.map((s) => (
+                <Link key={s} href={qs({ sector: sector === s ? '' : s })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={sector === s ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
+                  {s}
+                </Link>
+              ))}
+            </>
+          ) : null}
+          {cfg.remotenessFacets?.length ? (
+            <>
+              <span className="ml-2 font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--shell-muted)' }}>where</span>
+              {cfg.remotenessFacets.map((r) => (
+                <Link key={r} href={qs({ remoteness: remoteness === r ? '' : r })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={remoteness === r ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
+                  {r.replace(' of Australia', '').replace(' Australia', '')}
+                </Link>
+              ))}
+            </>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mt-4 shell-card">
         <div className="flex items-baseline gap-3 px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest" style={{ borderBottom: '1px solid var(--shell-line)', color: 'var(--shell-muted)' }}>

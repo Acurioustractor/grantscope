@@ -37,6 +37,9 @@ export default async function GrantsBrowsePage({
   const q = typeof sp.q === 'string' ? sp.q.trim() : '';
   const state = typeof sp.state === 'string' ? sp.state : '';
   const topic = typeof sp.topic === 'string' ? sp.topic : '';
+  const fy = (v: unknown) => (typeof v === 'string' && /^\d{4}-\d{2}$/.test(v) ? v : '');
+  const fromFy = fy(sp.from);
+  const toFy = fy(sp.to);
   const sort = typeof sp.sort === 'string' && sp.sort ? sp.sort : 'total';
   const dir = sp.dir === 'asc' || sp.dir === 'desc' ? sp.dir : '';
 
@@ -53,6 +56,8 @@ export default async function GrantsBrowsePage({
           p_q: q || null,
           p_state: state || null,
           p_topic: topic || null,
+          p_from_fy: fromFy || null,
+          p_to_fy: toFy || null,
           p_sort: sort, p_dir: dir || null,
           p_limit: 200,
         }),
@@ -131,6 +136,8 @@ export default async function GrantsBrowsePage({
             state={state}
             topic={topic}
             sort={sort} dir={dir}
+            fromFy={fromFy}
+            toFy={toFy}
             statsLine={statsLine}
             coverageLine={coverageLine}
             topicLine={topicLine}

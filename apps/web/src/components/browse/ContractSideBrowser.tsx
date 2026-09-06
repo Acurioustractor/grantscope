@@ -30,6 +30,12 @@ export interface SideConfig {
   yearOptions?: string[];
   /** RPC sort key for the counterparty-count column ('buyers' | 'suppliers' | 'recipients'). */
   counterpartySortKey: string;
+  /** State chips: the supplier's state from gs_entities by ABN. Suppliers with no ABN on the contract drop out when one is chosen. */
+  stateFacets?: string[];
+  /** Upper-bound year chips (financial years for donations). */
+  toYearOptions?: string[];
+  /** Counterparty chips matched as a substring of the recipient name: 'Labor', 'Liberal', 'Greens'. */
+  toFacets?: string[];
 }
 
 interface SideDetail {
@@ -50,6 +56,9 @@ export default function ContractSideBrowser({
   fromYear,
   sort,
   dir = '',
+  state = '',
+  toYear = '',
+  to = '',
   statsLine,
   caveat,
 }: {
@@ -60,6 +69,9 @@ export default function ContractSideBrowser({
   sort: string;
   /** 'asc' | 'desc' | '' (natural) */
   dir?: string;
+  state?: string;
+  toYear?: string;
+  to?: string;
   statsLine: string;
   caveat: string;
 }) {
@@ -67,7 +79,7 @@ export default function ContractSideBrowser({
   const detail = drawer.detail;
   const open = (key: string) =>
     drawer.open(key, `${cfg.detailApi}?key=${encodeURIComponent(key)}&from=${encodeURIComponent(fromYear || '2020')}`);
-  const qs = makeQs(cfg.basePath, { q, from: fromYear, sort, dir });
+  const qs = makeQs(cfg.basePath, { q, from: fromYear, to_year: toYear, to, state, sort, dir });
   /** Name normalisation folds spellings together, but one name can still be several declared
    *  ABNs — three Pratt Holdings Pty Ltd rows, three real ABNs. Where the name alone cannot
    *  tell two rows apart, show the ABN that does. */
@@ -89,6 +101,9 @@ export default function ContractSideBrowser({
           className="w-full max-w-[360px] bg-white px-3 py-2 font-mono text-[13px] shell-control"
         />
         {fromYear ? <input type="hidden" name="from" value={fromYear} /> : null}
+        {toYear ? <input type="hidden" name="to_year" value={toYear} /> : null}
+        {to ? <input type="hidden" name="to" value={to} /> : null}
+        {state ? <input type="hidden" name="state" value={state} /> : null}
         {sort ? <input type="hidden" name="sort" value={sort} /> : null}
         {dir ? <input type="hidden" name="dir" value={dir} /> : null}
       </form>
@@ -100,6 +115,41 @@ export default function ContractSideBrowser({
           </Link>
         ))}
       </div>
+      {cfg.toYearOptions?.length || cfg.toFacets?.length || cfg.stateFacets?.length ? (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          {cfg.toYearOptions?.length ? (
+            <>
+              <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--shell-muted)' }}>until</span>
+              {cfg.toYearOptions.map((y) => (
+                <Link key={y} href={qs({ to_year: toYear === y ? '' : y })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={toYear === y ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
+                  {y}
+                </Link>
+              ))}
+            </>
+          ) : null}
+          {cfg.toFacets?.length ? (
+            <>
+              <span className="ml-2 font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--shell-muted)' }}>{cfg.counterpartyLabel.toLowerCase()}</span>
+              {cfg.toFacets.map((t) => (
+                <Link key={t} href={qs({ to: to === t ? '' : t })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={to === t ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
+                  {t}
+                </Link>
+              ))}
+            </>
+          ) : null}
+          {cfg.stateFacets?.length ? (
+            <>
+              <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--shell-muted)' }}>state</span>
+              {cfg.stateFacets.map((st) => (
+                <Link key={st} href={qs({ state: state === st ? '' : st })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={state === st ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
+                  {st}
+                </Link>
+              ))}
+              {state ? <span className="ml-2 font-mono text-[10px]" style={{ color: 'var(--shell-muted)' }}>by the supplier&apos;s registered state; contracts with no supplier ABN are left out</span> : null}
+            </>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mt-4 shell-card">
         <div className="flex items-baseline gap-3 px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest" style={{ borderBottom: '1px solid var(--shell-line)', color: 'var(--shell-muted)' }}>

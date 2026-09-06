@@ -74,6 +74,7 @@ export default function FoundationsBrowser({
   type,
   sort,
   dir = '',
+  state = '',
   total,
 }: {
   rows: BrowseRow[];
@@ -82,6 +83,8 @@ export default function FoundationsBrowser({
   sort: string;
   /** 'asc' | 'desc' | '' (natural) */
   dir?: string;
+  /** acnc_charities.state for the foundation's ABN. */
+  state?: string;
   total: number;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
@@ -107,6 +110,7 @@ export default function FoundationsBrowser({
     if (type) p.set('type', type);
     if (sort) p.set('sort', sort);
     if (dir) p.set('dir', dir);
+    if (state) p.set('state', state);
     for (const [k, v] of Object.entries(over)) {
       if (v) p.set(k, v);
       else p.delete(k);
@@ -125,6 +129,7 @@ export default function FoundationsBrowser({
           className="w-full max-w-[360px] bg-white px-3 py-2 font-mono text-[13px] shell-control"
         />
         {type ? <input type="hidden" name="type" value={type} /> : null}
+        {state ? <input type="hidden" name="state" value={state} /> : null}
         {sort ? <input type="hidden" name="sort" value={sort} /> : null}
         {dir ? <input type="hidden" name="dir" value={dir} /> : null}
       </form>
@@ -144,6 +149,14 @@ export default function FoundationsBrowser({
             style={type === v ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}
           >
             {label}
+          </Link>
+        ))}
+      </div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+        <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--shell-muted)' }}>state</span>
+        {['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'].map((st) => (
+          <Link key={st} href={qs({ state: state === st ? '' : st })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={state === st ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
+            {st}
           </Link>
         ))}
       </div>
