@@ -29,6 +29,7 @@ export default async function CharityList({
   const state = typeof sp.state === 'string' ? sp.state : '';
   const size = typeof sp.size === 'string' ? sp.size : '';
   const sort = typeof sp.sort === 'string' && sp.sort ? sp.sort : 'known';
+  const dir = sp.dir === 'asc' || sp.dir === 'desc' ? sp.dir : '';
 
   const supabase = getDirectServiceSupabase();
   let rows: OrgRow[] = [];
@@ -36,7 +37,7 @@ export default async function CharityList({
   let why: string | null = null;
   try {
     const [{ data, error }, s] = await Promise.all([
-      retryRpc(() => supabase.rpc('charity_browse', { p_q: q || null, p_state: state || null, p_size: size || null, p_sort: sort, p_limit: 200 })),
+      retryRpc(() => supabase.rpc('charity_browse', { p_q: q || null, p_state: state || null, p_size: size || null, p_sort: sort, p_dir: dir || null, p_limit: 200 })),
       stats(),
     ]);
     if (error) throw new Error(error.message);
@@ -95,7 +96,7 @@ export default async function CharityList({
             q={q}
             state={state}
             size={size}
-            sort={sort}
+            sort={sort} dir={dir}
             statsLine={statsLine}
           />
         )}

@@ -138,6 +138,8 @@ export async function Shell({ title, children }: ShellProps) {
           ['/dashboard/browse/contracts', 'Contract suppliers'],
           ['/dashboard/browse/buyers', 'Government buyers'],
           ['/dashboard/browse/donations', 'Political donors'],
+          ['/allocation', 'Councils: need vs dollars'],
+          ['/charities/trajectories', 'Charity trajectories'],
         ].map(([href, label]) => (
           <RailGroupLink
             key={href}

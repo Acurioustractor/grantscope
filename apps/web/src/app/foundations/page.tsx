@@ -21,6 +21,7 @@ export default async function FoundationsList({
   const q = typeof sp.q === 'string' ? sp.q.trim() : '';
   const type = typeof sp.type === 'string' ? sp.type : '';
   const sort = typeof sp.sort === 'string' && sp.sort ? sp.sort : 'giving';
+  const dir = sp.dir === 'asc' || sp.dir === 'desc' ? sp.dir : '';
 
   const supabase = getDirectServiceSupabase();
   let rows: BrowseRow[] = [];
@@ -31,7 +32,7 @@ export default async function FoundationsList({
       supabase.rpc('foundation_browse', {
         p_q: q || null,
         p_type: type || null,
-        p_sort: sort,
+        p_sort: sort, p_dir: dir || null,
         p_limit: 200,
       }),
       supabase.from('foundations').select('id', { count: 'exact', head: true }),
@@ -57,7 +58,7 @@ export default async function FoundationsList({
             The list could not be read: {why}. Nothing is estimated in its place.
           </p>
         ) : (
-          <FoundationsBrowser rows={rows} q={q} type={type} sort={sort} total={total} />
+          <FoundationsBrowser rows={rows} q={q} type={type} sort={sort} dir={dir} total={total} />
         )}
       </div>
     </Shell>

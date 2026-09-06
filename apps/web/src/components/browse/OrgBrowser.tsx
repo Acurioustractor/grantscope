@@ -78,6 +78,7 @@ export default function OrgBrowser({
   state,
   size,
   sort,
+  dir = '',
   statsLine,
 }: {
   rows: OrgRow[];
@@ -86,6 +87,8 @@ export default function OrgBrowser({
   state: string;
   size: string;
   sort: string;
+  /** 'asc' | 'desc' | '' (natural) */
+  dir?: string;
   statsLine: string;
 }) {
   const [openAbn, setOpenAbn] = useState<string | null>(null);
@@ -107,7 +110,7 @@ export default function OrgBrowser({
 
   const qs = (over: Record<string, string>) => {
     const p = new URLSearchParams();
-    for (const [k, v] of Object.entries({ q, state, size, sort, ...over })) if (v) p.set(k, v);
+    for (const [k, v] of Object.entries({ q, state, size, sort, dir, ...over })) if (v) p.set(k, v);
     const s = p.toString();
     return `${cfg.basePath}${s ? `?${s}` : ''}`;
   };
@@ -127,6 +130,7 @@ export default function OrgBrowser({
         {state ? <input type="hidden" name="state" value={state} /> : null}
         {size ? <input type="hidden" name="size" value={size} /> : null}
         {sort ? <input type="hidden" name="sort" value={sort} /> : null}
+        {dir ? <input type="hidden" name="dir" value={dir} /> : null}
       </form>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <Link href={qs({ state: '' })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={state === '' ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
@@ -151,7 +155,7 @@ export default function OrgBrowser({
 
       <div className="mt-4 shell-card">
         <div className="flex items-baseline gap-3 px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest" style={{ borderBottom: '1px solid var(--shell-line)', color: 'var(--shell-muted)' }}>
-          <SortHeader label="Name" sortKey="name" current={sort} qs={qs} />
+          <SortHeader label="Name" sortKey="name" current={sort} dir={dir} qs={qs} />
           <span className="w-[190px] shrink-0">Detail</span>
           <Link
             href={qs({ sort: (sort || 'known') === 'known' ? 'least' : 'known' })}
@@ -161,8 +165,8 @@ export default function OrgBrowser({
           >
             {sort === 'least' ? 'Least known ▾' : 'Known ▾'}
           </Link>
-          <SortHeader label="Systems" sortKey="systems" current={sort} qs={qs} width="w-[64px]" align="right" />
-          <SortHeader label="Visible $" sortKey="dollars" current={sort} qs={qs} width="w-[92px]" align="right" />
+          <SortHeader label="Systems" sortKey="systems" current={sort} dir={dir} qs={qs} width="w-[64px]" align="right" />
+          <SortHeader label="Visible $" sortKey="dollars" current={sort} dir={dir} qs={qs} width="w-[92px]" align="right" />
         </div>
         {rows.map((r) => {
           const inner = (

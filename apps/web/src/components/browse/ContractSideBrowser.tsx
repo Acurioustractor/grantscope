@@ -49,6 +49,7 @@ export default function ContractSideBrowser({
   q,
   fromYear,
   sort,
+  dir = '',
   statsLine,
   caveat,
 }: {
@@ -57,6 +58,8 @@ export default function ContractSideBrowser({
   q: string;
   fromYear: string;
   sort: string;
+  /** 'asc' | 'desc' | '' (natural) */
+  dir?: string;
   statsLine: string;
   caveat: string;
 }) {
@@ -64,7 +67,7 @@ export default function ContractSideBrowser({
   const detail = drawer.detail;
   const open = (key: string) =>
     drawer.open(key, `${cfg.detailApi}?key=${encodeURIComponent(key)}&from=${encodeURIComponent(fromYear || '2020')}`);
-  const qs = makeQs(cfg.basePath, { q, from: fromYear, sort });
+  const qs = makeQs(cfg.basePath, { q, from: fromYear, sort, dir });
   /** Name normalisation folds spellings together, but one name can still be several declared
    *  ABNs — three Pratt Holdings Pty Ltd rows, three real ABNs. Where the name alone cannot
    *  tell two rows apart, show the ABN that does. */
@@ -87,6 +90,7 @@ export default function ContractSideBrowser({
         />
         {fromYear ? <input type="hidden" name="from" value={fromYear} /> : null}
         {sort ? <input type="hidden" name="sort" value={sort} /> : null}
+        {dir ? <input type="hidden" name="dir" value={dir} /> : null}
       </form>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--shell-muted)' }}>since</span>
@@ -99,11 +103,11 @@ export default function ContractSideBrowser({
 
       <div className="mt-4 shell-card">
         <div className="flex items-baseline gap-3 px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest" style={{ borderBottom: '1px solid var(--shell-line)', color: 'var(--shell-muted)' }}>
-          <SortHeader label="Name" sortKey="name" current={sort} qs={qs} />
+          <SortHeader label="Name" sortKey="name" current={sort} dir={dir} qs={qs} />
           <span className="w-[220px] shrink-0">Top {cfg.counterpartyLabel.toLowerCase().replace(/s$/, '')}</span>
-          <SortHeader label={cfg.counterpartyLabel} sortKey={cfg.counterpartySortKey} current={sort} qs={qs} width="w-[72px]" align="right" />
-          <SortHeader label={(cfg.itemLabel ?? 'contract') === 'donation' ? 'Donations' : 'Contracts'} sortKey="contracts" current={sort} qs={qs} width="w-[76px]" align="right" />
-          <SortHeader label="Total $" sortKey="total" current={sort} qs={qs} width="w-[92px]" align="right" />
+          <SortHeader label={cfg.counterpartyLabel} sortKey={cfg.counterpartySortKey} current={sort} dir={dir} qs={qs} width="w-[72px]" align="right" />
+          <SortHeader label={(cfg.itemLabel ?? 'contract') === 'donation' ? 'Donations' : 'Contracts'} sortKey="contracts" current={sort} dir={dir} qs={qs} width="w-[76px]" align="right" />
+          <SortHeader label="Total $" sortKey="total" current={sort} dir={dir} qs={qs} width="w-[92px]" align="right" />
         </div>
         {rows.map((r) => (
           <button key={r.key} onClick={() => open(r.key)} className="flex w-full items-baseline gap-3 px-4 py-2 text-left hover:bg-[#FAFAF8]" style={{ borderBottom: '1px solid var(--shell-line)' }}>

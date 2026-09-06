@@ -62,6 +62,7 @@ export default function PlaceBrowser({
   q,
   state,
   sort,
+  dir = '',
   statsLine,
   caveat,
 }: {
@@ -69,6 +70,8 @@ export default function PlaceBrowser({
   q: string;
   state: string;
   sort: string;
+  /** 'asc' | 'desc' | '' (natural) */
+  dir?: string;
   statsLine: string;
   caveat: string;
 }) {
@@ -76,7 +79,7 @@ export default function PlaceBrowser({
   const detail = drawer.detail;
   const open = (row: PlaceRow) =>
     drawer.open(row.key, `/api/browse/place?lga=${encodeURIComponent(row.lga)}&state=${encodeURIComponent(row.state)}`);
-  const qs = makeQs('/dashboard/places', { q, state, sort });
+  const qs = makeQs('/dashboard/places', { q, state, sort, dir });
 
   return (
     <>
@@ -92,6 +95,7 @@ export default function PlaceBrowser({
         />
         {state ? <input type="hidden" name="state" value={state} /> : null}
         {sort ? <input type="hidden" name="sort" value={sort} /> : null}
+        {dir ? <input type="hidden" name="dir" value={dir} /> : null}
       </form>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <Link href={qs({ state: '' })} className="px-2 py-1 font-mono text-[10px] font-black uppercase tracking-widest shell-control" style={state === '' ? { background: '#121212', color: '#F4F4F2' } : { background: '#FFF' }}>
@@ -106,13 +110,13 @@ export default function PlaceBrowser({
 
       <div className="mt-4 shell-card">
         <div className="flex items-baseline gap-3 px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest" style={{ borderBottom: '1px solid var(--shell-line)', color: 'var(--shell-muted)' }}>
-          <SortHeader label="Council area" sortKey="name" current={sort} qs={qs} />
+          <SortHeader label="Council area" sortKey="name" current={sort} dir={dir} qs={qs} />
           <span className="w-[52px] shrink-0">State</span>
-          <SortHeader label="Entities" sortKey="entities" current={sort} qs={qs} width="w-[72px]" align="right" />
-          <SortHeader label="ACCO" sortKey="acco" current={sort} qs={qs} width="w-[64px]" align="right" title="community-controlled organisations" />
-          <SortHeader label="Funding $" sortKey="funding" current={sort} qs={qs} width="w-[92px]" align="right" />
-          <SortHeader label="SEIFA" sortKey="disadvantage" current={sort} qs={qs} width="w-[56px]" align="right" title="average SEIFA disadvantage decile, 1 = most disadvantaged; sorts most-disadvantaged first" />
-          <SortHeader label="Unfunded" sortKey="desert" current={sort} qs={qs} width="w-[76px]" align="right" title="how far funders and providers have fallen short of this area's measured need — a measure of funding behaviour, not of the community" />
+          <SortHeader label="Entities" sortKey="entities" current={sort} dir={dir} qs={qs} width="w-[72px]" align="right" />
+          <SortHeader label="ACCO" sortKey="acco" current={sort} dir={dir} qs={qs} width="w-[64px]" align="right" title="community-controlled organisations" />
+          <SortHeader label="Funding $" sortKey="funding" current={sort} dir={dir} qs={qs} width="w-[92px]" align="right" />
+          <SortHeader label="SEIFA" sortKey="disadvantage" naturalDir="asc" current={sort} dir={dir} qs={qs} width="w-[56px]" align="right" title="average SEIFA disadvantage decile, 1 = most disadvantaged; sorts most-disadvantaged first" />
+          <SortHeader label="Unfunded" sortKey="desert" current={sort} dir={dir} qs={qs} width="w-[76px]" align="right" title="how far funders and providers have fallen short of this area's measured need — a measure of funding behaviour, not of the community" />
         </div>
         {rows.map((r) => (
           <button key={r.key} onClick={() => open(r)} className="flex w-full items-baseline gap-3 px-4 py-2 text-left hover:bg-[#FAFAF8]" style={{ borderBottom: '1px solid var(--shell-line)' }}>

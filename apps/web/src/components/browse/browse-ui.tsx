@@ -47,6 +47,8 @@ export function SortHeader({
   label,
   sortKey,
   current,
+  dir,
+  naturalDir,
   qs,
   width,
   align,
@@ -55,6 +57,10 @@ export function SortHeader({
   label: string;
   sortKey: string;
   current: string;
+  /** Direction in the URL ('asc' | 'desc' | ''); '' means the column's natural direction. */
+  dir?: string;
+  /** What a first click gives. Names A to Z, everything else highest first, unless told otherwise. */
+  naturalDir?: 'asc' | 'desc';
   qs: (over: Record<string, string>) => string;
   /** Tailwind width class, e.g. 'w-[92px]'; omit for flex-1. */
   width?: string;
@@ -62,15 +68,19 @@ export function SortHeader({
   title?: string;
 }) {
   const active = current === sortKey;
+  const natural = naturalDir ?? (sortKey === 'name' ? 'asc' : 'desc');
+  const inForce = active ? (dir === 'asc' || dir === 'desc' ? dir : natural) : natural;
+  const next = active ? (inForce === 'asc' ? 'desc' : 'asc') : natural;
+  const words = next === 'asc' ? 'lowest first' : 'highest first';
   return (
     <Link
-      href={qs({ sort: sortKey })}
-      title={title}
-      className={`${width ?? 'min-w-0 flex-1'} ${align === 'right' ? 'text-right' : ''} shrink-0 truncate hover:underline`}
+      href={active ? qs({ sort: sortKey, dir: next }) : qs({ sort: sortKey, dir: '' })}
+      title={`${title ? `${title}. ` : ''}Click to sort ${sortKey === 'name' ? (next === 'asc' ? 'A to Z' : 'Z to A') : words}.`}
+      className={`${width ?? 'min-w-0 flex-1'} ${align === 'right' ? 'text-right' : ''} shrink-0 truncate whitespace-nowrap hover:underline`}
       style={{ color: active ? '#121212' : undefined }}
     >
       {label}
-      {active ? ' ▾' : ''}
+      <span className="ml-[2px]" style={{ color: active ? '#D02020' : '#C0C0C0' }}>{active ? (inForce === 'asc' ? '▲' : '▼') : '⇅'}</span>
     </Link>
   );
 }

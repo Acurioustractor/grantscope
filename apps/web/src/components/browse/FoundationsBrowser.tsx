@@ -73,12 +73,15 @@ export default function FoundationsBrowser({
   q,
   type,
   sort,
+  dir = '',
   total,
 }: {
   rows: BrowseRow[];
   q: string;
   type: string;
   sort: string;
+  /** 'asc' | 'desc' | '' (natural) */
+  dir?: string;
   total: number;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
@@ -103,6 +106,7 @@ export default function FoundationsBrowser({
     if (q) p.set('q', q);
     if (type) p.set('type', type);
     if (sort) p.set('sort', sort);
+    if (dir) p.set('dir', dir);
     for (const [k, v] of Object.entries(over)) {
       if (v) p.set(k, v);
       else p.delete(k);
@@ -122,6 +126,7 @@ export default function FoundationsBrowser({
         />
         {type ? <input type="hidden" name="type" value={type} /> : null}
         {sort ? <input type="hidden" name="sort" value={sort} /> : null}
+        {dir ? <input type="hidden" name="dir" value={dir} /> : null}
       </form>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <Link
@@ -148,12 +153,12 @@ export default function FoundationsBrowser({
           className="flex items-baseline gap-3 px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest"
           style={{ borderBottom: '1px solid var(--shell-line)', color: 'var(--shell-muted)' }}
         >
-          <SortHeader label="Foundation" sortKey="name" current={sort} qs={qs} />
-          <SortHeader label="Giving / yr" sortKey="giving" current={sort} qs={qs} width="w-[92px]" align="right" />
-          <SortHeader label="Granted" sortKey="granted" current={sort} qs={qs} width="w-[100px]" align="right" title="grants + donations made, latest ACNC return" />
-          <SortHeader label="Assets" sortKey="assets" current={sort} qs={qs} width="w-[92px]" align="right" title="total assets, latest ACNC return" />
-          <SortHeader label="Grantees" sortKey="grantees" current={sort} qs={qs} width="w-[74px]" align="right" />
-          <SortHeader label="Board" sortKey="board" current={sort} qs={qs} width="w-[70px]" align="right" />
+          <SortHeader label="Foundation" sortKey="name" current={sort} dir={dir} qs={qs} />
+          <SortHeader label="Giving / yr" sortKey="giving" current={sort} dir={dir} qs={qs} width="w-[92px]" align="right" />
+          <SortHeader label="Granted" sortKey="granted" current={sort} dir={dir} qs={qs} width="w-[100px]" align="right" title="grants + donations made, latest ACNC return" />
+          <SortHeader label="Assets" sortKey="assets" current={sort} dir={dir} qs={qs} width="w-[92px]" align="right" title="total assets, latest ACNC return" />
+          <SortHeader label="Grantees" sortKey="grantees" current={sort} dir={dir} qs={qs} width="w-[74px]" align="right" />
+          <SortHeader label="Board" sortKey="board" current={sort} dir={dir} qs={qs} width="w-[70px]" align="right" />
         </div>
         {rows.map((r) => (
           <button

@@ -7,9 +7,11 @@ import {
   ALLOCATION_SORTS,
   REMOTENESS_BANDS,
   STATES,
+  UNFILTERED,
   listAllocation,
   parseAllocationFilters,
   summariseAllocation,
+  type AllocationFilters,
   type AllocationRow,
   type AllocationSort,
 } from '@/lib/allocation';
@@ -65,12 +67,18 @@ function Chip({ href, active, children }: { href: string; active: boolean; child
   );
 }
 
-function Head({ label, sortKey, current, qs, className, title }: { label: string; sortKey: AllocationSort; current: AllocationSort; qs: (o: Record<string, string>) => string; className?: string; title?: string }) {
-  const active = current === sortKey;
+/**
+ * Every column sorts. First click gives the column its natural direction (need ascending, money descending);
+ * a click on the active column flips it. The arrow shows the direction in force; inactive columns show a
+ * faint pair so the reader knows they can be clicked.
+ */
+function Head({ label, sortKey, f, qs, className, title }: { label: string; sortKey: AllocationSort; f: AllocationFilters; qs: (o: Record<string, string>) => string; className?: string; title?: string }) {
+  const active = f.sort === sortKey;
+  const next = active ? (f.dir === 'asc' ? 'desc' : 'asc') : ALLOCATION_SORTS[sortKey].defaultDir;
   return (
-    <th className={`px-2 py-2 text-left font-mono text-[10px] font-black uppercase tracking-widest ${className ?? ''}`} title={title}>
-      <Link href={qs({ sort: sortKey })} className="hover:underline" style={{ color: active ? '#121212' : '#777777' }}>
-        {label}{active ? ' ▾' : ''}
+    <th className={`px-2 py-2 text-left font-mono text-[10px] font-black uppercase tracking-widest ${className ?? ''}`} title={title ? `${title}. Click to sort ${next === 'asc' ? 'lowest first' : 'highest first'}.` : `Sort ${next === 'asc' ? 'lowest first' : 'highest first'}`}>
+      <Link href={qs({ sort: sortKey, dir: next })} className="whitespace-nowrap hover:underline" style={{ color: active ? '#121212' : '#777777' }}>
+        {label}<span className="ml-[2px]" style={{ color: active ? '#D02020' : '#C0C0C0' }}>{active ? (f.dir === 'asc' ? '▲' : '▼') : '⇅'}</span>
       </Link>
     </th>
   );
@@ -83,10 +91,10 @@ export default async function AllocationPage({ searchParams }: { searchParams: P
   let all: AllocationRow[] = [];
   let why: string | null = null;
   try {
-    const filtered = f.state || f.remoteness || f.decile;
+    const filtered = f.state || f.remoteness || f.decile || f.q || f.sure;
     [rows, all] = await Promise.all([
       listAllocation(f),
-      filtered ? listAllocation({ state: '', remoteness: '', decile: '', sort: 'need' }) : Promise.resolve([] as AllocationRow[]),
+      filtered ? listAllocation(UNFILTERED) : Promise.resolve([] as AllocationRow[]),
     ]);
     if (!filtered) all = rows;
   } catch (e) {
@@ -104,15 +112,21 @@ export default async function AllocationPage({ searchParams }: { searchParams: P
   };
   const qs = (over: Record<string, string>) => {
     const p = new URLSearchParams();
-    const merged: Record<string, string> = { state: f.state, remoteness: f.remoteness, decile: f.decile, sort: f.sort, ...over };
-    for (const [k, v] of Object.entries(merged)) if (v && !(k === 'sort' && v === 'need')) p.set(k, v);
+    const merged: Record<string, string> = { state: f.state, remoteness: f.remoteness, decile: f.decile, q: f.q, sure: f.sure, sort: f.sort, dir: f.dir, ...over };
+    const sortKey = (merged.sort || 'need') as AllocationSort;
+    for (const [k, v] of Object.entries(merged)) {
+      if (!v) continue;
+      if (k === 'sort' && v === 'need') continue;
+      if (k === 'dir' && v === ALLOCATION_SORTS[sortKey].defaultDir) continue;
+      p.set(k, v);
+    }
     const s = p.toString();
     return `/allocation${s ? `?${s}` : ''}`;
   };
 
   return (
     <Shell title="Allocation">
-      <div className="mx-auto max-w-[1280px] px-6 py-6">
+      <div className="mx-auto max-w-[1600px] px-2 py-6">
         <h1 className="font-display text-[22px] font-extrabold uppercase tracking-tight">Disadvantage versus dollars, by council</h1>
         <p className="mt-2 max-w-3xl text-[14px] leading-relaxed" style={{ color: '#333' }}>
           Every council in Australia on one line: how disadvantaged it is, how many people live there, which
@@ -144,27 +158,39 @@ export default async function AllocationPage({ searchParams }: { searchParams: P
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
               {DECILE_CHIPS.map((d) => <Chip key={d.key} href={qs({ decile: d.key })} active={f.decile === d.key}>{d.label}</Chip>)}
+              <Chip href={qs({ sure: f.sure === '80' ? '' : '80' })} active={f.sure === '80'}>Sure rows only (80%+)</Chip>
             </div>
+            <form action="/allocation" method="get" className="mt-3 flex flex-wrap items-center gap-2">
+              {f.state ? <input type="hidden" name="state" value={f.state} /> : null}
+              {f.remoteness ? <input type="hidden" name="remoteness" value={f.remoteness} /> : null}
+              {f.decile ? <input type="hidden" name="decile" value={f.decile} /> : null}
+              {f.sure ? <input type="hidden" name="sure" value={f.sure} /> : null}
+              {f.sort !== 'need' ? <input type="hidden" name="sort" value={f.sort} /> : null}
+              {f.dir !== ALLOCATION_SORTS[f.sort].defaultDir ? <input type="hidden" name="dir" value={f.dir} /> : null}
+              <input name="q" defaultValue={f.q} placeholder="Council name" maxLength={60} className="border-2 border-bauhaus-black bg-white px-2 py-1 font-mono text-[12px]" style={{ width: 220 }} />
+              <button type="submit" className="border-2 border-bauhaus-black bg-bauhaus-black px-2 py-1 font-mono text-[11px] font-black uppercase tracking-widest text-white">Find</button>
+              {f.q ? <Link href={qs({ q: '' })} className="font-mono text-[11px] uppercase tracking-widest underline" style={{ color: '#777' }}>clear</Link> : null}
+            </form>
 
             <p className="mt-4 font-mono text-[11px] uppercase tracking-widest" style={{ color: '#777' }}>
-              {rows.length} councils · sorted by {ALLOCATION_SORTS[f.sort].label} · click a column to sort
+              {rows.length} councils · sorted by {ALLOCATION_SORTS[f.sort].label}, {f.dir === 'asc' ? 'lowest first' : 'highest first'} · click a column to sort, click again to flip
             </p>
 
             <div className="mt-2 overflow-x-auto border-4 border-bauhaus-black bg-white">
-              <table className="w-full min-w-[1300px] border-collapse text-[13px]" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              <table className="w-full min-w-[1180px] border-collapse text-[13px]" style={{ fontVariantNumeric: 'tabular-nums' }}>
                 <thead>
                   <tr className="border-b-4 border-bauhaus-black">
-                    <Head label="Council" sortKey="name" current={f.sort} qs={qs} />
-                    <th className="px-2 py-2 text-left font-mono text-[10px] font-black uppercase tracking-widest" style={{ color: '#777' }}>Where</th>
-                    <Head label="Need" sortKey="need" current={f.sort} qs={qs} title="SEIFA IRSD decile, weighted across the council's postcodes. 1 is the most disadvantaged tenth of Australia." />
-                    <Head label="People" sortKey="population" current={f.sort} qs={qs} className="text-right" title="ABS estimated resident population, 2023" />
-                    <Head label="Orgs" sortKey="orgs" current={f.sort} qs={qs} className="text-right" title="Entities placed in this council (community-controlled in brackets)" />
-                    <Head label="Gov $ / head" sortKey="gov_per_head" current={f.sort} qs={qs} className="text-right" title="Revenue from government reported by charities placed here, 2023, divided by population" />
-                    <Head label="Donations / head" sortKey="donations_per_head" current={f.sort} qs={qs} className="text-right" title="Donations and bequests reported by charities placed here, 2023, divided by population" />
-                    <Head label="Cwlth grants 24m / head" sortKey="grants_per_head" current={f.sort} qs={qs} className="text-right" title="GrantConnect awards to recipients placed here, approved in the last two years, divided by population" />
-                    <Head label="Delivered here / head" sortKey="delivered_per_head" current={f.sort} qs={qs} className="text-right" title="The same awards spread by the delivery postcode the agency stated, divided by population. Grey percentage: how much of this council's recipient-lane money carries a delivery postcode at all" />
-                    <Head label="Shrinking" sortKey="shrinking" current={f.sort} qs={qs} className="text-right" title="Charities placed here whose revenue fell more than 20% from first statement to latest (2017 to 2023), as a share of charities with a statement" />
-                    <Head label="How sure" sortKey="sure" current={f.sort} qs={qs} className="text-right" title="Placed entities as a share of placed plus entities sharing this council's postcodes that could not be placed" />
+                    <Head label="Council" sortKey="name" f={f} qs={qs} />
+                    <Head label="Where" sortKey="remoteness" f={f} qs={qs} title="ABS remoteness band of the council's largest postcode" />
+                    <Head label="Need" sortKey="need" f={f} qs={qs} title="SEIFA IRSD decile, weighted across the council's postcodes. 1 is the most disadvantaged tenth of Australia." />
+                    <Head label="People" sortKey="population" f={f} qs={qs} className="text-right" title="ABS estimated resident population, 2023" />
+                    <Head label="Orgs" sortKey="orgs" f={f} qs={qs} className="text-right" title="Entities placed in this council (community-controlled in brackets)" />
+                    <Head label="Gov $ / head" sortKey="gov_per_head" f={f} qs={qs} className="text-right" title="Revenue from government reported by charities placed here, 2023, divided by population" />
+                    <Head label="Donations / head" sortKey="donations_per_head" f={f} qs={qs} className="text-right" title="Donations and bequests reported by charities placed here, 2023, divided by population" />
+                    <Head label="Cwlth grants / head" sortKey="grants_per_head" f={f} qs={qs} className="text-right" title="GrantConnect awards to recipients placed here, approved in the last two years, divided by population" />
+                    <Head label="Delivered / head" sortKey="delivered_per_head" f={f} qs={qs} className="text-right" title="The same awards spread by the delivery postcode the agency stated, divided by population. Grey percentage: how much of this council's recipient-lane money carries a delivery postcode at all" />
+                    <Head label="Shrinking" sortKey="shrinking" f={f} qs={qs} className="text-right" title="Charities placed here whose revenue fell more than 20% from first statement to latest (2017 to 2023), as a share of charities with a statement" />
+                    <Head label="How sure" sortKey="sure" f={f} qs={qs} className="text-right" title="Placed entities as a share of placed plus entities sharing this council's postcodes that could not be placed" />
                   </tr>
                 </thead>
                 <tbody>

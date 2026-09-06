@@ -30,6 +30,7 @@ export default async function PeoplePage({
   const sp = await searchParams;
   const q = typeof sp.q === 'string' ? sp.q.trim() : '';
   const sort = typeof sp.sort === 'string' && sp.sort ? sp.sort : 'influence';
+  const dir = sp.dir === 'asc' || sp.dir === 'desc' ? sp.dir : '';
 
   const supabase = getDirectServiceSupabase();
   let rows: PersonRow[] = [];
@@ -38,7 +39,7 @@ export default async function PeoplePage({
   let why: string | null = null;
   try {
     const [{ data, error }, s] = await Promise.all([
-      retryRpc(() => supabase.rpc('person_browse', { p_q: q || null, p_sort: sort, p_limit: 200 })),
+      retryRpc(() => supabase.rpc('person_browse', { p_q: q || null, p_sort: sort, p_dir: dir || null, p_limit: 200 })),
       stats(),
     ]);
     if (error) throw new Error(error.message);
@@ -79,7 +80,7 @@ export default async function PeoplePage({
       {why ? (
         <p className="mt-4 text-[13px]" style={{ color: '#D02020' }}>The list could not be read: {why}</p>
       ) : (
-        <PersonBrowser rows={rows} q={q} sort={sort} statsLine={statsLine} exclusionNote={exclusionNote} />
+        <PersonBrowser rows={rows} q={q} sort={sort} dir={dir} statsLine={statsLine} exclusionNote={exclusionNote} />
       )}
     </div>
   );
