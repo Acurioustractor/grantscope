@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Shell } from '@/components/shell/shell';
 import { placeSlug } from '@/lib/atlas/share';
+import { getRemoteCouncils } from '@/lib/services/council-place-report';
 import {
   ALLOCATION_SORTS,
   REMOTENESS_BANDS,
@@ -92,6 +93,15 @@ export default async function AllocationPage({ searchParams }: { searchParams: P
     why = e instanceof Error ? e.message : String(e);
   }
   const nation = summariseAllocation(all);
+  // A council page exists only for councils holding remote community-controlled organisations, and it
+  // is keyed by the register's name, which can be a truncation of the ABS name ("Lower Eyre" for
+  // "Lower Eyre Peninsula"). Link only where a page exists; everything else is plain text, not a 404.
+  const councilSlugs = await getRemoteCouncils().then((cs) => cs.map((c) => c.slug)).catch(() => [] as string[]);
+  const councilHref = (name: string): string | null => {
+    const want = placeSlug(name);
+    const hit = councilSlugs.find((s) => s === want) ?? councilSlugs.find((s) => want.startsWith(s + '-') || s.startsWith(want + '-'));
+    return hit ? `/place/council/${hit}` : null;
+  };
   const qs = (over: Record<string, string>) => {
     const p = new URLSearchParams();
     const merged: Record<string, string> = { state: f.state, remoteness: f.remoteness, decile: f.decile, sort: f.sort, ...over };
@@ -158,7 +168,9 @@ export default async function AllocationPage({ searchParams }: { searchParams: P
                   {rows.map((r) => (
                     <tr key={r.lga_code} className="border-b border-[#D0D0D0] hover:bg-[#F7F7F7]">
                       <td className="px-2 py-[6px]">
-                        <Link href={`/place/council/${placeSlug(r.lga_name)}`} className="font-semibold hover:underline" style={{ color: '#1040C0' }}>{r.lga_name}</Link>
+                        {councilHref(r.lga_name)
+                          ? <Link href={councilHref(r.lga_name)!} className="font-semibold hover:underline" style={{ color: '#1040C0' }}>{r.lga_name}</Link>
+                          : <span className="font-semibold">{r.lga_name}</span>}
                         <span className="ml-1 font-mono text-[10px]" style={{ color: '#777' }}>{r.state}</span>
                       </td>
                       <td className="px-2 py-[6px] text-[12px]" style={{ color: '#555' }}>{remotenessShort(r.remoteness)}</td>
@@ -191,7 +203,7 @@ export default async function AllocationPage({ searchParams }: { searchParams: P
                 <li>Population is the ABS Estimated Resident Population for 2023. Commonwealth grants are GrantConnect awards approved in the last two years. Nothing on this page reads Xero, GoHighLevel or any private table.</li>
               </ul>
               <p className="mt-3" style={{ color: '#555' }}>
-                Council pages under <Link href="/place/council" className="underline" style={{ color: '#1040C0' }}>/place/council</Link> list the organisations behind each row and the ones we could not place, with a form to correct them. The earlier narrative on the same question is <Link href="/reports/funding-deserts" className="underline" style={{ color: '#1040C0' }}>Where the Money Doesn&apos;t Go</Link>.
+                Councils shown as links have a <Link href="/place/council" className="underline" style={{ color: '#1040C0' }}>council page</Link> listing the organisations behind the row and the ones we could not place, with a form to correct them. Those pages exist so far only for councils holding remote community-controlled organisations. The earlier narrative on the same question is <Link href="/reports/funding-deserts" className="underline" style={{ color: '#1040C0' }}>Where the Money Doesn&apos;t Go</Link>.
               </p>
             </section>
           </>
