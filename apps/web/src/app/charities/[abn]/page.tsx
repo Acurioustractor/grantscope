@@ -1,4 +1,5 @@
 import { getServiceSupabase } from '@/lib/supabase';
+import { trajectoryForAbn, TREND_LABEL } from '@/lib/charity-trajectory';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { notFound } from 'next/navigation';
 
@@ -312,6 +313,10 @@ export default async function CharityDetailPage({ params }: { params: Promise<{ 
 
   const c = charity as CharityDetail;
 
+  // Direction across the seven-year statement run (mv_charity_trajectory). Absent rather than a
+  // 500 when the view is missing or the ABN has no statement with revenue.
+  const trajectory = await trajectoryForAbn(abn).catch(() => null);
+
   const isEnriched = !!c.community_org_id;
 
   // Fetch ACNC financial history
@@ -488,6 +493,37 @@ export default async function CharityDetailPage({ params }: { params: Promise<{ 
                   </div>
                 ))}
               </div>
+            </Section>
+          )}
+
+          {/* Trajectory: the seven-year direction, before the year-by-year table */}
+          {trajectory && trajectory.years_reported > 1 && (
+            <Section title={`Trajectory ${trajectory.first_year}–${trajectory.last_year}`}>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4 text-sm" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                <div className="border-2 border-bauhaus-black p-2">
+                  <div className="font-mono text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Direction</div>
+                  <div className="font-black" style={{ color: trajectory.trend === 'shrinking' ? '#D02020' : trajectory.trend === 'growing' ? '#059669' : '#121212' }}>{TREND_LABEL[trajectory.trend]}</div>
+                  <div className="text-xs text-bauhaus-muted">{trajectory.revenue_change_pct == null ? '' : `${trajectory.revenue_change_pct > 0 ? '+' : ''}${Math.round(trajectory.revenue_change_pct)}% revenue, first to latest`}</div>
+                </div>
+                <div className="border-2 border-bauhaus-black p-2">
+                  <div className="font-mono text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">From government</div>
+                  <div className="font-black" style={{ color: trajectory.gov_dependent ? '#D02020' : '#121212' }}>{trajectory.gov_share_last_pct == null ? '—' : `${Math.round(trajectory.gov_share_last_pct)}%`}</div>
+                  <div className="text-xs text-bauhaus-muted">{trajectory.gov_share_first_pct == null ? '' : `was ${Math.round(trajectory.gov_share_first_pct)}% in ${trajectory.first_year}`}</div>
+                </div>
+                <div className="border-2 border-bauhaus-black p-2">
+                  <div className="font-mono text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Donations share</div>
+                  <div className="font-black">{trajectory.donation_share_last_pct == null ? '—' : `${Math.round(trajectory.donation_share_last_pct)}%`}</div>
+                  <div className="text-xs text-bauhaus-muted">{trajectory.donation_share_first_pct == null ? '' : `was ${Math.round(trajectory.donation_share_first_pct)}% in ${trajectory.first_year}`}</div>
+                </div>
+                <div className="border-2 border-bauhaus-black p-2">
+                  <div className="font-mono text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Deficits, last 3</div>
+                  <div className="font-black" style={{ color: trajectory.three_year_deficit ? '#D02020' : '#121212' }}>{trajectory.deficit_years_last3} of 3</div>
+                  <div className="text-xs text-bauhaus-muted">{trajectory.reserve_months == null ? '' : `${Math.round(trajectory.reserve_months)} months of reserves`}</div>
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-bauhaus-muted">
+                Read against the register at <a href="/charities/trajectories" className="underline" style={{ color: '#1040C0' }}>charity trajectories</a>. Reserves count buildings and endowments as if they were cash.
+              </p>
             </Section>
           )}
 
