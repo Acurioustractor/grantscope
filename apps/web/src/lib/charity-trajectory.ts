@@ -138,3 +138,27 @@ export async function trajectoryLists(state: string, limit = 25): Promise<Trajec
     donationShift,
   };
 }
+
+export interface CouncilCharities {
+  rows: TrajectoryRow[];
+  total: number;
+  byTrend: Record<TrajectoryRow['trend'], number>;
+}
+
+/** Charities placed in one council, largest first, with the trend split for the whole council. */
+export async function charitiesInCouncil(lgaCode: string, limit = 30): Promise<CouncilCharities> {
+  const db = getDirectServiceSupabase();
+  const [rows, ...counts] = await Promise.all([
+    db.from('mv_charity_trajectory').select(COLS).eq('lga_code', lgaCode).order('revenue_last', { ascending: false, nullsFirst: false }).limit(limit),
+    ...(['growing', 'steady', 'shrinking', 'lapsed', 'single_year'] as TrajectoryRow['trend'][]).map((t) =>
+      db.from('mv_charity_trajectory').select('abn', { count: 'exact', head: true }).eq('lga_code', lgaCode).eq('trend', t),
+    ),
+  ]);
+  if (rows.error) throw new Error(rows.error.message);
+  const byTrend = { growing: 0, steady: 0, shrinking: 0, lapsed: 0, single_year: 0 } as Record<TrajectoryRow['trend'], number>;
+  (['growing', 'steady', 'shrinking', 'lapsed', 'single_year'] as TrajectoryRow['trend'][]).forEach((t, i) => {
+    if (counts[i].error) throw new Error(counts[i].error!.message);
+    byTrend[t] = counts[i].count ?? 0;
+  });
+  return { rows: (rows.data ?? []) as TrajectoryRow[], total: Object.values(byTrend).reduce((a, b) => a + b, 0), byTrend };
+}

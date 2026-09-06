@@ -97,6 +97,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // stacks on top of the rail (the site-within-a-site Ben saw on 2026-09-06).
   const SHELL_INDEX_PATHS = ['/charities', '/charities/trajectories', '/allocation', '/foundations', '/grants', '/social-enterprises'];
   const isChromeless = SHELL_INDEX_PATHS.includes(pathname)
+    || pathname.startsWith('/allocation/')
     || pathname.startsWith('/dashboard')
     || pathname.startsWith('/search')
     || pathname.startsWith('/clarity')
