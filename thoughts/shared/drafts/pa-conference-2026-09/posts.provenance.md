@@ -18,13 +18,13 @@ before posting.
 | 7,431 government-dependent (≥70%) | 4,497 + 1,005 + 579 + 952 + 398 across trends | verified (dry run, re-measured live 2026-09-06, unchanged) |
 | $556,330 grant and philanthropic receipts; Snow, VFFF, QIC, Villiers | Goods Asset Register `DECISIONS.md` ruling Z (5 Sep 2026) | verified in repo, not in Xero |
 | Centrecorp $123,332, 130 beds, two invoices (INV-0259, INV-0291), Utopia | `DECISIONS.md` ruling Z and line 104 | verified in repo |
-| $0 signed for next round | Goods `CONTEXT.md` "0 rows at Committed" | inferred: CRM snapshot 2026-07-25, six weeks old; flagged inline for Ben |
+| $0 signed for next round | Goods `CONTEXT.md` "0 rows at Committed" | verified: Ben confirmed 2026-09-06 nothing signed since the 25 July snapshot |
 | Snow moved first | `CONTEXT.md` "Snow $100K first-mover" | verified in repo; amount withheld from the post |
 | QBE $400,000, $750 a bed, 533 beds | `DECISIONS.md` ruling Y | verified in repo |
 | "not anti-philanthropy, anti pretending" | studio `docs/strategy/confessions-launch-and-content-engine.md` | verified in repo |
 | "we sell foundations nothing and represent none of them" | studio `business/philanthropy-australia-positioning-brief.md` | verified in repo |
 
-Ground pass run 2026-09-06 against the live views after apply. Verdict: PASS with one inline flag
-(the "nothing signed" line). Struck: the claimed order in which Fairfax, QIC and Villiers funded (no
+Ground pass run 2026-09-06 against the live views after apply. Verdict: PASS, no flags remaining
+(Ben cleared the "nothing signed" line on 2026-09-06). Struck: the claimed order in which Fairfax, QIC and Villiers funded (no
 source). Reworded: the $82bn/$10.8bn line, which had read as the whole register when it is the
 placed subset.
