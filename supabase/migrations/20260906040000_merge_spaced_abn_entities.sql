@@ -79,6 +79,17 @@ DELETE FROM gs_relationships r
         AND coalesce(t.source_record_id, '') = coalesce(r.source_record_id, '')
         AND t.id <> r.id);
 
+-- ── Drop edges between a loser and its own winner (they would become self-loops) ─────────────
+-- The dry run (2026-09-06) stopped here: 159 grant_opportunities edges run from the spaced Griffith
+-- entity to the correctly keyed one. They are the March 2026 "grant" edges that the 2026-08-20
+-- self-loop migration would have deleted had the duplicate not hidden them, and re-pointing would
+-- trip gs_relationships_no_judged_selfloops. An organisation does not offer grants to itself.
+-- Backed up above in _backup_gs_rel_merge_20260906.
+DELETE FROM gs_relationships r
+ USING gs_entity_merge_map_20260906 m
+ WHERE (r.source_entity_id = m.loser_id AND r.target_entity_id = m.winner_id)
+    OR (r.target_entity_id = m.loser_id AND r.source_entity_id = m.winner_id);
+
 -- ── Re-point every foreign key, generated from the catalogue ─────────────────────────────────
 DO $$
 DECLARE r record; n bigint; total bigint := 0;
