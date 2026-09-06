@@ -9,13 +9,13 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-09-06T19:50:00+10:00
+**Updated:** 2026-09-06T20:10:00+10:00
 **Goal:** Two surfaces that read the whole register: disadvantage versus dollars per council (`/allocation`) and seven-year charity trajectories (`/charities/trajectories`), plus three grounded posts for the Philanthropy Australia conference (Brisbane, 8 to 10 Sept 2026). Done when both pages are live and verified, and the posts have no unverified claim.
 **Branch:** main
 **Test:** `bash scripts/precheck.sh` · `node --env-file=.env scripts/check-migration-parity.mjs` · `node --env-file=.env scripts/check-private-exposure.mjs`
 
 ### Now
-[->] Confirm #433 is live: `civicgraph.app/allocation/30250` (Aurukun) should render the low-sure warning inside the shell (Playwright, not curl).
+[->] Nothing in progress. PR #435 (posts flag cleared, docs only) was merging in the background at clear; if it is still open, merge it (SAFE) and delete `docs/pa-posts-flag`. Then the stream is closed unless Ben picks a Next item.
 
 ### This Session
 - [x] Migrations applied + committed: `20260906120000_abs_lga_population` (ABS ERP 2023, 546 councils, inlined), `20260906120100_mv_lga_allocation` (council-keyed, lga_code, how-sure column), `20260906120200_mv_charity_trajectory` (63,565 ABNs, 2017-2023). Both matviews nightly in mv_refresh_registry. Types regenerated.
@@ -24,10 +24,11 @@ status: active
 - [x] PR #431 merged `5aab8758`: `/allocation` links a council only where a council page exists (~117 remote councils), prefix-tolerant slug match.
 - [x] Posts drafted and grounded: `thoughts/shared/drafts/pa-conference-2026-09/posts.md` + `.provenance.md`. Verdict PASS with one inline flag.
 - [x] Three merged branches deleted on origin. #431 verified live (NSW view: 18 links, new copy present).
+- [x] #433 verified live (Aurukun page renders the low-sure warning inside the shell). All work branches deleted on origin.
+- [x] Ben confirmed nothing signed for Goods since 25 July; the last inline flag in post 3 is cleared (PR #435). Posts are ready to use.
 - [x] PR #433 merged `375c7809`: `/allocation/[lga_code]`, a page for all 546 councils (tiles, low-sure warning, charities largest first with direction, neighbours by need); index links every council; `/allocation/*` chromeless. Dev server stopped.
 
 ### Next
-- [ ] Ben: confirm "nothing is signed for the next round" (Goods CRM snapshot is 25 July) and clear the inline flag in post 3.
 - [ ] `mv_lga_allocation` attributes money to the recipient's council; a delivery-postcode lane from `grantconnect_awards.delivery_postcode` would show the hub-versus-community gap directly.
 - [ ] `/charities/trajectories` lists are national top-25s; per-council rollups (shrinking charities by LGA) are one query away on `mv_charity_trajectory.lga_code`.
 
@@ -40,7 +41,7 @@ status: active
 - **Push every fix and confirm the PR tip BEFORE arming `--auto`.** Main is unprotected, so auto-merge fired on #430 before the parity-fix push landed (memory: automerge-races-followup-push).
 
 ### Open Questions
-- UNCONFIRMED: #433 live on production (Vercel build running at 19:50 AEST).
+- UNCONFIRMED: PR #435 merged (watcher was running at clear).
 - UNCONFIRMED: whether `revenue_from_government` in ACNC AIS includes fee-for-service from government (the page says it does; ACNC guidance not re-read this session).
 
 ### Workflow State
