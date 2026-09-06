@@ -70,6 +70,17 @@ export default async function CouncilAllocationPage({ params }: { params: Promis
           <Stat label="Justice grants on record" value={money(row.jf_grant_value)} sub={`${num(row.jf_grant_count)} rows, grant lane only`} />
           <Stat label="AusTender contracts, last 24 months" value={money(row.contract_value_24m)} sub="by supplier address" />
         </div>
+        <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Stat label="Commonwealth grants delivered here, 24 months" value={money(row.cw_delivery_value_24m)} sub={`${num(row.cw_delivery_count)} awards spread by delivery postcode, all time · ${perHead(row.cw_delivery_24m_per_head, row.population)}`} />
+          <Stat label="Recipient lane, where delivery is stated" value={money(row.cw_recipient_24m_with_delivery)} sub={row.cw_grant_value_24m > 0 ? `${row.cw_delivery_stated_pct == null ? '—' : Math.round(row.cw_delivery_stated_pct)}% of the ${money(row.cw_grant_value_24m)} received here states a delivery postcode` : 'no Commonwealth grants received here in 24 months'} tone={row.cw_grant_value_24m > 0 && (row.cw_delivery_stated_pct ?? 0) < 25 ? '#B8860B' : undefined} />
+          <Stat label="Charities shrinking" value={row.charities_tracked ? `${num(row.charities_shrinking)} of ${num(row.charities_tracked)}` : '—'} sub={row.charities_shrinking ? `${money(row.shrinking_revenue_lost)} a year less than their first statement, ${num(row.charities_growing)} growing, ${num(row.charities_lapsed)} lapsed` : row.charities_tracked ? `${num(row.charities_growing)} growing, ${num(row.charities_lapsed)} lapsed` : 'no charity here has a financial statement'} tone={row.charities_shrinking > 0 && (row.shrinking_share_pct ?? 0) >= 25 ? '#D02020' : undefined} />
+          <Stat label="Living on government, or in deficit" value={row.charities_tracked ? `${num(row.charities_gov_dependent)} · ${num(row.charities_three_year_deficit)}` : '—'} sub="70%+ revenue from government · deficits three statements running" />
+        </div>
+        {row.cw_grant_value_24m > 0 && (row.cw_delivery_stated_pct ?? 0) < 25 ? (
+          <p className="mt-3 max-w-3xl text-[12px]" style={{ color: '#555' }}>
+            The two grant lanes are only comparable where the agency stated a delivery postcode, and here that is {row.cw_delivery_stated_pct == null ? 'none' : `${Math.round(row.cw_delivery_stated_pct)}%`} of the money. The National Indigenous Australians Agency states no delivery postcode on any award; Health, Disability and Ageing on 2%. So a gap between received and delivered on this page is mostly the record being silent.
+          </p>
+        ) : null}
 
         {sure != null && sure < 40 ? (
           <p className="mt-4 border-4 border-bauhaus-black bg-[#FFF8E0] p-3 text-[13px]">
@@ -144,6 +155,8 @@ export default async function CouncilAllocationPage({ params }: { params: Promis
           <h2 className="font-display text-[13px] font-black uppercase tracking-widest">Where this comes from, and what is missing</h2>
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>Population is the ABS Estimated Resident Population, 2023. Need is SEIFA IRSD 2021, held per postcode and weighted into the council by each postcode&apos;s share of it.</li>
+            <li>Commonwealth grants delivered here spread each GrantConnect award across councils by the ABS share of its stated delivery postcode, so a straddling postcode splits an award rather than picking a side. Only some agencies state one; the tile above says how much of this council&apos;s money does.</li>
+            <li>Charity direction is first statement to latest, 2017 to 2023, from the same Annual Information Statements; shrinking means revenue fell by more than a fifth and the latest year is above $0.</li>
             <li>Government revenue and donations are what every charity placed here reported to the ACNC for 2023. Councils, companies and schools file nothing here, so a place run by its shire council can read as $0.</li>
             <li>{num(row.unplaced_sharing_postcodes)} organisations use a postcode that crosses into this council and could not be placed on one side of the line. They are counted, never guessed.</li>
             {councilSlug ? (

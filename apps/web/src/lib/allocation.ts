@@ -26,13 +26,30 @@ export interface AllocationRow {
   charity_fte: number;
   cw_grant_count: number;
   cw_grant_value_24m: number;
+  /** Delivery lane: GrantConnect awards spread by delivery_postcode through the postcode-to-council ratio. */
+  cw_delivery_count: number;
+  cw_delivery_value_24m: number;
+  /** Recipient-lane 24m value on rows that also carry a mapped delivery postcode: the only fair comparison base. */
+  cw_recipient_24m_with_delivery: number;
+  /** That base as a share of the recipient lane. Low means the record is silent, not that money went elsewhere. */
+  cw_delivery_stated_pct: number | null;
   jf_grant_count: number;
   jf_grant_value: number;
   contract_value_24m: number;
   unplaced_sharing_postcodes: number;
+  /** Trajectory rollups from mv_charity_trajectory, charities placed here with at least one statement. */
+  charities_tracked: number;
+  charities_shrinking: number;
+  charities_growing: number;
+  charities_lapsed: number;
+  charities_gov_dependent: number;
+  charities_three_year_deficit: number;
+  shrinking_revenue_lost: number;
+  shrinking_share_pct: number | null;
   gov_revenue_per_head: number | null;
   donations_per_head: number | null;
   cw_grants_24m_per_head: number | null;
+  cw_delivery_24m_per_head: number | null;
   orgs_per_10k: number | null;
   placed_share_pct: number | null;
 }
@@ -44,6 +61,8 @@ export const ALLOCATION_SORTS = {
   donations_per_head: { column: 'donations_per_head', ascending: false, label: 'donations per head' },
   donations_per_head_asc: { column: 'donations_per_head', ascending: true, label: 'least donations per head' },
   grants_per_head: { column: 'cw_grants_24m_per_head', ascending: false, label: 'Commonwealth grants per head' },
+  delivered_per_head: { column: 'cw_delivery_24m_per_head', ascending: false, label: 'Commonwealth grants delivered here, per head' },
+  shrinking: { column: 'shrinking_share_pct', ascending: false, label: 'share of charities shrinking' },
   population: { column: 'population', ascending: false, label: 'population' },
   orgs: { column: 'org_count', ascending: false, label: 'organisations' },
   sure: { column: 'placed_share_pct', ascending: true, label: 'least sure first' },
@@ -104,6 +123,10 @@ export interface AllocationSummary {
   charity_gov_revenue: number;
   charity_donations: number;
   cw_grant_value_24m: number;
+  cw_delivery_value_24m: number;
+  cw_recipient_24m_with_delivery: number;
+  charities_tracked: number;
+  charities_shrinking: number;
   unplaced: number;
   /** Councils in decile 1-2 with fewer government dollars per head than the national median. */
   under_median_disadvantaged: number;
@@ -121,6 +144,10 @@ export function summariseAllocation(rows: AllocationRow[]): AllocationSummary {
     charity_gov_revenue: sum('charity_gov_revenue'),
     charity_donations: sum('charity_donations'),
     cw_grant_value_24m: sum('cw_grant_value_24m'),
+    cw_delivery_value_24m: sum('cw_delivery_value_24m'),
+    cw_recipient_24m_with_delivery: sum('cw_recipient_24m_with_delivery'),
+    charities_tracked: sum('charities_tracked'),
+    charities_shrinking: sum('charities_shrinking'),
     unplaced: sum('unplaced_sharing_postcodes'),
     under_median_disadvantaged: rows.filter((r) => r.irsd_decile != null && r.irsd_decile <= 2.5 && (r.gov_revenue_per_head ?? 0) < median).length,
     median_gov_per_head: median,
@@ -135,12 +162,32 @@ export async function allocationForCode(lgaCode: string): Promise<AllocationRow 
   return (data as AllocationRow | null) ?? null;
 }
 
+const NEIGHBOUR_COLS =
+  'lga_code, lga_name, state, remoteness, population, irsd_decile, min_irsd_decile, org_count, community_controlled, charities_reporting, charity_revenue, charity_gov_revenue, charity_donations, charity_fte, cw_grant_count, cw_grant_value_24m, cw_delivery_count, cw_delivery_value_24m, cw_recipient_24m_with_delivery, cw_delivery_stated_pct, jf_grant_count, jf_grant_value, contract_value_24m, unplaced_sharing_postcodes, charities_tracked, charities_shrinking, charities_growing, charities_lapsed, charities_gov_dependent, charities_three_year_deficit, shrinking_revenue_lost, shrinking_share_pct, gov_revenue_per_head, donations_per_head, cw_grants_24m_per_head, cw_delivery_24m_per_head, orgs_per_10k, placed_share_pct';
+
+/**
+ * Councils where charities are shrinking, for /charities/trajectories. A council needs at least `minTracked`
+ * charities with a statement before its share means anything: one shrinking charity out of one is 100%.
+ * Sorted by share, then by revenue lost, so the list reads as places rather than as a rerun of the national list.
+ */
+export async function shrinkingCouncils(state: string, limit = 25, minTracked = 10): Promise<AllocationRow[]> {
+  const db = getDirectServiceSupabase();
+  let q = db.from('mv_lga_allocation').select(NEIGHBOUR_COLS).gte('charities_tracked', minTracked);
+  if (state) q = q.eq('state', state);
+  const { data, error } = await q
+    .order('shrinking_share_pct', { ascending: false, nullsFirst: false })
+    .order('shrinking_revenue_lost', { ascending: false, nullsFirst: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as AllocationRow[];
+}
+
 /** Councils in the same state, ordered by need, for the "read the row with its neighbours" strip. */
 export async function stateNeighbours(state: string, limit = 12): Promise<AllocationRow[]> {
   const db = getDirectServiceSupabase();
   const { data, error } = await db
     .from('mv_lga_allocation')
-    .select('lga_code, lga_name, state, remoteness, population, irsd_decile, min_irsd_decile, org_count, community_controlled, charities_reporting, charity_revenue, charity_gov_revenue, charity_donations, charity_fte, cw_grant_count, cw_grant_value_24m, jf_grant_count, jf_grant_value, contract_value_24m, unplaced_sharing_postcodes, gov_revenue_per_head, donations_per_head, cw_grants_24m_per_head, orgs_per_10k, placed_share_pct')
+    .select(NEIGHBOUR_COLS)
     .eq('state', state)
     .order('irsd_decile', { ascending: true, nullsFirst: false })
     .limit(limit);

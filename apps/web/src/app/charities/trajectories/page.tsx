@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Shell } from '@/components/shell/shell';
 import { TREND_LABEL, trajectoryLists, type TrajectoryLists, type TrajectoryRow } from '@/lib/charity-trajectory';
+import { shrinkingCouncils, type AllocationRow } from '@/lib/allocation';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
@@ -37,9 +38,10 @@ export default async function TrajectoriesPage({ searchParams }: { searchParams:
   const sp = await searchParams;
   const state = typeof sp.state === 'string' && STATES.includes(sp.state) ? sp.state : '';
   let lists: TrajectoryLists | null = null;
+  let councils: AllocationRow[] = [];
   let why: string | null = null;
   try {
-    lists = await trajectoryLists(state);
+    [lists, councils] = await Promise.all([trajectoryLists(state), shrinkingCouncils(state).catch(() => [] as AllocationRow[])]);
   } catch (e) {
     why = e instanceof Error ? e.message : String(e);
   }
@@ -141,6 +143,37 @@ export default async function TrajectoriesPage({ searchParams }: { searchParams:
                 { h: 'Donation share', r: (r) => pct(r.donation_share_last_pct), right: true },
               ]}
             />
+
+            <section className="mt-8">
+              <h2 className="font-display text-[15px] font-black uppercase tracking-widest">Councils where charities are shrinking</h2>
+              <p className="mt-1 text-[12px]" style={{ color: '#555' }}>Councils with ten or more charities on file, sorted by the share whose revenue fell more than a fifth from first statement to latest. Revenue lost is the sum of those falls, a year. Each council links to its allocation page with the charities named.</p>
+              <div className="mt-2 overflow-x-auto border-4 border-bauhaus-black bg-white">
+                <table className="w-full min-w-[820px] border-collapse text-[13px]" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  <thead>
+                    <tr className="border-b-4 border-bauhaus-black">
+                      {['Council', 'Need', 'Charities on file', 'Shrinking', 'Share', 'Revenue lost / yr', 'Growing', 'On government'].map((h, i) => (
+                        <th key={h} className={`px-2 py-2 font-mono text-[10px] font-black uppercase tracking-widest ${i >= 2 ? 'text-right' : 'text-left'}`} style={{ color: '#777' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {councils.map((c) => (
+                      <tr key={c.lga_code} className="border-b border-[#D0D0D0] hover:bg-[#F7F7F7]">
+                        <td className="px-2 py-[6px]"><Link href={`/allocation/${c.lga_code}`} className="font-semibold hover:underline" style={{ color: '#1040C0' }}>{c.lga_name}</Link><span className="ml-1 font-mono text-[10px]" style={{ color: '#777' }}>{[c.state, (c.remoteness ?? '').replace(' of Australia', '').replace(' Australia', '')].filter(Boolean).join(' · ')}</span></td>
+                        <td className="px-2 py-[6px] font-black" style={{ color: c.irsd_decile != null && c.irsd_decile <= 2.5 ? '#D02020' : '#121212' }}>{c.irsd_decile?.toFixed(1) ?? '—'}</td>
+                        <td className="px-2 py-[6px] text-right">{c.charities_tracked.toLocaleString('en-AU')}</td>
+                        <td className="px-2 py-[6px] text-right font-black" style={{ color: '#D02020' }}>{c.charities_shrinking.toLocaleString('en-AU')}</td>
+                        <td className="px-2 py-[6px] text-right">{c.shrinking_share_pct == null ? '—' : `${Math.round(c.shrinking_share_pct)}%`}</td>
+                        <td className="px-2 py-[6px] text-right">{money(c.shrinking_revenue_lost)}</td>
+                        <td className="px-2 py-[6px] text-right">{c.charities_growing.toLocaleString('en-AU')}</td>
+                        <td className="px-2 py-[6px] text-right">{c.charities_gov_dependent.toLocaleString('en-AU')}</td>
+                      </tr>
+                    ))}
+                    {councils.length === 0 ? <tr><td colSpan={8} className="px-2 py-4 text-center" style={{ color: '#777' }}>No council here has ten charities on file.</td></tr> : null}
+                  </tbody>
+                </table>
+              </div>
+            </section>
 
             <section className="mt-8 max-w-3xl border-4 border-bauhaus-black bg-white p-4 text-[13px] leading-relaxed">
               <h2 className="font-display text-[13px] font-black uppercase tracking-widest">How to read this</h2>

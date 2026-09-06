@@ -125,11 +125,12 @@ export default async function AllocationPage({ searchParams }: { searchParams: P
           <p className="mt-4 text-[13px]" style={{ color: '#D02020' }}>The table could not be read: {why}</p>
         ) : (
           <>
-            <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-5">
+            <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-6">
               <Stat label="Councils" value={num(nation.councils)} />
               <Stat label="Charity revenue from government, 2023" value={money(nation.charity_gov_revenue)} hint="Sum of revenue_from_government across every charity placed in a council, ACNC statements for 2023" />
               <Stat label="Donations and bequests, 2023" value={money(nation.charity_donations)} hint="Same statements, donations_and_bequests" />
               <Stat label="Commonwealth grants, last 24 months" value={money(nation.cw_grant_value_24m)} hint="GrantConnect awards approved in the last two years, by recipient's council" />
+              <Stat label="Of which state where delivered" value={nation.cw_grant_value_24m ? `${Math.round((100 * nation.cw_recipient_24m_with_delivery) / nation.cw_grant_value_24m)}%` : '—'} hint={`${money(nation.cw_recipient_24m_with_delivery)} of those awards carry a delivery postcode the ABS can place. The National Indigenous Australians Agency states none; Health 2%.`} tone="#B8860B" />
               <Stat label="Decile 1–2 councils under the median $/head" value={num(nation.under_median_disadvantaged)} hint={`National median government revenue per head is $${num(nation.median_gov_per_head)}`} tone="#D02020" />
             </div>
 
@@ -150,7 +151,7 @@ export default async function AllocationPage({ searchParams }: { searchParams: P
             </p>
 
             <div className="mt-2 overflow-x-auto border-4 border-bauhaus-black bg-white">
-              <table className="w-full min-w-[1100px] border-collapse text-[13px]" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              <table className="w-full min-w-[1300px] border-collapse text-[13px]" style={{ fontVariantNumeric: 'tabular-nums' }}>
                 <thead>
                   <tr className="border-b-4 border-bauhaus-black">
                     <Head label="Council" sortKey="name" current={f.sort} qs={qs} />
@@ -161,6 +162,8 @@ export default async function AllocationPage({ searchParams }: { searchParams: P
                     <Head label="Gov $ / head" sortKey="gov_per_head" current={f.sort} qs={qs} className="text-right" title="Revenue from government reported by charities placed here, 2023, divided by population" />
                     <Head label="Donations / head" sortKey="donations_per_head" current={f.sort} qs={qs} className="text-right" title="Donations and bequests reported by charities placed here, 2023, divided by population" />
                     <Head label="Cwlth grants 24m / head" sortKey="grants_per_head" current={f.sort} qs={qs} className="text-right" title="GrantConnect awards to recipients placed here, approved in the last two years, divided by population" />
+                    <Head label="Delivered here / head" sortKey="delivered_per_head" current={f.sort} qs={qs} className="text-right" title="The same awards spread by the delivery postcode the agency stated, divided by population. Grey percentage: how much of this council's recipient-lane money carries a delivery postcode at all" />
+                    <Head label="Shrinking" sortKey="shrinking" current={f.sort} qs={qs} className="text-right" title="Charities placed here whose revenue fell more than 20% from first statement to latest (2017 to 2023), as a share of charities with a statement" />
                     <Head label="How sure" sortKey="sure" current={f.sort} qs={qs} className="text-right" title="Placed entities as a share of placed plus entities sharing this council's postcodes that could not be placed" />
                   </tr>
                 </thead>
@@ -183,11 +186,18 @@ export default async function AllocationPage({ searchParams }: { searchParams: P
                       <td className="px-2 py-[6px] text-right">{perHead(r.donations_per_head, r.population)}</td>
                       <td className="px-2 py-[6px] text-right">{perHead(r.cw_grants_24m_per_head, r.population)}</td>
                       <td className="px-2 py-[6px] text-right">
+                        {perHead(r.cw_delivery_24m_per_head, r.population)}
+                        {r.cw_grant_value_24m > 0 ? <span className="ml-1 font-mono text-[10px]" style={{ color: '#777' }} title="Share of recipient-lane money here that states a delivery postcode">{r.cw_delivery_stated_pct == null ? '' : `${Math.round(r.cw_delivery_stated_pct)}%`}</span> : null}
+                      </td>
+                      <td className="px-2 py-[6px] text-right">
+                        {r.charities_tracked === 0 ? <span style={{ color: '#777' }}>—</span> : <><span className="font-black" style={{ color: r.charities_shrinking > 0 && (r.shrinking_share_pct ?? 0) >= 25 ? '#D02020' : '#121212' }}>{num(r.charities_shrinking)}</span><span className="ml-1 font-mono text-[10px]" style={{ color: '#777' }}>of {num(r.charities_tracked)}</span></>}
+                      </td>
+                      <td className="px-2 py-[6px] text-right">
                         <Sure pct={r.placed_share_pct} unplaced={r.unplaced_sharing_postcodes} />
                       </td>
                     </tr>
                   ))}
-                  {rows.length === 0 ? <tr><td colSpan={9} className="px-2 py-6 text-center" style={{ color: '#777' }}>No council matches these filters.</td></tr> : null}
+                  {rows.length === 0 ? <tr><td colSpan={11} className="px-2 py-6 text-center" style={{ color: '#777' }}>No council matches these filters.</td></tr> : null}
                 </tbody>
               </table>
             </div>
@@ -198,6 +208,8 @@ export default async function AllocationPage({ searchParams }: { searchParams: P
                 <li><b>Need</b> is the SEIFA Index of Relative Socio-economic Disadvantage (2021), held per postcode and weighted into the council by each postcode's share. Decile 1 is the most disadvantaged tenth of Australia. The small arrow shows the worst postcode touching the council when it is more than a whole decile below the average.</li>
                 <li><b>Gov $ / head</b> and <b>Donations / head</b> come from the Annual Information Statements every registered charity files with the ACNC. This is the whole register for 2023, not a sample. An organisation that is not a charity (a council, a company, a school) files nothing here.</li>
                 <li><b>Money follows the recipient's address.</b> A land council or regional service in a hub town collects money that is spent hours away. A remote council can show $0 per head while being served from the next council over. Read the row together with its neighbours.</li>
+                <li><b>Delivered here / head</b> is the second lane on the same GrantConnect awards. Some agencies state the postcode where the money is to be spent; where they do, the award is spread across councils by the ABS postcode-to-council ratio, so a postcode that straddles two councils splits the award instead of picking a side. The grey percentage is how much of the council&apos;s recipient-lane money states a delivery postcode at all. It is low almost everywhere that matters: the National Indigenous Australians Agency states none, Health, Disability and Ageing 2%, Education 11%, while the Australian Research Council states one on every dollar. A blank here is the record being silent, not money going elsewhere.</li>
+                <li><b>Shrinking</b> counts charities placed here whose revenue fell more than a fifth between their first and latest statement, 2017 to 2023, out of those with a statement. A charity at $0 in its latest year is dormant and is not counted. The <Link href="/charities/trajectories" className="underline" style={{ color: '#1040C0' }}>trajectories page</Link> lists the councils where this share is highest.</li>
                 <li><b>How sure</b> is the share of organisations we could place. Where a postcode crosses two councils and nothing in the record says which side an organisation is on, it is left unplaced and counted here. A row at 10% is a row about what we cannot see; do not read its dollar figures as a finding.</li>
                 <li>Population is the ABS Estimated Resident Population for 2023. Commonwealth grants are GrantConnect awards approved in the last two years. Nothing on this page reads Xero, GoHighLevel or any private table.</li>
               </ul>

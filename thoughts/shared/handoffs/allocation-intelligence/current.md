@@ -9,15 +9,17 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-09-06T20:10:00+10:00
+**Updated:** 2026-09-07T05:00:00+10:00
 **Goal:** Two surfaces that read the whole register: disadvantage versus dollars per council (`/allocation`) and seven-year charity trajectories (`/charities/trajectories`), plus three grounded posts for the Philanthropy Australia conference (Brisbane, 8 to 10 Sept 2026). Done when both pages are live and verified, and the posts have no unverified claim.
-**Branch:** main
+**Branch:** feat/allocation-delivery-lane (PR #437, VISIBLE, applied + verified, awaiting merge)
 **Test:** `bash scripts/precheck.sh` · `node --env-file=.env scripts/check-migration-parity.mjs` · `node --env-file=.env scripts/check-private-exposure.mjs`
 
 ### Now
-[->] Nothing in progress. PR #435 (posts flag cleared, docs only) was merging in the background at clear; if it is still open, merge it (SAFE) and delete `docs/pa-posts-flag`. Then the stream is closed unless Ben picks a Next item.
+[->] PR #437: migration APPLIED (tracker 20260907090000, parity green), types regenerated and pushed (`b965464d`), all three pages verified on local dev against the live view. CI running. Waits on Ben's preview look and the word "merge". Merge with `gh pr merge 437 --squash --delete-branch` (auto-merge not allowed on this repo).
 
 ### This Session
+- [x] #435 and #436 confirmed merged, branches gone.
+- [x] Delivery-postcode lane + per-council trajectory rollups built (migration + /allocation, /allocation/[lga_code], /charities/trajectories), PR #437. Finding: delivery postcodes cover 11% of 24m recipient-lane money, by agency (NIAA none, Health 2%, ARC 100%); the lane shows where the record is silent.
 - [x] Migrations applied + committed: `20260906120000_abs_lga_population` (ABS ERP 2023, 546 councils, inlined), `20260906120100_mv_lga_allocation` (council-keyed, lga_code, how-sure column), `20260906120200_mv_charity_trajectory` (63,565 ABNs, 2017-2023). Both matviews nightly in mv_refresh_registry. Types regenerated.
 - [x] PR #430 merged `458bd4b2`: `/allocation`, `/charities/trajectories`, trajectory block on `/charities/[abn]`, sitemap, pointer from the old funding-deserts report. Live and checked in a browser.
 - [x] PR #429 (other session, `ecosystem_sites` public read) merged `611c405f` after allowlisting the table in `check-private-exposure.mjs` on Ben's "allowlist ecosystem sites". Parity + exposure green on main.
@@ -29,8 +31,8 @@ status: active
 - [x] PR #433 merged `375c7809`: `/allocation/[lga_code]`, a page for all 546 councils (tiles, low-sure warning, charities largest first with direction, neighbours by need); index links every council; `/allocation/*` chromeless. Dev server stopped.
 
 ### Next
-- [ ] `mv_lga_allocation` attributes money to the recipient's council; a delivery-postcode lane from `grantconnect_awards.delivery_postcode` would show the hub-versus-community gap directly.
-- [ ] `/charities/trajectories` lists are national top-25s; per-council rollups (shrinking charities by LGA) are one query away on `mv_charity_trajectory.lga_code`.
+- [ ] After #437 lands: verify /allocation, /allocation/30150 (Alice Springs area code check), /charities/trajectories live in a browser.
+- [ ] The delivery-lane finding (NIAA states no delivery postcode on $3.84bn) is a post-worthy claim; ground it before use.
 
 ### Decisions
 - **New matview, not a fix to mv_funding_deserts.** The old one is name-keyed off postcode_geo, which the LGA rebuild found wrong; the new one stands on `gs_entities.lga_code` and ABS population.
