@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       _backup_articles_310_20260820: {
@@ -56387,13 +56362,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "community_programs_profiles_program_id_fkey"
-            columns: ["community_program_id"]
-            isOneToOne: false
-            referencedRelation: "programs_catalog_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "community_programs_profiles_program_id_fkey"
             columns: ["program_id"]
             isOneToOne: false
             referencedRelation: "programs_catalog_v"
@@ -56402,13 +56370,20 @@ export type Database = {
           {
             foreignKeyName: "community_programs_profiles_program_id_fkey"
             columns: ["community_program_id"]
+            isOneToOne: false
+            referencedRelation: "programs_catalog_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_programs_profiles_program_id_fkey"
+            columns: ["program_id"]
             isOneToOne: false
             referencedRelation: "registered_services"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "community_programs_profiles_program_id_fkey"
-            columns: ["program_id"]
+            columns: ["community_program_id"]
             isOneToOne: false
             referencedRelation: "registered_services"
             referencedColumns: ["id"]
@@ -57997,7 +57972,13 @@ export type Database = {
         Row: {
           area_sqkm: number | null
           charities: number | null
+          charities_gov_dependent: number | null
+          charities_growing: number | null
+          charities_lapsed: number | null
           charities_reporting: number | null
+          charities_shrinking: number | null
+          charities_three_year_deficit: number | null
+          charities_tracked: number | null
           charity_donations: number | null
           charity_fte: number | null
           charity_gov_revenue: number | null
@@ -58007,10 +57988,16 @@ export type Database = {
           contract_count: number | null
           contract_value: number | null
           contract_value_24m: number | null
+          cw_delivery_24m_per_head: number | null
+          cw_delivery_count: number | null
+          cw_delivery_stated_pct: number | null
+          cw_delivery_value: number | null
+          cw_delivery_value_24m: number | null
           cw_grant_count: number | null
           cw_grant_value: number | null
           cw_grant_value_24m: number | null
           cw_grants_24m_per_head: number | null
+          cw_recipient_24m_with_delivery: number | null
           donations_per_head: number | null
           erp_2018: number | null
           gov_revenue_per_head: number | null
@@ -58029,6 +58016,8 @@ export type Database = {
           postcodes_with_seifa: number | null
           refreshed_at: string | null
           remoteness: string | null
+          shrinking_revenue_lost: number | null
+          shrinking_share_pct: number | null
           state: string | null
           unplaced_sharing_postcodes: number | null
         }
@@ -69475,9 +69464,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       analysis_job_status_enum: ["queued", "processing", "completed", "failed"],
