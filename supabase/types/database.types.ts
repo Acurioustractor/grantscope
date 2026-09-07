@@ -16012,6 +16012,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           display_order: number | null
+          el_site_slug: string | null
           github_repo: string | null
           health_score: number | null
           health_trend: string | null
@@ -16025,6 +16026,8 @@ export type Database = {
           slug: string
           ssl_expires_at: string | null
           status: string | null
+          stories_consented: number | null
+          stories_last_pull_at: string | null
           updated_at: string | null
           url: string
           vercel_project_id: string | null
@@ -16035,6 +16038,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           display_order?: number | null
+          el_site_slug?: string | null
           github_repo?: string | null
           health_score?: number | null
           health_trend?: string | null
@@ -16048,6 +16052,8 @@ export type Database = {
           slug: string
           ssl_expires_at?: string | null
           status?: string | null
+          stories_consented?: number | null
+          stories_last_pull_at?: string | null
           updated_at?: string | null
           url: string
           vercel_project_id?: string | null
@@ -16058,6 +16064,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           display_order?: number | null
+          el_site_slug?: string | null
           github_repo?: string | null
           health_score?: number | null
           health_trend?: string | null
@@ -16071,6 +16078,8 @@ export type Database = {
           slug?: string
           ssl_expires_at?: string | null
           status?: string | null
+          stories_consented?: number | null
+          stories_last_pull_at?: string | null
           updated_at?: string | null
           url?: string
           vercel_project_id?: string | null
