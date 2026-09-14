@@ -89,6 +89,23 @@ function normalizeExistingSources(existingSources: unknown): GrantSource[] {
   });
 }
 
+/**
+ * Tags → columns. geography (text) gets the most specific region tag ('AU-WA', 'AU-National'); a bare 'AU'
+ * says nothing, so it is not written. 'LGA:<name>' tags become metadata.place. The engine carried these
+ * tags from every plugin but never saved them until 2026-09-14.
+ */
+export function placeFromGeography(geography: string[] | undefined): {
+  geography: string | null;
+  place: { state?: string; lga_name?: string; national?: true } | null;
+} {
+  const tags = geography ?? [];
+  const region = tags.find(t => /^AU-(NSW|VIC|QLD|WA|SA|TAS|NT|ACT)$/.test(t)) ?? tags.find(t => t === 'AU-National') ?? null;
+  const lga = tags.find(t => t.startsWith('LGA:'))?.slice(4);
+  if (!region) return { geography: null, place: null };
+  const place = region === 'AU-National' ? { national: true as const } : { state: region.slice(3), ...(lga ? { lga_name: lga } : {}) };
+  return { geography: region, place };
+}
+
 export function mergeGrantSources(existingSources: unknown, incomingSources: GrantSource[]): GrantSource[] {
   const merged = new Map<string, GrantSource>();
 
@@ -123,7 +140,10 @@ export class GrantRepository {
 
   private buildGrantRow(grant: CanonicalGrant) {
     const statuses = resolveGrantStatuses(grant.applicationStatus, grant.closesAt);
+    const { geography, place } = placeFromGeography(grant.geography);
     return {
+      geography,
+      ...(place ? { metadata: { place } } : {}),
       name: grant.name,
       provider: grant.provider,
       program: grant.program,
@@ -151,6 +171,8 @@ export class GrantRepository {
     existingClosesAt: string | null = null,
     existingSourceId: string | null = null,
     existingSources: unknown = null,
+    existingMetadata: Record<string, unknown> | null = null,
+    existingGeography: string | null = null,
   ): Record<string, unknown> {
     const statuses = resolveGrantStatuses(grant.applicationStatus, grant.closesAt);
     const sourceIdentity = resolveCanonicalSourceIdentity(existingSourceId, grant.discoveryMethod);
@@ -163,6 +185,10 @@ export class GrantRepository {
       application_status: statuses.applicationStatus,
       status: statuses.status,
     };
+    const { geography, place } = placeFromGeography(grant.geography);
+    // Fill, never overwrite: other sources hold richer values ('AU-ACT, AU-NSW, AU-SA, AU-VIC', 'Gold Coast, QLD').
+    if (geography && !existingGeography) updateRow.geography = geography;
+    if (place && !existingMetadata?.place) updateRow.metadata = { ...(existingMetadata ?? {}), place };
     if (grant.description) updateRow.description = grant.description;
     if (grant.closesAt) updateRow.closes_at = grant.closesAt;
     if (!grant.closesAt && existingClosesAt && existingClosesAt < todayInAustralia() && statuses.applicationStatus === 'open') {
@@ -175,7 +201,7 @@ export class GrantRepository {
     if (!grant.url) return 'skipped';
     const { data: existingGrant, error: existingError } = await this.supabase
       .from('grant_opportunities')
-      .select('id, closes_at, source_id, sources')
+      .select('id, closes_at, source_id, sources, metadata, geography')
       .eq('url', grant.url)
       .neq('status', 'duplicate')
       .order('updated_at', { ascending: false })
@@ -197,6 +223,8 @@ export class GrantRepository {
       existingGrant.closes_at ?? null,
       existingGrant.source_id ?? null,
       existingGrant.sources ?? null,
+      (existingGrant.metadata as Record<string, unknown> | null) ?? null,
+      (existingGrant.geography as string | null) ?? null,
     );
 
     const { error, count } = await this.supabase

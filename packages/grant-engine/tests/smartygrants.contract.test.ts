@@ -57,3 +57,23 @@ test('a round that has not opened yet is upcoming, and the notice stays out of t
   assert.equal(g?.title, 'Connected Campbelltown Community Grants 2026-2027');
   assert.equal(g?.applicationStatus, 'upcoming');
 });
+
+test('rounds carry their place: council, state-only, national, unknown', async () => {
+  const { smartyGrantsGeography } = await import('../src/sources/smartygrants-places');
+  const { placeFromGeography } = await import('../src/storage/repository');
+  assert.deepEqual(smartyGrantsGeography('latrobe'), ['AU-VIC', 'LGA:Latrobe (Vic.)']);
+  assert.deepEqual(placeFromGeography(smartyGrantsGeography('latrobe')), { geography: 'AU-VIC', place: { state: 'VIC', lga_name: 'Latrobe (Vic.)' } });
+  assert.deepEqual(placeFromGeography(smartyGrantsGeography('screenwest')), { geography: 'AU-WA', place: { state: 'WA' } });
+  assert.deepEqual(placeFromGeography(smartyGrantsGeography('lowitja')), { geography: 'AU-National', place: { national: true } });
+  assert.deepEqual(placeFromGeography(smartyGrantsGeography('not-a-tenant')), { geography: null, place: null });
+});
+
+test('every tenant in the crawl list is either placed or deliberately absent, and every place is well-formed', async () => {
+  const { SMARTYGRANTS_TENANTS } = await import('../src/sources/smartygrants');
+  const { SMARTYGRANTS_PLACES } = await import('../src/sources/smartygrants-places');
+  for (const [tenant, place] of Object.entries(SMARTYGRANTS_PLACES)) {
+    assert.ok('national' in place || /^(NSW|VIC|QLD|WA|SA|TAS|NT|ACT)$/.test(place.state), tenant);
+  }
+  const placed = SMARTYGRANTS_TENANTS.filter(t => SMARTYGRANTS_PLACES[t]).length;
+  assert.ok(placed >= 100, `only ${placed} tenants placed`);
+});
