@@ -33,6 +33,13 @@ function isProject(v: string | undefined): v is ActProject {
   return !!v && v in ACT_PROJECTS;
 }
 
+function FitPill({ score }: { score: number }) {
+  const cls = score >= 60 ? 'bg-money text-white' : score >= FIT_THRESHOLD ? 'bg-bauhaus-yellow text-bauhaus-black' : 'border-2 border-bauhaus-black/30 bg-white text-bauhaus-muted';
+  return <span className={`inline-block px-2 py-0.5 font-mono text-[11px] font-black tabular-nums ${cls}`}>{score}</span>;
+}
+
+const FIT_THRESHOLD = 20;
+
 function ClosePill({ grant }: { grant: DeskGrant }) {
   if (grant.daysToClose == null) return <span className="text-[11px] font-bold uppercase tracking-wider text-bauhaus-muted">No close date</span>;
   const d = grant.daysToClose;
@@ -67,8 +74,26 @@ export default async function ActGrantsDeskPage({
   const desk = await getActGrantsDesk();
   const { generatedAt } = desk;
   const elig = (g: DeskGrant) => (project ? g.eligibility.find((e) => e.project === project) ?? null : null);
+  const fit = (g: DeskGrant) => (project ? g.fitScore[project] ?? 0 : null);
+  // "show all" reveals both filters a project view hides by default: ruled out (can't apply)
+  // and below-threshold fit (no signal it matches this project). Same one toggle, two reasons.
   const ruledOut = project ? desk.grants.filter((g) => elig(g)?.overall === 'no').length : 0;
-  const grants = project && !showRuledOut ? desk.grants.filter((g) => elig(g)?.overall !== 'no') : desk.grants;
+  const eligibleForFit = project ? desk.grants.filter((g) => elig(g)?.overall !== 'no') : desk.grants;
+  const lowFit = project ? eligibleForFit.filter((g) => (fit(g) ?? 0) < FIT_THRESHOLD).length : 0;
+  const grants = project && !showRuledOut
+    ? eligibleForFit.filter((g) => (fit(g) ?? 0) >= FIT_THRESHOLD)
+    : desk.grants;
+  if (project) {
+    grants.sort((a, b) => {
+      const fa = fit(a) ?? 0;
+      const fb = fit(b) ?? 0;
+      if (fa !== fb) return fb - fa;
+      if (a.closeDate && b.closeDate) return a.closeDate.localeCompare(b.closeDate) || a.name.localeCompare(b.name);
+      if (a.closeDate) return -1;
+      if (b.closeDate) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }
   const base = `/org/${slug}/grants`;
   // ~3,700 rows of tags is a slow page on any machine: render the soonest 300, more on request.
   const limit = Math.max(300, Number(sp.limit) || 300);
@@ -84,8 +109,9 @@ export default async function ActGrantsDeskPage({
         <p className="text-[11px] font-black uppercase tracking-widest text-bauhaus-red">ACT only · not public</p>
         <h1 className="mt-2 text-4xl font-black uppercase tracking-tight">Grants desk</h1>
         <p className="mt-2 max-w-3xl text-sm">
-          Every live grant, soonest close first. Pick a project to see which ACT entity can apply and whether it operates where the grant is limited to.
-          Most grants do not record DGR or company rules, so most answers are unknown: read the guidelines before applying.
+          Pick a project to rank grants by fit and see which ACT entity can apply and whether it operates where the grant is limited to.
+          With no project picked there is no fit signal, so the list falls back to soonest close first.
+          Most grants do not record DGR or company rules, so most eligibility answers are unknown: read the guidelines before applying.
         </p>
 
         <nav className="mt-5 flex flex-wrap gap-2" aria-label="Project">
@@ -96,11 +122,11 @@ export default async function ActGrantsDeskPage({
         </nav>
         {project ? (
           <p className="mt-3 text-sm">
-            <strong>{ACT_PROJECTS[project].label}</strong> applies through {ACT_PROJECTS[project].entities.map((e) => ENTITY_LABEL[e]).join(' or ')}.{' '}
-            {ruledOut.toLocaleString('en-AU')} grants ruled out by entity or place{' '}
+            <strong>{ACT_PROJECTS[project].label}</strong> applies through {ACT_PROJECTS[project].entities.map((e) => ENTITY_LABEL[e]).join(' or ')}. Ranked by fit, soonest close breaks ties.{' '}
+            {ruledOut.toLocaleString('en-AU')} ruled out by entity or place, {lowFit.toLocaleString('en-AU')} with no fit signal for this project hidden{' '}
             {showRuledOut
               ? <Link className="font-bold text-bauhaus-blue underline" href={`${base}?project=${project}`}>hide them</Link>
-              : <Link className="font-bold text-bauhaus-blue underline" href={`${base}?project=${project}&show=all`}>show them</Link>}.
+              : <Link className="font-bold text-bauhaus-blue underline" href={`${base}?project=${project}&show=all`}>show everything</Link>}.
           </p>
         ) : null}
 
@@ -122,6 +148,7 @@ export default async function ActGrantsDeskPage({
           <table className="w-full text-left text-sm">
             <thead className="bg-bauhaus-black text-white">
               <tr className="text-[11px] font-black uppercase tracking-widest">
+                {project ? <th className="px-3 py-2">Fit</th> : null}
                 <th className="px-3 py-2">Closes</th>
                 <th className="px-3 py-2">Grant</th>
                 <th className="px-3 py-2">Amount</th>
@@ -133,6 +160,7 @@ export default async function ActGrantsDeskPage({
             <tbody>
               {shown.map((g) => (
                 <tr key={`${g.origin}-${g.id}`} className="border-t-2 border-bauhaus-black/10 align-top">
+                  {project ? <td className="whitespace-nowrap px-3 py-2"><FitPill score={fit(g) ?? 0} /></td> : null}
                   <td className="whitespace-nowrap px-3 py-2">
                     <ClosePill grant={g} />
                     {g.closeDate ? <div className="mt-1 font-mono text-[11px]">{g.closeDate}</div> : null}
