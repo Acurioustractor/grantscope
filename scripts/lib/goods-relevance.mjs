@@ -282,3 +282,25 @@ export function scoreGrantForGoods(grant) {
 
 export const GOODS_TAG_THRESHOLD = 50;
 export const GOODS_HIGH_FIT_THRESHOLD = 70;
+
+/**
+ * Apply a score to a row's tags and say what moved. Every rescore used to rewrite tags in place with no
+ * record, so on 2026-09-14 a 130→63 drop could only be reconciled to within 7 rows. The change is kept
+ * in goods_relevance_signals.tag_change and carried forward until the next change, so
+ *   SELECT name FROM grant_opportunities WHERE goods_relevance_signals->'tag_change'->>'change' = 'removed'
+ * always answers "what did the last rescore untag".
+ */
+export function applyGoodsTag(row, score, signals, at = new Date().toISOString()) {
+  const before = new Set(row.aligned_projects || []);
+  const wasTagged = before.has('ACT-GD');
+  const tagged = new Set(before);
+  if (score >= GOODS_TAG_THRESHOLD) { tagged.add('ACT-GD'); tagged.add('goods'); }
+  else { tagged.delete('ACT-GD'); tagged.delete('goods'); }
+  const isTagged = tagged.has('ACT-GD');
+  const change = wasTagged === isTagged ? null : (isTagged ? 'added' : 'removed');
+  const previous = row.goods_relevance_signals?.tag_change;
+  const tagChange = change
+    ? { change, at, previous_score: row.goods_relevance_score ?? null, score }
+    : previous ?? undefined;
+  return { tagged: Array.from(tagged), change, signals: tagChange ? { ...signals, tag_change: tagChange } : signals };
+}
