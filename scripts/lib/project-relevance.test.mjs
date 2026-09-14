@@ -8,7 +8,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { scoreGrantForProject, scoreGrantForAllProjects, PROJECT_TAG_THRESHOLD } from './project-relevance.mjs';
+import { scoreGrantForProject, scoreGrantForAllProjects, applyProjectTags, PROJECT_CODES, PROJECT_TAG_THRESHOLD } from './project-relevance.mjs';
 
 test('a real youth justice diversion grant scores at/above threshold for justicehub', () => {
   const { score, signals } = scoreGrantForProject('justicehub', {
@@ -162,4 +162,37 @@ test('a genuine ACT Government justice grant still tags via its name', () => {
 
 test('unknown project throws', () => {
   assert.throws(() => scoreGrantForProject('not-a-project', {}));
+});
+
+test('applyProjectTags tags a fresh high-scoring justicehub grant and logs the add', () => {
+  const row = { aligned_projects: [], project_relevance: {} };
+  const results = { justicehub: { score: 60, signals: { tier1_hits: ['youth justice'] } } };
+  const { tagged, changes, relevance } = applyProjectTags(row, results, '2026-09-14T00:00:00Z');
+  assert.ok(tagged.includes(PROJECT_CODES.justicehub));
+  assert.equal(changes.justicehub.change, 'added');
+  assert.equal(relevance.justicehub.score, 60);
+});
+
+test('applyProjectTags untags a project whose score dropped below threshold on rescore', () => {
+  const row = { aligned_projects: [PROJECT_CODES.farm], project_relevance: { farm: { score: 55 } } };
+  const results = { farm: { score: 10, signals: {} } };
+  const { tagged, changes } = applyProjectTags(row, results, '2026-09-14T00:00:00Z');
+  assert.ok(!tagged.includes(PROJECT_CODES.farm));
+  assert.equal(changes.farm.change, 'removed');
+  assert.equal(changes.farm.previous_score, 55);
+});
+
+test('applyProjectTags leaves unrelated tags (e.g. ACT-GD) alone', () => {
+  const row = { aligned_projects: ['ACT-GD'], project_relevance: {} };
+  const results = { harvest: { score: 5, signals: {} } };
+  const { tagged } = applyProjectTags(row, results);
+  assert.deepEqual(tagged, ['ACT-GD']);
+});
+
+test('applyProjectTags is a no-op (no changes) when nothing crosses the threshold either way', () => {
+  const row = { aligned_projects: [], project_relevance: {} };
+  const results = { farm: { score: 10, signals: {} }, harvest: { score: 5, signals: {} } };
+  const { tagged, changes } = applyProjectTags(row, results);
+  assert.deepEqual(tagged, []);
+  assert.deepEqual(changes, {});
 });

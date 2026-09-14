@@ -6,7 +6,7 @@ import { getFunderScan } from '@/lib/services/goods-funder-scan';
 import { getActRelationshipLedger } from '@/lib/services/act-relationship-ledger';
 import { getOrgDailyActionStates, type ActDailyActionStatus } from '@/lib/services/act-daily-actions';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
-import { getGoodsGrantsTriage } from '@/lib/services/goods-grants-triage';
+import { getAllProjectsGrantsTriage } from '@/lib/services/act-project-grants-triage';
 import { getGoodsBuyerPipeline } from '@/lib/services/goods-buyer-pipeline';
 import { ghlContactUrl } from '@/lib/ghl-links';
 import { actOrgHref } from '@/lib/services/act-org-record';
@@ -20,7 +20,8 @@ export type DeskRecordKind = 'funder' | 'grant' | 'buyer' | 'money' | 'obligatio
 
 const PROJECT_LABELS: Record<string, string> = {
   'ACT-GD': 'Goods', 'ACT-EL': 'Empathy Ledger', 'ACT-JH': 'JusticeHub',
-  'ACT-HV': 'Harvest', 'ACT-PI': 'Palm Island', 'ACT-MY': 'ACT',
+  'ACT-HV': 'Harvest', 'ACT-FM': 'Farm', 'ACT-CN': 'Contained',
+  'ACT-PI': 'Palm Island', 'ACT-MY': 'ACT',
 };
 
 export function deskProjectLabel(code: string | null): string {
@@ -128,7 +129,10 @@ export async function getOneDeskPool(slug: string): Promise<DeskRecord[]> {
     // funders and the only surface, while Empathy Ledger had 99 and PICC 84 with
     // none. Passing no slug scans every ACT project.
     getFunderScan().catch(() => null),
-    getGoodsGrantsTriage({ scope: 'closing' }).catch(() => null),
+    // Widened 2026-09-14 (step 4 of the ACT grants desk build): this used to be
+    // getGoodsGrantsTriage, which only ever ranked on goods_relevance_score — every
+    // grant row on the desk read "Goods" regardless of which project it actually fit.
+    getAllProjectsGrantsTriage().catch(() => []),
     getGoodsBuyerPipeline().catch(() => null),
     profile ? getActRelationshipLedger(slug, profile.id).catch(() => null) : null,
     profile ? getDeskObligations(profile.id).catch(() => []) : [],
@@ -210,19 +214,23 @@ export async function getOneDeskPool(slug: string): Promise<DeskRecord[]> {
       isDecision: !inGhl,
     });
   }
-  // Grant Rounds: decision-due when closing within 30 days or fit >= 85;
-  // already-in-GHL rounds are Asks being worked.
-  for (const g of triage?.grants ?? []) {
+  // Grant Rounds: decision-due when closing within 30 days or fit >= 85 for Goods
+  // (its scorer's tuned scale) or >= its own threshold for the other five projects
+  // (project-relevance.mjs's simpler scorer tops out much lower — 30 is its tag
+  // threshold, not a decision-due bar, so lean on the deadline clause for those).
+  // Already-in-GHL rounds are Asks being worked.
+  for (const g of triage) {
     const inGhl = Boolean(g.ghlOpportunityId);
-    const decisionDue = (g.daysToDeadline != null && g.daysToDeadline <= 30) || (g.goodsScore ?? 0) >= 85;
+    const fitBar = g.project === 'goods' ? 85 : 40;
+    const decisionDue = (g.daysToDeadline != null && g.daysToDeadline <= 30) || g.fitScore >= fitBar;
     if (!inGhl && !decisionDue) continue;
     pool.push({
-      id: `g-${g.id}`, kind: 'grant', project: 'Goods', name: g.name,
+      id: `g-${g.id}`, kind: 'grant', project: deskProjectLabel(g.code), name: g.name,
       signal: inGhl ? 'in GHL' : 'live round · not yet an Ask',
       next: inGhl ? 'Work the application' : 'Decide: pursue (push to GHL) or pass',
-      dueDays: g.daysToDeadline, score: g.goodsScore ?? 0,
+      dueDays: g.daysToDeadline, score: g.fitScore,
       amount: g.amountMax ? `$${Math.round(g.amountMax / 1000)}K` : null,
-      ghlUrl: null, workHref: `/org/${slug}/goods/grants`,
+      ghlUrl: null, workHref: g.project === 'goods' ? `/org/${slug}/goods/grants` : `/org/${slug}/grants`,
       isDecision: !inGhl,
     });
   }
