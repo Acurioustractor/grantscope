@@ -24,6 +24,8 @@ export interface DeskSourceRow {
   dgr_required?: boolean | null;
   accepts_pty_ltd?: boolean | null;
   place?: unknown;
+  goods_relevance_score?: number | null;
+  project_relevance?: Record<string, { score?: number }> | null;
 }
 
 export interface DeskGrant {
@@ -39,6 +41,9 @@ export interface DeskGrant {
   url: string | null;
   source: string | null;
   eligibility: ProjectEligibility[];
+  /** Fit score 0-100 per project. 'goods' comes from goods_relevance_score (both tables);
+   *  the other five come from project_relevance, which only public rows carry. */
+  fitScore: Partial<Record<ActProject, number>>;
 }
 
 const DAY = 86_400_000;
@@ -69,6 +74,14 @@ export function buildDesk(
         if (seen.has(key)) continue;
         seen.add(key);
       }
+      const relevance = r.project_relevance ?? {};
+      const fitScore: Partial<Record<ActProject, number>> = {};
+      if (r.goods_relevance_score != null) fitScore.goods = r.goods_relevance_score;
+      for (const project of Object.keys(ACT_PROJECTS) as ActProject[]) {
+        if (project === 'goods') continue;
+        const score = relevance[project]?.score;
+        if (score != null) fitScore[project] = score;
+      }
       out.push({
         id: r.id,
         origin,
@@ -89,6 +102,7 @@ export function buildDesk(
             place: r.place ?? null,
           }),
         ),
+        fitScore,
       });
     }
   };
@@ -103,10 +117,10 @@ export function buildDesk(
   });
 }
 
-const BASE_COLUMNS = 'id, name, provider, status, closes_at, deadline, amount_min, amount_max, geography, url, source, place:metadata->place';
-// act_private_grant_rounds has no dgr_required / accepts_pty_ltd columns.
+const BASE_COLUMNS = 'id, name, provider, status, closes_at, deadline, amount_min, amount_max, geography, url, source, place:metadata->place, goods_relevance_score';
+// act_private_grant_rounds has no dgr_required / accepts_pty_ltd / project_relevance columns.
 const COLUMNS = {
-  grant_opportunities: `${BASE_COLUMNS}, dgr_required, accepts_pty_ltd`,
+  grant_opportunities: `${BASE_COLUMNS}, dgr_required, accepts_pty_ltd, project_relevance`,
   act_private_grant_rounds: BASE_COLUMNS,
 };
 const PAGE = 1000;
