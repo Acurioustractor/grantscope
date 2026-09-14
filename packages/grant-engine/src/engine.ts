@@ -51,6 +51,7 @@ import { createScenicRimGrantsPlugin } from './sources/scenicrim-grants';
 import { createWhitsundayGrantsPlugin } from './sources/whitsunday-grants';
 import { createCentralHighlandsGrantsPlugin } from './sources/centralhighlands-grants';
 import { createNoosaGrantsPlugin } from './sources/noosa-grants';
+import { createSmartyGrantsPlugin } from './sources/smartygrants';
 import { createChartersTowersGrantsPlugin } from './sources/charterstowers-grants';
 import { createLockyerValleyGrantsPlugin } from './sources/lockyervalley-grants';
 
@@ -94,6 +95,7 @@ export class GrantEngine {
     this.registry.register(createWhitsundayGrantsPlugin());
     this.registry.register(createCentralHighlandsGrantsPlugin());
     this.registry.register(createNoosaGrantsPlugin());
+    this.registry.register(createSmartyGrantsPlugin());
     this.registry.register(createChartersTowersGrantsPlugin());
     this.registry.register(createLockyerValleyGrantsPlugin());
   }
