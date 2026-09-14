@@ -435,6 +435,16 @@ export const AGENTS = {
     timeoutMs: 1_800_000,
     dependencies: [],
   },
+  // ACT-internal only: writes act_private_grant_rounds, never grant_opportunities. Ben chose to run it despite
+  // Our Community ToU cl 2(i); see migration 20260914180000. ~25 min for 149 SmartyGrants tenants.
+  'sync-act-private-grant-rounds': {
+    command: ['npx', 'tsx', '--env-file=.env', 'scripts/sync-act-private-grant-rounds.mts'],
+    displayName: 'ACT private grant rounds (SmartyGrants)',
+    category: 'discovery',
+    defaultPriority: 4,
+    timeoutMs: 2_700_000,
+    dependencies: [],
+  },
   'discover-act-opportunities-octen': {
     command: ['node', '--env-file=.env', 'scripts/discover-act-opportunities.mjs', '--provider=octen', '--count=8'],
     displayName: 'ACT Opportunity Observatory · Octen discovery',

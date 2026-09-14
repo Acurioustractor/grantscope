@@ -10,10 +10,11 @@
  * Found 2026-09-14: 347 of the 974 grants Grant'd added since June that we lacked apply through
  * SmartyGrants, across the 149 tenants below.
  *
- * DO NOT RUN. Our Community's Terms of Use (July 2026) cover every SmartyGrants applicant portal and say users
+ * NOT FOR THE PUBLIC ENGINE. Our Community's Terms of Use (July 2026) cover every SmartyGrants applicant portal and say users
  * "will not use bots or web scraping tools to access, browse or extract data" (cl 2(i)). robots.txt allowing a
- * path is not permission. Unregistered from the engine and the agent registry on 2026-09-14 (migration
- * 20260914160000). Kept so the parsers are not rebuilt by accident; the route to this data is a licence.
+ * path is not permission. Unregistered from the public engine on 2026-09-14 (migration 20260914160000). Its only
+ * caller is scripts/sync-act-private-grant-rounds.mts, which writes to ACT's private table; Ben chose to run that
+ * for ACT's own grant-seeking (migration 20260914180000). Written permission from Our Community would settle it.
  */
 
 import type { DiscoveryQuery, GrantApplicationStatus, RawGrant, SourcePlugin } from '../types';
