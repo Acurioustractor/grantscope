@@ -117,3 +117,35 @@ test('discovery_method=indigenous-finance boosts a capital opportunity', () => {
   assert.equal(withBoost.signals.discovery_boost, 'indigenous-finance');
   assert.ok(withBoost.score >= GOODS_TAG_THRESHOLD, `expected >= ${GOODS_TAG_THRESHOLD}, got ${withBoost.score}`);
 });
+
+test('First Nations wording alone cannot reach the Goods tag (2026-09-14 CreateSA / ACCO fund false tags)', () => {
+  const arts = scoreGrantForGoods({
+    name: 'Aboriginal and Torres Strait Islander - Projects 2609',
+    provider: 'CreateSA', description: 'Aboriginal and Torres Strait Islander artists community projects.',
+    geography: 'AU-SA', closes_at: '2099-01-01', source: 'smartygrants',
+  });
+  assert.ok(arts.score < GOODS_TAG_THRESHOLD, `scored ${arts.score}`);
+  assert.ok(arts.signals.identity_only_cap >= GOODS_TAG_THRESHOLD);
+
+  const housing = scoreGrantForGoods({
+    name: 'Aboriginal remote housing essential goods fund',
+    provider: 'NIAA', description: 'Beds and washing machines for remote Aboriginal community housing.',
+    geography: 'AU-NT', closes_at: '2099-01-01',
+  });
+  assert.ok(housing.score >= GOODS_TAG_THRESHOLD, `scored ${housing.score}`);
+});
+
+test("'acco' matches the word, never 'accommodation'", () => {
+  const { signals } = scoreGrantForGoods({ name: 'Tourism accommodation upgrade', description: 'accommodation' });
+  assert.ok(!signals.tier1_hits.includes('acco'));
+  const acco = scoreGrantForGoods({ name: 'ACCO establishment fund', description: '' });
+  assert.ok(acco.signals.tier1_hits.includes('acco'));
+});
+
+test('grants from funders that back remote-community infrastructure stay tagged on identity wording', () => {
+  const aba = scoreGrantForGoods({
+    name: 'Aboriginals Benefit Account (ABA) Grants', provider: 'NIAA / Aboriginal Investment NT',
+    description: 'Grants for Aboriginal people in the Northern Territory.', geography: 'AU-NT',
+  });
+  assert.equal(aba.signals.identity_only_cap, undefined);
+});

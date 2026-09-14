@@ -18,9 +18,21 @@ const TIER_1 = [
   'community store', 'essential goods', 'household goods',
   'whitegoods', 'white goods', 'furniture',
   'beds', 'bedding', 'mattress', 'washing machine',
-  'aboriginal community controlled', 'acco',
+  'aboriginal community controlled',
   'closing the gap', 'self-determination',
 ];
+
+// Identity words say who a grant is for, not that it is Goods-shaped. On 2026-09-14 they alone tagged
+// CreateSA Aboriginal arts rounds and an ACT ACCO health fund as ACT-GD. They still score, but a grant
+// needs at least one GOODS_SHAPE hit to reach the tag (see the cap below).
+const IDENTITY = new Set(['indigenous', 'aboriginal', 'first nations', 'torres strait', 'first peoples', 'closing the gap', 'self-determination', 'aboriginal community controlled']);
+const GOODS_SHAPE_TIER2 = new Set(['remote', 'housing', 'homelessness', 'shelter', 'social enterprise', 'community-led', 'community development']);
+// 'acco' as a substring matched 'accommodation'; whole word only.
+const ACCO = /\bacco\b/;
+
+// Funders whose money itself backs remote-community infrastructure and enterprise (not identity words in a
+// provider name): a grant from them counts as Goods-shaped.
+const GOODS_FUNDER = /\b(niaa|national indigenous australians agency|ilsc|indigenous land and sea|iba|indigenous business australia|aboriginals benefit account|aboriginal investment nt)\b/;
 
 // Tier 2 = strong signal — geographic / thematic context
 const TIER_2 = [
@@ -128,6 +140,11 @@ export function scoreGrantForGoods(grant) {
       // just thematically aligned, the grant is named for it).
       if (name.includes(kw)) score += 8;
     }
+  }
+  if (ACCO.test(haystack)) {
+    signals.tier1_hits.push('acco');
+    score += 15;
+    if (ACCO.test(name)) score += 8;
   }
   for (const kw of TIER_2) {
     if (haystack.includes(kw)) {
@@ -246,6 +263,16 @@ export function scoreGrantForGoods(grant) {
       score -= 30;
       signals.closed = true;
     }
+  }
+
+  const goodsShaped =
+    signals.tier1_hits.some(kw => !IDENTITY.has(kw) && kw !== 'acco') ||
+    signals.tier2_hits.some(kw => GOODS_SHAPE_TIER2.has(kw)) ||
+    Boolean(signals.sedi_hit) || Boolean(signals.discovery_boost) ||
+    GOODS_FUNDER.test(`${provider} ${name}`);
+  if (!goodsShaped && score >= GOODS_TAG_THRESHOLD) {
+    signals.identity_only_cap = score;
+    score = GOODS_TAG_THRESHOLD - 1;
   }
 
   score = Math.max(0, Math.min(100, score));
