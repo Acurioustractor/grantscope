@@ -12,6 +12,7 @@
  */
 
 import type { DiscoveryQuery, GrantApplicationStatus, RawGrant, SourcePlugin } from '../types';
+import { smartyGrantsGeography } from './smartygrants-places';
 
 const UA = 'CivicGraph/1.0 (grant discovery; contact@act.place)';
 const DELAY_MS = 700;
@@ -133,7 +134,7 @@ export function mapSmartyGrantsRound(tenant: string, slug: string, html: string,
     applicationStatus: parseStatus(text, deadline, now),
     description,
     categories: inferCategories(`${round} ${description ?? ''}`),
-    geography: ['AU'],
+    geography: smartyGrantsGeography(tenant),
     sourceId: 'smartygrants',
   };
 }
