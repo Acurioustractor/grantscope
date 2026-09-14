@@ -173,3 +173,44 @@ export function scoreGrantForAllProjects(grant) {
     .filter((r) => r.score >= PROJECT_TAG_THRESHOLD)
     .sort((a, b) => b.score - a.score);
 }
+
+/** The aligned_projects tag code for each project this file scores (ACT-GD/goods excluded — it has its own scorer). */
+export const PROJECT_CODES = {
+  justicehub: 'ACT-JH',
+  'empathy-ledger': 'ACT-EL',
+  harvest: 'ACT-HV',
+  farm: 'ACT-FM',
+  contained: 'ACT-CN',
+};
+
+/**
+ * Apply every project's score to a row's tags in one pass and say what moved, per project.
+ * Same tag_change ledger goods-relevance.mjs keeps in goods_relevance_signals, kept here in
+ * project_relevance.tag_changes so a rescore's effect stays auditable.
+ * @param {object} row must carry aligned_projects and project_relevance (previous scores)
+ * @param {Record<string, {score: number, signals: object}>} results keyed by project id
+ */
+export function applyProjectTags(row, results, at = new Date().toISOString()) {
+  const before = new Set(row.aligned_projects || []);
+  const tagged = new Set(before);
+  const changes = {};
+  const relevance = { ...(row.project_relevance || {}) };
+
+  for (const [project, code] of Object.entries(PROJECT_CODES)) {
+    const result = results[project];
+    if (!result) continue;
+    const wasTagged = before.has(code);
+    if (result.score >= PROJECT_TAG_THRESHOLD) tagged.add(code);
+    else tagged.delete(code);
+    const isTagged = tagged.has(code);
+    const change = wasTagged === isTagged ? null : (isTagged ? 'added' : 'removed');
+    const previousScore = relevance[project]?.score ?? null;
+    if (change) changes[project] = { change, at, previous_score: previousScore, score: result.score };
+    relevance[project] = { score: result.score, signals: result.signals, scored_at: at };
+  }
+
+  const anyChange = Object.keys(changes).length > 0;
+  if (anyChange) relevance.tag_changes = { ...(relevance.tag_changes || {}), ...changes };
+
+  return { tagged: Array.from(tagged), changes, relevance };
+}
