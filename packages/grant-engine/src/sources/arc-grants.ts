@@ -136,7 +136,8 @@ export function createARCGrantsPlugin(): SourcePlugin {
               provider: org,
               sourceUrl: `https://dataportal.arc.gov.au/NCGP/Web/Grant/Grant/${code}`,
               amount: amount ? { max: amount } : undefined,
-              deadline: attrs['anticipated-end-date'] || undefined,
+              // No deadline: these are funded projects, and anticipated-end-date is when the project ends.
+              // Emitting it made 3,988 past awards read as open grants closing up to 2035.
               description: [
                 summary,
                 `Scheme: ${scheme}`,
