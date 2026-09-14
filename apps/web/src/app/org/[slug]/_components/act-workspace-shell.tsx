@@ -95,6 +95,7 @@ export function ActWorkspaceShell({
     // backs ~1,535 across all 11 projects, so the portfolio-wide decision queue
     // is worth a door. Curiosity is raw leads; this is the ranked five.
     { label: 'Funding', hint: 'Money worth chasing', href: `/org/${slug}/funding`, active: pathname.startsWith(`/org/${slug}/funding`) },
+    { label: 'Grants', hint: 'Every live grant', href: `/org/${slug}/grants`, active: pathname.startsWith(`/org/${slug}/grants`) },
     // Rail otherwise stays cut to the spine (Ben, 2026-08-05): Action, Art,
     // Money, Sources and Research left and have not come back. Art = the Harvest
     // project, which the project list already carries; the rest stay reachable
