@@ -43,6 +43,7 @@ export { createBusinessGovAuPlugin } from './sources/business-gov-au';
 export { createNSWGrantsPlugin } from './sources/nsw-grants';
 export { createVICGrantsPlugin } from './sources/vic-grants';
 export { createARCGrantsPlugin } from './sources/arc-grants';
+export { createSmartyGrantsPlugin } from './sources/smartygrants';
 export { createNHMRCGrantsPlugin } from './sources/nhmrc-grants';
 export { createTASGrantsPlugin } from './sources/tas-grants';
 export { createACTGrantsPlugin } from './sources/act-grants';
