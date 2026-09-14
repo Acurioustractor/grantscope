@@ -8,7 +8,12 @@
  * applicant area and the forms, which this never touches.
  *
  * Found 2026-09-14: 347 of the 974 grants Grant'd added since June that we lacked apply through
- * SmartyGrants, across the 149 tenants below. Grow the list as new tenants are found.
+ * SmartyGrants, across the 149 tenants below.
+ *
+ * DO NOT RUN. Our Community's Terms of Use (July 2026) cover every SmartyGrants applicant portal and say users
+ * "will not use bots or web scraping tools to access, browse or extract data" (cl 2(i)). robots.txt allowing a
+ * path is not permission. Unregistered from the engine and the agent registry on 2026-09-14 (migration
+ * 20260914160000). Kept so the parsers are not rebuilt by accident; the route to this data is a licence.
  */
 
 import type { DiscoveryQuery, GrantApplicationStatus, RawGrant, SourcePlugin } from '../types';

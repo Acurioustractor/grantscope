@@ -435,16 +435,6 @@ export const AGENTS = {
     timeoutMs: 1_800_000,
     dependencies: [],
   },
-  // SmartyGrants on its own weekly lane: ~25 min for 149 tenants, which would crowd the main discovery
-  // run into its 30-minute timeout. Rounds arrive dated and placed; expire_closed_grant_opportunities closes them.
-  'grantscope-discovery-smartygrants': {
-    command: ['npx', 'tsx', 'scripts/grantscope-discovery.mjs', '--sources=smartygrants'],
-    displayName: 'Grant Discovery · SmartyGrants portals',
-    category: 'discovery',
-    defaultPriority: 4,
-    timeoutMs: 2_700_000,
-    dependencies: [],
-  },
   'discover-act-opportunities-octen': {
     command: ['node', '--env-file=.env', 'scripts/discover-act-opportunities.mjs', '--provider=octen', '--count=8'],
     displayName: 'ACT Opportunity Observatory · Octen discovery',
