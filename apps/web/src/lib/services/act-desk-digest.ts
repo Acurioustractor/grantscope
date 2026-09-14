@@ -174,10 +174,14 @@ function renderEmail(digest: DeskDigest, newKeys: Set<string>, heartbeat: boolea
   return { subject, html };
 }
 
+// The account is Resend sandbox-mode: it can only send to the account's own verified
+// address. Every night since this cron existed it 500'd on a 403 from Resend because the
+// default here (ben@benjamink.com.au) isn't verified — DESK_DIGEST_TO=hi@act.place is set
+// in prod as the real fix (2026-09-14); the fallback stays honest about what actually works.
 async function sendViaResend(subject: string, html: string): Promise<void> {
   const key = process.env.RESEND_API_KEY;
   if (!key) throw new Error('RESEND_API_KEY not set');
-  const to = (process.env.DESK_DIGEST_TO || 'ben@benjamink.com.au').split(',').map((s) => s.trim());
+  const to = (process.env.DESK_DIGEST_TO || 'hi@act.place').split(',').map((s) => s.trim());
   const from = process.env.DESK_DIGEST_FROM || 'CivicGraph Desk <onboarding@resend.dev>';
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
