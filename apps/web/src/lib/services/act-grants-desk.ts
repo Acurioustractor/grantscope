@@ -1,4 +1,5 @@
 import { getServiceSupabase } from '@/lib/supabase';
+import { ACT_PROJECTS, projectEligibility, type ActProject, type ProjectEligibility } from '@/lib/act-grant-eligibility';
 
 /** The private ACT grants desk: every live grant from the public corpus (grant_opportunities) and ACT's
  *  private SmartyGrants rounds (act_private_grant_rounds), soonest close first. The private table is service
@@ -20,6 +21,9 @@ export interface DeskSourceRow {
   geography: string | null;
   url: string | null;
   source: string | null;
+  dgr_required?: boolean | null;
+  accepts_pty_ltd?: boolean | null;
+  place?: unknown;
 }
 
 export interface DeskGrant {
@@ -34,6 +38,7 @@ export interface DeskGrant {
   geography: string | null;
   url: string | null;
   source: string | null;
+  eligibility: ProjectEligibility[];
 }
 
 const DAY = 86_400_000;
@@ -76,6 +81,14 @@ export function buildDesk(
         geography: r.geography,
         url: r.url,
         source: r.source,
+        eligibility: (Object.keys(ACT_PROJECTS) as ActProject[]).map((project) =>
+          projectEligibility(project, {
+            dgr_required: r.dgr_required ?? null,
+            accepts_pty_ltd: r.accepts_pty_ltd ?? null,
+            geography: r.geography,
+            place: r.place ?? null,
+          }),
+        ),
       });
     }
   };
@@ -90,7 +103,12 @@ export function buildDesk(
   });
 }
 
-const COLUMNS = 'id, name, provider, status, closes_at, deadline, amount_min, amount_max, geography, url, source';
+const BASE_COLUMNS = 'id, name, provider, status, closes_at, deadline, amount_min, amount_max, geography, url, source, place:metadata->place';
+// act_private_grant_rounds has no dgr_required / accepts_pty_ltd columns.
+const COLUMNS = {
+  grant_opportunities: `${BASE_COLUMNS}, dgr_required, accepts_pty_ltd`,
+  act_private_grant_rounds: BASE_COLUMNS,
+};
 const PAGE = 1000;
 
 async function fetchLive(table: 'grant_opportunities' | 'act_private_grant_rounds'): Promise<DeskSourceRow[]> {
@@ -99,12 +117,12 @@ async function fetchLive(table: 'grant_opportunities' | 'act_private_grant_round
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await db
       .from(table)
-      .select(COLUMNS)
+      .select(COLUMNS[table])
       .in('status', [...LIVE_STATUSES])
       .order('id')
       .range(from, from + PAGE - 1);
     if (error) throw new Error(`act grants desk (${table}): ${error.message}`);
-    rows.push(...((data ?? []) as DeskSourceRow[]));
+    rows.push(...((data ?? []) as unknown as DeskSourceRow[]));
     if (!data || data.length < PAGE) return rows;
   }
 }

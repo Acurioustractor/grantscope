@@ -2,7 +2,9 @@ import { notFound } from 'next/navigation';
 import { isAdminEmail } from '@/lib/admin';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { isActSlug } from '@/lib/services/fast-local-org';
+import Link from 'next/link';
 import { getActGrantsDesk, type DeskGrant } from '@/lib/services/act-grants-desk';
+import { ACT_PROJECTS, ENTITY_LABEL, type ActProject, type Verdict } from '@/lib/act-grant-eligibility';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +19,20 @@ function money(min: number | null, max: number | null): string {
   return 'Not published';
 }
 
+const VERDICT_CLS: Record<Verdict, string> = {
+  yes: 'bg-money text-white',
+  no: 'bg-bauhaus-red text-white',
+  unknown: 'border-2 border-bauhaus-black/30 bg-white text-bauhaus-muted',
+};
+
+function VerdictTag({ verdict, children }: { verdict: Verdict; children: React.ReactNode }) {
+  return <span className={`inline-block px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${VERDICT_CLS[verdict]}`}>{children}</span>;
+}
+
+function isProject(v: string | undefined): v is ActProject {
+  return !!v && v in ACT_PROJECTS;
+}
+
 function ClosePill({ grant }: { grant: DeskGrant }) {
   if (grant.daysToClose == null) return <span className="text-[11px] font-bold uppercase tracking-wider text-bauhaus-muted">No close date</span>;
   const d = grant.daysToClose;
@@ -24,8 +40,17 @@ function ClosePill({ grant }: { grant: DeskGrant }) {
   return <span className={`px-2 py-0.5 font-mono text-[11px] font-black uppercase tracking-wider ${cls}`}>{d === 0 ? 'Today' : `${d}d`}</span>;
 }
 
-export default async function ActGrantsDeskPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ActGrantsDeskPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ project?: string; show?: string }>;
+}) {
   const { slug } = await params;
+  const sp = await searchParams;
+  const project = isProject(sp.project) ? sp.project : null;
+  const showRuledOut = sp.show === 'all';
   if (!isActSlug(slug)) notFound();
 
   // Middleware only checks for a session and signup is open, so this page checks who is looking.
@@ -34,7 +59,12 @@ export default async function ActGrantsDeskPage({ params }: { params: Promise<{ 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || !isAdminEmail(user.email)) notFound();
 
-  const { grants, generatedAt } = await getActGrantsDesk();
+  const desk = await getActGrantsDesk();
+  const { generatedAt } = desk;
+  const elig = (g: DeskGrant) => (project ? g.eligibility.find((e) => e.project === project) ?? null : null);
+  const ruledOut = project ? desk.grants.filter((g) => elig(g)?.overall === 'no').length : 0;
+  const grants = project && !showRuledOut ? desk.grants.filter((g) => elig(g)?.overall !== 'no') : desk.grants;
+  const base = `/org/${slug}/grants`;
   const dated = grants.filter((g) => g.daysToClose != null);
   const within30 = dated.filter((g) => (g.daysToClose ?? 99) <= 30).length;
   const privateCount = grants.filter((g) => g.origin === 'act-private').length;
@@ -45,8 +75,25 @@ export default async function ActGrantsDeskPage({ params }: { params: Promise<{ 
         <p className="text-[11px] font-black uppercase tracking-widest text-bauhaus-red">ACT only · not public</p>
         <h1 className="mt-2 text-4xl font-black uppercase tracking-tight">Grants desk</h1>
         <p className="mt-2 max-w-3xl text-sm">
-          Every live grant, soonest close first. Eligibility per ACT entity and project fit come next; nothing here says ACT can apply yet.
+          Every live grant, soonest close first. Pick a project to see which ACT entity can apply and whether it operates where the grant is limited to.
+          Most grants do not record DGR or company rules, so most answers are unknown: read the guidelines before applying.
         </p>
+
+        <nav className="mt-5 flex flex-wrap gap-2" aria-label="Project">
+          <Link href={base} className={`border-2 border-bauhaus-black px-3 py-1.5 text-xs font-black uppercase tracking-widest ${!project ? 'bg-bauhaus-black text-white' : 'bg-white'}`}>All grants</Link>
+          {(Object.keys(ACT_PROJECTS) as ActProject[]).map((p) => (
+            <Link key={p} href={`${base}?project=${p}`} className={`border-2 border-bauhaus-black px-3 py-1.5 text-xs font-black uppercase tracking-widest ${project === p ? 'bg-bauhaus-black text-white' : 'bg-white'}`}>{ACT_PROJECTS[p].label}</Link>
+          ))}
+        </nav>
+        {project ? (
+          <p className="mt-3 text-sm">
+            <strong>{ACT_PROJECTS[project].label}</strong> applies through {ACT_PROJECTS[project].entities.map((e) => ENTITY_LABEL[e]).join(' or ')}.{' '}
+            {ruledOut.toLocaleString('en-AU')} grants ruled out by entity or place{' '}
+            {showRuledOut
+              ? <Link className="font-bold text-bauhaus-blue underline" href={`${base}?project=${project}`}>hide them</Link>
+              : <Link className="font-bold text-bauhaus-blue underline" href={`${base}?project=${project}&show=all`}>show them</Link>}.
+          </p>
+        ) : null}
 
         <dl className="mt-6 grid grid-cols-2 gap-0 border-4 border-bauhaus-black bg-white sm:grid-cols-4">
           {[
@@ -70,6 +117,7 @@ export default async function ActGrantsDeskPage({ params }: { params: Promise<{ 
                 <th className="px-3 py-2">Grant</th>
                 <th className="px-3 py-2">Amount</th>
                 <th className="px-3 py-2">Where</th>
+                {project ? <th className="px-3 py-2">Can apply</th> : null}
                 <th className="px-3 py-2">Source</th>
               </tr>
             </thead>
@@ -85,7 +133,19 @@ export default async function ActGrantsDeskPage({ params }: { params: Promise<{ 
                     <div className="text-xs text-bauhaus-muted">{g.provider ?? 'Funder not recorded'}</div>
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 tabular-nums">{money(g.amountMin, g.amountMax)}</td>
-                  <td className="px-3 py-2 text-xs">{g.geography ?? 'Unknown'}</td>
+                  <td className="px-3 py-2 text-xs">{g.geography || 'Unknown'}</td>
+                  {project ? (() => {
+                    const e = elig(g)!;
+                    return (
+                      <td className="px-3 py-2">
+                        <VerdictTag verdict={e.overall}>{e.overall}</VerdictTag>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          <VerdictTag verdict={e.location}>place {e.location}</VerdictTag>
+                          {e.entities.map((x) => <VerdictTag key={x.entity} verdict={x.verdict}>{x.entity === 'pty' ? 'Pty' : x.entity === 'butterfly' ? 'Butterfly' : 'AKT'} {x.verdict}</VerdictTag>)}
+                        </div>
+                      </td>
+                    );
+                  })() : null}
                   <td className="px-3 py-2">
                     {g.origin === 'act-private'
                       ? <span className="bg-bauhaus-black px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">Private</span>
