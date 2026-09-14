@@ -51,7 +51,6 @@ import { createScenicRimGrantsPlugin } from './sources/scenicrim-grants';
 import { createWhitsundayGrantsPlugin } from './sources/whitsunday-grants';
 import { createCentralHighlandsGrantsPlugin } from './sources/centralhighlands-grants';
 import { createNoosaGrantsPlugin } from './sources/noosa-grants';
-import { createSmartyGrantsPlugin } from './sources/smartygrants';
 import { createChartersTowersGrantsPlugin } from './sources/charterstowers-grants';
 import { createLockyerValleyGrantsPlugin } from './sources/lockyervalley-grants';
 
@@ -95,7 +94,8 @@ export class GrantEngine {
     this.registry.register(createWhitsundayGrantsPlugin());
     this.registry.register(createCentralHighlandsGrantsPlugin());
     this.registry.register(createNoosaGrantsPlugin());
-    this.registry.register(createSmartyGrantsPlugin());
+    // SmartyGrants is not registered: Our Community's Terms of Use prohibit bots and scraping on its portals
+    // (cl 2(i), 4.3(e); read 2026-09-14). See migration 20260914160000.
     this.registry.register(createChartersTowersGrantsPlugin());
     this.registry.register(createLockyerValleyGrantsPlugin());
   }

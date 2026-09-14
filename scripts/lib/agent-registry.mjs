@@ -435,11 +435,11 @@ export const AGENTS = {
     timeoutMs: 1_800_000,
     dependencies: [],
   },
-  // SmartyGrants on its own weekly lane: ~25 min for 149 tenants, which would crowd the main discovery
-  // run into its 30-minute timeout. Rounds arrive dated and placed; expire_closed_grant_opportunities closes them.
-  'grantscope-discovery-smartygrants': {
-    command: ['npx', 'tsx', 'scripts/grantscope-discovery.mjs', '--sources=smartygrants'],
-    displayName: 'Grant Discovery · SmartyGrants portals',
+  // ACT-internal only: writes act_private_grant_rounds, never grant_opportunities. Ben chose to run it despite
+  // Our Community ToU cl 2(i); see migration 20260914180000. ~25 min for 149 SmartyGrants tenants.
+  'sync-act-private-grant-rounds': {
+    command: ['npx', 'tsx', '--env-file=.env', 'scripts/sync-act-private-grant-rounds.mts'],
+    displayName: 'ACT private grant rounds (SmartyGrants)',
     category: 'discovery',
     defaultPriority: 4,
     timeoutMs: 2_700_000,
