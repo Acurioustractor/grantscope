@@ -45,7 +45,7 @@ export default async function ActGrantsDeskPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ project?: string; show?: string }>;
+  searchParams: Promise<{ project?: string; show?: string; limit?: string }>;
 }) {
   const { slug } = await params;
   const sp = await searchParams;
@@ -55,9 +55,14 @@ export default async function ActGrantsDeskPage({
 
   // Middleware only checks for a session and signup is open, so this page checks who is looking.
   // act_private_grant_rounds is ACT-internal (migration 20260914170000): nobody else may see it.
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email)) notFound();
+  // "Continue locally as A Curious Tractor" signs nobody in; it relies on the same dev-only escape hatch as
+  // middleware, which NODE_ENV hard-guards against production.
+  const localBypass = process.env.NODE_ENV !== 'production' && process.env.SKIP_AUTH_LOCAL === '1';
+  if (!localBypass) {
+    const supabase = await createSupabaseServer();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !isAdminEmail(user.email)) notFound();
+  }
 
   const desk = await getActGrantsDesk();
   const { generatedAt } = desk;
@@ -65,6 +70,10 @@ export default async function ActGrantsDeskPage({
   const ruledOut = project ? desk.grants.filter((g) => elig(g)?.overall === 'no').length : 0;
   const grants = project && !showRuledOut ? desk.grants.filter((g) => elig(g)?.overall !== 'no') : desk.grants;
   const base = `/org/${slug}/grants`;
+  // ~3,700 rows of tags is a slow page on any machine: render the soonest 300, more on request.
+  const limit = Math.max(300, Number(sp.limit) || 300);
+  const shown = grants.slice(0, limit);
+  const moreHref = `${base}?${new URLSearchParams({ ...(project ? { project } : {}), ...(showRuledOut ? { show: 'all' } : {}), limit: String(limit + 500) })}`;
   const dated = grants.filter((g) => g.daysToClose != null);
   const within30 = dated.filter((g) => (g.daysToClose ?? 99) <= 30).length;
   const privateCount = grants.filter((g) => g.origin === 'act-private').length;
@@ -122,7 +131,7 @@ export default async function ActGrantsDeskPage({
               </tr>
             </thead>
             <tbody>
-              {grants.map((g) => (
+              {shown.map((g) => (
                 <tr key={`${g.origin}-${g.id}`} className="border-t-2 border-bauhaus-black/10 align-top">
                   <td className="whitespace-nowrap px-3 py-2">
                     <ClosePill grant={g} />
@@ -156,6 +165,12 @@ export default async function ActGrantsDeskPage({
             </tbody>
           </table>
         </div>
+        {shown.length < grants.length ? (
+          <p className="mt-3 text-sm">
+            Showing the soonest {shown.length.toLocaleString('en-AU')} of {grants.length.toLocaleString('en-AU')}.{' '}
+            <Link className="font-bold text-bauhaus-blue underline" href={moreHref}>Show 500 more</Link>
+          </p>
+        ) : null}
         <p className="mt-3 font-mono text-[11px] text-bauhaus-muted">Generated {new Date(generatedAt).toLocaleString('en-AU')}</p>
       </div>
     </main>
