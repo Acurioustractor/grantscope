@@ -149,3 +149,19 @@ test('grants from funders that back remote-community infrastructure stay tagged 
   });
   assert.equal(aba.signals.identity_only_cap, undefined);
 });
+
+test('applyGoodsTag records what a rescore added or removed, and carries it forward', async () => {
+  const { applyGoodsTag } = await import('./goods-relevance.mjs');
+  const removed = applyGoodsTag({ aligned_projects: ['ACT-GD', 'goods', 'WATCH'], goods_relevance_score: 63 }, 49, { a: 1 }, 't1');
+  assert.equal(removed.change, 'removed');
+  assert.deepEqual(removed.tagged, ['WATCH']);
+  assert.deepEqual(removed.signals.tag_change, { change: 'removed', at: 't1', previous_score: 63, score: 49 });
+
+  const same = applyGoodsTag({ aligned_projects: ['WATCH'], goods_relevance_score: 49, goods_relevance_signals: removed.signals }, 30, { b: 2 }, 't2');
+  assert.equal(same.change, null);
+  assert.equal(same.signals.tag_change.at, 't1');
+
+  const added = applyGoodsTag({ aligned_projects: [] }, 70, {}, 't3');
+  assert.equal(added.change, 'added');
+  assert.deepEqual(added.tagged.sort(), ['ACT-GD', 'goods']);
+});

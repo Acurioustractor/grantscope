@@ -22,7 +22,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
-import { scoreGrantForGoods, GOODS_TAG_THRESHOLD, GOODS_HIGH_FIT_THRESHOLD } from './lib/goods-relevance.mjs';
+import { scoreGrantForGoods, applyGoodsTag, GOODS_TAG_THRESHOLD, GOODS_HIGH_FIT_THRESHOLD } from './lib/goods-relevance.mjs';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -49,6 +49,7 @@ function pickColumns(row) {
     closes_at: row.closes_at,
     aligned_projects: row.aligned_projects || [],
     goods_relevance_score: row.goods_relevance_score,
+    goods_relevance_signals: row.goods_relevance_signals,
     source: row.source,
     discovery_method: row.discovery_method,
   };
@@ -57,7 +58,7 @@ function pickColumns(row) {
 async function fetchBatch(offset) {
   let q = supabase
     .from('grant_opportunities')
-    .select('id,name,provider,description,geography,amount_max,categories,focus_areas,closes_at,aligned_projects,goods_relevance_score,goods_relevance_scored_at,updated_at,source,discovery_method')
+    .select('id,name,provider,description,geography,amount_max,categories,focus_areas,closes_at,aligned_projects,goods_relevance_score,goods_relevance_signals,goods_relevance_scored_at,updated_at,source,discovery_method')
     .order('id', { ascending: true })
     .range(offset, offset + BATCH - 1);
 
@@ -86,20 +87,13 @@ function sqlLiteral(v) {
 async function applyScoresPsql(scored) {
   const nowIso = new Date().toISOString();
   const rows = scored.map(s => {
-    const tagged = new Set(s.row.aligned_projects || []);
-    if (s.score >= GOODS_TAG_THRESHOLD) {
-      tagged.add('ACT-GD');  // canonical finance/ledger tag
-      tagged.add('goods');   // UI pile tag (matches /grants?pile=goods)
-    } else {
-      tagged.delete('ACT-GD');
-      tagged.delete('goods');
-    }
+    const { tagged, signals } = applyGoodsTag(s.row, s.score, s.signals, nowIso);
     return [
       sqlLiteral(s.row.id),
       sqlLiteral(s.score),
-      sqlLiteral(s.signals),
+      sqlLiteral(signals),
       sqlLiteral(nowIso),
-      sqlLiteral(Array.from(tagged)),
+      sqlLiteral(tagged),
     ];
   });
 
@@ -133,15 +127,8 @@ async function applyScoresRest(scored) {
   const nowIso = new Date().toISOString();
   const CONCURRENCY = 10;
   const queue = scored.map(s => {
-    const tagged = new Set(s.row.aligned_projects || []);
-    if (s.score >= GOODS_TAG_THRESHOLD) {
-      tagged.add('ACT-GD');  // canonical finance/ledger tag
-      tagged.add('goods');   // UI pile tag (matches /grants?pile=goods)
-    } else {
-      tagged.delete('ACT-GD');
-      tagged.delete('goods');
-    }
-    return { id: s.row.id, score: s.score, signals: s.signals, tagged: Array.from(tagged) };
+    const { tagged, signals } = applyGoodsTag(s.row, s.score, s.signals, nowIso);
+    return { id: s.row.id, score: s.score, signals, tagged };
   });
 
   let i = 0;
@@ -187,6 +174,8 @@ async function main() {
 
   let totalScored = 0;
   let totalTagged = 0;
+  const tagsAdded = [];
+  const tagsRemoved = [];
   let totalHighFit = 0;
   let totalSkippedManual = 0;
   // When incremental (filter on IS NULL), the pool shrinks each batch so we keep
@@ -229,6 +218,11 @@ async function main() {
       return { row, ...result };
     });
 
+    for (const sc of scored) {
+      const { change } = applyGoodsTag(sc.row, sc.score, sc.signals);
+      if (change === 'added') tagsAdded.push(sc.row.name);
+      if (change === 'removed') tagsRemoved.push(sc.row.name);
+    }
     if (!DRY_RUN) await applyScores(scored);
 
     totalScored += batch.length;
@@ -246,6 +240,9 @@ async function main() {
   console.log(`Manual preserved:${totalSkippedManual} (source LIKE 'manual%' — score untouched)`);
   console.log(`ACT-GD tagged:   ${totalTagged} (score >= ${GOODS_TAG_THRESHOLD})`);
   console.log(`High-fit:        ${totalHighFit} (score >= ${GOODS_HIGH_FIT_THRESHOLD})`);
+  console.log(`Tags added:      ${tagsAdded.length}${tagsAdded.length ? '  ' + tagsAdded.slice(0, 10).join(' · ') : ''}`);
+  console.log(`Tags removed:    ${tagsRemoved.length}${tagsRemoved.length ? '  ' + tagsRemoved.slice(0, 10).join(' · ') : ''}`);
+  if (tagsAdded.length + tagsRemoved.length) console.log("  (every change: goods_relevance_signals->'tag_change')");
   console.log('Distribution:');
   for (const [band, count] of Object.entries(histogram)) {
     const pct = totalScored ? ((count / totalScored) * 100).toFixed(1) : '0';
