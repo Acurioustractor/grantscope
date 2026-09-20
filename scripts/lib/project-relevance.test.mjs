@@ -228,28 +228,43 @@ test('"Bail and Remand Support" reaches the JusticeHub threshold (was 8/30)', ()
   assert.ok(signals.tier1_hits.includes('bail and remand'));
 });
 
-test('touring-exhibition funds reach the Contained threshold (were 0 and 2 of 30)', () => {
-  const touring = scoreGrantForProject('contained', {
+test('"Regional Arts Touring" reaches the Contained threshold (was 0/30)', () => {
+  const { score, signals } = scoreGrantForProject('contained', {
     name: '2026 Regional Arts Touring Round 2',
     source: 'NSW Government — Create NSW',
     description: 'This grant round is open to individual artists, arts and cultural workers, groups and organisations who are touring arts and cultural work across regional NSW.',
   });
-  assert.ok(touring.score >= PROJECT_TAG_THRESHOLD, `Regional Arts Touring scored ${touring.score}`);
+  assert.ok(score >= PROJECT_TAG_THRESHOLD, `scored ${score}`);
+  assert.ok(signals.tier1_hits.includes('arts touring'));
+});
 
-  const visions = scoreGrantForProject('contained', {
+test('the Contained keywords stay narrow: no craft fairs, no orchestra tours', () => {
+  // Both of these were produced by looser drafts and measured against all 26,840
+  // rows before being rejected. If a future widening reintroduces them, this fails.
+  const craftFair = scoreGrantForProject('contained', {
+    name: "Lord Mayor's Community Fund - Marchant — Art and Craft Exhibitions at Hypermarket Shopping Centre",
+    description: 'Rental assistance to enable Arts and Crafts Exhibitions at a local shopping centre.',
+  });
+  assert.ok(craftFair.score < PROJECT_TAG_THRESHOLD, `craft fair scored ${craftFair.score}`);
+
+  const orchestra = scoreGrantForProject('contained', {
+    name: 'Playing Queensland Fund — Queensland Youth Orchestras',
+    description: 'Support for touring performances by Queensland Youth Orchestras to regional venues.',
+  });
+  assert.ok(orchestra.score < PROJECT_TAG_THRESHOLD, `orchestra tour scored ${orchestra.score}`);
+});
+
+test('"Visions of Australia" is a KNOWN keyword blind spot, not a bug to widen for', () => {
+  // The national touring-exhibition fund. Its wording ("development and touring of
+  // quality exhibitions") cannot be matched by any substring that does not also
+  // catch craft fairs or orchestra tours. The JEV rubric sweep rates it 2.88/3.
+  // This test exists so the blind spot is deliberate and visible, not forgotten.
+  const { score } = scoreGrantForProject('contained', {
     name: 'Visions of Australia - Round 23',
     source: 'grantconnect',
     description: 'The Visions of Australia Program provides funding to support the development and touring of quality exhibitions around Australia.',
   });
-  assert.ok(visions.score >= PROJECT_TAG_THRESHOLD, `Visions scored ${visions.score}`);
-});
-
-test('adding "touring" to Contained tier2 does not let tour false-friends through', () => {
-  // The whole reason 'touring' is tier2 and not tier1: the disqualifiers must still bite.
-  for (const name of ['Concert Tour Support Fund', 'Regional Sports Tour Grant', 'Study Tour Scholarship']) {
-    const { score } = scoreGrantForProject('contained', { name, description: 'Support for touring.' });
-    assert.ok(score < PROJECT_TAG_THRESHOLD, `${name} scored ${score}`);
-  }
+  assert.ok(score < PROJECT_TAG_THRESHOLD, `scored ${score} — if this now passes, check what keyword widened and what else it caught`);
 });
 
 test('a council grant in the home LGA is still NOT a thematic match', () => {

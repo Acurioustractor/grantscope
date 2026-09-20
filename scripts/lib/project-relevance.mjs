@@ -90,11 +90,23 @@ export const PROJECT_CONFIGS = {
       // "Regional Arts Touring", not "touring exhibition") and "Visions of Australia
       // Round 23" (its description says "touring of quality exhibitions" — the singular
       // tier1 phrases cannot match across that wording).
-      'arts touring', 'touring arts', 'touring exhibitions', 'exhibitions',
+      // Only phrases that carry BOTH travel and visual-arts sense. Two looser
+      // attempts were measured against all 26,840 rows and rejected:
+      //   bare 'exhibitions' -> tagged four Lord Mayor's craft-fair grants
+      //     ("Sewing of canvas screens for regular exhibitions", "Art and Craft
+      //     Exhibitions at Hypermarket Shopping Centre").
+      //   bare 'touring'     -> tagged 160+ Playing Queensland Fund grants for
+      //     orchestras, theatre and circus. Contained is a container exhibition,
+      //     not a touring show.
+      // KNOWN BLIND SPOT, accepted: "Visions of Australia" (the national touring
+      // exhibition fund, ~$120k rounds) says "development and touring of quality
+      // exhibitions". No substring spans that without one of the above collateral
+      // classes, so this list cannot reach it. The JEV rubric sweep rates it 2.88/3
+      // — see scripts/jev-pilot/4-missed-money.mjs. It is a standing argument for
+      // rubric scoring over keyword lists, not a gap to widen the list for.
+      'arts touring', 'touring arts', 'touring exhibitions',
     ],
-    // 'touring' is safe as tier2 only because the disqualifiers below carry the tour
-    // false-friends (concert/sports/study tour, tour operator, tourism) at -25.
-    tier2: ['immersive', 'installation art', 'exhibition tour', 'touring'],
+    tier2: ['immersive', 'installation art', 'exhibition tour', 'exhibitions'],
     tier3: ['exhibition', 'container', 'installation'],
     disqualifiers: ['study tour', 'sports tour', 'concert tour', 'tour operator', 'tourism'],
   },
