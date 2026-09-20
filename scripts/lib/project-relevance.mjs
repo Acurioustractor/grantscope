@@ -38,6 +38,14 @@ export const PROJECT_CONFIGS = {
       'youth justice', 'justice reinvestment', 'diversion program', 'diversionary program',
       'restorative justice', 'youth detention', 'juvenile justice', 'youth mentoring',
       'throughcare', 'bail support', 'recidivism', 'reoffending',
+      // Added 2026-09-21 after a JEV sweep of the rejected pool found three real misses.
+      // 'youth crime' — "Strengthening Efforts to Reduce Youth Crime" (Kempsey + Tamworth,
+      //   $5M each) scored 2/30, because the round's description is procurement boilerplate
+      //   and 'youth' alone is tier3.
+      // 'bail and remand' / 'remand support' — "Aboriginal Justice Agreement Bail and Remand
+      //   Support Program" ($20M to 2028) scored 8/30. 'bail support' was already tier1, but
+      //   these are substring matches: "Bail and Remand Support" does not contain "bail support".
+      'youth crime', 'bail and remand', 'remand support', 'young offender', 'youth offending',
     ],
     tier2: ['justice', 'detention', 'incarceration', 'juvenile', 'at-risk youth', 'court support'],
     tier3: ['youth', 'mentor', 'community safety', 'first nations'],
@@ -77,8 +85,16 @@ export const PROJECT_CONFIGS = {
     tier1: [
       'shipping container', 'container exhibition', 'touring exhibition',
       'immersive installation', 'pop-up exhibition', 'mobile exhibition',
+      // Added 2026-09-21, same sweep. The two biggest touring-exhibition funds in the
+      // open pool both scored 0-2: "2026 Regional Arts Touring Round 2" (its name says
+      // "Regional Arts Touring", not "touring exhibition") and "Visions of Australia
+      // Round 23" (its description says "touring of quality exhibitions" — the singular
+      // tier1 phrases cannot match across that wording).
+      'arts touring', 'touring arts', 'touring exhibitions', 'exhibitions',
     ],
-    tier2: ['immersive', 'installation art', 'exhibition tour'],
+    // 'touring' is safe as tier2 only because the disqualifiers below carry the tour
+    // false-friends (concert/sports/study tour, tour operator, tourism) at -25.
+    tier2: ['immersive', 'installation art', 'exhibition tour', 'touring'],
     tier3: ['exhibition', 'container', 'installation'],
     disqualifiers: ['study tour', 'sports tour', 'concert tour', 'tour operator', 'tourism'],
   },

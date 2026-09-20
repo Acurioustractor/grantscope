@@ -196,3 +196,69 @@ test('applyProjectTags is a no-op (no changes) when nothing crosses the threshol
   assert.deepEqual(tagged, []);
   assert.deepEqual(changes, {});
 });
+
+// ── Regression cases from the 2026-09-21 JEV sweep of the rejected pool ──────
+// Each of these was a REAL open grant the keyword scorer threw away. The stored
+// scores at the time are in the comments; all five now clear the threshold.
+// Do not delete a keyword these depend on without replacing the coverage.
+
+test('youth-crime rounds reach the JusticeHub threshold (was 2/30)', () => {
+  // NSW Premier's Department, $5M each, close 2026-11-30. The description is
+  // procurement boilerplate with no justice vocabulary, so the NAME is the only signal.
+  for (const town of ['Kempsey', 'Tamworth']) {
+    const { score, signals } = scoreGrantForProject('justicehub', {
+      name: `Strengthening Efforts to Reduce Youth Crime - ${town}`,
+      source: "NSW Government — Premier's Department",
+      description: 'Funding will be allocated through a structured assessment process. Local stakeholders will identify, develop and prioritise projects that respond to community need, build on existing services and improve outcomes for young people.',
+    });
+    assert.ok(score >= PROJECT_TAG_THRESHOLD, `${town} scored ${score}`);
+    assert.ok(signals.tier1_hits.includes('youth crime'));
+  }
+});
+
+test('"Bail and Remand Support" reaches the JusticeHub threshold (was 8/30)', () => {
+  // 'bail support' was already tier1 but never matched: these are substring tests,
+  // and "Bail and Remand Support" does not contain "bail support".
+  const { score, signals } = scoreGrantForProject('justicehub', {
+    name: 'Aboriginal Justice Agreement Bail and Remand Support Program - Grants RFA 003/25-26',
+    source: 'Victorian Government',
+    description: 'The Aboriginal Justice Agreement (AJA) Bail and Remand Support Grants Program will support Aboriginal community organisations.',
+  });
+  assert.ok(score >= PROJECT_TAG_THRESHOLD, `scored ${score}`);
+  assert.ok(signals.tier1_hits.includes('bail and remand'));
+});
+
+test('touring-exhibition funds reach the Contained threshold (were 0 and 2 of 30)', () => {
+  const touring = scoreGrantForProject('contained', {
+    name: '2026 Regional Arts Touring Round 2',
+    source: 'NSW Government — Create NSW',
+    description: 'This grant round is open to individual artists, arts and cultural workers, groups and organisations who are touring arts and cultural work across regional NSW.',
+  });
+  assert.ok(touring.score >= PROJECT_TAG_THRESHOLD, `Regional Arts Touring scored ${touring.score}`);
+
+  const visions = scoreGrantForProject('contained', {
+    name: 'Visions of Australia - Round 23',
+    source: 'grantconnect',
+    description: 'The Visions of Australia Program provides funding to support the development and touring of quality exhibitions around Australia.',
+  });
+  assert.ok(visions.score >= PROJECT_TAG_THRESHOLD, `Visions scored ${visions.score}`);
+});
+
+test('adding "touring" to Contained tier2 does not let tour false-friends through', () => {
+  // The whole reason 'touring' is tier2 and not tier1: the disqualifiers must still bite.
+  for (const name of ['Concert Tour Support Fund', 'Regional Sports Tour Grant', 'Study Tour Scholarship']) {
+    const { score } = scoreGrantForProject('contained', { name, description: 'Support for touring.' });
+    assert.ok(score < PROJECT_TAG_THRESHOLD, `${name} scored ${score}`);
+  }
+});
+
+test('a council grant in the home LGA is still NOT a thematic match', () => {
+  // SCC Major Grants (Sunshine Coast Council, Harvest and Farm's only LGA) scores 0.
+  // That is CORRECT for a theme scorer — it is a geography signal, and forcing it
+  // through tier1 would defeat the `shaped` gate. Recorded so nobody "fixes" it here.
+  const { score } = scoreGrantForProject('harvest', {
+    name: 'SCC Major Grants',
+    description: "The Sunshine Coast Council's Major Grants program supports not-for-profit organisations in Australia to deliver one-off projects, events, and activities that provide broad community benefit.",
+  });
+  assert.ok(score < PROJECT_TAG_THRESHOLD, `scored ${score}`);
+});
