@@ -123,3 +123,6 @@ outputs/
 .claude/skills/writing-for-agents
 .claude/skills/writing-fragments
 .claude/skills/writing-shape
+
+# JEV pilot outputs: scraped third-party page text + derived verdicts, all regenerable
+data/jev-pilot/

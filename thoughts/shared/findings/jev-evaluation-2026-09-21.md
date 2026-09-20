@@ -2,8 +2,8 @@
 date: 2026-09-21
 topic: Where JEV (typesafe.ai's System One model) could replace judgement code in CivicGraph, and which tasks it must never touch
 method: read-only audit of three local grantscope clones — greps and file reads across every scoring, classifying, matching and retrieval decision point; run frequency measured from agent_runs; JEV capabilities read from docs.typesafe.ai including the model-jaggedness page
-status: findings only. Nothing changed, nothing called. JEV has never been invoked against this codebase — no accuracy, latency or cost figure here is measured on our data
-recommendation: pilot grant-eligibility extraction as five Noul questions, replayed over data/grant-eligibility-cache.jsonl
+status: audit + a pilot built and run on 25 grants (scripts/jev-pilot/). Latency and cost are now MEASURED; accuracy is not — 9 disagreements await blind adjudication in data/jev-pilot/adjudication-sheet-choice.csv
+recommendation: grant-eligibility extraction as five three-option CHOICE questions (not Nouls — see Candidate 1), replayed over data/grant-eligibility-cache.jsonl
 ---
 
 # JEV evaluation
@@ -16,8 +16,9 @@ recommendation: pilot grant-eligibility extraction as five Noul questions, repla
 
 ## The headline
 
-`JEV_API_KEY` is in `.env` and **nothing in any of the three local trees references it** `[G]`. This is a
-greenfield evaluation, so every number below about JEV's behaviour on our data is `[?]`.
+`JEV_API_KEY` is in `.env` and, before this session, **nothing in any of the three local trees
+referenced it** `[G]`. The pilot in `scripts/jev-pilot/` is the first use. Latency and cost below are
+now measured on 50 real calls; **accuracy is still `[?]`** until the adjudication sheet is graded.
 
 JEV is not a chat model. It answers typed questions about a state blob and returns calibrated
 probabilities, with no text generation. That makes it a candidate for exactly one pattern in this
@@ -31,9 +32,12 @@ surface area.
 
 Four things follow, in order of usefulness:
 
-1. **Grant eligibility extraction is the pilot.** `act-grant-eligibility.ts:1-4` records that only
-   **7 of 3,088 live grants** have `dgr_required` populated and 302 have `accepts_pty_ltd` `[V]`. The
-   ACT desk answers "unknown" for almost every grant. There is a 337-row replay cache on disk.
+1. **Grant eligibility extraction is the pilot, and it is built.** `act-grant-eligibility.ts:1-4`
+   records that only **7 of 3,088 live grants** have `dgr_required` populated and 302 have
+   `accepts_pty_ltd` `[V]`. The ACT desk answers "unknown" for almost every grant. Measured on 25
+   pages: p50 **322ms**, p95 861ms, **$0.078 per 1,000 grants**, 0 failures in 50 calls `[V]`.
+   **The primitive mattered far more than the model:** Nouls agreed with the incumbent 0-44% per
+   field, three-option Choices 88-100%, on identical input `[V]`.
 2. **Never point it at money, place or dates.** See "Where JEV has no use" — this is a hard boundary,
    not a preference.
 3. **Two bugs surfaced that are independent of JEV** and should be fixed regardless: a topic regex
@@ -100,10 +104,16 @@ agents lives in the `agent_schedules` table, not the repo — not queried this s
 
 ---
 
-## Candidate 1 — grant eligibility extraction `[V]`
+## Candidate 1 — grant eligibility extraction `[V]` — PILOT BUILT AND RUN
 
 **Files.** `scripts/enrich-grant-eligibility.mjs` (prompt L54-76, provider table L45-52),
 cache `data/grant-eligibility-cache.jsonl` (337 rows).
+
+> **Corrected 2026-09-21, after building the pilot.** An earlier version of this document said the
+> reference text is stored beside every verdict so nothing needs re-scraping. **That is wrong.** The
+> cache holds verdicts only — `id, name, the five flags, eligible_summary, confidence, provider`. No
+> url, no page text. A replay has to re-fetch the pages, which moves this row's setup effort from Low
+> to Medium and is why the pilot has a separate fetch stage. `[V]`
 
 **Today.** Playwright fetches the grant's `url`, takes the first 6,000 characters of page text, and
 asks an LLM for `dgr_required, accepts_charity, accepts_pty_ltd, accepts_sole_trader,
@@ -113,23 +123,43 @@ llama-3.3-70b → MiniMax-M3 → gpt-4o-mini → gemini-2.5-flash → deepseek-c
 Output parsed by slicing to the outer braces and `JSON.parse`. Writes only under `--apply`; NULL is an
 honest unknown by design (header L16).
 
-**Where JEV helps.** Five independent yes/no questions over one document, which is Noul's exact shape,
-and the fan-out pattern sends all five in a single request. It deletes the JSON-parsing failure mode
-outright — there is no text to parse — and replaces a self-reported confidence, which a chat model
-invents, with a calibrated probability.
+**Where JEV helps.** Five independent questions over one document, sent as one fan-out request. It
+deletes the JSON-parsing failure mode outright — there is no text to parse — and replaces a
+self-reported confidence, which a chat model invents, with a calibrated one.
+
+> **Use Choice, not Noul. Measured 2026-09-21 on 25 pages `[V]`.** The obvious design is five Nouls,
+> and it is wrong here. Noul has two outcomes, so "the page is silent" has to be folded into `false` —
+> and JEV then answered `dgr_required` at 0.03–0.12 on all 25 pages (confidently *false*) where the
+> incumbent answered `null` (*not stated*). Both defensible; different questions; the comparison was
+> meaningless. Re-asked as a three-option Choice (`required` / `not_required` / `not_stated`) on the
+> same pages, same model, same 6,000 characters, agreement with the incumbent went:
+>
+> | field | Noul | **Choice** |
+> |---|---|---|
+> | dgr_required | 0% | **100%** |
+> | accepts_charity | 44% | **88%** |
+> | accepts_pty_ltd | 20% | **88%** |
+> | accepts_sole_trader | 12% | **96%** |
+> | accepts_unincorporated | 36% | **92%** |
+>
+> Choice also returns a `confidence`, which **Noul does not** — and confidence was what we wanted to
+> gate on in the first place. The general lesson, worth carrying to every other candidate in this
+> document: **when "not stated" or "unknown" is a real answer in the domain, it needs to be an
+> option, not an inference from the middle of a probability range.**
 
 - **State:** the 6,000 chars of page text plus grant name and funder. (JEV's 32k state budget means
   we could stop truncating, but see "context rot" — more unrelated text may hurt, so keep the
   truncation for the pilot and test widening separately.)
 - **References to check against:** the page text is the authority. Nothing external needed.
-- **One question it should answer:** *"Does this page state that an applicant must hold DGR
-  endorsement to be eligible?"* — `criteria.true`: "The page states that DGR status, deductible gift
-  recipient endorsement, or Item 1 DGR is required of applicants." `criteria.false`: "The page does
-  not state this, or explicitly says DGR endorsement is not required."
-- **Allowed answer:** probability 0–1.
-- **What the app does:** ≥0.85 → write `true`; ≤0.15 → write `false`; in between → **write null**.
-  Null already means "unknown" to `act-grant-eligibility.ts:82-88`, which renders it as such, so the
-  uncertain path costs nothing to build.
+- **One question it should answer:** *"What does this funding page say about whether applicants must
+  hold DGR endorsement?"* — three options: `required` ("The page states applicants must hold DGR
+  status, Item 1 DGR, deductible gift recipient endorsement, or must be able to receive
+  tax-deductible donations"), `not_required` ("The page explicitly states DGR endorsement is not
+  required"), `not_stated` ("The page says nothing either way").
+- **Allowed answer:** one of those three, with per-option probabilities and a confidence 0–1.
+- **What the app does:** confidence ≥ 0.5 → map `required`/`not_required` to true/false and
+  `not_stated` to null; below 0.5 → null. Null already means "unknown" to
+  `act-grant-eligibility.ts:82-88`, which renders it as such, so the uncertain path costs nothing.
 - **If wrong or uncertain:** a false `dgr_required=true` hides real money from A Curious Tractor Pty
   Ltd; a false `false` puts Butterfly-only grants in front of the wrong entity. These columns feed the
   ACT desk (`act-grant-eligibility.ts:82-88`) and the SE match gate
@@ -394,7 +424,7 @@ Recording these so nobody relitigates them:
 
 | Candidate | Usefulness | Setup effort | Testability | Frequency | Cost of a wrong answer |
 |---|---|---|---|---|---|
-| Grant eligibility (Noul ×5) | **High** — closes a 7-of-3,088 gap | Low | **High** — 337 cached rows, page text is the authority | manual now; would be nightly | Medium, reversible |
+| Grant eligibility (Choice ×5) | **High** — closes a 7-of-3,088 gap | **Medium** — pages must be re-fetched; cache has verdicts only | **High** — 337 ids to replay, page is the authority | manual now; would be nightly | Medium, reversible |
 | Opportunity type (Choice ×6) | Medium-high | Low — rubric is already criteria-shaped | **High** — hundreds of stored prior verdicts | 9 runs/30d × 300 rows | Medium |
 | SE classification (Noul) | High (trust) | Low | Medium — no labels, thin inputs | 12 runs/30d | **High** — feeds a buyer-facing "verified" tier |
 | RAG filter + citation check | High for `/api/chat` | Medium — provenance bugs first | **Low** — zero tests, no golden questions | `[?]` — no usage logging | Medium |
@@ -413,9 +443,10 @@ notice.
 
 **Grant eligibility, replayed over `data/grant-eligibility-cache.jsonl`.**
 
-The reference text is stored beside every verdict, so nothing needs re-scraping. The questions are
-factual booleans where "not stated" is already a first-class answer the UI renders. The gap it closes
-is concrete and large. Disagreements are cheap to adjudicate — open the URL, read a paragraph.
+The questions are factual, "not stated" is already a first-class answer the UI renders, the gap it
+closes is concrete and large, and disagreements are cheap to adjudicate — open the URL, read a
+paragraph. The page text must be re-fetched (the cache stores verdicts only), which is a one-off cost
+the pilot's stage 1 pays once.
 
 **One caveat, stated plainly:** those 337 rows are *machine*-generated verdicts, not human-reviewed.
 The only genuinely human-labelled set in this repo is the 20-case
