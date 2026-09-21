@@ -19,13 +19,32 @@ getting those confidently wrong is worse than leaving them null.
 
 ## Summary
 
-- **18 tables** have both an unfilled typed field and text in the same row to read.
-- **5 tables** have an unfilled field but no readable text beside it. A classifier cannot help; these need a source, not a model.
-- **~667,685 rows** carry at least one unknown that text in the same row might answer.
+- **20 tables** have both an unfilled typed field and text in the same row to read.
+- **6 tables** have an unfilled field but no readable text beside it. A classifier cannot help; these need a source, not a model.
+- **~667,768 rows** carry at least one unknown that text in the same row might answer.
 - **~$2.53** to ask every one of them once, at $0.042/M input tokens.
 
 That total is an upper bound on the ask, not a promise of the answer. Expect a large share of
 honest "not enough information" on rows whose only text is a name.
+
+### The whole corpus, for scale
+
+Measured 2026-09-21 across every table in `public`:
+
+| kind | columns | est. tokens | est. $ to read once |
+|---|---|---|---|
+| `jsonb` | 252 | 215M | $9.02 |
+| `text` | 717 | 162M | $6.82 |
+| `text[]` | 165 | 15M | $0.63 |
+| **total** | **1,135** | **392M** | **~$16.47** |
+
+`jsonb` holds more free text than every plain text column combined, and this script still
+only treats it as something to READ, never as something with structure worth extracting.
+That is the next gap in this catalogue, and it is a large one.
+
+The database has 784 tables, 231 views and 107 matviews. Only tables are listed as places
+to WRITE an answer: a view or matview is rebuilt from its sources, so filling one is
+filling the table underneath it.
 
 ## Tables with work to do
 
@@ -49,6 +68,8 @@ honest "not enough information" on rows whose only text is a name.
 | `notion_actions` | 957 | `action_type` (71%) | `ai_summary`, `data` | 851 | $0.01 |
 | `civic_org_classifications` | 597 | `sector_category` (49%) | `llm_evidence_snippet` | 295 | $0.00 |
 | `services` | 508 | `eligibility_criteria` (93%) | `description`, `metadata`, `service_category` | 491 | $0.00 |
+| `notion_calendar` | 85 | `event_type` (27%) | `data`, `notes` | 65 | $0.00 |
+| `quotes` | 37 | `quote_type` (49%) | `context_after`, `context_before`, `quote_text` | 18 | $0.00 |
 
 ## Large taxonomies: a closed set, but too big for one question
 
@@ -63,6 +84,58 @@ gap in the database and a 60-option cap was dropping it silently.
 | `gs_entities` | 610,409 | `sub_sector` | 529 | 100% | `metadata` |
 | `grant_opportunities` | 26,883 | `eligibility_criteria` | 431 | 98% | `categories`, `description`, `goods_relevance_signals`, `metadata`, `name`, `project_relevance`, `sources` |
 
+## Prose with no typed field yet
+
+**261 tables.** They hold text and have nothing typed to put an answer in.
+The field does not exist, so this is a schema question before it is a model question:
+decide what is worth knowing about these rows, add the column, then fill it.
+
+This is the LARGER half of the opportunity and the first version of this script missed
+all of it by only hunting for columns that were already there and already empty.
+
+| table | rows | text it holds |
+|---|---|---|
+| `gs_relationships` | 3,019,530 | `properties` |
+| `person_roles` | 339,286 | `properties` |
+| `grantconnect_awards` | 277,532 | `grant_activity`, `pbs_program`, `purpose` |
+| `acnc_programs` | 98,196 | `operating_locations`, `operating_locations_coords` |
+| `community_directory_orgs` | 74,968 | `description`, `raw` |
+| `acnc_charities` | 66,404 | `beneficiaries` |
+| `assertions` | 58,352 | `note` |
+| `source_frontier` | 57,253 | `metadata`, `source_name` |
+| `procurement_alerts` | 53,223 | `body`, `payload`, `title` |
+| `research_grants` | 46,378 | `investigators`, `national_interest`, `title` |
+| `nz_charities` | 45,192 | `purposes`, `raw_data` |
+| `foundation_category_assignments` | 42,599 | `evidence_text` |
+| `entity_identifiers` | 30,934 | `identifier_value`, `normalized_value` |
+| `webhook_delivery_log` | 23,396 | `raw_body` |
+| `opportunities_unified` | 17,790 | `description`, `metadata`, `title` |
+| `foundation_geo_focus` | 16,942 | `evidence_text` |
+| `person_identity_map` | 14,919 | `contact_data` |
+| `integration_events` | 12,920 | `payload` |
+| `se_search_index` | 12,192 | `description`, `search_tsv`, `sectors`, `sectors_text` |
+| `social_enterprises` | 12,177 | `description`, `geographic_focus`, `sector`, `sources`, `target_beneficiaries`, `website` |
+| `foundation_power_profiles` | 10,114 | `evidence` |
+| `civic_intelligence_chunks` | 7,022 | `chunk_text`, `metadata` |
+| `foundation_grantees` | 5,695 | `evidence_text`, `metadata`, `yj_evidence_snippet` |
+| `intelligence_insights` | 5,303 | `data`, `description` |
+| `campaign_alignment_entities` | 4,141 | `alignment_signals` |
+| `memory_episodes` | 3,636 | `embedding`, `key_events` |
+| `alma_outcomes` | 3,163 | `measurement_method`, `search_vector` |
+| `discoveries` | 3,084 | `description`, `metadata`, `title` |
+| `funder_board_paths` | 2,651 | `connected_entity_name`, `foundation_name` |
+| `person_entity_links` | 2,572 | `link_evidence` |
+| `contact_intelligence_insights` | 2,197 | `highlights` |
+| `project_health_history` | 1,977 | `raw_payload` |
+| `civic_ministerial_diaries` | 1,728 | `organisation`, `who_met` |
+| `bank_statement_lines` | 1,618 | `notes` |
+| `agil_locations` | 1,546 | `alternate_names` |
+| `goods_procurement_signals` | 1,260 | `description`, `title` |
+| `community_orgs` | 1,244 | `description`, `domain`, `geographic_focus`, `outcomes`, `programs` |
+| `supporter_comms_summary` | 1,169 | `last_touch_snippet`, `last_touch_subject` |
+| `organization_funding_summaries` | 1,093 | `source_row_ids`, `summary_text` |
+| `schema_ownership` | 1,000 | `evidence` |
+
 ## Unfilled, but nothing to read
 
 A model has no input here. Either the column is dead, or the answer lives in another table.
@@ -74,3 +147,4 @@ A model has no input here. Either the column is dead, or the answer lives in ano
 | `relationship_health` | 3,330 | `overall_sentiment` (83%)<br>`risk_flags` (86%)<br>`suggested_actions` (83%) |
 | `imessage_attachments` | 1,026 | `mime_type` (49%) |
 | `vendor_project_rules` | 508 | `income_type` (94%)<br>`rd_category` (89%) |
+| `ghl_tags` | 72 | `category` (86%) |

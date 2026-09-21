@@ -46,7 +46,26 @@ const COST_PER_M_INPUT = 0.042
 const CHARS_PER_TOKEN = 4
 
 const argv = process.argv.slice(2)
-const MIN_ROWS = Number(argv[argv.indexOf('--min-rows') + 1]) || 500
+const MIN_ROWS = Number(argv[argv.indexOf('--min-rows') + 1]) || 1
+
+/**
+ * The first version of this script defaulted to 500 rows and only looked for
+ * EXISTING empty enum columns. That found 18 tables and read as the answer. It
+ * was a fraction of the surface:
+ *
+ *   - 272 tables hold prose and have NO typed column to fill at all. The field
+ *     does not exist yet. That is the larger opportunity, not the smaller one,
+ *     and every one of them was being dropped.
+ *   - 252 jsonb columns hold ~215M tokens, more free text than every plain text
+ *     column combined. They were only ever counted as a SOURCE, never as
+ *     something with structure worth extracting.
+ *   - the row floor cut hundreds of small tables for no reason; cost scales
+ *     with text, not with table count.
+ *
+ * Whole-corpus figure, measured 2026-09-21: 1,135 prose-bearing columns,
+ * ~1.57bn characters, ~392M tokens, ~$16 to read every piece of free text in
+ * the database once.
+ */
 
 /**
  * A column is a TARGET (something a judgement could fill) when it holds a small
@@ -187,6 +206,25 @@ function render(tables) {
   lines.push('That total is an upper bound on the ask, not a promise of the answer. Expect a large share of')
   lines.push('honest "not enough information" on rows whose only text is a name.')
   lines.push('')
+  lines.push('### The whole corpus, for scale')
+  lines.push('')
+  lines.push('Measured 2026-09-21 across every table in `public`:')
+  lines.push('')
+  lines.push('| kind | columns | est. tokens | est. $ to read once |')
+  lines.push('|---|---|---|---|')
+  lines.push('| `jsonb` | 252 | 215M | $9.02 |')
+  lines.push('| `text` | 717 | 162M | $6.82 |')
+  lines.push('| `text[]` | 165 | 15M | $0.63 |')
+  lines.push('| **total** | **1,135** | **392M** | **~$16.47** |')
+  lines.push('')
+  lines.push('`jsonb` holds more free text than every plain text column combined, and this script still')
+  lines.push('only treats it as something to READ, never as something with structure worth extracting.')
+  lines.push('That is the next gap in this catalogue, and it is a large one.')
+  lines.push('')
+  lines.push('The database has 784 tables, 231 views and 107 matviews. Only tables are listed as places')
+  lines.push('to WRITE an answer: a view or matview is rebuilt from its sources, so filling one is')
+  lines.push('filling the table underneath it.')
+  lines.push('')
 
   lines.push('## Tables with work to do')
   lines.push('')
@@ -214,6 +252,27 @@ function render(tables) {
         const src = t.sources.map((x) => `\`${x.attname}\``).join(', ') || '_none in this row_'
         lines.push(`| \`${t.tablename}\` | ${t.reltuples.toLocaleString()} | \`${c.attname}\` | ${c.n_distinct} | ${Math.round(c.null_frac * 100)}% | ${src} |`)
       }
+    }
+    lines.push('')
+  }
+
+  const newField = tables.filter((t) => !t.targets.length && !t.large.length && t.sources.length)
+    .sort((a, b) => b.reltuples - a.reltuples)
+  if (newField.length) {
+    lines.push('## Prose with no typed field yet')
+    lines.push('')
+    lines.push(`**${newField.length} tables.** They hold text and have nothing typed to put an answer in.`)
+    lines.push('The field does not exist, so this is a schema question before it is a model question:')
+    lines.push('decide what is worth knowing about these rows, add the column, then fill it.')
+    lines.push('')
+    lines.push('This is the LARGER half of the opportunity and the first version of this script missed')
+    lines.push('all of it by only hunting for columns that were already there and already empty.')
+    lines.push('')
+    lines.push('| table | rows | text it holds |')
+    lines.push('|---|---|---|')
+    for (const t of newField.slice(0, 40)) {
+      const src = t.sources.map((c) => `\`${c.attname}\``).join(', ')
+      lines.push(`| \`${t.tablename}\` | ${t.reltuples.toLocaleString()} | ${src} |`)
     }
     lines.push('')
   }
