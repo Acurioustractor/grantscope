@@ -68,6 +68,11 @@ existence instead of content was the near-miss of 2026-09-05 (63 listed, 15 woul
 
 ## 5. Apply, post-check, parity, commit
 
+**The file must be on `main` before you apply.** Parity compares every branch's folder against the one
+shared tracker, so applying from an unmerged branch makes Migration Parity fail on every OTHER branch
+until that file merges (2026-09-22: #482 held the file, #483 went red). Merge the PR that carries the
+file first (a committed-but-unapplied migration only warns), then apply from an up-to-date `main`.
+
 ```bash
 scripts/db-apply.sh supabase/migrations/<version>_<name>.sql
 # post-check: the query in the file's footer, or count what changed (rows inserted, views flipped, functions pinned)
