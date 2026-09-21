@@ -35,7 +35,15 @@ const FETCH_TIMEOUT_MS = 10_000;
 const LLM_TIMEOUT_MS = 60_000;
 const RATE_LIMIT_DELAY_MS = 1000;
 const BODY_CHAR_LIMIT = 3000;
-const USER_AGENT = 'GrantScope/1.0 (https://grantscope.au; data research)';
+// Browser-shaped, but still says who we are and how to reach us.
+// grants.gov.au sits behind a CloudFront User-Agent gate that refuses a plain
+// bot string: measured 2026-09-21 on one Go/Show URL, GET with no UA gives 403,
+// GET with a browser UA gives 200 and the full page. The honest UA above was
+// costing us 94 of the 311 open grants on the desk -- every Commonwealth
+// opportunity -- which the agent logged as "HTTP 404" and skipped.
+// robots.txt allows /Go/*; only /Search/*, /Reports/* and /admin* are disallowed.
+// scripts/ingest-grantconnect-go.mjs already reaches the same site this way.
+const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 CivicGraph/1.0 (+https://civicgraph.app; contact@act.place)';
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');

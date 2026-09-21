@@ -28,7 +28,10 @@ async function fetchProbe(url) {
   for (const method of ['HEAD', 'GET']) {
     try {
       const r = await fetch(url, { method, redirect: 'follow', headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(15000) });
-      if (method === 'HEAD' && (r.status === 405 || r.status === 501)) continue;
+      // Never trust a failing HEAD. grants.gov.au answers HEAD with 404 and the
+      // same URL with GET with 200 and a full page. Taking the HEAD status at
+      // face value is what made 94 live Commonwealth grants look bot-blocked.
+      if (method === 'HEAD' && !(r.status >= 200 && r.status < 300)) continue;
       return { status: r.status };
     } catch (e) {
       if (method === 'GET') return { status: 0, err: e.name === 'TimeoutError' ? 'timeout' : String(e.cause?.code || e.message).slice(0, 40) };

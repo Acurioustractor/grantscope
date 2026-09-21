@@ -8,8 +8,14 @@ real browser** before it is called dead.
 
 | population | fetch ok | bot-blocked | genuinely dead |
 |---|---|---|---|
-| every open grant (n=311) | 67.8% | **31.8%** | **0.3% — one row** |
+| every open grant (n=311) | **98.1%** | 1.6% | **0.3% — one row** |
 | random sample of all grants (n=500) | 95.0% | 2.8% | 2.2% |
+
+**Corrected later the same day.** The open-grant row first read 67.8% / 31.8% / 0.3%.
+That 31.8% was an artifact of this script, not of the web: it probed with `HEAD`
+first and returned a failing HEAD status without retrying `GET`. grants.gov.au
+answers `HEAD` with 404 and the same URL with `GET` with 200 and a full page. With
+the retry fixed, 94 of the 99 "bot-blocked" rows are ordinary reachable pages.
 
 A first pass using bare `fetch` reported **93 of 93 open GrantConnect grants as
 "404 gone"**. Every one of them loads fine in a browser. `grants.gov.au` answers a
@@ -27,8 +33,20 @@ the point of the script, not an implementation detail.
 i.e. essentially every Commonwealth grant opportunity on the desk. Those are the
 highest-value rows in the table and the enricher has never once read one.
 
-`scripts/enrich-grant-eligibility.mjs` already solves this: it drives Chromium with
-`channel: 'chrome'` and a real user agent. The deadline scraper wants the same path.
+**Fixed, and it needed no browser.** The scraper introduced itself as
+`GrantScope/1.0 (https://grantscope.au; data research)`. grants.gov.au sits behind a
+CloudFront User-Agent gate. Measured on one Go/Show URL:
+
+| request | result |
+|---|---|
+| `HEAD`, browser UA | 404 |
+| `GET`, no UA | 403 |
+| `GET`, browser UA | **200, full page** |
+
+The UA is now browser-shaped but still identifies us and gives a contact address,
+which passes the gate. `robots.txt` allows `/Go/*` — only `/Search/*`, `/Reports/*`
+and `/admin*` are disallowed — and `scripts/ingest-grantconnect-go.mjs` already
+reaches the same site this way, documenting the gate as "UA-gating only".
 
 Hosts that block plain HTTP clients, from the open-grant run:
 
