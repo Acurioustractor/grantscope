@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -41376,6 +41371,13 @@ export type Database = {
             referencedRelation: "person_roles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "person_identities_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "v_person_roles_typed"
+            referencedColumns: ["id"]
+          },
         ]
       }
       person_identity_map: {
@@ -56707,13 +56709,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "community_programs_profiles_program_id_fkey"
-            columns: ["program_id"]
-            isOneToOne: false
-            referencedRelation: "programs_catalog_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "community_programs_profiles_program_id_fkey"
             columns: ["community_program_id"]
             isOneToOne: false
             referencedRelation: "programs_catalog_v"
@@ -56722,13 +56717,20 @@ export type Database = {
           {
             foreignKeyName: "community_programs_profiles_program_id_fkey"
             columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs_catalog_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_programs_profiles_program_id_fkey"
+            columns: ["community_program_id"]
             isOneToOne: false
             referencedRelation: "registered_services"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "community_programs_profiles_program_id_fkey"
-            columns: ["community_program_id"]
+            columns: ["program_id"]
             isOneToOne: false
             referencedRelation: "registered_services"
             referencedColumns: ["id"]
@@ -63412,7 +63414,286 @@ export type Database = {
           target_entity_id: string | null
           year: number | null
         }
-        Relationships: []
+        Insert: {
+          amount?: number | null
+          buyer_name?: never
+          dataset?: string | null
+          id?: string | null
+          procurement_method?: never
+          purpose?: never
+          relationship_type?: string | null
+          role_type?: never
+          source_entity_id?: string | null
+          target_entity_id?: string | null
+          year?: number | null
+        }
+        Update: {
+          amount?: number | null
+          buyer_name?: never
+          dataset?: string | null
+          id?: string | null
+          procurement_method?: never
+          purpose?: never
+          relationship_type?: string | null
+          role_type?: never
+          source_entity_id?: string | null
+          target_entity_id?: string | null
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "gs_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_charity_rankings"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_entity_power_index"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_foundation_grantees"
+            referencedColumns: ["grantee_entity_id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_funding_outcomes_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_gs_donor_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_gs_entity_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_intervention_funding_chain"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_person_entity_crosswalk"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revolving_door"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_youth_justice_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_act_organisations"
+            referencedColumns: ["gs_entity_uuid"]
+          },
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_entity_abr"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_goods_central_channels"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_nt_community_buyer_crosswalk"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_nt_community_entity_matches"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_org_funding_profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_youth_justice_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "gs_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_charity_rankings"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_entity_power_index"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_foundation_grantees"
+            referencedColumns: ["grantee_entity_id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_funding_outcomes_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_gs_donor_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_gs_entity_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_intervention_funding_chain"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_person_entity_crosswalk"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revolving_door"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_youth_justice_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_act_organisations"
+            referencedColumns: ["gs_entity_uuid"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_entity_abr"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_goods_central_channels"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_nt_community_buyer_crosswalk"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_nt_community_entity_matches"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_org_funding_profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gs_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_youth_justice_entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_harvest_public_social_posts: {
         Row: {
@@ -64533,7 +64814,154 @@ export type Database = {
           person_name_normalised: string | null
           role_type: string | null
         }
-        Relationships: []
+        Insert: {
+          charity_size?: never
+          confidence?: string | null
+          entity_id?: string | null
+          id?: string | null
+          original_role?: never
+          person_name?: string | null
+          person_name_normalised?: string | null
+          role_type?: string | null
+        }
+        Update: {
+          charity_size?: never
+          confidence?: string | null
+          entity_id?: string | null
+          id?: string | null
+          original_role?: never
+          person_name?: string | null
+          person_name_normalised?: string | null
+          role_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "gs_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_charity_rankings"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_entity_power_index"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_foundation_grantees"
+            referencedColumns: ["grantee_entity_id"]
+          },
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_funding_outcomes_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_gs_donor_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_gs_entity_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_intervention_funding_chain"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_person_entity_crosswalk"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revolving_door"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_youth_justice_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_act_organisations"
+            referencedColumns: ["gs_entity_uuid"]
+          },
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_entity_abr"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_goods_central_channels"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_nt_community_buyer_crosswalk"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_nt_community_entity_matches"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_org_funding_profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "person_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_youth_justice_entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_pipeline_value: {
         Row: {
@@ -70112,3 +70540,4 @@ export const Constants = {
     },
   },
 } as const
+
