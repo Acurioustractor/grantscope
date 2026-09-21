@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS se_buyer_prospects (
   states jsonb,
   computed_at timestamptz DEFAULT now(),
   gs_entity_id uuid,
-  link_method text CHECK (link_method IN ('graph_edge', 'unique_name'))
+  link_method text CHECK (link_method IN ('graph_edge', 'unique_name', 'unique_name_no_prefix'))
 );
 
 TRUNCATE se_buyer_prospects;
