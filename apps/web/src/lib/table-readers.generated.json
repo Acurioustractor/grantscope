@@ -1,0 +1,2550 @@
+{
+ "abs_iloc_health": [
+  "lib/services/goods-community-detail.ts"
+ ],
+ "abs_locality_lga": [
+  "lib/services/council-place-report.ts",
+  "lib/services/place-data-service.ts"
+ ],
+ "acara_schools": [
+  "app/reports/[state]/page.tsx",
+  "app/reports/education/[state]/page.tsx",
+  "app/reports/education/national/page.tsx",
+  "app/reports/education/page.tsx",
+  "lib/services/place-data-service.ts",
+  "lib/services/report-service.ts",
+  "lib/services/school-need-signal.ts"
+ ],
+ "acnc_ais": [
+  "app/api/browse/foundation/route.ts",
+  "app/api/browse/org/route.ts",
+  "app/api/ops/route.ts",
+  "app/architecture/page.tsx",
+  "app/charities/[abn]/page.tsx",
+  "app/entities/[gsId]/page.tsx",
+  "app/foundations/[id]/page.tsx",
+  "app/how-it-works/page.tsx",
+  "app/process/page.tsx",
+  "app/reports/board-interlocks/page.tsx",
+  "app/reports/charity-contracts/page.tsx",
+  "app/reports/community-efficiency/page.tsx",
+  "app/reports/desert-overhead/page.tsx",
+  "app/reports/exec-remuneration/page.tsx",
+  "app/reports/multicultural-sector/fecca-eccv/long-read/page.tsx",
+  "app/reports/multicultural-sector/fecca-eccv/page.tsx",
+  "app/reports/multicultural-sector/page.tsx",
+  "lib/services/due-diligence-service.ts"
+ ],
+ "acnc_charities": [
+  "app/api/browse/org/route.ts",
+  "app/api/charities/claim/route.ts",
+  "app/api/ops/claims/route.ts",
+  "app/changes/page.tsx",
+  "app/entities/[gsId]/page.tsx",
+  "app/entity/[gsId]/page.tsx",
+  "app/reports/cross-reference/page.tsx",
+  "app/reports/multicultural-sector/fecca-eccv/page.tsx",
+  "app/reports/power-map/page.tsx",
+  "app/social-enterprises/[id]/page.tsx",
+  "lib/place-organisations.ts",
+  "lib/services/due-diligence-service.ts"
+ ],
+ "act_ask_artefacts": [
+  "lib/services/act-ask-artefacts.ts"
+ ],
+ "act_ask_warmers": [
+  "app/api/org/[orgProfileId]/people/route.ts"
+ ],
+ "act_communities": [
+  "app/org/[slug]/goods/we-owe/page.tsx",
+  "lib/services/act-communities.ts"
+ ],
+ "act_community_links": [
+  "lib/services/act-communities.ts"
+ ],
+ "act_funding_opportunity_current_status": [
+  "lib/services/ask-grantscope.ts",
+  "lib/services/funding-weekly-digest.ts"
+ ],
+ "act_grant_recommendation_decisions": [
+  "app/api/integrations/ghl/funding-callback/route.ts",
+  "app/api/ops/funders/timeline/route.ts",
+  "app/api/ops/grant-recommendations/decide/route.ts",
+  "app/api/ops/grant-recommendations/sync-notion/route.ts",
+  "app/home/page.tsx",
+  "app/ops/grant-recommendations/page.tsx",
+  "app/reports/grant-frontier/page.tsx",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/funding-ghl.ts",
+  "lib/services/funding-notion.ts",
+  "lib/services/funding-weekly-digest.ts",
+  "lib/services/org-pipeline-service.ts",
+  "lib/services/project-funding-service.ts"
+ ],
+ "act_grant_recommendation_projects": [
+  "app/ops/grant-recommendations/page.tsx",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-project-apply-now.ts",
+  "lib/services/act-research.ts",
+  "lib/services/org-pipeline-service.ts"
+ ],
+ "act_grant_recommendations": [
+  "app/api/ops/grant-recommendations/sync-notion/route.ts",
+  "app/reports/grant-frontier/page.tsx"
+ ],
+ "act_grant_recommendations_current": [
+  "app/home/page.tsx",
+  "app/ops/grant-recommendations/page.tsx",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-project-apply-now.ts",
+  "lib/services/funding-ghl.ts",
+  "lib/services/funding-weekly-digest.ts",
+  "lib/services/org-pipeline-service.ts",
+  "lib/services/project-funding-service.ts"
+ ],
+ "act_obligations": [
+  "app/api/org/[orgProfileId]/obligations/route.ts",
+  "lib/services/act-communities.ts",
+  "lib/services/act-obligations.ts"
+ ],
+ "act_opportunity_benchmark_cases": [
+  "app/api/ops/act-research/benchmark/review/route.ts",
+  "lib/services/act-research.ts",
+  "lib/services/ask-grantscope-corrections.ts",
+  "lib/services/funding-weekly-digest.ts"
+ ],
+ "act_payable_decisions": [
+  "app/api/ops/payables/decide-bulk/route.ts",
+  "app/api/ops/payables/decide/route.ts",
+  "lib/services/org-payables-service.ts"
+ ],
+ "act_people": [
+  "app/api/org/[orgProfileId]/people/route.ts",
+  "app/api/org/[orgProfileId]/people/search/route.ts",
+  "lib/services/act-desk-digest.ts",
+  "lib/services/act-desk-people.ts",
+  "lib/services/act-people.ts"
+ ],
+ "act_person_roles": [
+  "app/api/org/[orgProfileId]/people/route.ts"
+ ],
+ "act_research_initiatives": [
+  "lib/services/act-research.ts"
+ ],
+ "agent_runs": [
+  "app/api/data/data-health/route.ts",
+  "app/api/data/health/route.ts",
+  "app/api/mission-control/route.ts",
+  "app/api/ops/health/route.ts",
+  "app/api/ops/route.ts",
+  "app/changes/page.tsx",
+  "app/home/page.tsx",
+  "app/mission-control/mission-control-client.tsx",
+  "app/reports/data-health/page.tsx",
+  "app/reports/grant-frontier/page.tsx",
+  "app/reports/youth-justice/trackers/page.tsx",
+  "components/shell/shell.tsx",
+  "lib/services/act-funder-intelligence.ts",
+  "lib/services/act-opportunity-context.ts",
+  "lib/services/funding-weekly-digest.ts",
+  "lib/services/goods-grants-triage.ts"
+ ],
+ "agent_runtime_state": [
+  "app/api/mission-control/runtime-sweeps/[agentId]/route.ts"
+ ],
+ "agent_schedules": [
+  "app/api/mission-control/schedules/[id]/route.ts",
+  "app/api/mission-control/schedules/route.ts",
+  "app/api/ops/health/route.ts",
+  "app/reports/grant-frontier/page.tsx",
+  "app/reports/youth-justice/trackers/page.tsx",
+  "lib/services/goods-grants-triage.ts"
+ ],
+ "agent_tasks": [
+  "app/api/mission-control/tasks/[id]/cancel/route.ts",
+  "app/api/mission-control/tasks/route.ts",
+  "app/api/ops/health/route.ts"
+ ],
+ "aggregated": [
+  "app/reports/youth-justice/[state]/trackers/page.tsx",
+  "app/reports/youth-justice/qld/trackers/page.tsx",
+  "app/reports/youth-justice/trackers/page.tsx"
+ ],
+ "aihw_child_protection": [
+  "app/reports/convergence/page.tsx"
+ ],
+ "ais": [
+  "app/reports/multicultural-sector/fecca-eccv/page.tsx"
+ ],
+ "alert_events": [
+  "app/api/alerts/route.ts",
+  "app/home/page.tsx",
+  "lib/alert-attribution.ts",
+  "lib/alert-events.ts",
+  "lib/grant-alert-digests.ts"
+ ],
+ "alert_notifications": [
+  "lib/grant-alert-digests.ts"
+ ],
+ "alert_preferences": [
+  "app/api/alerts/[id]/route.ts",
+  "app/api/alerts/matches/route.ts",
+  "app/api/alerts/route.ts",
+  "app/api/alerts/track/click/route.ts",
+  "app/api/alerts/track/open/route.ts",
+  "app/home/page.tsx",
+  "app/home/watchlist/page.tsx",
+  "lib/grant-alert-digests.ts",
+  "lib/grant-notifications.ts",
+  "lib/grant-scout.ts"
+ ],
+ "all_per_year": [
+  "app/reports/procurement-oligopoly/page.tsx"
+ ],
+ "alma": [
+  "app/api/data/map/route.ts",
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "lib/services/qld-yj-recipient.ts"
+ ],
+ "alma_evidence": [
+  "app/api/data/data-health/route.ts",
+  "app/api/evidence/route.ts",
+  "app/api/justice/evidence-pack/route.ts",
+  "app/api/justice/interventions/route.ts",
+  "app/org/[slug]/intelligence/page.tsx",
+  "app/reports/data-health/page.tsx",
+  "lib/services/due-diligence-service.ts",
+  "lib/services/report-service.ts"
+ ],
+ "alma_funding_opportunities": [
+  "app/api/ops/grant-recommendations/decide/route.ts",
+  "app/api/ops/grant-recommendations/triage/route.ts",
+  "app/ops/grant-recommendations/triage/page.tsx",
+  "app/reports/grant-frontier/page.tsx",
+  "lib/services/ask-grantscope-corrections.ts",
+  "lib/services/ask-grantscope.ts",
+  "lib/services/goods-money.ts"
+ ],
+ "alma_intervention_evidence": [
+  "app/api/entities/[gsId]/evidence/route.ts",
+  "app/api/evidence/route.ts",
+  "app/entities/[gsId]/page.tsx",
+  "lib/services/due-diligence-service.ts",
+  "lib/services/report-service.ts"
+ ],
+ "alma_intervention_outcomes": [
+  "app/api/evidence/route.ts",
+  "lib/services/due-diligence-service.ts",
+  "lib/services/report-service.ts"
+ ],
+ "alma_interventions": [
+  "app/api/data/data-health/route.ts",
+  "app/reports/data-health/page.tsx"
+ ],
+ "alma_interventions_valid": [
+  "app/api/board-report/route.ts",
+  "app/api/civicscope/cron/route.ts",
+  "app/api/data/entity/[identifier]/route.ts",
+  "app/api/data/graph/route.ts",
+  "app/api/data/map/route.ts",
+  "app/api/data/place/[code]/route.ts",
+  "app/api/entities/[gsId]/evidence/route.ts",
+  "app/api/entities/[gsId]/route.ts",
+  "app/api/evidence/route.ts",
+  "app/api/justice/closing-the-gap/route.ts",
+  "app/api/justice/evidence-pack/route.ts",
+  "app/api/justice/interventions/route.ts",
+  "app/api/org/[orgProfileId]/pipeline/export/route.ts",
+  "app/api/scenarios/route.ts",
+  "app/api/v1/exposure/route.ts",
+  "app/changes/page.tsx",
+  "app/entities/[gsId]/page.tsx",
+  "app/entity/[gsId]/funding-flow/page.tsx",
+  "app/entity/[gsId]/page.tsx",
+  "app/foundations/prf/page.tsx",
+  "app/org/[slug]/intelligence/page.tsx",
+  "app/reports/convergence/page.tsx",
+  "app/reports/reality-check/page.tsx",
+  "app/reports/youth-justice/[state]/sector/page.tsx",
+  "app/reports/youth-justice/alice-springs/page.tsx",
+  "app/reports/youth-justice/qld/sector/long-read/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "lib/services/due-diligence-service.ts",
+  "lib/services/journey-service.ts",
+  "lib/services/org-dashboard-service.ts",
+  "lib/services/place-brief-service.ts",
+  "lib/services/qld-yj-recipient.ts",
+  "lib/services/report-service.ts"
+ ],
+ "alma_media_articles": [
+  "app/reports/youth-justice/qld/crime-prevention-schools/page.tsx"
+ ],
+ "alma_outcomes": [
+  "app/api/data/data-health/route.ts",
+  "app/api/evidence/route.ts",
+  "app/api/justice/evidence-pack/route.ts",
+  "app/api/justice/interventions/route.ts",
+  "app/reports/data-health/page.tsx",
+  "lib/services/due-diligence-service.ts",
+  "lib/services/report-service.ts"
+ ],
+ "anao_mmr_compliance": [
+  "app/entity/[gsId]/page.tsx",
+  "lib/services/report-service.ts"
+ ],
+ "anao_mmr_exemptions": [
+  "app/entity/[gsId]/page.tsx",
+  "lib/services/report-service.ts"
+ ],
+ "api_keys": [
+  "lib/api-auth.ts",
+  "lib/api-key.ts"
+ ],
+ "api_usage": [
+  "lib/api-key.ts"
+ ],
+ "asic_companies": [
+  "app/reports/cross-reference/page.tsx",
+  "app/reports/power-map/page.tsx"
+ ],
+ "ask_grantscope_corrections": [
+  "lib/services/ask-grantscope-corrections.ts"
+ ],
+ "ato_tax_transparency": [
+  "app/api/data/tax-transparency/route.ts",
+  "app/api/entities/[gsId]/route.ts",
+  "app/api/v1/exposure/route.ts",
+  "app/entity/[gsId]/page.tsx",
+  "app/reports/cross-reference/page.tsx",
+  "app/reports/power-map/page.tsx",
+  "app/reports/tax-transparency/page.tsx",
+  "app/reports/triple-play/page.tsx"
+ ],
+ "austender_contracts": [
+  "app/api/contacts/analyze/route.ts",
+  "app/api/data/data-health/route.ts",
+  "app/api/data/entity/[identifier]/route.ts",
+  "app/api/data/entity/investigate/route.ts",
+  "app/api/data/health/route.ts",
+  "app/api/data/place/[code]/route.ts",
+  "app/api/data/route.ts",
+  "app/api/data/tax-transparency/route.ts",
+  "app/api/insights/route.ts",
+  "app/api/justice/evidence-pack/route.ts",
+  "app/api/procurement/analyse/route.ts",
+  "app/api/procurement/tender-pack/route.ts",
+  "app/api/scenarios/route.ts",
+  "app/briefing/page.tsx",
+  "app/changes/page.tsx",
+  "app/entities/[gsId]/page.tsx",
+  "app/entity/[gsId]/funding-flow/page.tsx",
+  "app/entity/[gsId]/page.tsx",
+  "app/entity/[gsId]/print/page.tsx",
+  "app/insights/page.tsx",
+  "app/opportunities/ecosystem/page.tsx",
+  "app/reports/charity-contracts/page.tsx",
+  "app/reports/community-efficiency/page.tsx",
+  "app/reports/consulting-class/page.tsx",
+  "app/reports/data-health/page.tsx",
+  "app/reports/education/[state]/page.tsx",
+  "app/reports/education/page.tsx",
+  "app/reports/multicultural-sector/fecca-eccv/long-read/page.tsx",
+  "app/reports/multicultural-sector/fecca-eccv/page.tsx",
+  "app/reports/multicultural-sector/page.tsx",
+  "app/reports/power-map/page.tsx",
+  "app/reports/procurement-oligopoly/page.tsx",
+  "app/reports/tax-transparency/page.tsx",
+  "app/reports/youth-justice/[state]/sector/page.tsx",
+  "app/reports/youth-justice/qld/sector/long-read/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "app/social-enterprises/[id]/opengraph-image.tsx",
+  "app/social-enterprises/[id]/page.tsx",
+  "lib/opportunity-intelligence.ts",
+  "lib/place-contract-ladder.ts",
+  "lib/place-organisations.ts",
+  "lib/services/act-barkly-field.ts",
+  "lib/services/act-saved-queries.ts",
+  "lib/services/contract-service.ts",
+  "lib/services/due-diligence-service.ts",
+  "lib/services/org-dashboard-service.ts",
+  "lib/services/place-intelligence.ts",
+  "lib/services/report-service.ts"
+ ],
+ "base": [
+  "app/reports/youth-justice/qld/crime-prevention-schools/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "lib/grant-place-capture.ts"
+ ],
+ "bill_proof": [
+  "lib/services/org-verification-service.ts"
+ ],
+ "board": [
+  "app/api/data/entity/investigate/route.ts",
+  "app/foundations/backlog/page.tsx"
+ ],
+ "board_counts": [
+  "app/api/data/route.ts"
+ ],
+ "boards": [
+  "app/api/power/holders/route.ts"
+ ],
+ "candidate_rows": [
+  "app/foundations/backlog/page.tsx"
+ ],
+ "capture_lga": [
+  "app/api/data/map/route.ts"
+ ],
+ "capture_state": [
+  "app/api/data/map/route.ts"
+ ],
+ "cc_rows": [
+  "app/reports/youth-justice/qld/crime-prevention-schools/page.tsx"
+ ],
+ "charity_claims": [
+  "app/api/charities/claim/[id]/route.ts",
+  "app/api/charities/claim/route.ts",
+  "app/api/ops/claims/route.ts",
+  "app/charities/[abn]/page.tsx"
+ ],
+ "charity_impact_reports": [
+  "app/changes/page.tsx",
+  "app/entity/[gsId]/page.tsx",
+  "app/reports/multicultural-sector/fecca-eccv/long-read/page.tsx",
+  "app/reports/multicultural-sector/fecca-eccv/page.tsx"
+ ],
+ "cir": [
+  "app/reports/multicultural-sector/fecca-eccv/page.tsx"
+ ],
+ "civic_alerts": [
+  "app/api/civicscope/cron/route.ts",
+  "app/api/civicscope/data/route.ts",
+  "app/api/civicscope/digest/route.ts",
+  "app/api/watches/digest/route.ts"
+ ],
+ "civic_charter_commitments": [
+  "app/api/civicscope/cron/route.ts",
+  "app/api/civicscope/digest/route.ts"
+ ],
+ "civic_consultancy_spending": [
+  "app/api/civicscope/data/route.ts"
+ ],
+ "civic_digests": [
+  "app/api/civicscope/digest/route.ts"
+ ],
+ "civic_hansard": [
+  "app/api/civicscope/cron/route.ts",
+  "app/api/civicscope/data/route.ts",
+  "app/api/civicscope/digest/route.ts",
+  "app/reports/youth-justice/[state]/sector/page.tsx",
+  "app/reports/youth-justice/qld/crime-prevention-schools/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "lib/services/report-service.ts"
+ ],
+ "civic_ministerial_diaries": [
+  "app/api/civicscope/data/route.ts",
+  "app/api/data/graph/route.ts"
+ ],
+ "civic_ministerial_statements": [
+  "app/api/civicscope/cron/route.ts",
+  "app/api/civicscope/data/route.ts",
+  "app/api/civicscope/digest/route.ts",
+  "app/reports/youth-justice/[state]/sector/page.tsx",
+  "app/reports/youth-justice/qld/crime-prevention-schools/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "civic_rti_disclosures": [
+  "app/api/civicscope/data/route.ts"
+ ],
+ "clarity_answer": [
+  "app/claim/[id]/page.tsx",
+  "app/clarity/q/[slug]/page.tsx"
+ ],
+ "clarity_code_ref": [
+  "app/clarity/o/[key]/page.tsx",
+  "app/clarity/page.tsx",
+  "app/clarity/surfaces/page.tsx"
+ ],
+ "clarity_column": [
+  "app/clarity/o/[key]/page.tsx"
+ ],
+ "clarity_delta": [
+  "app/clarity/catalogue/page.tsx",
+  "app/clarity/changes/page.tsx"
+ ],
+ "clarity_edge": [
+  "app/api/clarity/object/route.ts",
+  "app/clarity/o/[key]/page.tsx"
+ ],
+ "clarity_event": [
+  "app/api/clarity/events/[id]/reason/route.ts",
+  "app/clarity/catalogue/page.tsx"
+ ],
+ "clarity_finding": [
+  "app/api/clarity/findings/route.ts",
+  "app/api/clarity/object/route.ts",
+  "app/clarity/findings/page.tsx",
+  "app/clarity/page.tsx"
+ ],
+ "clarity_object": [
+  "app/api/clarity/nouns/route.ts",
+  "app/api/clarity/object/route.ts",
+  "app/api/clarity/owners/route.ts",
+  "app/clarity/catalogue/page.tsx",
+  "app/clarity/changes/page.tsx",
+  "app/clarity/o/[key]/page.tsx",
+  "app/clarity/o/[key]/rows/page.tsx",
+  "app/clarity/owners/page.tsx",
+  "app/clarity/page.tsx",
+  "app/clarity/surfaces/page.tsx",
+  "app/clarity/unfiled/page.tsx",
+  "app/search/search-index.ts"
+ ],
+ "clarity_object_history": [
+  "app/clarity/changes/page.tsx"
+ ],
+ "clarity_project_code": [
+  "app/api/clarity/stories/route.ts",
+  "app/clarity/projects/page.tsx",
+  "app/clarity/stories/page.tsx"
+ ],
+ "clarity_question": [
+  "app/api/clarity/questions/mint/route.ts"
+ ],
+ "clarity_question_ingredient": [
+  "app/api/clarity/questions/mint/route.ts",
+  "app/clarity/o/[key]/page.tsx"
+ ],
+ "clarity_sentinel": [
+  "app/clarity/cross/page.tsx"
+ ],
+ "clarity_story_project_link": [
+  "app/api/clarity/stories/route.ts",
+  "app/clarity/projects/page.tsx",
+  "app/clarity/stories/page.tsx"
+ ],
+ "cluster": [
+  "app/reports/multicultural-sector/page.tsx"
+ ],
+ "cluster_directors": [
+  "app/reports/multicultural-sector/fecca-eccv/page.tsx",
+  "app/reports/multicultural-sector/page.tsx"
+ ],
+ "cols": [
+  "lib/table-atlas.ts"
+ ],
+ "communications_history": [
+  "lib/services/act-people-directory.ts"
+ ],
+ "community_feedback": [
+  "app/api/feedback/route.ts"
+ ],
+ "community_orgs": [
+  "app/api/dashboard/route.ts",
+  "app/api/data/route.ts",
+  "app/api/ops/route.ts",
+  "app/architecture/page.tsx",
+  "app/how-it-works/page.tsx",
+  "app/process/page.tsx",
+  "app/reports/access-gap/page.tsx",
+  "app/reports/ndis-market/page.tsx"
+ ],
+ "consulting": [
+  "app/reports/consulting-class/page.tsx"
+ ],
+ "contact_entity_links": [
+  "app/api/contacts/analyze/route.ts",
+  "app/api/contacts/graph/route.ts",
+  "app/org/[slug]/intelligence/page.tsx",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-funder-intelligence.ts",
+  "lib/services/act-people-directory.ts",
+  "lib/services/goods-community-detail.ts",
+  "lib/services/goods-living-data-adapter.ts"
+ ],
+ "contact_project_links": [
+  "lib/services/goods-community-detail.ts"
+ ],
+ "contract_start": [
+  "app/reports/procurement-oligopoly/page.tsx",
+  "lib/services/report-service.ts"
+ ],
+ "council_pc": [
+  "app/api/data/map/route.ts"
+ ],
+ "crime_stats_lga": [
+  "app/place/far-west-coast/page.tsx",
+  "lib/services/council-place-report.ts",
+  "lib/services/place-data-service.ts",
+  "lib/services/report-service.ts"
+ ],
+ "cross_": [
+  "lib/services/report-service.ts"
+ ],
+ "data_corrections": [
+  "app/api/data/corrections/route.ts"
+ ],
+ "deduped": [
+  "app/api/data/funding-deserts/route.ts",
+  "app/reports/funding-deserts/page.tsx"
+ ],
+ "deduped_deserts": [
+  "app/api/data/map/route.ts"
+ ],
+ "descs": [
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "deserts": [
+  "app/reports/funding-deserts/page.tsx",
+  "lib/funding-deserts.ts"
+ ],
+ "dext_receipts": [
+  "lib/services/goods-cost-evidence.ts"
+ ],
+ "digest_log": [
+  "lib/services/act-desk-digest.ts"
+ ],
+ "discoveries": [
+  "app/api/mission-control/discoveries/[id]/route.ts",
+  "app/api/mission-control/route.ts",
+  "app/api/watches/digest/route.ts",
+  "app/home/watchlist/page.tsx"
+ ],
+ "dss_payment_demographics": [
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "lib/services/place-data-service.ts",
+  "lib/services/report-service.ts"
+ ],
+ "e": [
+  "lib/place-organisations.ts"
+ ],
+ "el_transcripts": [
+  "lib/services/place-brief-service.ts"
+ ],
+ "entity_watches": [
+  "app/api/watches/[watchId]/route.ts",
+  "app/api/watches/digest/route.ts",
+  "app/api/watches/route.ts",
+  "app/home/watchlist/page.tsx"
+ ],
+ "expanded": [
+  "app/reports/youth-justice/[state]/trackers/page.tsx"
+ ],
+ "fg": [
+  "app/foundations/backlog/page.tsx"
+ ],
+ "first_ranked": [
+  "app/reports/youth-justice/[state]/trackers/page.tsx",
+  "app/reports/youth-justice/qld/trackers/page.tsx",
+  "app/reports/youth-justice/trackers/page.tsx"
+ ],
+ "fk_in": [
+  "lib/table-atlas.ts"
+ ],
+ "fk_out": [
+  "lib/table-atlas.ts"
+ ],
+ "fks": [
+  "lib/table-atlas.ts"
+ ],
+ "foundation_category_assignments": [
+  "lib/philanthropy-admin.ts"
+ ],
+ "foundation_funded": [
+  "app/api/power/foundations/route.ts"
+ ],
+ "foundation_geo_focus": [
+  "lib/philanthropy-admin.ts"
+ ],
+ "foundation_grantees": [
+  "app/api/data/route.ts",
+  "app/api/ops/funders/timeline/route.ts",
+  "app/foundations/[id]/page.tsx",
+  "app/foundations/backlog/page.tsx",
+  "app/foundations/compare/page.tsx",
+  "app/foundations/public-review-route.tsx",
+  "app/foundations/review-set/page.tsx",
+  "app/snow-foundation/page.tsx",
+  "lib/philanthropy-admin.ts",
+  "lib/place-philanthropy.ts",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "foundation_notes": [
+  "app/api/foundations/notes/route.ts"
+ ],
+ "foundation_people": [
+  "app/snow-foundation/page.tsx",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "foundation_power_profiles": [
+  "app/snow-foundation/page.tsx"
+ ],
+ "foundation_program_years": [
+  "app/api/data/route.ts",
+  "app/foundations/[id]/page.tsx",
+  "app/foundations/backlog/page.tsx",
+  "app/foundations/compare/page.tsx",
+  "app/foundations/prf/page.tsx",
+  "app/foundations/public-review-route.tsx",
+  "app/foundations/review-set/page.tsx",
+  "app/snow-foundation/page.tsx",
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "foundation_programs": [
+  "app/api/data/route.ts",
+  "app/api/ops/route.ts",
+  "app/api/search/route.ts",
+  "app/architecture/page.tsx",
+  "app/entities/[gsId]/page.tsx",
+  "app/foundations/[id]/page.tsx",
+  "app/foundations/backlog/page.tsx",
+  "app/foundations/compare/page.tsx",
+  "app/foundations/prf/page.tsx",
+  "app/foundations/public-review-route.tsx",
+  "app/giving/page.tsx",
+  "app/how-it-works/page.tsx",
+  "app/process/page.tsx",
+  "app/reports/grant-frontier/page.tsx",
+  "app/snow-foundation/page.tsx",
+  "lib/opportunity-intelligence.ts",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "foundation_relationship_signals": [
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "foundation_sources": [
+  "app/api/power/foundations/route.ts"
+ ],
+ "foundations": [
+  "app/api/browse/foundation/route.ts",
+  "app/api/chat/route.ts",
+  "app/api/dashboard/route.ts",
+  "app/api/data/data-health/route.ts",
+  "app/api/data/health/route.ts",
+  "app/api/data/route.ts",
+  "app/api/foundations/[foundationId]/pipeline-context/route.ts",
+  "app/api/foundations/route.ts",
+  "app/api/insights/route.ts",
+  "app/api/ops/health/route.ts",
+  "app/api/ops/route.ts",
+  "app/api/org/[orgProfileId]/projects/[projectId]/foundations/route.ts",
+  "app/api/power/foundations/route.ts",
+  "app/api/search/route.ts",
+  "app/api/simulator/route.ts",
+  "app/architecture/page.tsx",
+  "app/briefing/page.tsx",
+  "app/changes/page.tsx",
+  "app/dashboard/browse/foundations/[id]/page.tsx",
+  "app/entities/[gsId]/page.tsx",
+  "app/entities/page.tsx",
+  "app/foundations/[id]/page.tsx",
+  "app/foundations/backlog/page.tsx",
+  "app/foundations/compare/page.tsx",
+  "app/foundations/page.tsx",
+  "app/foundations/prf/page.tsx",
+  "app/foundations/public-review-route.tsx",
+  "app/foundations/review-set/page.tsx",
+  "app/giving/page.tsx",
+  "app/grants/[id]/page.tsx",
+  "app/how-it-works/page.tsx",
+  "app/insights/page.tsx",
+  "app/mission-control/mission-control-client.tsx",
+  "app/process/page.tsx",
+  "app/reports/cross-reference/page.tsx",
+  "app/reports/data-health/page.tsx",
+  "app/reports/grant-frontier/page.tsx",
+  "app/reports/power-dynamics/page.tsx",
+  "app/reports/power-map/page.tsx",
+  "app/reports/youth-justice/qld/sector/long-read/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "app/snow-foundation/page.tsx",
+  "lib/foundation-giving.ts",
+  "lib/opportunity-intelligence.ts",
+  "lib/philanthropy-admin.ts",
+  "lib/services/act-funder-intelligence.ts",
+  "lib/services/foundation-service.ts",
+  "lib/services/goods-community-detail.ts",
+  "lib/services/goods-foundation-targets.ts",
+  "lib/services/report-service.ts"
+ ],
+ "funder_allowlist": [
+  "app/reports/grant-frontier/page.tsx"
+ ],
+ "funder_blocklist": [
+  "app/reports/grant-frontier/page.tsx"
+ ],
+ "funder_board_paths": [
+  "app/api/browse/foundation/route.ts",
+  "app/dashboard/browse/foundations/[id]/page.tsx"
+ ],
+ "funder_context_snapshot": [
+  "app/home/page.tsx",
+  "app/ops/grant-recommendations/page.tsx",
+  "app/ops/grant-recommendations/triage/page.tsx",
+  "app/reports/grant-frontier/page.tsx",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-funder-intelligence.ts",
+  "lib/services/act-opportunity-context.ts",
+  "lib/services/act-research.ts",
+  "lib/services/org-pipeline-service.ts"
+ ],
+ "funders": [
+  "app/api/power/holders/route.ts"
+ ],
+ "funding_ghl_callback_events": [
+  "app/api/integrations/ghl/funding-callback/route.ts"
+ ],
+ "funding_ghl_handoffs": [
+  "app/api/integrations/ghl/funding-callback/route.ts",
+  "lib/services/funding-ghl.ts",
+  "lib/services/funding-notion.ts"
+ ],
+ "funding_map": [
+  "lib/services/report-service.ts"
+ ],
+ "funding_weekly_cycles": [
+  "lib/services/funding-weekly-digest.ts"
+ ],
+ "geo_resolution_gaps": [
+  "lib/services/place-intelligence.ts"
+ ],
+ "get_funding_gaps": [
+  "app/api/insights/route.ts",
+  "app/mission-control/mission-control-client.tsx"
+ ],
+ "ghl_contacts": [
+  "app/api/contacts/analyze/route.ts",
+  "app/api/contacts/graph/route.ts",
+  "app/api/contacts/lookup/route.ts",
+  "app/api/contacts/search/route.ts",
+  "app/api/grants/send/route.ts",
+  "app/api/ops/funders/timeline/route.ts",
+  "app/api/org/[orgProfileId]/people/search/route.ts",
+  "app/org/[slug]/intelligence/page.tsx",
+  "lib/ghl.ts",
+  "lib/opportunity-intelligence.ts",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-funder-intelligence.ts",
+  "lib/services/act-opportunity-context.ts",
+  "lib/services/act-org-record.ts",
+  "lib/services/act-people.ts",
+  "lib/services/act-relationship-ledger.ts",
+  "lib/services/goods-community-detail.ts",
+  "lib/services/goods-funnel.ts",
+  "lib/services/goods-living-data-adapter.ts",
+  "lib/services/org-dashboard-service.ts",
+  "lib/services/tag-sync-service.ts"
+ ],
+ "ghl_opportunities": [
+  "app/api/org/[orgProfileId]/people/search/route.ts",
+  "lib/goods-readiness-snapshot.ts",
+  "lib/opportunity-intelligence.ts",
+  "lib/services/act-opportunity-context.ts",
+  "lib/services/goods-living-data-adapter.ts"
+ ],
+ "ghl_pipelines": [
+  "lib/goods-readiness-snapshot.ts"
+ ],
+ "ghl_sync_log": [
+  "lib/opportunity-intelligence.ts"
+ ],
+ "ghl_task_bridge": [
+  "lib/services/act-ghl-task-bridge.ts"
+ ],
+ "gmail_messages": [
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "gmail_sync_status": [
+  "lib/services/act-opportunity-context.ts"
+ ],
+ "goods_asset_lifecycle": [
+  "app/api/goods/community/[id]/deploy/route.ts",
+  "lib/goods-readiness-snapshot.ts",
+  "lib/services/goods-community-detail.ts",
+  "lib/services/goods-living-data-adapter.ts"
+ ],
+ "goods_capital_blocks": [
+  "lib/services/goods-capital-workspace.ts"
+ ],
+ "goods_communities": [
+  "app/api/goods/community/[id]/deploy/route.ts",
+  "lib/goods-readiness-snapshot.ts",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-atlas.ts",
+  "lib/services/act-barkly-field.ts",
+  "lib/services/goods-atlas-points.ts",
+  "lib/services/goods-communities-hub.ts",
+  "lib/services/goods-community-detail.ts",
+  "lib/services/goods-funnel.ts",
+  "lib/services/goods-living-data-adapter.ts",
+  "lib/services/goods-proof.ts"
+ ],
+ "goods_cost_allocation_decisions": [
+  "lib/services/goods-cost-evidence.ts"
+ ],
+ "goods_deployment_batches": [
+  "app/api/goods/community/[id]/deploy/route.ts",
+  "lib/services/goods-community-detail.ts",
+  "lib/services/goods-living-data-adapter.ts"
+ ],
+ "goods_funding_matters": [
+  "lib/services/goods-capital-workspace.ts"
+ ],
+ "goods_funding_routes": [
+  "app/org/[slug]/goods/capital/actions.ts",
+  "lib/services/goods-capital-workspace.ts"
+ ],
+ "goods_governance_readiness": [
+  "app/home/page.tsx",
+  "lib/goods-readiness-snapshot.ts"
+ ],
+ "goods_procurement_entities": [
+  "app/api/goods/buyer/push-ghl/route.ts",
+  "lib/goods-readiness-snapshot.ts",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/goods-community-detail.ts",
+  "lib/services/goods-living-data-adapter.ts"
+ ],
+ "goods_procurement_signals": [
+  "app/api/goods/signals/[id]/action/route.ts",
+  "lib/goods-readiness-snapshot.ts",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/goods-community-detail.ts",
+  "lib/services/goods-living-data-adapter.ts",
+  "lib/services/goods-signals-workbench.ts"
+ ],
+ "goods_products": [
+  "lib/goods-readiness-snapshot.ts"
+ ],
+ "goods_relationships": [
+  "app/org/[slug]/goods/engagement/actions.ts",
+  "app/org/[slug]/goods/foundations/actions.ts",
+  "lib/services/act-communities.ts",
+  "lib/services/goods-buyer-pipeline.ts",
+  "lib/services/goods-engagement.ts",
+  "lib/services/goods-funder-insight.ts",
+  "lib/services/goods-governance.ts",
+  "lib/services/goods-living-data-adapter.ts",
+  "lib/services/goods-network-people.ts",
+  "lib/services/goods-timeline.ts"
+ ],
+ "goods_route_allocations": [
+  "app/org/[slug]/goods/capital/actions.ts",
+  "lib/services/goods-capital-workspace.ts"
+ ],
+ "goods_tranches": [
+  "lib/services/goods-capital-workspace.ts",
+  "lib/services/goods-tranches.ts"
+ ],
+ "governed_proof_bundle_records": [
+  "lib/governed-proof/service.ts"
+ ],
+ "governed_proof_bundles": [
+  "app/api/outcomes/[id]/review/route.ts",
+  "app/entities/[gsId]/page.tsx",
+  "lib/governed-proof/service.ts",
+  "lib/services/due-diligence-service.ts"
+ ],
+ "governed_proof_runs": [
+  "lib/governed-proof/service.ts"
+ ],
+ "governed_proof_tasks": [
+  "app/api/outcomes/portfolio/route.ts",
+  "lib/governed-proof/service.ts"
+ ],
+ "government_programs": [
+  "app/api/data/route.ts"
+ ],
+ "govt_funded": [
+  "app/api/power/foundations/route.ts"
+ ],
+ "grant_answer_bank": [
+  "app/api/answers/extract/route.ts",
+  "app/api/answers/route.ts",
+  "app/api/answers/search/route.ts"
+ ],
+ "grant_counts": [
+  "app/api/data/route.ts"
+ ],
+ "grant_discovery_runs": [
+  "app/api/mission-control/route.ts",
+  "app/api/ops/health/route.ts",
+  "app/architecture/page.tsx"
+ ],
+ "grant_feedback": [
+  "app/api/grants/[grantId]/feedback/route.ts",
+  "app/api/tracker/route.ts"
+ ],
+ "grant_frontier_source_snapshots": [
+  "app/reports/grant-frontier/page.tsx"
+ ],
+ "grant_notification_outbox": [
+  "app/api/alerts/notifications/route.ts",
+  "app/api/alerts/route.ts",
+  "app/api/alerts/track/click/route.ts",
+  "app/api/alerts/track/open/route.ts",
+  "app/api/tracker/automation/deliver-notifications/route.ts",
+  "app/home/page.tsx",
+  "app/home/watchlist/page.tsx",
+  "lib/grant-alert-digests.ts",
+  "lib/grant-notifications.ts",
+  "lib/grant-scout.ts"
+ ],
+ "grant_opportunities": [
+  "app/api/alerts/matches/route.ts",
+  "app/api/alerts/route.ts",
+  "app/api/dashboard/route.ts",
+  "app/api/data/data-health/route.ts",
+  "app/api/data/health/route.ts",
+  "app/api/data/route.ts",
+  "app/api/goods/grants/push-ghl/route.ts",
+  "app/api/grants/[grantId]/route.ts",
+  "app/api/insights/route.ts",
+  "app/api/ops/grant-recommendations/decide/route.ts",
+  "app/api/ops/health/route.ts",
+  "app/api/ops/route.ts",
+  "app/api/org/[orgProfileId]/pipeline/export/route.ts",
+  "app/api/search/route.ts",
+  "app/api/tracker/[grantId]/route.ts",
+  "app/api/tracker/route.ts",
+  "app/architecture/page.tsx",
+  "app/briefing/page.tsx",
+  "app/foundations/[id]/page.tsx",
+  "app/giving/page.tsx",
+  "app/grants/[id]/page.tsx",
+  "app/home/page.tsx",
+  "app/home/watchlist/page.tsx",
+  "app/how-it-works/page.tsx",
+  "app/insights/page.tsx",
+  "app/mission-control/mission-control-client.tsx",
+  "app/opportunities/ecosystem/page.tsx",
+  "app/places/[postcode]/page.tsx",
+  "app/process/page.tsx",
+  "app/reports/data-health/page.tsx",
+  "app/reports/grant-frontier/page.tsx",
+  "lib/grant-alert-digests.ts",
+  "lib/grant-notifications.ts",
+  "lib/grant-scout.ts",
+  "lib/opportunity-intelligence.ts",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-opportunity-context.ts",
+  "lib/services/act-project-grants-triage.ts",
+  "lib/services/act-saved-queries.ts",
+  "lib/services/goods-community-detail.ts",
+  "lib/services/goods-grants-triage.ts",
+  "lib/services/goods-signals-workbench.ts",
+  "lib/services/grant-opportunity-cache.ts",
+  "lib/services/grant-service.ts",
+  "lib/services/org-dashboard-service.ts",
+  "lib/services/report-service.ts",
+  "lib/services/se-grant-match.ts"
+ ],
+ "grantconnect_awards": [
+  "app/api/data/map/route.ts",
+  "app/api/data/place/[code]/route.ts",
+  "lib/grant-place-capture.ts",
+  "lib/place-organisations.ts",
+  "lib/services/place-intelligence.ts"
+ ],
+ "grantees": [
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "grants": [
+  "app/api/data/map/route.ts",
+  "app/api/grants/send/route.ts",
+  "app/reports/power-map/page.tsx"
+ ],
+ "gs_entities": [
+  "app/api/agent/route.ts",
+  "app/api/board-report/route.ts",
+  "app/api/browse/foundation/route.ts",
+  "app/api/contacts/analyze/route.ts",
+  "app/api/data/data-health/route.ts",
+  "app/api/data/entity/[identifier]/route.ts",
+  "app/api/data/entity/compare/route.ts",
+  "app/api/data/entity/investigate/route.ts",
+  "app/api/data/entity/network/route.ts",
+  "app/api/data/entity/search/route.ts",
+  "app/api/data/graph/route.ts",
+  "app/api/data/health/route.ts",
+  "app/api/data/map/route.ts",
+  "app/api/data/person/route.ts",
+  "app/api/data/place/[code]/route.ts",
+  "app/api/data/route.ts",
+  "app/api/data/sector/route.ts",
+  "app/api/data/tax-transparency/route.ts",
+  "app/api/entities/[gsId]/evidence/route.ts",
+  "app/api/entities/[gsId]/money/route.ts",
+  "app/api/entities/[gsId]/network/route.ts",
+  "app/api/entities/[gsId]/place/route.ts",
+  "app/api/entities/[gsId]/stories/route.ts",
+  "app/api/evidence/route.ts",
+  "app/api/foundations/[foundationId]/pipeline-context/route.ts",
+  "app/api/insights/route.ts",
+  "app/api/justice/closing-the-gap/route.ts",
+  "app/api/justice/evidence-pack/route.ts",
+  "app/api/justice/interventions/route.ts",
+  "app/api/ops/health/route.ts",
+  "app/api/org/[orgProfileId]/contact-resolution/route.ts",
+  "app/api/org/[orgProfileId]/contacts/sync-ghl/route.ts",
+  "app/api/org/[orgProfileId]/people/search/route.ts",
+  "app/api/org/[orgProfileId]/pipeline/export/route.ts",
+  "app/api/outcomes/[id]/review/route.ts",
+  "app/api/outcomes/portfolio/route.ts",
+  "app/api/outcomes/submit/route.ts",
+  "app/api/places/[postcode]/brief/route.ts",
+  "app/api/places/gaps/route.ts",
+  "app/api/power/accountability/route.ts",
+  "app/api/power/network/[gsId]/route.ts",
+  "app/api/power/place/[sa2Code]/route.ts",
+  "app/api/procurement/analyse/route.ts",
+  "app/api/procurement/black-cladding/route.ts",
+  "app/api/procurement/gap-map/route.ts",
+  "app/api/procurement/tender-pack/route.ts",
+  "app/api/procurement/upload/route.ts",
+  "app/api/scenarios/route.ts",
+  "app/api/social-enterprises/route.ts",
+  "app/api/watches/route.ts",
+  "app/briefing/page.tsx",
+  "app/changes/page.tsx",
+  "app/dashboard/browse/foundations/[id]/page.tsx",
+  "app/dashboard/entities/page.tsx",
+  "app/entities/[gsId]/page.tsx",
+  "app/entities/page.tsx",
+  "app/entity/[gsId]/funding-flow/page.tsx",
+  "app/entity/[gsId]/page.tsx",
+  "app/entity/[gsId]/print/page.tsx",
+  "app/foundations/compare/page.tsx",
+  "app/foundations/prf/page.tsx",
+  "app/foundations/public-review-route.tsx",
+  "app/foundations/review-set/page.tsx",
+  "app/giving/page.tsx",
+  "app/home/page.tsx",
+  "app/insights/page.tsx",
+  "app/mission-control/mission-control-client.tsx",
+  "app/opportunities/ecosystem/page.tsx",
+  "app/org/[slug]/intelligence/page.tsx",
+  "app/person/[name]/page.tsx",
+  "app/pipeline/page.tsx",
+  "app/place/far-west-coast/page.tsx",
+  "app/places/[postcode]/page.tsx",
+  "app/reports/board-interlocks/page.tsx",
+  "app/reports/charity-contracts/page.tsx",
+  "app/reports/child-protection/page.tsx",
+  "app/reports/community-efficiency/page.tsx",
+  "app/reports/consulting-class/page.tsx",
+  "app/reports/convergence/page.tsx",
+  "app/reports/data-health/page.tsx",
+  "app/reports/desert-overhead/page.tsx",
+  "app/reports/disability/[state]/page.tsx",
+  "app/reports/donor-contractors/page.tsx",
+  "app/reports/education/[state]/page.tsx",
+  "app/reports/exec-remuneration/page.tsx",
+  "app/reports/indigenous-proxy/page.tsx",
+  "app/reports/multicultural-sector/fecca-eccv/page.tsx",
+  "app/reports/multicultural-sector/page.tsx",
+  "app/reports/power-dynamics/page.tsx",
+  "app/reports/procurement-oligopoly/page.tsx",
+  "app/reports/research-funding/page.tsx",
+  "app/reports/state-procurement/page.tsx",
+  "app/reports/tax-transparency/page.tsx",
+  "app/reports/triple-play/page.tsx",
+  "app/reports/youth-justice/[state]/program/[programSlug]/page.tsx",
+  "app/reports/youth-justice/qld/crime-prevention-schools/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "app/reports/youth-justice/qld/tracker/page.tsx",
+  "app/share/fecca-eccv/people/[slug]/page.tsx",
+  "app/social-enterprises/[id]/page.tsx",
+  "lib/governed-proof/place-bundle.ts",
+  "lib/justice-money.ts",
+  "lib/philanthropy-admin.ts",
+  "lib/place-contract-ladder.ts",
+  "lib/place-organisations.ts",
+  "lib/place-philanthropy.ts",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-barkly-field.ts",
+  "lib/services/act-funder-intelligence.ts",
+  "lib/services/act-people-directory.ts",
+  "lib/services/act-saved-queries.ts",
+  "lib/services/council-place-report.ts",
+  "lib/services/due-diligence-service.ts",
+  "lib/services/entity-service.ts",
+  "lib/services/goods-community-detail.ts",
+  "lib/services/org-dashboard-service.ts",
+  "lib/services/place-intelligence.ts",
+  "lib/services/report-service.ts"
+ ],
+ "gs_relationships": [
+  "app/api/board-report/route.ts",
+  "app/api/contacts/analyze/route.ts",
+  "app/api/contacts/graph/route.ts",
+  "app/api/data/data-health/route.ts",
+  "app/api/data/entity/investigate/route.ts",
+  "app/api/data/entity/network/route.ts",
+  "app/api/data/graph/route.ts",
+  "app/api/data/route.ts",
+  "app/api/entities/[gsId]/money/route.ts",
+  "app/api/entities/[gsId]/network/route.ts",
+  "app/api/insights/route.ts",
+  "app/api/places/[postcode]/brief/route.ts",
+  "app/api/places/[postcode]/route.ts",
+  "app/api/power/accountability/route.ts",
+  "app/api/power/network/[gsId]/route.ts",
+  "app/api/power/place/[sa2Code]/route.ts",
+  "app/api/procurement/black-cladding/route.ts",
+  "app/api/procurement/upload/route.ts",
+  "app/api/v1/exposure/route.ts",
+  "app/entities/[gsId]/page.tsx",
+  "app/entities/page.tsx",
+  "app/entity/[gsId]/funding-flow/page.tsx",
+  "app/entity/[gsId]/page.tsx",
+  "app/foundations/backlog/page.tsx",
+  "app/foundations/compare/page.tsx",
+  "app/foundations/prf/page.tsx",
+  "app/foundations/public-review-route.tsx",
+  "app/foundations/review-set/page.tsx",
+  "app/giving/page.tsx",
+  "app/insights/page.tsx",
+  "app/org/[slug]/intelligence/page.tsx",
+  "app/places/[postcode]/page.tsx",
+  "app/reports/consulting-class/page.tsx",
+  "app/reports/data-health/page.tsx",
+  "app/reports/disability/[state]/page.tsx",
+  "app/reports/donor-contractors/page.tsx",
+  "app/reports/education/[state]/page.tsx",
+  "app/reports/multicultural-sector/fecca-eccv/page.tsx",
+  "app/reports/multicultural-sector/page.tsx",
+  "app/reports/procurement-oligopoly/page.tsx",
+  "app/share/fecca-eccv/people/[slug]/page.tsx",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/org-dashboard-service.ts",
+  "lib/services/report-service.ts"
+ ],
+ "ids": [
+  "app/api/data/route.ts"
+ ],
+ "information_schema": [
+  "app/api/data/schema-graph/route.ts",
+  "app/ops/schema/[object]/page.tsx"
+ ],
+ "it": [
+  "lib/services/act-saved-queries.ts"
+ ],
+ "justice": [
+  "app/api/data/map/route.ts",
+  "app/api/data/place/[code]/route.ts"
+ ],
+ "justice_funding": [
+  "app/api/board-report/route.ts",
+  "app/api/civicscope/cron/route.ts",
+  "app/api/civicscope/digest/route.ts",
+  "app/api/data/data-health/route.ts",
+  "app/api/data/entity/[identifier]/route.ts",
+  "app/api/data/entity/investigate/route.ts",
+  "app/api/data/graph/route.ts",
+  "app/api/data/health/route.ts",
+  "app/api/data/map/route.ts",
+  "app/api/data/place/[code]/route.ts",
+  "app/api/entities/[gsId]/evidence/route.ts",
+  "app/api/insights/route.ts",
+  "app/api/justice/closing-the-gap/route.ts",
+  "app/api/justice/evidence-pack/route.ts",
+  "app/api/justice/interventions/route.ts",
+  "app/api/org/[orgProfileId]/pipeline/export/route.ts",
+  "app/api/outcomes/portfolio/route.ts",
+  "app/api/power/foundations/route.ts",
+  "app/api/scenarios/route.ts",
+  "app/changes/page.tsx",
+  "app/entities/[gsId]/page.tsx",
+  "app/entity/[gsId]/funding-flow/page.tsx",
+  "app/entity/[gsId]/page.tsx",
+  "app/entity/[gsId]/print/page.tsx",
+  "app/foundations/prf/page.tsx",
+  "app/insights/page.tsx",
+  "app/org/[slug]/intelligence/page.tsx",
+  "app/places/[postcode]/page.tsx",
+  "app/reports/convergence/page.tsx",
+  "app/reports/data-health/page.tsx",
+  "app/reports/indigenous-proxy/page.tsx",
+  "app/reports/reality-check/page.tsx",
+  "app/reports/youth-justice/[state]/program/[programSlug]/page.tsx",
+  "app/reports/youth-justice/[state]/sector/page.tsx",
+  "app/reports/youth-justice/qld/crime-prevention-schools/page.tsx",
+  "app/reports/youth-justice/qld/sector/long-read/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "app/reports/youth-justice/qld/tracker/page.tsx",
+  "app/social-enterprises/[id]/page.tsx",
+  "lib/justice-money.ts",
+  "lib/services/act-barkly-field.ts",
+  "lib/services/act-saved-queries.ts",
+  "lib/services/due-diligence-service.ts",
+  "lib/services/journey-service.ts",
+  "lib/services/org-dashboard-service.ts",
+  "lib/services/qld-yj-recipient.ts",
+  "lib/services/report-service.ts"
+ ],
+ "keyed": [
+  "lib/table-atlas.ts"
+ ],
+ "knowledge_chunks": [
+  "app/api/profile/enrich/route.ts"
+ ],
+ "knowledge_source_sync": [
+  "lib/services/act-opportunity-context.ts"
+ ],
+ "latest": [
+  "app/reports/grant-frontier/page.tsx"
+ ],
+ "latest_activity": [
+  "lib/services/act-opportunity-context.ts"
+ ],
+ "latest_grant": [
+  "lib/services/act-opportunity-context.ts"
+ ],
+ "latest_refresh": [
+  "app/reports/youth-justice/trackers/page.tsx"
+ ],
+ "latest_runs": [
+  "app/reports/grant-frontier/page.tsx",
+  "app/reports/youth-justice/trackers/page.tsx"
+ ],
+ "lga_centroids": [
+  "app/api/data/map/route.ts"
+ ],
+ "lga_cross_system_stats": [
+  "app/reports/youth-justice/qld/sector/long-read/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "lib/services/report-service.ts"
+ ],
+ "linkedin_contacts": [
+  "app/api/contacts/analyze/route.ts"
+ ],
+ "locations": [
+  "app/places/[postcode]/page.tsx"
+ ],
+ "matched": [
+  "lib/philanthropy-admin.ts"
+ ],
+ "modal_remoteness": [
+  "app/api/data/map/route.ts"
+ ],
+ "money_flows": [
+  "app/api/data/route.ts",
+  "app/api/power/flows/route.ts",
+  "app/api/reports/money-flow/route.ts",
+  "app/architecture/page.tsx",
+  "app/how-it-works/page.tsx",
+  "app/reports/money-flow/page.tsx",
+  "app/reports/reallocation-atlas/page.tsx"
+ ],
+ "mv_board_interlocks": [
+  "app/api/data/graph/route.ts",
+  "app/api/data/who-runs-australia/route.ts",
+  "app/reports/power-dynamics/page.tsx",
+  "app/reports/reallocation-atlas/page.tsx",
+  "app/reports/who-runs-australia/page.tsx",
+  "lib/services/act-people.ts",
+  "lib/services/report-service.ts",
+  "lib/view-data.ts"
+ ],
+ "mv_board_power": [
+  "app/api/data/board-power/route.ts"
+ ],
+ "mv_charity_rankings": [
+  "app/api/data/rankings/route.ts",
+  "app/entity/[gsId]/page.tsx"
+ ],
+ "mv_charity_trajectory": [
+  "lib/charity-trajectory.ts"
+ ],
+ "mv_clarity_flow": [
+  "app/api/clarity/questions/mint/route.ts",
+  "app/clarity/cross/page.tsx"
+ ],
+ "mv_crossref_quality": [
+  "app/reports/data-quality/page.tsx"
+ ],
+ "mv_data_quality": [
+  "app/reports/data-quality/page.tsx"
+ ],
+ "mv_disability_landscape": [
+  "app/api/data/graph/route.ts",
+  "app/reports/disability/[state]/page.tsx",
+  "app/reports/disability/page.tsx",
+  "app/reports/ndis/page.tsx"
+ ],
+ "mv_donation_contract_timing": [
+  "app/reports/timing/page.tsx"
+ ],
+ "mv_donor_contract_crossref": [
+  "app/reports/funding-equity/page.tsx"
+ ],
+ "mv_donor_person_crosslink": [
+  "lib/services/org-dashboard-service.ts"
+ ],
+ "mv_entity_power_index": [
+  "app/api/agent/route.ts",
+  "app/api/ask/route.ts",
+  "app/api/browse/org/route.ts",
+  "app/api/data/entity/compare/route.ts",
+  "app/api/data/entity/investigate/route.ts",
+  "app/api/data/entity/search/route.ts",
+  "app/api/data/entity/top/route.ts",
+  "app/api/data/graph/route.ts",
+  "app/api/data/place/[code]/route.ts",
+  "app/api/data/political-money/route.ts",
+  "app/api/data/power-index/route.ts",
+  "app/api/data/sector/route.ts",
+  "app/api/power/accountability/route.ts",
+  "app/entity/[gsId]/page.tsx",
+  "app/entity/[gsId]/print/page.tsx",
+  "app/pipeline/page.tsx",
+  "app/reports/community-efficiency/page.tsx",
+  "app/reports/convergence/page.tsx",
+  "app/reports/disability/page.tsx",
+  "app/reports/influence-network/page.tsx",
+  "app/reports/multicultural-sector/fecca-eccv/page.tsx",
+  "app/reports/ndis/page.tsx",
+  "app/reports/political-money/page.tsx",
+  "app/reports/power-concentration/page.tsx",
+  "app/reports/reality-check/page.tsx",
+  "app/reports/reallocation-atlas/page.tsx",
+  "app/sitemap.ts",
+  "lib/funding-deserts.ts",
+  "lib/services/org-dashboard-service.ts",
+  "lib/view-data.ts"
+ ],
+ "mv_evidence_backed_funding": [
+  "app/foundation/[abn]/page.tsx",
+  "app/reports/philanthropy/page.tsx"
+ ],
+ "mv_foundation_grantees": [
+  "app/api/browse/foundation/route.ts",
+  "app/api/data/graph/route.ts",
+  "app/api/power/holders/route.ts",
+  "app/dashboard/browse/foundations/[id]/page.tsx",
+  "app/foundation/[abn]/page.tsx",
+  "lib/services/org-dashboard-service.ts"
+ ],
+ "mv_foundation_need_alignment": [
+  "app/reports/philanthropy/page.tsx"
+ ],
+ "mv_foundation_regranting": [
+  "app/api/browse/foundation/route.ts",
+  "app/api/data/graph/route.ts",
+  "app/dashboard/browse/foundations/[id]/page.tsx",
+  "app/foundation/[abn]/page.tsx",
+  "app/reports/power-dynamics/page.tsx"
+ ],
+ "mv_foundation_scores": [
+  "app/api/data/graph/route.ts",
+  "app/foundation/[abn]/page.tsx",
+  "app/foundation/page.tsx",
+  "app/reports/philanthropy/page.tsx",
+  "lib/services/org-dashboard-service.ts"
+ ],
+ "mv_foundation_trends": [
+  "app/foundation/[abn]/page.tsx"
+ ],
+ "mv_funding_by_disadvantage": [
+  "app/reports/funding-equity/page.tsx"
+ ],
+ "mv_funding_by_lga": [
+  "app/api/procurement/gap-map/route.ts",
+  "app/api/procurement/tender-pack/route.ts"
+ ],
+ "mv_funding_by_postcode": [
+  "app/api/data/route.ts",
+  "app/api/power/place/[sa2Code]/route.ts",
+  "app/giving/page.tsx",
+  "lib/governed-proof/place-bundle.ts",
+  "lib/services/goods-community-detail.ts"
+ ],
+ "mv_funding_deserts": [
+  "app/api/agent/route.ts",
+  "app/api/data/funding-deserts/route.ts",
+  "app/api/data/map/route.ts",
+  "app/api/data/power-index/route.ts",
+  "app/api/scenarios/route.ts",
+  "app/reports/convergence/page.tsx",
+  "app/reports/desert-overhead/page.tsx",
+  "app/reports/funding-deserts/page.tsx",
+  "app/reports/power-concentration/page.tsx",
+  "app/reports/reality-check/page.tsx",
+  "app/reports/reallocation-atlas/page.tsx",
+  "lib/funding-deserts.ts",
+  "lib/services/org-dashboard-service.ts",
+  "lib/view-data.ts"
+ ],
+ "mv_funding_outcomes_summary": [
+  "app/api/outcomes/portfolio/route.ts"
+ ],
+ "mv_grant_contract_overlap": [
+  "app/reports/double-dippers/page.tsx"
+ ],
+ "mv_gs_donor_contractors": [
+  "app/api/data/health/route.ts",
+  "app/api/mission-control/route.ts",
+  "app/api/ops/health/route.ts",
+  "app/entities/page.tsx",
+  "app/mission-control/mission-control-client.tsx",
+  "app/reports/donor-contractors/page.tsx",
+  "app/reports/reality-check/page.tsx",
+  "app/reports/triple-play/page.tsx"
+ ],
+ "mv_gs_entity_stats": [
+  "app/api/entities/[gsId]/money/route.ts",
+  "app/api/entities/[gsId]/route.ts",
+  "app/entities/[gsId]/page.tsx",
+  "lib/services/due-diligence-service.ts"
+ ],
+ "mv_indigenous_funding_by_disadvantage": [
+  "app/reports/funding-equity/page.tsx"
+ ],
+ "mv_indigenous_procurement_score": [
+  "app/reports/ipp-scoreboard/page.tsx"
+ ],
+ "mv_indigenous_proven_suppliers": [
+  "app/social-enterprises/[id]/page.tsx",
+  "lib/services/supplier-search.ts"
+ ],
+ "mv_justice_charity_financial_health": [
+  "app/social-enterprises/[id]/page.tsx"
+ ],
+ "mv_justice_proven_suppliers": [
+  "app/social-enterprises/[id]/page.tsx",
+  "lib/services/supplier-search.ts"
+ ],
+ "mv_lga_allocation": [
+  "lib/allocation.ts"
+ ],
+ "mv_lga_indigenous_proxy_score": [
+  "app/reports/indigenous-proxy/page.tsx"
+ ],
+ "mv_lga_place_profile": [
+  "lib/services/place-intelligence.ts"
+ ],
+ "mv_person_cross_system": [
+  "app/api/data/who-runs-australia/route.ts",
+  "app/reports/who-runs-australia/page.tsx"
+ ],
+ "mv_person_entity_crosswalk": [
+  "lib/services/org-dashboard-service.ts"
+ ],
+ "mv_person_entity_network": [
+  "app/api/data/person/route.ts",
+  "app/person/[name]/page.tsx"
+ ],
+ "mv_person_identity_influence": [
+  "app/api/data/person/route.ts",
+  "app/person/[name]/page.tsx"
+ ],
+ "mv_person_identity_influence_v2": [
+  "app/api/power/holders/route.ts"
+ ],
+ "mv_person_identity_network": [
+  "app/api/power/holders/route.ts",
+  "app/person/[name]/page.tsx"
+ ],
+ "mv_person_influence": [
+  "app/api/data/person/route.ts",
+  "app/reports/multicultural-sector/fecca-eccv/page.tsx",
+  "app/reports/multicultural-sector/page.tsx",
+  "app/reports/youth-justice/qld/sector/long-read/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "app/share/fecca-eccv/people/[slug]/page.tsx",
+  "lib/services/act-people.ts"
+ ],
+ "mv_person_network": [
+  "app/reports/power-network/page.tsx",
+  "app/reports/reallocation-atlas/page.tsx"
+ ],
+ "mv_revolving_door": [
+  "app/api/agent/route.ts",
+  "app/api/data/entity/compare/route.ts",
+  "app/api/data/entity/investigate/route.ts",
+  "app/api/data/political-money/route.ts",
+  "app/api/data/who-runs-australia/route.ts",
+  "app/api/power/accountability/route.ts",
+  "app/entity/[gsId]/page.tsx",
+  "app/entity/[gsId]/print/page.tsx",
+  "app/reports/influence-network/page.tsx",
+  "app/reports/political-money/page.tsx",
+  "app/reports/power-concentration/page.tsx",
+  "app/reports/power-dynamics/page.tsx",
+  "app/reports/reality-check/page.tsx",
+  "app/reports/who-runs-australia/page.tsx",
+  "lib/services/org-dashboard-service.ts",
+  "lib/services/report-service.ts"
+ ],
+ "mv_sa2_map_data": [
+  "app/api/power/map-data/route.ts"
+ ],
+ "mv_temporal_summary": [
+  "app/reports/timing/page.tsx"
+ ],
+ "mv_triple_proof_suppliers": [
+  "lib/services/supplier-search.ts"
+ ],
+ "mv_trustee_grantee_chain": [
+  "app/foundation/[abn]/page.tsx",
+  "app/reports/philanthropy/page.tsx"
+ ],
+ "mv_trustee_grantee_overlaps": [
+  "app/reports/power-network/page.tsx"
+ ],
+ "mv_yj_report_acco_gap": [
+  "app/reports/youth-justice/qld/sector/long-read/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "mv_yj_report_alma_type_counts": [
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "mv_yj_report_state_top_orgs": [
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "mv_yj_report_unfunded_programs": [
+  "app/reports/youth-justice/qld/sector/long-read/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "ndis_active_providers": [
+  "app/reports/ndis/page.tsx"
+ ],
+ "ndis_first_nations": [
+  "app/reports/disability/page.tsx"
+ ],
+ "ndis_market_concentration": [
+  "app/entities/[gsId]/page.tsx",
+  "app/places/[postcode]/page.tsx",
+  "app/reports/ndis-market/page.tsx",
+  "app/reports/ndis/page.tsx"
+ ],
+ "ndis_participants": [
+  "app/reports/ndis/page.tsx"
+ ],
+ "ndis_participants_lga": [
+  "app/reports/convergence/page.tsx",
+  "app/reports/ndis/page.tsx",
+  "lib/services/place-data-service.ts"
+ ],
+ "ndis_registered_providers": [
+  "app/reports/ndis/page.tsx"
+ ],
+ "ndis_utilisation": [
+  "app/reports/disability/page.tsx",
+  "app/reports/ndis/page.tsx"
+ ],
+ "notion_organizations": [
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "opportunity_context_events": [
+  "app/api/org/[orgProfileId]/contact-resolution/route.ts",
+  "app/api/org/[orgProfileId]/daily-actions/route.ts",
+  "app/api/org/[orgProfileId]/funder-intelligence/route.ts",
+  "app/api/org/[orgProfileId]/relationship-contributions/route.ts",
+  "app/api/org/[orgProfileId]/relationship-follow-ups/route.ts",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-daily-actions.ts",
+  "lib/services/act-funder-intelligence.ts",
+  "lib/services/act-opportunity-context.ts",
+  "lib/services/act-relationship-ledger.ts",
+  "lib/services/goods-capital-workspace.ts",
+  "lib/services/goods-funnel.ts"
+ ],
+ "opportunity_decisions": [
+  "app/api/org/[orgProfileId]/daily-actions/route.ts",
+  "app/api/org/[orgProfileId]/funder-intelligence/route.ts",
+  "app/api/org/[orgProfileId]/pipeline/route.ts",
+  "lib/opportunity-intelligence.ts",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-opportunity-context.ts",
+  "lib/services/goods-capital-workspace.ts",
+  "lib/services/org-dashboard-service.ts"
+ ],
+ "org_applicant_entities": [
+  "app/api/org/[orgProfileId]/projects/[projectId]/foundations/route.ts"
+ ],
+ "org_contacts": [
+  "app/api/org/[orgProfileId]/contact-resolution/route.ts",
+  "app/api/org/[orgProfileId]/contacts/link-notion/route.ts",
+  "app/api/org/[orgProfileId]/contacts/route.ts",
+  "app/api/org/[orgProfileId]/contacts/sync-ghl/route.ts",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-barkly-field.ts",
+  "lib/services/act-funder-intelligence.ts",
+  "lib/services/act-people-directory.ts",
+  "lib/services/act-people.ts",
+  "lib/services/act-relationship-ledger.ts",
+  "lib/services/goods-community-detail.ts",
+  "lib/services/goods-governance.ts",
+  "lib/services/goods-network-people.ts",
+  "lib/services/org-dashboard-service.ts",
+  "lib/services/tag-sync-service.ts"
+ ],
+ "org_journey_matches": [
+  "lib/services/journey-service.ts"
+ ],
+ "org_journey_messages": [
+  "lib/services/journey-service.ts"
+ ],
+ "org_journey_personas": [
+  "lib/services/journey-service.ts"
+ ],
+ "org_journey_steps": [
+  "lib/services/journey-service.ts"
+ ],
+ "org_journeys": [
+  "lib/services/journey-service.ts"
+ ],
+ "org_leadership": [
+  "lib/services/org-dashboard-service.ts",
+  "lib/services/report-service.ts"
+ ],
+ "org_members": [
+  "app/api/foundations/saved/[foundationId]/route.ts",
+  "app/api/foundations/saved/route.ts",
+  "app/api/profile/enrich/route.ts",
+  "app/api/profile/matches/route.ts",
+  "app/api/team/route.ts",
+  "app/api/tracker/[grantId]/route.ts",
+  "app/api/tracker/route.ts",
+  "app/org/page.tsx",
+  "lib/org-profile.ts"
+ ],
+ "org_pipeline": [
+  "app/api/foundations/[foundationId]/pipeline-context/route.ts",
+  "app/api/org/[orgProfileId]/pipeline/export/route.ts",
+  "app/api/org/[orgProfileId]/pipeline/route.ts",
+  "app/api/org/[orgProfileId]/projects/[projectId]/foundations/route.ts",
+  "app/api/tracker/route.ts",
+  "app/grants/[id]/page.tsx",
+  "lib/opportunity-intelligence.ts",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-atlas.ts",
+  "lib/services/act-cross-projects.ts",
+  "lib/services/act-funder-intelligence.ts",
+  "lib/services/goods-funnel.ts",
+  "lib/services/org-dashboard-service.ts",
+  "lib/services/report-service.ts"
+ ],
+ "org_profiles": [
+  "app/api/admin/impersonate/route.ts",
+  "app/api/billing/check-access/route.ts",
+  "app/api/billing/checkout/route.ts",
+  "app/api/billing/portal/route.ts",
+  "app/api/billing/track/click/route.ts",
+  "app/api/billing/webhook/route.ts",
+  "app/api/charities/claim/route.ts",
+  "app/api/foundations/[foundationId]/pipeline-context/route.ts",
+  "app/api/foundations/notes/route.ts",
+  "app/api/foundations/saved/route.ts",
+  "app/api/grants/[grantId]/feedback/route.ts",
+  "app/api/grants/match/route.ts",
+  "app/api/ops/claims/route.ts",
+  "app/api/ops/route.ts",
+  "app/api/org/[orgProfileId]/contacts/sync-ghl/route.ts",
+  "app/api/org/[orgProfileId]/opportunity-context/route.ts",
+  "app/api/org/[orgProfileId]/pipeline/export/route.ts",
+  "app/api/profile/enrich/route.ts",
+  "app/api/profile/matches/route.ts",
+  "app/api/profile/route.ts",
+  "app/api/team/route.ts",
+  "app/api/tracker/route.ts",
+  "app/architecture/page.tsx",
+  "app/charities/[abn]/page.tsx",
+  "app/continue/page.tsx",
+  "app/grants/[id]/page.tsx",
+  "app/home/page.tsx",
+  "app/layout.tsx",
+  "app/org/page.tsx",
+  "lib/api-auth.ts",
+  "lib/grant-alert-digests.ts",
+  "lib/grant-scout.ts",
+  "lib/opportunity-intelligence.ts",
+  "lib/org-profile.ts",
+  "lib/pilot-participants.ts",
+  "lib/services/funding-weekly-digest.ts",
+  "lib/services/org-dashboard-service.ts",
+  "lib/services/report-service.ts"
+ ],
+ "org_program_source_links": [
+  "lib/services/report-service.ts"
+ ],
+ "org_programs": [
+  "app/api/org/[orgProfileId]/pipeline/export/route.ts",
+  "app/api/org/[orgProfileId]/programs/route.ts",
+  "lib/services/org-dashboard-service.ts",
+  "lib/services/report-service.ts"
+ ],
+ "org_project_foundation_interactions": [
+  "app/api/org/[orgProfileId]/funder-intelligence/route.ts",
+  "app/api/org/[orgProfileId]/projects/[projectId]/foundations/route.ts",
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "org_project_foundation_research": [
+  "app/api/org/[orgProfileId]/projects/[projectId]/foundations/route.ts"
+ ],
+ "org_project_foundations": [
+  "app/api/org/[orgProfileId]/funder-intelligence/route.ts",
+  "app/api/org/[orgProfileId]/projects/[projectId]/foundations/route.ts",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-cross-projects.ts",
+  "lib/services/act-funder-intelligence.ts",
+  "lib/services/goods-funder-scan.ts",
+  "lib/services/org-dashboard-service.ts"
+ ],
+ "org_projects": [
+  "app/api/org/[orgProfileId]/projects/[projectId]/foundations/route.ts",
+  "app/api/org/[orgProfileId]/projects/route.ts",
+  "lib/services/act-atlas.ts",
+  "lib/services/act-cross-projects.ts",
+  "lib/services/act-funder-intelligence.ts",
+  "lib/services/act-project-apply-now.ts",
+  "lib/services/act-research.ts",
+  "lib/services/ask-grantscope.ts",
+  "lib/services/funding-ghl.ts",
+  "lib/services/funding-weekly-digest.ts",
+  "lib/services/goods-community-detail.ts",
+  "lib/services/org-dashboard-service.ts",
+  "lib/services/project-funding-service.ts"
+ ],
+ "org_systems": [
+  "lib/services/report-service.ts"
+ ],
+ "organizations": [
+  "app/api/entities/[gsId]/evidence/route.ts",
+  "app/api/power/foundations/route.ts",
+  "app/entities/[gsId]/page.tsx"
+ ],
+ "orgs": [
+  "lib/table-atlas.ts"
+ ],
+ "oric_corporations": [
+  "app/reports/cross-reference/page.tsx",
+  "app/reports/power-map/page.tsx"
+ ],
+ "outcome_submissions": [
+  "app/api/outcomes/[id]/review/route.ts",
+  "app/api/outcomes/review/route.ts",
+  "app/api/outcomes/submit/route.ts",
+  "app/entities/[gsId]/page.tsx",
+  "app/foundations/prf/page.tsx"
+ ],
+ "outcomes_metrics": [
+  "app/api/data/outcomes/route.ts",
+  "app/api/data/route.ts",
+  "app/entity/[gsId]/page.tsx",
+  "app/reports/youth-justice/qld/sector/long-read/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "lib/services/report-service.ts"
+ ],
+ "oversight_recommendations": [
+  "lib/services/report-service.ts"
+ ],
+ "parliament_bills": [
+  "app/reports/youth-justice/[state]/sector/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "partnership_inquiries": [
+  "app/api/partnership-inquiries/backfill-ghl/route.ts",
+  "app/share/partner/actions.ts"
+ ],
+ "patterns": [
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "payment_proof": [
+  "lib/services/org-verification-service.ts"
+ ],
+ "people": [
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "person_entities": [
+  "app/api/power/holders/route.ts"
+ ],
+ "person_entity_links": [
+  "app/api/contacts/analyze/route.ts"
+ ],
+ "person_identity_map": [
+  "app/api/contacts/analyze/route.ts",
+  "app/api/org/[orgProfileId]/contacts/link-notion/route.ts",
+  "app/api/org/[orgProfileId]/contacts/sync-ghl/route.ts",
+  "lib/services/act-people-directory.ts",
+  "lib/services/org-dashboard-service.ts",
+  "lib/services/tag-sync-service.ts"
+ ],
+ "person_orgs": [
+  "app/reports/multicultural-sector/fecca-eccv/page.tsx"
+ ],
+ "person_roles": [
+  "app/api/agent/route.ts",
+  "app/api/browse/org/route.ts",
+  "app/api/data/entity/compare/route.ts",
+  "app/api/data/entity/investigate/route.ts",
+  "app/api/data/entity/network/route.ts",
+  "app/api/data/route.ts",
+  "app/api/entities/[gsId]/network/route.ts",
+  "app/api/power/accountability/route.ts",
+  "app/entities/[gsId]/page.tsx",
+  "app/entity/[gsId]/page.tsx",
+  "app/entity/[gsId]/print/page.tsx",
+  "app/foundations/[id]/page.tsx",
+  "app/foundations/backlog/page.tsx",
+  "app/foundations/compare/page.tsx",
+  "app/foundations/prf/page.tsx",
+  "app/foundations/public-review-route.tsx",
+  "app/foundations/review-set/page.tsx",
+  "app/reports/board-interlocks/page.tsx",
+  "app/reports/youth-justice/[state]/program/[programSlug]/page.tsx",
+  "app/snow-foundation/page.tsx",
+  "lib/services/act-funder-intelligence.ts",
+  "lib/services/report-service.ts"
+ ],
+ "pg_attribute": [
+  "app/api/data/schema-graph/route.ts",
+  "lib/table-atlas.ts"
+ ],
+ "pg_class": [
+  "app/api/data/schema-graph/route.ts",
+  "app/api/mission-control/route.ts",
+  "app/api/ops/health/route.ts",
+  "app/ops/schema/page.tsx",
+  "lib/table-atlas.ts"
+ ],
+ "pg_constraint": [
+  "app/api/data/schema-graph/route.ts",
+  "lib/table-atlas.ts"
+ ],
+ "pg_namespace": [
+  "app/api/data/schema-graph/route.ts",
+  "app/api/ops/health/route.ts",
+  "app/ops/schema/page.tsx",
+  "lib/table-atlas.ts"
+ ],
+ "pg_options_to_table": [
+  "app/ops/schema/page.tsx"
+ ],
+ "pg_policy": [
+  "app/ops/schema/page.tsx"
+ ],
+ "pg_roles": [
+  "app/ops/schema/page.tsx"
+ ],
+ "pg_stat_user_tables": [
+  "app/api/data/schema-graph/route.ts"
+ ],
+ "pg_stats": [
+  "app/ops/schema/[object]/page.tsx"
+ ],
+ "phidu_lga_health": [
+  "lib/services/goods-community-detail.ts"
+ ],
+ "pilot_participants": [
+  "app/api/ops/pilots/[pilotId]/route.ts",
+  "app/api/ops/pilots/route.ts",
+  "app/api/ops/route.ts"
+ ],
+ "pipeline": [
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "place_corrections": [
+  "app/api/place/corrections/route.ts"
+ ],
+ "placed": [
+  "app/api/data/map/route.ts",
+  "app/api/data/place/[code]/route.ts"
+ ],
+ "policy_events": [
+  "app/entity/[gsId]/page.tsx",
+  "lib/services/report-service.ts"
+ ],
+ "political_donations": [
+  "app/api/data/entity/[identifier]/route.ts",
+  "app/api/data/health/route.ts",
+  "app/api/data/political-money/route.ts",
+  "app/api/data/route.ts",
+  "app/api/insights/route.ts",
+  "app/api/justice/evidence-pack/route.ts",
+  "app/api/v1/exposure/route.ts",
+  "app/entities/[gsId]/page.tsx",
+  "app/entity/[gsId]/page.tsx",
+  "app/entity/[gsId]/print/page.tsx",
+  "app/insights/page.tsx",
+  "app/reports/consulting-class/page.tsx",
+  "app/reports/funding-equity/page.tsx",
+  "app/reports/influence-network/page.tsx",
+  "app/reports/political-money/page.tsx",
+  "app/reports/power-map/page.tsx",
+  "app/reports/procurement-oligopoly/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "lib/services/act-saved-queries.ts",
+  "lib/services/due-diligence-service.ts",
+  "lib/services/report-service.ts"
+ ],
+ "portfolio": [
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "postcode_geo": [
+  "app/api/data/map/route.ts",
+  "app/api/entities/[gsId]/place/route.ts",
+  "app/api/place/central-australia/organisations/route.ts",
+  "app/api/places/[postcode]/brief/route.ts",
+  "app/api/places/[postcode]/route.ts",
+  "app/api/places/gaps/route.ts",
+  "app/api/power/place/[sa2Code]/route.ts",
+  "app/api/procurement/tender-pack/route.ts",
+  "app/entities/[gsId]/page.tsx",
+  "app/places/[postcode]/page.tsx",
+  "app/reports/funding-equity/page.tsx",
+  "app/reports/power-map/page.tsx",
+  "lib/services/council-place-report.ts",
+  "lib/services/due-diligence-service.ts",
+  "lib/services/goods-atlas-points.ts",
+  "lib/services/place-data-service.ts",
+  "lib/services/report-service.ts"
+ ],
+ "primary_orgs": [
+  "lib/services/report-service.ts"
+ ],
+ "product_events": [
+  "app/api/ops/route.ts",
+  "lib/product-events.ts"
+ ],
+ "profiles": [
+  "app/api/watches/digest/route.ts",
+  "lib/pilot-participants.ts"
+ ],
+ "prog": [
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "lib/services/qld-yj-recipient.ts"
+ ],
+ "program_counts": [
+  "app/api/data/route.ts",
+  "app/reports/grant-frontier/page.tsx"
+ ],
+ "program_topics": [
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "programs": [
+  "app/foundations/backlog/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "project_funding_profiles": [
+  "lib/services/ask-grantscope.ts",
+  "lib/services/funding-weekly-digest.ts",
+  "lib/services/project-funding-service.ts"
+ ],
+ "project_monthly_financials": [
+  "lib/services/goods-cost-evidence.ts",
+  "lib/services/goods-finance-ledger.ts"
+ ],
+ "project_profiles": [
+  "app/api/grants/[grantId]/feedback/route.ts",
+  "app/api/profile/matches/route.ts",
+  "app/api/profile/route.ts"
+ ],
+ "provider_contracts": [
+  "app/reports/youth-justice/qld/tracker/page.tsx"
+ ],
+ "provider_rows": [
+  "app/reports/youth-justice/qld/crime-prevention-schools/page.tsx"
+ ],
+ "qld_bills": [
+  "app/reports/youth-justice/qld/sector/long-read/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "qld_coroners_findings": [
+  "app/reports/youth-justice/qld/sector/long-read/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "qld_watchhouse_snapshot_rows": [
+  "app/api/reports/youth-justice/qld/watchhouse-data/refresh/route.ts",
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "qld_watchhouse_snapshots": [
+  "app/api/reports/youth-justice/qld/watchhouse-data/refresh/route.ts",
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "ranked": [
+  "app/reports/procurement-oligopoly/page.tsx",
+  "app/reports/youth-justice/[state]/trackers/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "app/reports/youth-justice/qld/trackers/page.tsx",
+  "app/reports/youth-justice/trackers/page.tsx",
+  "lib/services/act-funder-intelligence.ts",
+  "lib/services/report-service.ts"
+ ],
+ "raw_rel": [
+  "app/foundations/backlog/page.tsx"
+ ],
+ "rec": [
+  "lib/services/qld-yj-recipient.ts"
+ ],
+ "recip": [
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "recipients_agg": [
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "recipients_per": [
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "recipients_ranked": [
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "rel": [
+  "app/foundations/backlog/page.tsx",
+  "app/foundations/review-set/page.tsx",
+  "lib/table-atlas.ts"
+ ],
+ "relationship_health": [
+  "app/org/[slug]/intelligence/page.tsx",
+  "lib/services/act-people-directory.ts",
+  "lib/services/goods-community-detail.ts",
+  "lib/services/goods-living-data-adapter.ts"
+ ],
+ "rels": [
+  "app/api/data/entity/network/route.ts"
+ ],
+ "report_feedback": [
+  "app/account/page.tsx",
+  "app/changes/page.tsx",
+  "app/feedback/actions.ts"
+ ],
+ "report_leads": [
+  "app/api/reports/leads/route.ts"
+ ],
+ "report_submissions": [
+  "app/account/page.tsx",
+  "app/changes/page.tsx",
+  "app/get-a-report/actions.ts"
+ ],
+ "reports": [
+  "app/api/data/route.ts",
+  "app/giving/page.tsx"
+ ],
+ "research_grants": [
+  "app/reports/research-funding/page.tsx"
+ ],
+ "rogs_justice_spending": [
+  "app/reports/convergence/page.tsx"
+ ],
+ "role_counts": [
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "roles": [
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "saved_foundations": [
+  "app/api/foundations/saved/[foundationId]/route.ts",
+  "app/api/foundations/saved/route.ts",
+  "app/continue/page.tsx",
+  "app/home/page.tsx",
+  "app/home/watchlist/page.tsx"
+ ],
+ "saved_grants": [
+  "app/api/alerts/route.ts",
+  "app/api/goods/signals/[id]/action/route.ts",
+  "app/api/home/pre-sweep/route.ts",
+  "app/api/ops/grant-recommendations/decide/route.ts",
+  "app/api/tracker/[grantId]/route.ts",
+  "app/api/tracker/auto-review/route.ts",
+  "app/api/tracker/route.ts",
+  "app/architecture/page.tsx",
+  "app/continue/page.tsx",
+  "app/home/page.tsx",
+  "app/home/watchlist/page.tsx",
+  "lib/grant-alert-digests.ts",
+  "lib/grant-scout.ts"
+ ],
+ "schema_ownership": [
+  "app/ops/schema/[object]/page.tsx",
+  "app/ops/schema/page.tsx",
+  "lib/table-atlas.ts"
+ ],
+ "scoped": [
+  "app/reports/youth-justice/[state]/sites/site-dossier.ts",
+  "app/reports/youth-justice/[state]/trackers/page.tsx",
+  "app/reports/youth-justice/qld/trackers/page.tsx",
+  "app/reports/youth-justice/trackers/page.tsx"
+ ],
+ "seifa_2021": [
+  "app/api/entities/[gsId]/place/route.ts",
+  "app/api/places/[postcode]/brief/route.ts",
+  "app/api/places/[postcode]/route.ts",
+  "app/api/places/gaps/route.ts",
+  "app/api/power/place/[sa2Code]/route.ts",
+  "app/api/procurement/tender-pack/route.ts",
+  "app/entities/[gsId]/page.tsx",
+  "app/places/[postcode]/page.tsx",
+  "app/reports/funding-equity/page.tsx",
+  "app/reports/power-map/page.tsx",
+  "lib/services/council-place-report.ts",
+  "lib/services/due-diligence-service.ts"
+ ],
+ "signals": [
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "site_providers": [
+  "app/reports/youth-justice/qld/crime-prevention-schools/page.tsx",
+  "app/reports/youth-justice/qld/tracker/page.tsx"
+ ],
+ "snapshots": [
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "social_enterprises": [
+  "app/api/browse/org/route.ts",
+  "app/api/dashboard/route.ts",
+  "app/api/data/health/route.ts",
+  "app/api/data/route.ts",
+  "app/api/insights/route.ts",
+  "app/api/ops/health/route.ts",
+  "app/api/ops/route.ts",
+  "app/api/procurement/analyse/route.ts",
+  "app/api/procurement/tender-pack/route.ts",
+  "app/api/procurement/upload/route.ts",
+  "app/api/social-enterprises/route.ts",
+  "app/architecture/page.tsx",
+  "app/entities/[gsId]/page.tsx",
+  "app/how-it-works/page.tsx",
+  "app/insights/page.tsx",
+  "app/places/[postcode]/page.tsx",
+  "app/process/page.tsx",
+  "app/reports/ndis-market/page.tsx",
+  "app/reports/power-dynamics/page.tsx",
+  "app/reports/social-enterprise/page.tsx",
+  "app/social-enterprises/[id]/opengraph-image.tsx",
+  "app/social-enterprises/[id]/page.tsx",
+  "lib/opportunity-intelligence.ts",
+  "lib/services/council-place-report.ts",
+  "lib/services/supplier-search.ts"
+ ],
+ "source_frontier": [
+  "app/api/home/pre-sweep/route.ts",
+  "app/api/mission-control/frontier/[frontierId]/route.ts",
+  "app/api/mission-control/route.ts",
+  "app/home/page.tsx",
+  "app/reports/grant-frontier/page.tsx",
+  "lib/services/wiki-support-frontier.ts"
+ ],
+ "state_orgs": [
+  "lib/services/report-service.ts"
+ ],
+ "state_tenders": [
+  "app/reports/state-procurement/page.tsx",
+  "app/reports/youth-justice/qld/crime-prevention-schools/page.tsx",
+  "app/reports/youth-justice/qld/tracker/page.tsx"
+ ],
+ "stories": [
+  "app/clarity/projects/page.tsx",
+  "app/clarity/stories/page.tsx"
+ ],
+ "storytellers": [
+  "app/places/[postcode]/page.tsx",
+  "lib/services/place-brief-service.ts"
+ ],
+ "supplier_totals": [
+  "app/reports/procurement-oligopoly/page.tsx"
+ ],
+ "target_people": [
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "target_rows": [
+  "app/reports/youth-justice/qld/crime-prevention-schools/page.tsx",
+  "app/reports/youth-justice/qld/tracker/page.tsx"
+ ],
+ "targets": [
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "these": [
+  "app/api/procurement/black-cladding/route.ts"
+ ],
+ "top100_per_year": [
+  "app/reports/procurement-oligopoly/page.tsx"
+ ],
+ "top100abns": [
+  "app/reports/procurement-oligopoly/page.tsx"
+ ],
+ "top_abns": [
+  "app/api/power/accountability/route.ts"
+ ],
+ "top_holders": [
+  "app/api/power/holders/route.ts"
+ ],
+ "top_orgs": [
+  "lib/services/report-service.ts"
+ ],
+ "top_r": [
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "tp": [
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "lib/services/qld-yj-recipient.ts"
+ ],
+ "tracker_evidence_events": [
+  "app/reports/youth-justice/[state]/sites/site-dossier.ts",
+  "app/reports/youth-justice/[state]/trackers/[trackerKey]/page.tsx",
+  "app/reports/youth-justice/[state]/trackers/page.tsx",
+  "app/reports/youth-justice/qld/tracker/page.tsx",
+  "app/reports/youth-justice/qld/trackers/[trackerKey]/page.tsx",
+  "app/reports/youth-justice/qld/trackers/page.tsx",
+  "app/reports/youth-justice/trackers/page.tsx"
+ ],
+ "tracker_site_snapshots": [
+  "app/reports/youth-justice/trackers/page.tsx"
+ ],
+ "unplaced": [
+  "app/api/data/map/route.ts"
+ ],
+ "unplaced_pc": [
+  "app/api/data/map/route.ts"
+ ],
+ "unresolved": [
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "v_act_expense_by_payee": [
+  "lib/services/org-income-service.ts"
+ ],
+ "v_act_expense_by_project": [
+  "lib/services/org-income-service.ts"
+ ],
+ "v_act_financial_pulse": [
+  "lib/services/org-income-service.ts"
+ ],
+ "v_act_income_by_funder": [
+  "lib/services/org-income-service.ts",
+  "lib/services/org-pipeline-service.ts"
+ ],
+ "v_act_income_by_project": [
+  "lib/services/org-income-service.ts"
+ ],
+ "v_act_payables_triage": [
+  "lib/services/org-payables-service.ts",
+  "lib/services/org-verification-service.ts"
+ ],
+ "v_act_people": [
+  "lib/services/act-people-directory.ts",
+  "lib/services/org-people-service.ts"
+ ],
+ "v_agent_runtime_sweeps": [
+  "app/api/mission-control/route.ts"
+ ],
+ "v_ato_largest_entities": [
+  "app/reports/cross-reference/page.tsx"
+ ],
+ "v_austender_entity_summary": [
+  "app/reports/cross-reference/page.tsx"
+ ],
+ "v_austender_procurement_by_type": [
+  "app/reports/cross-reference/page.tsx"
+ ],
+ "v_austender_stats": [
+  "app/reports/cross-reference/page.tsx"
+ ],
+ "v_austender_supplier_tax": [
+  "app/reports/cross-reference/page.tsx"
+ ],
+ "v_austender_top_charities": [
+  "app/reports/cross-reference/page.tsx"
+ ],
+ "v_austender_top_oric": [
+  "app/reports/cross-reference/page.tsx"
+ ],
+ "v_charity_detail": [
+  "app/charities/[abn]/page.tsx"
+ ],
+ "v_clarity_board_cards": [
+  "app/claim/[id]/page.tsx",
+  "app/clarity/catalogue/page.tsx",
+  "app/clarity/page.tsx",
+  "app/clarity/q/[slug]/page.tsx",
+  "app/clarity/q/[slug]/rows/page.tsx",
+  "app/reports/theme/[slug]/page.tsx",
+  "app/search/search-index.ts",
+  "lib/view-data.ts"
+ ],
+ "v_clarity_changes": [
+  "app/clarity/changes/page.tsx"
+ ],
+ "v_clarity_join_matrix": [
+  "app/clarity/cross/page.tsx"
+ ],
+ "v_clarity_seams": [
+  "app/clarity/seams/page.tsx"
+ ],
+ "v_clarity_wants": [
+  "app/clarity/q/[slug]/page.tsx",
+  "app/clarity/wants/page.tsx"
+ ],
+ "v_contact_360": [
+  "lib/services/act-people-directory.ts"
+ ],
+ "v_ctg_youth_justice_progress": [
+  "app/reports/youth-justice/qld/sector/long-read/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "lib/services/report-service.ts"
+ ],
+ "v_data_catalog_latest": [
+  "app/api/data/catalog/route.ts",
+  "app/giving/quality/page.tsx"
+ ],
+ "v_data_health": [
+  "app/api/power/health/route.ts"
+ ],
+ "v_funding_opportunities": [
+  "lib/funding/opportunities.ts"
+ ],
+ "v_goods_central_channels": [
+  "lib/services/goods-channels.ts"
+ ],
+ "v_goods_foundation_targets": [
+  "lib/services/goods-foundation-targets.ts"
+ ],
+ "v_goods_life_events": [
+  "lib/services/goods-life-events.ts",
+  "lib/services/goods-timeline.ts"
+ ],
+ "v_goods_relationship_funding": [
+  "lib/services/goods-relationship-funding.ts"
+ ],
+ "v_goods_relationship_power": [
+  "lib/services/goods-relationship-power.ts"
+ ],
+ "v_goods_warm_intros": [
+  "lib/services/goods-warm-intros.ts"
+ ],
+ "v_grant_focus_areas": [
+  "app/reports/cross-reference/page.tsx"
+ ],
+ "v_grant_place_capture": [
+  "app/api/data/map/route.ts",
+  "lib/grant-place-capture.ts"
+ ],
+ "v_grant_provider_summary": [
+  "app/reports/cross-reference/page.tsx"
+ ],
+ "v_grant_stats": [
+  "app/reports/cross-reference/page.tsx"
+ ],
+ "v_mv_refresh_drift": [
+  "lib/mv-freshness.ts"
+ ],
+ "v_ndis_provider_supply_summary": [
+  "app/entities/[gsId]/page.tsx",
+  "app/places/[postcode]/page.tsx",
+  "app/reports/ndis-market/page.tsx"
+ ],
+ "v_ndis_registered_provider_graph_match": [
+  "app/reports/ndis-market/page.tsx"
+ ],
+ "v_ndis_registered_provider_state_supply": [
+  "app/reports/ndis-market/page.tsx"
+ ],
+ "v_ndis_registered_provider_status_summary": [
+  "app/reports/ndis-market/page.tsx"
+ ],
+ "v_ndis_youth_justice_overlay": [
+  "app/reports/child-protection/page.tsx",
+  "app/reports/youth-justice/qld/sector/long-read/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "lib/services/report-service.ts"
+ ],
+ "v_org_funding_profile": [
+  "app/api/place/central-australia/organisations/route.ts"
+ ],
+ "v_prf_portfolio_outcomes": [
+  "app/api/outcomes/portfolio/route.ts",
+  "app/foundations/prf/page.tsx"
+ ],
+ "v_project_money_state": [
+  "lib/services/act-atlas-context.ts"
+ ],
+ "v_qld_watchhouse_latest": [
+  "app/changes/page.tsx",
+  "app/reports/youth-justice/qld/sector/long-read/page.tsx",
+  "app/reports/youth-justice/qld/sector/page.tsx",
+  "app/reports/youth-justice/qld/watchhouse-data/page.tsx"
+ ],
+ "v_qld_yj_bills_active": [
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "v_unified_contacts": [
+  "lib/services/act-people-directory.ts"
+ ],
+ "v_youth_justice_state_dashboard": [
+  "app/api/ask/route.ts",
+  "lib/services/report-service.ts"
+ ],
+ "validation_reviews": [
+  "app/api/ops/route.ts",
+  "app/api/ops/validation-reviews/import/route.ts"
+ ],
+ "vic_grants_awarded": [
+  "app/changes/page.tsx",
+  "app/reports/multicultural-sector/fecca-eccv/long-read/page.tsx",
+  "app/reports/multicultural-sector/fecca-eccv/page.tsx"
+ ],
+ "worst": [
+  "app/reports/funding-deserts/page.tsx",
+  "lib/funding-deserts.ts"
+ ],
+ "x": [
+  "app/ops/schema/page.tsx",
+  "lib/table-readers.ts"
+ ],
+ "xero_bank_accounts": [
+  "lib/services/org-verification-service.ts"
+ ],
+ "xero_bank_transactions": [
+  "lib/services/org-verification-service.ts"
+ ],
+ "xero_invoices": [
+  "app/api/ops/funders/timeline/route.ts",
+  "lib/services/act-atlas-context.ts",
+  "lib/services/act-relationship-ledger.ts",
+  "lib/services/goods-cost-evidence.ts",
+  "lib/services/goods-finance-ledger.ts",
+  "lib/services/goods-living-data-adapter.ts",
+  "lib/services/goods-timeline.ts",
+  "lib/services/org-receivables-service.ts",
+  "lib/services/org-verification-service.ts"
+ ],
+ "xero_payments": [
+  "lib/services/org-verification-service.ts"
+ ],
+ "xero_sync_log": [
+  "lib/services/org-verification-service.ts"
+ ],
+ "xero_transactions": [
+  "lib/services/goods-cost-evidence.ts",
+  "lib/services/org-verification-service.ts"
+ ],
+ "year_counts": [
+  "app/api/data/route.ts"
+ ],
+ "yearly": [
+  "app/reports/procurement-oligopoly/page.tsx"
+ ],
+ "yearly_ranked": [
+  "app/reports/procurement-oligopoly/page.tsx"
+ ],
+ "years": [
+  "lib/services/act-funder-intelligence.ts"
+ ],
+ "yj_entities": [
+  "lib/services/report-service.ts"
+ ],
+ "yj_orgs": [
+  "lib/services/report-service.ts"
+ ],
+ "youth_detention_facilities": [
+  "app/reports/youth-justice/qld/sector/page.tsx"
+ ],
+ "yrs": [
+  "app/foundations/backlog/page.tsx",
+  "app/foundations/review-set/page.tsx"
+ ]
+}
