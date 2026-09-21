@@ -19,6 +19,7 @@
 
 import 'dotenv/config';
 import { assignProgramUrls, stripFragment } from './lib/foundation-grant-urls.mjs';
+import { normalizeGrantAmount, hasPlausibleAmount } from './lib/grant-amounts.mjs';
 import { createClient } from '@supabase/supabase-js';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
@@ -176,8 +177,12 @@ function buildGrantPayload(program, foundation, resolvedUrl) {
     provider: foundation.name,
     program: program.name,
     description: program.description,
-    amount_min: program.amount_min ? Number(program.amount_min) : null,
-    amount_max: program.amount_max ? Number(program.amount_max) : null,
+    // grant_opportunities.amount_* are INTEGER and foundation_programs.amount_*
+    // are NUMERIC, so a fractional value used to fail the whole row. Rounding
+    // alone would keep a wrong number: see scripts/lib/grant-amounts.mjs for the
+    // ticket prices and tuition percentages this refuses.
+    amount_min: normalizeGrantAmount(program.amount_min),
+    amount_max: normalizeGrantAmount(program.amount_max),
     // Only an evidenced deadline reaches the desk. An unevidenced one becomes null,
     // which renders as "no deadline known" rather than invented urgency.
     deadline: evidencedDeadlineOf(program),
@@ -551,7 +556,9 @@ export function isGrantLikeFoundationProgram(program, foundation) {
   const hasGrantLanguage = PUBLIC_GRANT_SIGNALS.test(text);
   const hasGrantUrl = URL_GRANT_SIGNALS.test(url);
   const evidencedDeadline = Boolean(program.deadline && meta.deadline_evidence);
-  const hasStructuredGrantSignal = Boolean(program.amount_min || program.amount_max || evidencedDeadline);
+  // An amount only counts when it could actually be a grant. A $20 laser tag
+  // ticket used to satisfy this and promote a fundraising event onto the desk.
+  const hasStructuredGrantSignal = Boolean(hasPlausibleAmount(program) || evidencedDeadline);
   const looksLikeNonGrant = NON_GRANT_SIGNALS.test(text) || DIRECT_SERVICE_SIGNALS.test(text);
   const trustedFoundationType = ['private_ancillary_fund', 'public_ancillary_fund', 'trust', 'corporate_foundation', 'grantmaker'].includes(foundationType);
 

@@ -113,3 +113,20 @@ test('a programme whose page says it is not accepting applications is not grant-
   };
   assert.equal(isGrantLikeFoundationProgram(shut, TRUSTED), false);
 });
+
+test('a ticket price is not a structured grant signal', () => {
+  // "Underworld Laser tag Menai (1 hour) 3 x missions", amount_max 20, which
+  // used to be enough to make a fundraising event grant-like.
+  const lasertag = {
+    name: 'Underworld Laser tag Menai (1 hour) 3 x missions',
+    description: 'Join us for an afternoon of laser tag.',
+    amount_max: 20,
+    metadata: {},
+  };
+  assert.equal(isGrantLikeFoundationProgram(lasertag, TRUSTED), false);
+});
+
+test('a plausible amount still proves grant-hood', () => {
+  const real = { name: 'Community Fund', description: 'Supports community projects.', amount_max: 50000, metadata: {} };
+  assert.equal(isGrantLikeFoundationProgram(real, TRUSTED), true);
+});
