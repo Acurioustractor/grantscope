@@ -1,5 +1,5 @@
 ---
-date: 2026-09-22T00:15:00Z
+date: 2026-09-22T02:30:00Z
 session_name: jev-system-alignment
 branch: main
 status: active
@@ -9,57 +9,59 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-09-22T00:15:00Z
-**Goal:** Point a typed classifier at everything the database holds: catalogue where it could help, measure whether its confidence is real, then use it to find data that lies. **Done and merged.** Three repair PRs in other repos still await Ben.
-**Branch:** grantscope `main` (PRs #466 #468 #469 #470 #471 merged) · JusticeHub + empathy-ledger worktrees still on disk
-**Test:** `bash scripts/precheck.sh` · `node --env-file=.env scripts/check-data-contradictions.mjs` · `node --env-file=.env scripts/check-migration-parity.mjs`
+**Updated:** 2026-09-22T02:30:00Z
+**Goal:** Point a typed classifier at everything the database holds, then use it to find data that lies. **Done, merged, and guarded in CI.** Nothing in flight.
+**Branch:** `main` — everything landed across grantscope, JusticeHub and empathy-ledger
+**Test:** `bash scripts/precheck.sh` · `node --env-file=.env scripts/completion-receipts.mjs` · `scripts/check-data-contradictions.mjs` · `scripts/check-migration-parity.mjs`
 
 ### Now
-[->] Nothing in flight in grantscope. Three PRs in other repos waiting on Ben's eyes.
+[->] Nothing in flight. Only open PR is #463 (sidebar labels), 7+ days old and not from this work.
 
 ### This Session
-- [x] **grantscope #467 (OPEN, waiting on Ben):** org knowledge search was dead since it shipped. `knowledge_chunks.embedding` is vector(384), `/api/chat` sent 1536, pgvector errored every request and the error was destructured away. Same model both sides (`text-embedding-3-small` at `dimensions:384`), so **no re-embedding needed**. Verified live.
-- [x] **JEV workspace audit, 10 active repos, MERGED `bb4368e1`.** Every candidate has one shape: a chat model asked for JSON, regex-sliced back out, only an enum and a number used.
-- [x] **JusticeHub #485 (OPEN):** grant acquittal for a grassroots Indigenous org returned the model's prose RAW. Added an arithmetic-in-code grounding check. Prompt demanded 6 sections; the data supports 4.
-- [x] **empathy-ledger #662 (OPEN):** two cultural-safety fail-opens. Missing analysis defaulted to `'low'` so an unassessed transcript could publish itself; `'sacred'` fell through the gate and scored HIGHER than `'high'`. Five defaults across two vocabularies now route through one module.
-- [x] **Whole-database catalogue, MERGED `494ed875`.** 1,135 prose-bearing columns, ~392M tokens, ~$16 to read every piece of free text once. 261 tables hold prose with NO typed column to fill — the larger half, which the first version missed entirely.
-- [x] **JSONB census.** 215 columns, 220 keys are enums in hiding (a migration, not a model), 58 hold prose.
-- [x] **Two migrations applied + a third:** jsonb expression indexes, the predicate fix, `philanthropic-grant` folded into `philanthropic` (20 rows, $1.749M, exactly reversible via `source`).
-- [x] **`gen-types.sh` works.** The blocker was Docker not running, not the pooler. `DATABASE_URL`'s host is **IPv6-only** (AAAA, no A), so without IPv6 routing psql says "could not translate host name" — which reads like a dead hostname and is not one. The pooler is the way in. `DATABASE_URL` is also a **different credential** from `DATABASE_PASSWORD`; its password fails against the pooler. (Corrected 2026-09-21: I first recorded this as "does not resolve".)
-- [x] **CALIBRATION ANSWERED.** Measured against 291,264 agency-assigned labels: **95% correct at >= 0.90**, which carries 86% of answers. Below 0.90 nothing is conclusive (n of 7, 5, 5).
-- [x] **Check loop + contradiction guard, both in CI.** Flagged alma rows where `topics` says youth-justice and `serves_youth_justice` disagrees.
-- [x] **RESOLVED, merged `cee49e78`.** The 248 was wrong and the guard caused it: `IS NOT TRUE` folded NULL in with false, and 154 of those rows were simply never assessed. Real contradiction: **94**. Adjudicated with two signals (the flag AND a classifier at >= 0.90, 70% coverage); **64 tags stripped, 94 -> 30**. 28 below threshold untouched; 1 kept ("Youth Justice System Statistics - ROGS 2025", correct tag). Guard now uses `= false` and tracks the 154 unassessed separately as a backlog. Baselines 30 / 154.
+- [x] **Org knowledge search was dead since it shipped** (#467). `knowledge_chunks.embedding` is vector(384), `/api/chat` sent 1536, pgvector errored every request and the error was destructured away. Same model both sides at `dimensions:384`, so **no re-embedding needed**.
+- [x] **JEV workspace audit, 10 repos** (`bb4368e1`). Every candidate is one shape: a chat model asked for JSON, regex-sliced back out, only an enum and a number used.
+- [x] **JusticeHub #485:** grant acquittal for a grassroots Indigenous org returned the model's prose RAW. Grounding check added; prompt demanded 6 sections, the data supports 4. MERGED.
+- [x] **empathy-ledger #662:** two cultural-safety fail-opens. A missing analysis defaulted to `'low'` so an unassessed transcript could publish itself, and `'sacred'` fell through the gate scoring HIGHER than `'high'`. MERGED.
+- [x] **Whole-database catalogue + JSONB census** (`494ed875`). 1,135 prose columns, ~392M tokens, ~$16 to read all free text once. 261 tables hold prose with NO typed column to fill. 220 jsonb keys are enums in hiding (a migration, not a model).
+- [x] **Four migrations applied**, all parity-green: jsonb expression indexes, the predicate fix, the `philanthropic` fold, the 64-tag strip.
+- [x] **CALIBRATION ANSWERED.** Against 291,264 agency-assigned labels: **95% correct at >= 0.90**, carrying 86% of answers. Below 0.90 nothing is conclusive (n of 7, 5, 5).
+- [x] **ALMA: 64 wrong youth-justice tags stripped on TWO signals** (`cee49e78`). 248 was wrong and my own guard caused it — `IS NOT TRUE` folded 154 never-assessed NULLs in with false. Real figure 94, now 30.
+- [x] **Four guards now run in CI**: migration parity, private exposure, data contradictions, completion receipts (`--strict`, all three proving, including the index claim that shipped broken).
+- [x] **`gen-types.sh` works** — blocker was Docker not running. Check loop **batched** (several judgments per call, dependency test as the rule).
+- [x] **Agent-design response written** with the session's failures as the evidence base (`ee1018c0`, `0cf891b1`).
+- [x] **Cleanup:** both worktrees removed, both local branches and the stray remote branch deleted, verified by file presence on main (squash-merge makes ancestry checks lie).
 
 ### Next
-- [ ] **Merge the three open PRs:** grantscope #467 (VISIBLE, needs preview), JusticeHub #485, empathy-ledger #662. All green.
-- [ ] **30 contradicting rows remain** (flag false, tag present, classifier not confident). Plus **154 tagged-but-never-assessed** — a backlog, NOT a defect: do not set the flag false on rows nobody has looked at.
-- [ ] **Clean 131 alma rows with regex-detectable scraper artefacts** (URL in name, markdown, "Print this page"). Free, deterministic.
-- [ ] **Clean up two worktrees** once PRs land: `~/Code/JusticeHub-acquittal`, `~/Code/el-failopen`. Tier 3.
+- [ ] **30 contradicting ALMA rows** the classifier could not confidently judge, plus **154 tagged-but-never-assessed** — a backlog, NOT a defect. Do not set the flag false on rows nobody has looked at.
+- [ ] **131 alma rows with regex-detectable scraper artefacts** (URL in the name, markdown, "Print this page"). Free and deterministic.
 - [ ] `grantconnect_awards.category` is a PROGRAMME label, not a topic. Find what reads it as a subject classifier.
-- [ ] **PR #463 (sidebar labels) is now 7+ days old.**
-- [ ] Carried: `parse-foundation-grants.mjs:79-95` mental-health→child-protection mis-tag; `closes_at >= today OR deadline >= today` leak; orphan `foundation_programs`; "Epworth Research Grants" duplicate.
+- [ ] **PR #463** (sidebar labels) is 7+ days old.
+- [ ] Sweep merged branches still on grantscope's remote.
+- [ ] Carried: `parse-foundation-grants.mjs:79-95` mental-health→child-protection mis-tag; the `closes_at >= today OR deadline >= today` leak; orphan `foundation_programs`; "Epworth Research Grants" duplicate.
 - [ ] empathy-ledger `requires_elder_review ?? false` has the same fabrication shape. Left deliberately; policy call.
 
 ### Decisions
 - **The thesis held across three repos.** Every bug was a system with an "I don't know" available, discarded at the boundary. Not one was a model being wrong.
-- **I produced SEVEN confident-but-wrong results today and each is now a guard.** A 1000-row PostgREST cap reading as "43 tables"; a filter offering join-derived columns as model work; a 60-option cap silently dropping the biggest field; a distinct-count threshold tested against a smaller sample; first-page sampling on a phase-written table; **a green post-check on an index the planner never used, which reached production**; "no separator exists" when `serves_youth_justice` was right there. **Scripts now refuse to be read past their evidence:** UNDERPOWERED below 40% coverage, "a pattern of three is noise", exit 2 on missing credentials.
-- **Verify the guard against the BROKEN state, not the passing one.** 4 of 7 empathy-ledger tests fail pre-fix; the contradiction guard exits 1 at baseline 29 and 0 at 30. A test that would also pass on the bug is decoration.
-- **Check the code path, not the object.** The index EXPLAIN was green because I wrote the index's own predicate back at it. Through the view it was a Seq Scan over 3M rows.
-- **Match the embedding MODEL, not just the width.** Two models at one width return plausible nonsense instead of an error. 384 family = ACT knowledge tables; 1536 = CivicGraph domain.
-- **Cardinality from a sample is a LOWER BOUND.** `original_role` read as 12 distinct on 200 rows; it is 999.
-- **A null is not a gap.** `gs_entities.sector` looks like 428,449 missing until you split by entity_type: 240,584 are people. Real gap 185,504 organisations.
-- **Enums in hiding are a migration, not a model.** Never pay a classifier to read what `->>` already knows.
-- **Report patterns, not rows.** 8 of 12 disagreements were one pair: the column's meaning, not 12 bad rows.
-- **Baselines, not zero.** A check red on the day it ships gets muted within a week.
+- **ELEVEN confident-wrong results from me in one session, each now a guard.** A 1000-row PostgREST cap reading as "43 tables"; join-derived columns offered as model work; a 60-option cap dropping the biggest field; a distinct threshold tested against a smaller sample; first-page sampling on a phase-written table; **a green EXPLAIN on an index the planner never used, which REACHED PRODUCTION**; "no separator exists" when `serves_youth_justice` was right there; `IS NOT TRUE` inside the guard built to catch that; reading `head`'s exit code instead of the script's; "does not resolve" for a host that is IPv6-only; an interpretation printed in the check loop that its own data contradicted.
+- **Green checks caught ZERO of them.** Every one was caught by reading output and noticing it disagreed with something known. That is the gap.
+- **Verify the guard against the BROKEN state.** A test that would also pass on the bug is decoration.
+- **Check the code path, not the object.** The index EXPLAIN restated the implementation.
+- **A proof may not name what the change created** — enforced in `completion-receipts.mjs`, which refuses before running.
+- **"Not checked" is its own answer**, never a quiet pass. Three outcomes: proven / disproven / not checked.
+- **Give it one decision with a small answer space, then let code enforce the branch** (Ben). Necessary, not sufficient: the evidence must be able to answer it (coverage, not accuracy), and you must be asking the right question (validity before classification).
+- **Cardinality from a sample is a LOWER BOUND.** `original_role` read as 12; it is 999.
+- **A null is not a gap.** `gs_entities.sector`: 428,449 nulls, but 240,584 are people. Real gap 185,504 organisations.
+- **Enums in hiding are a migration, not a model.**
+- **Report patterns, not rows.** Baselines, not zero.
+- **I made 13 PRs when four would have done.** CLAUDE.md says batch by surface; I split by idea and charged Ben a round-trip each time.
 
 ### Open Questions
 - UNCONFIRMED: does `/api/chat` scope=knowledge work END TO END? Query layer proven live; the request path needs an authenticated org user that cannot be made locally. **Ben is the first to see it.**
-- RESOLVED: for the 64 stripped rows the TAG was wrong, confirmed by two independent signals. For the remaining 30 the question is still open, and for the 154 unassessed there is no question yet, because nobody has assessed them.
-- **A guard can carry the bug it hunts.** `IS NOT TRUE` folded "never assessed" into "assessed as false" and overstated a defect 2.5x. Split null from false in every check of this shape.
-- UNKNOWN: **the ingest that wrote those tags was never found.** Provenance `template_generated` (85) and `web_scraped` (55), Jan 2026. No writer in this repo. The guard is keyed on the symptom for that reason.
-- UNKNOWN: calibration below 0.90. Bands of n=7, 5, 5, 2 cannot support a threshold. Anything routing on 0.7–0.8 needs its own measurement.
-- UNKNOWN: LLM cost, volume and latency in every repo. No metering exists anywhere. The workspace audit is code-reads, not traffic.
-- UNVERIFIED: every §2–§5 claim in the workspace audit is an agent code-read. Re-read before acting.
+- UNKNOWN: **the ingest that wrote the bad youth-justice tags was never found.** Provenance `template_generated` (85) and `web_scraped` (55), Jan 2026. No writer in this repo. The guard is keyed on the symptom for that reason.
+- UNKNOWN: calibration below 0.90. Bands of n=7, 5, 5 cannot support a threshold.
+- UNKNOWN: LLM cost, volume and latency in every repo. **No metering exists anywhere.**
+- UNVERIFIED: the workspace audit's §2–§5 are agent code-reads, not measurements. Re-read before acting.
+- NOTE: `DATABASE_URL`'s host is IPv6-only (not dead), and it is a **different credential** from `DATABASE_PASSWORD`, which is now also a GitHub repo secret.
 
 ### Workflow State
 pattern: catalogue-measure-repair
@@ -71,16 +73,7 @@ max_retries: 3
 #### Resolved
 - goal: "point a typed classifier at the whole database; catalogue, calibrate, then find data that lies"
 - resource_allocation: balanced
-- scope: catalogue DONE · calibration DONE (95% @ >=0.90) · check loop DONE and in CI · three repair PRs OPEN
-
-#### Unknowns
-- alma_remaining_30_contradictions: UNKNOWN (classifier not confident; needs a human)
-- alma_tagging_ingest: UNKNOWN (not in this repo)
-- jev_calibration_below_0.90: UNKNOWN (n too small)
-- chat_knowledge_end_to_end: UNKNOWN (needs an authenticated org user)
-
-#### Last Failure
-(none — main green: parity 466/47, contradiction guard clean and passing in CI, precheck green)
+- scope: all of it landed and guarded in CI
 
 ---
 
