@@ -554,6 +554,9 @@ export function isGrantLikeFoundationProgram(program, foundation) {
 
   // Hard exclusions from the extractor, ahead of every other signal.
   if (meta.applicant_type === 'individual' || meta.applicant_type === 'not_an_application') return false;
+  // A page that says it is not taking applications has told us the answer
+  // directly. Amounts and grant language on it describe money already given.
+  if (program.application_mode === 'not_accepting') return false;
 
   const hasGrantLanguage = PUBLIC_GRANT_SIGNALS.test(text);
   const hasGrantUrl = URL_GRANT_SIGNALS.test(url);

@@ -101,3 +101,15 @@ test('evidencedDeadlineOf passes a quoted date and nulls an unquoted one', () =>
   assert.equal(evidencedDeadlineOf({ deadline: null, metadata: { deadline_evidence: QUOTE } }), null);
   assert.equal(evidencedDeadlineOf(null), null);
 });
+
+test('a programme whose page says it is not accepting applications is not grant-like', () => {
+  // Amounts on a closed page describe money already given, not an opportunity.
+  const shut = {
+    name: 'Community Grants Program',
+    description: 'Our grants program supports community projects.',
+    amount_max: 50000,
+    application_mode: 'not_accepting',
+    metadata: {},
+  };
+  assert.equal(isGrantLikeFoundationProgram(shut, TRUSTED), false);
+});

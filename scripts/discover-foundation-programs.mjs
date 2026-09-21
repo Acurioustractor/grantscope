@@ -25,6 +25,7 @@ import { createClient } from '@supabase/supabase-js';
 import { FoundationScraper } from '../packages/grant-engine/src/foundations/annual-report-scraper.ts';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 import { MINIMAX_CHAT_COMPLETIONS_URL } from './lib/minimax.mjs';
+import { buildProgramRecord } from './lib/foundation-program-record.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -917,6 +918,16 @@ For EACH program found, extract:
 - applicant_type: One of "organisation" (an incorporated body could apply to deliver a project), "individual" (a scholarship, fellowship, bursary or prize awarded to a person), "not_an_application" (a fundraising event, a way to DONATE to the foundation, a service they deliver themselves, or a trip/activity they run)
 - type: One of "grant", "fellowship", "scholarship", "award", "program"
 - categories: Array from [arts, indigenous, health, education, community, environment, enterprise, research, justice, sport, technology, disability, youth, aged_care]
+- eligibility: Who may apply, in the page's own terms (entity type, location, size, sector). Null if the page does not say.
+- eligibility_evidence: The exact sentence stating who may apply, copied word for word, or null
+- how_to_apply: What an applicant actually does — the form, the portal, the EOI, the contact-first step. Null if the page does not say.
+- how_to_apply_evidence: The exact sentence describing that, copied word for word, or null
+- application_mode: One of "online_application", "eoi", "email_application", "invitation_only", "relationship_based", "rolling", "not_accepting", or null
+- assessment_cadence: One of "rolling", "annual", "biannual", "quarterly", "one_off", "unknown" — how often this program is assessed
+- contact: { name, email, phone, url } for the person or team handling applications. Use only details printed on the page. Null for anything not printed.
+- thematic_focus: Array of short theme labels in the page's own words, or []
+- place_focus: Array of places this program funds, as named on the page (state, region, LGA, town), or []
+- source_urls: Array of the page URLs these details came from
 
 Return a JSON array of programs. If NO programs are found, return an empty array [].
 
@@ -926,6 +937,8 @@ IMPORTANT RULES:
 - Include ongoing/rolling programs without fixed deadlines — deadline null is a CORRECT answer and is far better than a guess
 - A deadline you cannot quote from the page is a wrong answer. "null" is right when the page does not say.
 - Be specific with amounts — "$50,000" not "varies"
+- Every quoted field must be copied from the page, not paraphrased. If you cannot copy it, set the field AND its evidence to null.
+- Do not fill eligibility, how_to_apply or contact from what foundations usually say. Null is the right answer when the page is silent.
 - Include both competitive grants AND named fellowships/scholarships
 - Return ONLY valid JSON array, no other text`;
 
@@ -972,61 +985,10 @@ IMPORTANT RULES:
     // Insert into foundation_programs
     let inserted = 0;
     for (const prog of programs) {
-      // A quote has to look like a sentence, not a restatement of the date. Short
-      // strings ("2026-06-30", "June") are the shape the model produces when it is
-      // manufacturing evidence for a value it already guessed.
-      const MIN_QUOTE = 15;
-      const quote = (v) => (typeof v === 'string' && v.trim().length >= MIN_QUOTE ? v.trim().slice(0, 500) : null);
-
-      const rawDeadline = typeof prog.deadline === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(prog.deadline)
-        ? prog.deadline
-        : null;
-      const deadlineEvidence = quote(prog.deadline_evidence);
-      const acceptedDeadline = rawDeadline && deadlineEvidence ? rawDeadline : null;
-      // Keep what we threw away, so the damage of this gate is measurable later.
-      const rejectedDeadline = rawDeadline && !deadlineEvidence ? rawDeadline : null;
-
-      const roundStatus = ['open', 'closed', 'unknown'].includes(prog.round_status) ? prog.round_status : 'unknown';
-      const applicantType = ['organisation', 'individual', 'not_an_application'].includes(prog.applicant_type)
-        ? prog.applicant_type
-        : 'unknown';
-
-      const programStatus = (acceptedDeadline && new Date(acceptedDeadline) < new Date()) || roundStatus === 'closed'
-        ? 'closed'
-        : roundStatus === 'open' ? 'open' : 'unknown';
-
-      const record = {
-        foundation_id: foundation.id,
-        name: prog.name.slice(0, 500),
-        url: typeof prog.url === 'string' && prog.url.startsWith('http') ? prog.url : null,
-        description: typeof prog.description === 'string' ? prog.description.slice(0, 2000) : null,
-        amount_min: typeof prog.amount_min === 'number' ? prog.amount_min : null,
-        amount_max: typeof prog.amount_max === 'number' ? prog.amount_max : null,
-        // A deadline is only accepted with a quote from the page behind it. Without
-        // this gate the model returned plausible month-end dates instead of null:
-        // on 2026-09-21, 50 different funders shared 2026-06-30 and Annamila's three
-        // streams all carried 2026-09-30 while their site said "grant rounds are
-        // currently closed until further notice". Those invented dates then satisfied
-        // hasStructuredGrantSignal in sync-foundation-programs.mjs, which is how a
-        // church mission trip and "Lions Biggest BBQ" became grant opportunities.
-        deadline: acceptedDeadline,
-        // 'open' used to be the default for anything without a past deadline, so a
-        // paused funder read as open forever. Unknown is now its own answer.
-        status: programStatus,
-        categories: Array.isArray(prog.categories) ? prog.categories : [],
-        program_type: typeof prog.type === 'string' ? prog.type : null,
-        scraped_at: scannedAt,
-        metadata: {
-          // Kept so a later pass can audit WHY a deadline was or was not accepted,
-          // and so sync can refuse to treat an unevidenced date as a grant signal.
-          deadline_evidence: quote(prog.deadline_evidence),
-          deadline_rejected: rejectedDeadline,
-          round_status: roundStatus,
-          round_status_evidence: quote(prog.round_status_evidence),
-          applicant_type: applicantType,
-          extraction_version: 2,
-        },
-      };
+      // Mapping lives in scripts/lib/foundation-program-record.mjs so it can be
+      // tested without running a live sync over 4,609 programmes.
+      const record = buildProgramRecord(prog, { foundationId: foundation.id, scannedAt });
+      if (!record) continue;
 
       const { error: insertError } = await supabase
         .from('foundation_programs')
