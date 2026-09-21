@@ -1,5 +1,5 @@
 ---
-date: 2026-09-21T23:30:00Z
+date: 2026-09-22T00:15:00Z
 session_name: jev-system-alignment
 branch: main
 status: active
@@ -9,9 +9,9 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-09-21T23:30:00Z
+**Updated:** 2026-09-22T00:15:00Z
 **Goal:** Point a typed classifier at everything the database holds: catalogue where it could help, measure whether its confidence is real, then use it to find data that lies. **Done and merged.** Three repair PRs in other repos still await Ben.
-**Branch:** grantscope `main` (PRs #466 #468 #469 merged) · JusticeHub + empathy-ledger worktrees still on disk
+**Branch:** grantscope `main` (PRs #466 #468 #469 #470 #471 merged) · JusticeHub + empathy-ledger worktrees still on disk
 **Test:** `bash scripts/precheck.sh` · `node --env-file=.env scripts/check-data-contradictions.mjs` · `node --env-file=.env scripts/check-migration-parity.mjs`
 
 ### Now
@@ -27,11 +27,12 @@ status: active
 - [x] **Two migrations applied + a third:** jsonb expression indexes, the predicate fix, `philanthropic-grant` folded into `philanthropic` (20 rows, $1.749M, exactly reversible via `source`).
 - [x] **`gen-types.sh` works.** The blocker was Docker not running, not the pooler. `DATABASE_URL` in .env is stale: `db.<ref>.supabase.co` does not resolve, direct IPv4 is gone.
 - [x] **CALIBRATION ANSWERED.** Measured against 291,264 agency-assigned labels: **95% correct at >= 0.90**, which carries 86% of answers. Below 0.90 nothing is conclusive (n of 7, 5, 5).
-- [x] **Check loop + contradiction guard, both in CI.** Found 248 alma rows where `topics` says youth-justice and `serves_youth_justice` says otherwise.
+- [x] **Check loop + contradiction guard, both in CI.** Flagged alma rows where `topics` says youth-justice and `serves_youth_justice` disagrees.
+- [x] **RESOLVED, merged `cee49e78`.** The 248 was wrong and the guard caused it: `IS NOT TRUE` folded NULL in with false, and 154 of those rows were simply never assessed. Real contradiction: **94**. Adjudicated with two signals (the flag AND a classifier at >= 0.90, 70% coverage); **64 tags stripped, 94 -> 30**. 28 below threshold untouched; 1 kept ("Youth Justice System Statistics - ROGS 2025", correct tag). Guard now uses `= false` and tracks the 154 unassessed separately as a backlog. Baselines 30 / 154.
 
 ### Next
 - [ ] **Merge the three open PRs:** grantscope #467 (VISIBLE, needs preview), JusticeHub #485, empathy-ledger #662. All green.
-- [ ] **Rule on the 248.** Which is authoritative, the topic tag or `serves_youth_justice`? Then correct the other. The published report path reads the TAG.
+- [ ] **30 contradicting rows remain** (flag false, tag present, classifier not confident). Plus **154 tagged-but-never-assessed** — a backlog, NOT a defect: do not set the flag false on rows nobody has looked at.
 - [ ] **Clean 131 alma rows with regex-detectable scraper artefacts** (URL in name, markdown, "Print this page"). Free, deterministic.
 - [ ] **Clean up two worktrees** once PRs land: `~/Code/JusticeHub-acquittal`, `~/Code/el-failopen`. Tier 3.
 - [ ] `grantconnect_awards.category` is a PROGRAMME label, not a topic. Find what reads it as a subject classifier.
@@ -42,7 +43,7 @@ status: active
 ### Decisions
 - **The thesis held across three repos.** Every bug was a system with an "I don't know" available, discarded at the boundary. Not one was a model being wrong.
 - **I produced SEVEN confident-but-wrong results today and each is now a guard.** A 1000-row PostgREST cap reading as "43 tables"; a filter offering join-derived columns as model work; a 60-option cap silently dropping the biggest field; a distinct-count threshold tested against a smaller sample; first-page sampling on a phase-written table; **a green post-check on an index the planner never used, which reached production**; "no separator exists" when `serves_youth_justice` was right there. **Scripts now refuse to be read past their evidence:** UNDERPOWERED below 40% coverage, "a pattern of three is noise", exit 2 on missing credentials.
-- **Verify the guard against the BROKEN state, not the passing one.** 4 of 7 empathy-ledger tests fail pre-fix; the contradiction guard exits 1 at baseline 247 and 0 at 248. A test that would also pass on the bug is decoration.
+- **Verify the guard against the BROKEN state, not the passing one.** 4 of 7 empathy-ledger tests fail pre-fix; the contradiction guard exits 1 at baseline 29 and 0 at 30. A test that would also pass on the bug is decoration.
 - **Check the code path, not the object.** The index EXPLAIN was green because I wrote the index's own predicate back at it. Through the view it was a Seq Scan over 3M rows.
 - **Match the embedding MODEL, not just the width.** Two models at one width return plausible nonsense instead of an error. 384 family = ACT knowledge tables; 1536 = CivicGraph domain.
 - **Cardinality from a sample is a LOWER BOUND.** `original_role` read as 12 distinct on 200 rows; it is 999.
@@ -53,7 +54,8 @@ status: active
 
 ### Open Questions
 - UNCONFIRMED: does `/api/chat` scope=knowledge work END TO END? Query layer proven live; the request path needs an authenticated org user that cannot be made locally. **Ben is the first to see it.**
-- UNCONFIRMED: which column is authoritative for the 248 — the topic tag or `serves_youth_justice`?
+- RESOLVED: for the 64 stripped rows the TAG was wrong, confirmed by two independent signals. For the remaining 30 the question is still open, and for the 154 unassessed there is no question yet, because nobody has assessed them.
+- **A guard can carry the bug it hunts.** `IS NOT TRUE` folded "never assessed" into "assessed as false" and overstated a defect 2.5x. Split null from false in every check of this shape.
 - UNKNOWN: **the ingest that wrote those tags was never found.** Provenance `template_generated` (85) and `web_scraped` (55), Jan 2026. No writer in this repo. The guard is keyed on the symptom for that reason.
 - UNKNOWN: calibration below 0.90. Bands of n=7, 5, 5, 2 cannot support a threshold. Anything routing on 0.7–0.8 needs its own measurement.
 - UNKNOWN: LLM cost, volume and latency in every repo. No metering exists anywhere. The workspace audit is code-reads, not traffic.
@@ -72,7 +74,7 @@ max_retries: 3
 - scope: catalogue DONE · calibration DONE (95% @ >=0.90) · check loop DONE and in CI · three repair PRs OPEN
 
 #### Unknowns
-- alma_248_authoritative_column: UNKNOWN (Ben's ruling)
+- alma_remaining_30_contradictions: UNKNOWN (classifier not confident; needs a human)
 - alma_tagging_ingest: UNKNOWN (not in this repo)
 - jev_calibration_below_0.90: UNKNOWN (n too small)
 - chat_knowledge_end_to_end: UNKNOWN (needs an authenticated org user)
