@@ -42,7 +42,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 // backstop; gemini is free but flaky on real pages. deepseek/anthropic kept last and
 // auto-disable on credit-balance errors (see callLLM). Provider health verified 2026-06-08.
 const PROVIDERS = [
-  { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', envKey: 'GROQ_API_KEY' },
+  { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'openai/gpt-oss-120b', envKey: 'GROQ_API_KEY' },
   { name: 'minimax', baseUrl: 'https://api.minimax.io/v1/chat/completions', model: 'MiniMax-M3', envKey: 'MINIMAX_API_KEY', maxTokens: 2000 },
   { name: 'openai', baseUrl: 'https://api.openai.com/v1/chat/completions', model: 'gpt-4o-mini', envKey: 'OPENAI_API_KEY' },
   { name: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash', envKey: 'GEMINI_API_KEY' },
@@ -86,10 +86,10 @@ async function callLLM(prompt) {
       let body;
       if (p.isAnthropic) {
         headers['x-api-key'] = key; headers['anthropic-version'] = '2023-06-01';
-        body = JSON.stringify({ model: p.model, max_tokens: 400, messages: [{ role: 'user', content: prompt }] });
+        body = JSON.stringify({ model: p.model, max_tokens: 1500, messages: [{ role: 'user', content: prompt }] });
       } else {
         headers['Authorization'] = `Bearer ${key}`;
-        body = JSON.stringify({ model: p.model, messages: [{ role: 'user', content: prompt }], temperature: 0.1, max_tokens: p.maxTokens || 400, response_format: { type: 'json_object' } });
+        body = JSON.stringify({ model: p.model, messages: [{ role: 'user', content: prompt }], temperature: 0.1, max_tokens: p.maxTokens || 1500, response_format: { type: 'json_object' } });
       }
       const res = await fetch(p.baseUrl, { method: 'POST', headers, body, signal: AbortSignal.timeout(40000) });
       if (!res.ok) {

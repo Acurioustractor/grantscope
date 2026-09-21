@@ -98,7 +98,7 @@ const PROVIDERS: ProviderConfig[] = [
     name: 'groq',
     envKey: 'GROQ_API_KEY',
     baseUrl: 'https://api.groq.com/openai/v1/chat/completions',
-    model: 'llama-3.3-70b-versatile',
+    model: 'openai/gpt-oss-120b',
     maxTokens: 4000,
     supportsJsonMode: true,
   },

@@ -52,7 +52,7 @@ function log(msg) {
 
 const PROVIDERS = [
   { name: 'minimax', baseUrl: MINIMAX_CHAT_COMPLETIONS_URL, model: 'MiniMax-M2.7', envKey: 'MINIMAX_API_KEY', disabled: false },
-  { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', envKey: 'GROQ_API_KEY', disabled: false },
+  { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'openai/gpt-oss-120b', envKey: 'GROQ_API_KEY', disabled: false },
   { name: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash', envKey: 'GEMINI_API_KEY', disabled: false },
   { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY', disabled: false },
   { name: 'anthropic', baseUrl: 'https://api.anthropic.com/v1/messages', model: 'claude-haiku-4-5-20251001', envKey: 'ANTHROPIC_API_KEY', disabled: false, isAnthropic: true },
@@ -173,7 +173,7 @@ Rules:
           model: provider.model,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.1,
-          max_tokens: 500,
+          max_tokens: 2000,
         });
       } else {
         headers['Authorization'] = `Bearer ${apiKey}`;
@@ -181,7 +181,7 @@ Rules:
           model: provider.model,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.1,
-          max_tokens: 500,
+          max_tokens: 2000,
         });
       }
 
@@ -236,7 +236,17 @@ Rules:
       // Find JSON object
       const jsonMatch = stripped.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
-        log(`  ${provider.name} no JSON found`);
+        // Truncation used to read as "no JSON found", which sent every
+        // investigation after the parser instead of the token cap. Gemini 2.5
+        // Flash spends max_tokens on reasoning before it writes anything, so a
+        // 500-token cap returned a JSON object with no closing brace and the
+        // agent looked like a parsing bug for months.
+        const finish = provider.isAnthropic
+          ? json.stop_reason
+          : json.choices?.[0]?.finish_reason;
+        log(finish === 'length' || finish === 'max_tokens'
+          ? `  ${provider.name} response truncated at the token cap (finish=${finish}, ${stripped.length} chars) -- raise max_tokens`
+          : `  ${provider.name} no JSON found (finish=${finish || 'unknown'}, ${stripped.length} chars)`);
         return null;
       }
 

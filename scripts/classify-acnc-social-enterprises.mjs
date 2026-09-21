@@ -46,7 +46,7 @@ function log(msg) {
 const PROVIDERS = [
   { name: 'minimax', baseUrl: MINIMAX_CHAT_COMPLETIONS_URL, model: 'MiniMax-M2.7', envKey: 'MINIMAX_API_KEY', disabled: false },
   { name: 'anthropic', baseUrl: 'https://api.anthropic.com/v1/messages', model: 'claude-haiku-4-5-20251001', envKey: 'ANTHROPIC_API_KEY', disabled: false, isAnthropic: true },
-  { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', envKey: 'GROQ_API_KEY', disabled: false },
+  { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'openai/gpt-oss-120b', envKey: 'GROQ_API_KEY', disabled: false },
   { name: 'deepseek', baseUrl: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', envKey: 'DEEPSEEK_API_KEY', disabled: false },
   { name: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash', envKey: 'GEMINI_API_KEY', disabled: false },
 ];
@@ -104,7 +104,7 @@ async function classifyWithLLM(charity) {
           model: provider.model,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.1,
-          max_tokens: 500,
+          max_tokens: 1500,
         });
       } else {
         headers['Authorization'] = `Bearer ${apiKey}`;
@@ -112,7 +112,7 @@ async function classifyWithLLM(charity) {
           model: provider.model,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.1,
-          max_tokens: provider.name === 'minimax' ? 1200 : 500,
+          max_tokens: provider.name === 'minimax' ? 1500 : 1500,
           response_format: { type: 'json_object' },
         };
 
