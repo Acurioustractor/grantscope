@@ -5400,6 +5400,7 @@ export type Database = {
           fields_backfilled_by: string | null
           fields_backfilled_reason: string | null
           focus_areas: string[] | null
+          funder_entity_id: string | null
           funder_name: string
           funding_duration: string | null
           guidelines_url: string | null
@@ -5450,6 +5451,7 @@ export type Database = {
           fields_backfilled_by?: string | null
           fields_backfilled_reason?: string | null
           focus_areas?: string[] | null
+          funder_entity_id?: string | null
           funder_name: string
           funding_duration?: string | null
           guidelines_url?: string | null
@@ -5500,6 +5502,7 @@ export type Database = {
           fields_backfilled_by?: string | null
           fields_backfilled_reason?: string | null
           focus_areas?: string[] | null
+          funder_entity_id?: string | null
           funder_name?: string
           funding_duration?: string | null
           guidelines_url?: string | null
@@ -21098,6 +21101,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      funder_entity_links: {
+        Row: {
+          funder_key: string
+          gs_entity_id: string
+          link_method: string
+          linked_at: string
+        }
+        Insert: {
+          funder_key: string
+          gs_entity_id: string
+          link_method: string
+          linked_at?: string
+        }
+        Update: {
+          funder_key?: string
+          gs_entity_id?: string
+          link_method?: string
+          linked_at?: string
+        }
+        Relationships: []
       }
       funder_intelligence: {
         Row: {
@@ -49716,7 +49740,9 @@ export type Database = {
           contract_count: number | null
           evidence_basis: string | null
           example_suppliers: Json | null
+          gs_entity_id: string | null
           last_contract_end: string | null
+          link_method: string | null
           se_supplier_count: number | null
           states: Json | null
           total_value: number | null
@@ -49728,7 +49754,9 @@ export type Database = {
           contract_count?: number | null
           evidence_basis?: string | null
           example_suppliers?: Json | null
+          gs_entity_id?: string | null
           last_contract_end?: string | null
+          link_method?: string | null
           se_supplier_count?: number | null
           states?: Json | null
           total_value?: number | null
@@ -49740,7 +49768,9 @@ export type Database = {
           contract_count?: number | null
           evidence_basis?: string | null
           example_suppliers?: Json | null
+          gs_entity_id?: string | null
           last_contract_end?: string | null
+          link_method?: string | null
           se_supplier_count?: number | null
           states?: Json | null
           total_value?: number | null
@@ -69010,6 +69040,7 @@ export type Database = {
           year: number
         }[]
       }
+      link_se_buyer_prospects: { Args: never; Returns: number }
       log_agent_action: {
         Args: {
           p_action: string
