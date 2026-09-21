@@ -16,7 +16,16 @@
  *   node --env-file=.env scripts/completion-receipts.mjs
  *   node --env-file=.env scripts/completion-receipts.mjs --id index_usable_through_view
  *
- * Exits non-zero if any claim is unproven. Writes data/completion-receipts.json.
+ * Three outcomes, never two. PROVEN, DISPROVEN, and NOT CHECKED, which is its
+ * own status and not a quiet pass. A receipt whose runner has no credentials
+ * has not told you anything, and reporting that as success is the failure this
+ * whole file exists to prevent.
+ *
+ * Exit codes: 0 proven (or proven with some not checked), 1 something is
+ * DISPROVEN, 2 fatal. `--strict` promotes "not checked" to a failure, for
+ * environments where everything is meant to be checkable.
+ *
+ * Writes data/completion-receipts.json.
  *
  * ── The one rule that is mechanically enforced ──────────────────────────────
  *
@@ -106,9 +115,12 @@ async function viaExecSql(sb, query) {
  * real connection. Returns rows shaped like exec_sql's so `expect` does not
  * have to care which runner ran.
  */
+class NotChecked extends Error {}
+
 function viaPsql(query) {
   const pw = process.env.DATABASE_PASSWORD
-  if (!pw) throw new Error('DATABASE_PASSWORD required for a psql receipt')
+  // Not a failure. Nothing was observed, so nothing is known either way.
+  if (!pw) throw new NotChecked('no DATABASE_PASSWORD, and this receipt needs psql (exec_sql is SELECT-only)')
   const out = execFileSync(
     'psql',
     ['-h', 'aws-0-ap-southeast-2.pooler.supabase.com', '-p', '5432',
@@ -126,7 +138,8 @@ function restatesImplementation(receipt) {
 }
 
 const argv = process.argv.slice(2)
-const ONLY = argv[argv.indexOf('--id') + 1]
+const ONLY = argv.includes('--id') ? argv[argv.indexOf('--id') + 1] : null
+const STRICT = argv.includes('--strict')
 
 async function run() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
@@ -141,6 +154,7 @@ async function run() {
 
   const results = []
   let failed = 0
+  let notChecked = 0
 
   for (const receipt of todo) {
     const restated = restatesImplementation(receipt)
@@ -150,7 +164,7 @@ async function run() {
       console.error(`✗ ${receipt.id}: the proof names ${restated.join(', ')}, which this change created.`)
       console.error('   That restates the implementation. Query the consumer\'s path instead.')
       failed++
-      results.push({ id: receipt.id, ok: false, reason: 'restates the implementation', restated })
+      results.push({ id: receipt.id, status: 'disproven', reason: 'restates the implementation', restated })
       continue
     }
 
@@ -158,9 +172,16 @@ async function run() {
     try {
       data = receipt.runner === 'psql' ? viaPsql(receipt.query) : await viaExecSql(sb, receipt.query)
     } catch (e) {
+      if (e instanceof NotChecked) {
+        console.log(`? ${receipt.id}: NOT CHECKED — ${e.message}`)
+        console.log(`   claim remains unproven, not disproven: ${receipt.claim}`)
+        notChecked++
+        results.push({ id: receipt.id, status: 'not_checked', claim: receipt.claim, reason: e.message })
+        continue
+      }
       console.error(`✗ ${receipt.id}: query failed — ${e.message}`)
       failed++
-      results.push({ id: receipt.id, ok: false, reason: `query failed: ${e.message}` })
+      results.push({ id: receipt.id, status: 'disproven', reason: `query failed: ${e.message}` })
       continue
     }
 
@@ -170,7 +191,7 @@ async function run() {
       migrations: receipt.migrations,
       claim: receipt.claim,
       consumer: receipt.consumer,
-      ok: verdict.ok,
+      status: verdict.ok ? 'proven' : 'disproven',
       saw: verdict.saw,
       checked_at: new Date().toISOString(),
     })
@@ -189,11 +210,22 @@ async function run() {
   writeFileSync(OUT, JSON.stringify({ checked_at: new Date().toISOString(), results }, null, 2) + '\n')
   console.log(`\nwrote ${OUT}`)
 
+  const proven = results.filter((r) => r.status === 'proven').length
+  console.log(`\nproven ${proven} · disproven ${failed} · not checked ${notChecked}`)
+
   if (failed) {
-    console.error(`\n${failed} claim(s) unproven. A migration that applied is not a change that worked.`)
+    console.error('\nA migration that applied is not a change that worked.')
     process.exit(1)
   }
-  console.log(`${results.length} claim(s) proven against fresh state`)
+  if (notChecked) {
+    const msg = `${notChecked} receipt(s) could not be checked; those claims are unproven, not confirmed`
+    if (STRICT) {
+      console.error(`\n${msg} (--strict)`)
+      process.exit(1)
+    }
+    // Visible in a CI log rather than swallowed.
+    console.log(`::warning::${msg}`)
+  }
 }
 
 run().catch((e) => {

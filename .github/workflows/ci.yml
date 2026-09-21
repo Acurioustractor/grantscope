@@ -117,6 +117,20 @@ jobs:
       - name: Data contradictions (no known contradiction grew)
         if: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' }}
         run: node scripts/check-data-contradictions.mjs
+      # Proves each applied change still does what it claimed, by reading fresh
+      # state through the path its CONSUMER uses. A migration that applied is not
+      # a change that worked: on 2026-09-21 an index passed a green EXPLAIN that
+      # had the index's own predicate in it, while the view consumers query was
+      # still doing a Seq Scan over 3.0M rows.
+      #
+      # Not run with --strict. One receipt needs psql, which needs
+      # DATABASE_PASSWORD, and that secret is not set here. Without it that
+      # receipt reports NOT CHECKED and emits a ::warning::, which is honest:
+      # the claim is unproven, not confirmed and not refuted. Add
+      # DATABASE_PASSWORD as a repo secret and this step proves all three.
+      - name: Completion receipts (applied changes still do what they claimed)
+        if: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        run: node scripts/completion-receipts.mjs
       - name: Parity skipped (no SUPABASE_SERVICE_ROLE_KEY secret)
         if: ${{ env.SUPABASE_SERVICE_ROLE_KEY == '' }}
         run: echo "::warning::migration parity not checked; add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY as repo secrets"
