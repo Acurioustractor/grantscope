@@ -50,6 +50,8 @@
 -- These are partial and small; if the lock is a problem, run them by hand with
 -- CONCURRENTLY outside a transaction instead.
 
+BEGIN;
+
 -- ── gs_relationships ───────────────────────────────────────────────────────
 
 CREATE INDEX IF NOT EXISTS gs_relationships_props_role_type_idx
@@ -115,3 +117,5 @@ FROM public.person_roles p;
 
 COMMENT ON VIEW public.v_person_roles_typed IS
   'person_roles with charity_size (3 values, indexed) and original_role lifted out of properties. original_role is raw input with 999 distinct values and disagrees with the normalised role_type on 186,233 rows; it is not an enum.';
+
+COMMIT;
