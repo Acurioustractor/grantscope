@@ -161,6 +161,76 @@ is not.
 
 ---
 
+## The playbook rule, and the two checks that have to sit beside it
+
+Ben's addition, 2026-09-21:
+
+> **Don't give Jev the whole problem. Give it one decision with a small answer space, then let code
+> enforce the branch. That's where speed turns into something you can trust.**
+
+This is right, and the best result of the session is exactly it. The ALMA tag strip was one
+decision with four options, and **code enforced the branch**: a tag was removed only where the
+classifier was >= 0.90 AND `serves_youth_justice` was already `false`. Two independent signals,
+combined in code. The model never decided to delete anything.
+
+The same day produced two cases showing the rule is necessary and not sufficient.
+
+### A small answer space does not make a question answerable
+
+`justice_funding.funding_type` was a clean four-option decision, well scoped, and it failed. Only
+**18%** of scored answers reached 0.90, against **86%** for the same model on a different column.
+The reason is in the data, not the question: `program_name` plus `project_description` averages
+**42 characters** on contract rows ("Labour Hire Services | Labour Hire Services"). The evidence
+cannot carry the distinction being asked about.
+
+So the rule needs a companion check: **can the evidence answer this at all?** Measured as confident
+coverage, not as accuracy. The check loop now prints `UNDERPOWERED` and refuses to show its ranked
+table below 40% coverage, because an 18%-coverage result printed next to a tidy table of patterns
+reads as a finding.
+
+### You also have to be asking the right question, which is a separate check
+
+The obvious audit of `alma_interventions` was its `type` column: ten values, 100% filled, a textbook
+small answer space. Asking it would have produced confident answers to a question that should never
+have been asked, because a share of those rows are scraped web pages, and one is an Air Force
+commemoration programme.
+
+The claim worth testing was the one the table makes by existing: that every row is an intervention.
+**Validity before classification.** That is an ordering question, and no amount of shrinking the
+answer space surfaces it.
+
+### Three things this session did NOT do, from the decision-loop diagram
+
+**Batching.** Every call made today asked one question. The existing pilot (`scripts/jev-pilot/2-ask-jev.mjs`)
+already batches five judgments over one page; the check loop regressed from that without noticing.
+For the ALMA adjudication the state in hand was name + description + operating_organization, and
+validity, domain and evidence-quality could all have been asked in one call over it. The dependency
+test is the rule for what may share a batch: *could you write this question using only the original
+state?*
+
+**Action-specific thresholds.** 0.90 was used for a read-only report AND for stripping 64 tags from
+a table six published surfaces read. A reversible tag and a destructive edit do not carry the same
+consequence. Harm was avoided there only by requiring a second independent signal, which was a
+judgement call in the moment rather than a property of the design. **The threshold should move with
+the blast radius, in code.**
+
+**Fresh-state verification, which is the one that matters.** The diagram's line is
+*"a selected 'done' option cannot prove that work finished"*, and that is a precise description of
+failure #6 above, the only one that reached production.
+
+An index was confirmed as used by writing the index's own predicate back at it and reading a green
+`EXPLAIN`. Through the view that consumers actually query, it was a Parallel Seq Scan over 3.0M
+rows. **The decision was verified; the outcome was not.** The completion-receipt idea on that
+page — the exported file, the stored record, the newly-read setting that proves the intended change
+happened — is the fix, and it ranks above batching.
+
+### The through-line
+
+Give it one decision. Let code enforce the branch. **Then read the world again to see whether the
+branch did what you thought.**
+
+This session did the first two and skipped the third eight times.
+
 ## What this evidence does not support
 
 - **One session, one person, one codebase.** The eight failures are real and the pattern is
