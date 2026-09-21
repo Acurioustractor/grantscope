@@ -1,5 +1,5 @@
 ---
-date: 2026-09-22T02:30:00Z
+date: 2026-09-22T12:00:00Z
 session_name: jev-system-alignment
 branch: main
 status: active
@@ -9,71 +9,71 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-09-22T02:30:00Z
-**Goal:** Point a typed classifier at everything the database holds, then use it to find data that lies. **Done, merged, and guarded in CI.** Nothing in flight.
-**Branch:** `main` — everything landed across grantscope, JusticeHub and empathy-ledger
-**Test:** `bash scripts/precheck.sh` · `node --env-file=.env scripts/completion-receipts.mjs` · `scripts/check-data-contradictions.mjs` · `scripts/check-migration-parity.mjs`
+**Updated:** 2026-09-22T23:00:00Z
+**Goal:** Make the database linkable: every table that names organisations joins the entity register, a CI guard stops new gaps, JEV handles only the judgement residue. **All 438 buyers linked, 28 reviewed funders linked, ALMA quarantine enforced, graph build unblocked.** Nothing in flight.
+**Branch:** `main` @ `219325d1` (PRs #486–#491 merged; migrations 120000–180000 applied, parity green)
+**Test:** `bash scripts/precheck.sh` · `node --env-file=.env scripts/check-table-linkage.mjs` · `scripts/check-migration-parity.mjs`
 
 ### Now
-[->] Nothing in flight. Only open PR is #463 (sidebar labels), 7+ days old and not from this work.
+[->] Nothing in flight. Next check: tomorrow's nightly build-entity-graph ran clean and austender edge drift (was 697,106/751,008) closed.
 
-### This Session
-- [x] **Org knowledge search was dead since it shipped** (#467). `knowledge_chunks.embedding` is vector(384), `/api/chat` sent 1536, pgvector errored every request and the error was destructured away. Same model both sides at `dimensions:384`, so **no re-embedding needed**.
-- [x] **JEV workspace audit, 10 repos** (`bb4368e1`). Every candidate is one shape: a chat model asked for JSON, regex-sliced back out, only an enum and a number used.
-- [x] **JusticeHub #485:** grant acquittal for a grassroots Indigenous org returned the model's prose RAW. Grounding check added; prompt demanded 6 sections, the data supports 4. MERGED.
-- [x] **empathy-ledger #662:** two cultural-safety fail-opens. A missing analysis defaulted to `'low'` so an unassessed transcript could publish itself, and `'sacred'` fell through the gate scoring HIGHER than `'high'`. MERGED.
-- [x] **Whole-database catalogue + JSONB census** (`494ed875`). 1,135 prose columns, ~392M tokens, ~$16 to read all free text once. 261 tables hold prose with NO typed column to fill. 220 jsonb keys are enums in hiding (a migration, not a model).
-- [x] **Four migrations applied**, all parity-green: jsonb expression indexes, the predicate fix, the `philanthropic` fold, the 64-tag strip.
-- [x] **CALIBRATION ANSWERED.** Against 291,264 agency-assigned labels: **95% correct at >= 0.90**, carrying 86% of answers. Below 0.90 nothing is conclusive (n of 7, 5, 5).
-- [x] **ALMA: 64 wrong youth-justice tags stripped on TWO signals** (`cee49e78`). 248 was wrong and my own guard caused it — `IS NOT TRUE` folded 154 never-assessed NULLs in with false. Real figure 94, now 30.
-- [x] **Four guards now run in CI**: migration parity, private exposure, data contradictions, completion receipts (`--strict`, all three proving, including the index claim that shipped broken).
-- [x] **`gen-types.sh` works** — blocker was Docker not running. Check loop **batched** (several judgments per call, dependency test as the rule).
-- [x] **Agent-design response written** with the session's failures as the evidence base (`ee1018c0`, `0cf891b1`).
-- [x] **Cleanup:** both worktrees removed, both local branches and the stray remote branch deleted, verified by file presence on main (squash-merge makes ancestry checks lie).
+### This Session (2026-09-22, second session)
+- [x] **Graph build unblocked** (#486): 3 ACNC placeholder ABNs (91111111272/3, 99111111119) failed the checksum → makeGsId threw → every run since 2026-09-18 died before edges. `validAbn()` guard at 7 sites. Entity dry-run clean. Full rebuild NOT yet observed.
+- [x] **ALMA readers** (#487 + 20260922120000): view `alma_interventions_valid` (security_invoker); 51 readers in 34 files switched; `apps/web/src/lib/alma-readers.test.ts` fails CI on raw reads outside allowlist. 10 homepage rows quarantined → 252 quarantined / 1,902 valid. Alice Springs 29→27, verified on dev.
+- [x] **Register state fix** (20260922130000): 78 NT sub-units + 1 QLD dept → 79 buyers linked.
+- [x] **28 JEV funder matches** (20260922140000, Ben approved each): `funder_entity_links` reviewed; 317 opps linked (19,921/23,705). Triggers off for backfill.
+- [x] **Last 11 buyers** (20260922150000–180000): `buyer_entity_links` reviewed table, read FIRST by `link_se_buyer_prospects()`, graph-edge-datasets austender map, and build-entity-graph govGsId. 14 names fixed from abr_registry (AU-ABN-76337613647 was "Brisbane Youth Detention Centre" = QLD Dept of Education; "Queensland Health" node was QLD Women's Health Network). 5 merges (Griffith + QUT typo ABNs, DoE/PSBA/QUT stubs; map `gs_entity_merge_map_20260922`). `renamed_to` relationship type + 2 lineage edges. Buyers 438/438 (13 reviewed).
+- [x] (prior session) **ALMA quarantine is DONE, not a backlog.** 242 rows `data_quality='quarantined'`. Real gaps: 9 `valid` rows are nav dumps; **49 of 54 reader files ignore the flag** — `/api/justice/interventions` serves 55/500 junk, public Alice Springs report shows 2/29. NOT FIXED.
+- [x] **Linkage guard** `scripts/check-table-linkage.mjs` in CI (#480, #481). Baseline by NAME in `data/linkage-baseline.json`: 6 accepted, 11 exempt with reasons. Counts FK-to-keyed-table as linked; ignores boolean `_abn` flags (`requires_abn` hid alma_funding_opportunities).
+- [x] **Migration 20260922090000 applied** (#482): `se_buyer_prospects.gs_entity_id` + `link_method`; `funder_entity_links` lookup + trigger fills `alma_funding_opportunities.funder_entity_id` on insert. 19,604/23,705 opps linked.
+- [x] **Migration 20260922100000 applied** (#485): state-prefix rung, SAME STATE required. Buyers 348/438 (189 graph_edge, 92 unique_name, 67 unique_name_no_prefix, 90 unlinked).
+- [x] **JEV entity match** `scripts/jev-entity-match.mjs` (#484), read-only. Report `thoughts/shared/findings/jev-entity-match-2026-09-21.md`.
+- [x] classify-changes.sh: guard baselines + `data/jev-check/` are SAFE. db-apply skill: merge the file BEFORE applying.
 
 ### Next
-- [ ] **30 contradicting ALMA rows** the classifier could not confidently judge, plus **154 tagged-but-never-assessed** — a backlog, NOT a defect. Do not set the flag false on rows nobody has looked at.
-- [ ] **131 alma rows with regex-detectable scraper artefacts** (URL in the name, markdown, "Print this page"). Free and deterministic.
-- [ ] `grantconnect_awards.category` is a PROGRAMME label, not a topic. Find what reads it as a subject classifier.
-- [ ] **PR #463** (sidebar labels) is 7+ days old.
-- [ ] Sweep merged branches still on grantscope's remote.
-- [ ] Carried: `parse-foundation-grants.mjs:79-95` mental-health→child-protection mis-tag; the `closes_at >= today OR deadline >= today` leak; orphan `foundation_programs`; "Epworth Research Grants" duplicate.
-- [ ] empathy-ledger `requires_elder_review ?? false` has the same fabrication shape. Left deliberately; policy call.
+- [ ] **Confirm nightly graph build** finished and austender/aec drift closed (check-graph-completeness in agent_runs).
+- [ ] **Register-name sweep:** names overwritten by imports (JusticeHub wrote a facility name onto a dept ABN). Compare gs_entities.canonical_name vs abr_registry.entity_name for AU-ABN nodes; guard against the overwrite recurring.
+- [ ] NSW DPI contracts after Oct 2021 belong to a successor dept (ABN not established); currently under Dept of Industry.
+- [ ] Types not regenerated after 150000 (new table buyer_entity_links, merge map) — run type generation.
+- [ ] 3 QLD/NSW buyers once "no edge" (249) were a crash, not the map — verify edges exist after rebuild.
+- [ ] 157 `open` opportunities past deadline — unmade decision (the status trigger would close them).
+- [ ] Carried from before: 30 contradicting ALMA yj rows + 154 unassessed; `grantconnect_awards.category` readers; merged-branch sweep; parse-foundation-grants mis-tag; Epworth duplicate.
 
 ### Decisions
-- **The thesis held across three repos.** Every bug was a system with an "I don't know" available, discarded at the boundary. Not one was a model being wrong.
-- **ELEVEN confident-wrong results from me in one session, each now a guard.** A 1000-row PostgREST cap reading as "43 tables"; join-derived columns offered as model work; a 60-option cap dropping the biggest field; a distinct threshold tested against a smaller sample; first-page sampling on a phase-written table; **a green EXPLAIN on an index the planner never used, which REACHED PRODUCTION**; "no separator exists" when `serves_youth_justice` was right there; `IS NOT TRUE` inside the guard built to catch that; reading `head`'s exit code instead of the script's; "does not resolve" for a host that is IPv6-only; an interpretation printed in the check loop that its own data contradicted.
-- **Green checks caught ZERO of them.** Every one was caught by reading output and noticing it disagreed with something known. That is the gap.
-- **Verify the guard against the BROKEN state.** A test that would also pass on the bug is decoration.
-- **Check the code path, not the object.** The index EXPLAIN restated the implementation.
-- **A proof may not name what the change created** — enforced in `completion-receipts.mjs`, which refuses before running.
-- **"Not checked" is its own answer**, never a quiet pass. Three outcomes: proven / disproven / not checked.
-- **Give it one decision with a small answer space, then let code enforce the branch** (Ben). Necessary, not sufficient: the evidence must be able to answer it (coverage, not accuracy), and you must be asking the right question (validity before classification).
-- **Cardinality from a sample is a LOWER BOUND.** `original_role` read as 12; it is 999.
-- **A null is not a gap.** `gs_entities.sector`: 428,449 nulls, but 240,584 are people. Real gap 185,504 organisations.
-- **Enums in hiding are a migration, not a model.**
-- **Report patterns, not rows.** Baselines, not zero.
-- **I made 13 PRs when four would have done.** CLAUDE.md says batch by surface; I split by idea and charged Ben a round-trip each time.
+- **Code for rules, JEV for judgement.** 88/92 JEV buyer matches were a state prefix → became an exact SQL rung. JEV's worth was funder suffix/trustee judgement and REFUSING look-alikes (Ocean Data Network ≠ Dads Network).
+- **A dropped prefix must be re-checked.** Prefix-strip alone linked QLD Dept of Education to VIC's (794 contracts). Caught only because JEV had picked a different entity.
+- **JEV weak spot confirmed:** renamed depts called "same organisation" at 0.90–0.91; `renamed` chosen 0 times. Renames need a human or a source record.
+- **Renamed dept (Ben 2026-09-22): "separate, linked", applied as identity = ABN.** Same ABN through renames = one entity (QLD 75563721098 held 4 names); an ABN change = separate node + `renamed_to` edge. Check abr_registry before minting.
+- **Reviewed links live in lookup tables** (`funder_entity_links`, `buyer_entity_links`) that every resolver reads first — se_buyer_prospects is truncated each scout run and the graph re-resolves nightly.
+- **Ben runs db-apply himself** via `! scripts/db-apply.sh …` — auto-mode classifier blocked the merge migration. Hand him the exact command.
+- **The name on a node is not evidence.** Verify ABN-keyed nodes against abr_registry before linking or merging.
+- **Key the funder NAME, not 23K rows** — lookup table + trigger, no writer changes.
+- **No completion receipt for the keys yet**: nothing consumes them, and a receipt naming created columns is refused. Add with the first consumer.
+- **Bulk UPDATE on alma_funding_opportunities** must disable `trigger_funding_opportunities_updated` + `trigger_funding_status_update` (memory: solution_afo_bulk_update_triggers).
 
 ### Open Questions
-- UNCONFIRMED: does `/api/chat` scope=knowledge work END TO END? Query layer proven live; the request path needs an authenticated org user that cannot be made locally. **Ben is the first to see it.**
-- UNKNOWN: **the ingest that wrote the bad youth-justice tags was never found.** Provenance `template_generated` (85) and `web_scraped` (55), Jan 2026. No writer in this repo. The guard is keyed on the symptom for that reason.
-- UNKNOWN: calibration below 0.90. Bands of n=7, 5, 5 cannot support a threshold.
-- UNKNOWN: LLM cost, volume and latency in every repo. **No metering exists anywhere.**
-- UNVERIFIED: the workspace audit's §2–§5 are agent code-reads, not measurements. Re-read before acting.
-- NOTE: `DATABASE_URL`'s host is IPv6-only (not dead), and it is a **different credential** from `DATABASE_PASSWORD`, which is now also a GitHub repo secret.
+- NOTE: repo has auto-merge DISABLED; ship-watch `--merge` does the merge. `main` unprotected — a direct `gh pr merge` goes through before CI finishes.
+- NOTE: port 3013 was squatted by a Goods worktree; grantscope dev ran on 3016.
+- UNKNOWN: identity accuracy of JEV — the 0.90/95% calibration was on topic labels, not identity.
+- NOTE: `ship-watch.mjs` output via `| tail` always shows exit 0; redirect to a file and echo `$?` to get the real result. zsh has no `PIPESTATUS`.
+- NOTE: CI linkage query hit exec_sql's 8s timeout once under DB load (query is 0.3–0.5s); re-run passed.
 
 ### Workflow State
-pattern: catalogue-measure-repair
-phase: 6
-total_phases: 6
+pattern: guard-key-adjudicate
+phase: 5
+total_phases: 5
 retries: 0
 max_retries: 3
 
 #### Resolved
-- goal: "point a typed classifier at the whole database; catalogue, calibrate, then find data that lies"
+- goal: "make the database readable, connected and clean, ready for linkage; JEV where it beats other systems"
 - resource_allocation: balanced
-- scope: all of it landed and guarded in CI
+
+#### Unknowns
+- (none; rename policy decided 2026-09-22)
+
+#### Last Failure
+(none open)
 
 ---
 
