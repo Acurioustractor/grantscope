@@ -8,7 +8,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { scoreGrantForProject, scoreGrantForAllProjects, applyProjectTags, PROJECT_CODES, PROJECT_TAG_THRESHOLD } from './project-relevance.mjs';
+import { scoreGrantForProject, scoreGrantForAllProjects, applyProjectTags, PROJECT_CODES, PROJECT_TAG_THRESHOLD, rubricQualifies, countRubricFits, RUBRIC_FIT_AT, RUBRIC_CONFIDENCE_AT } from './project-relevance.mjs';
 
 test('a real youth justice diversion grant scores at/above threshold for justicehub', () => {
   const { score, signals } = scoreGrantForProject('justicehub', {
@@ -276,4 +276,93 @@ test('a council grant in the home LGA is still NOT a thematic match', () => {
     description: "The Sunshine Coast Council's Major Grants program supports not-for-profit organisations in Australia to deliver one-off projects, events, and activities that provide broad community benefit.",
   });
   assert.ok(score < PROJECT_TAG_THRESHOLD, `scored ${score}`);
+});
+
+
+// ── Rubric signal (JEV) merged with the keyword signal ──────────────────────
+
+const META_OK = { organisation_fundable: 0.9 };
+
+test('rubricQualifies needs fit, confidence and an organisation-fundable grant', () => {
+  assert.ok(rubricQualifies({ score: 2.5, confidence: 0.9 }, META_OK));
+  assert.ok(!rubricQualifies({ score: 2.4, confidence: 0.9 }, META_OK), 'below fit threshold');
+  assert.ok(!rubricQualifies({ score: 2.5, confidence: 0.3 }, META_OK), 'model not committing');
+  assert.ok(!rubricQualifies({ score: 2.5, confidence: 0.9 }, { organisation_fundable: 0.1 }), 'scholarship');
+  assert.ok(!rubricQualifies({ score: 2.9, confidence: 1, geography_excluded: true }, META_OK), 'out of area');
+  assert.ok(!rubricQualifies(null, META_OK), 'never scored');
+});
+
+test('a rubric-only fit tags the grant even when the keyword score is zero', () => {
+  // This is the whole point: "Visions of Australia" scores 0 on keywords and 2.88 on the rubric.
+  const row = {
+    aligned_projects: [],
+    project_relevance: { rubric_meta: META_OK, contained: { rubric: { score: 2.88, confidence: 0.95 } } },
+  };
+  const results = { contained: { score: 0, signals: {} } };
+  const { tagged, changes, relevance } = applyProjectTags(row, results);
+  assert.ok(tagged.includes(PROJECT_CODES.contained));
+  assert.equal(changes.contained.by, 'rubric');
+  assert.equal(relevance.contained.tagged_by, 'rubric');
+});
+
+test('a keyword rescore does NOT destroy a stored rubric verdict', () => {
+  // applyProjectTags replaces the whole per-project object. If `rubric` is not
+  // carried across, every keyword rescore silently wipes the second signal and
+  // the grant falls off the desk with no trace.
+  const row = {
+    aligned_projects: [PROJECT_CODES.contained],
+    project_relevance: { rubric_meta: META_OK, contained: { score: 0, rubric: { score: 2.88, confidence: 0.95 } } },
+  };
+  const results = { contained: { score: 0, signals: { tier1_hits: [] } } };
+  const { tagged, relevance } = applyProjectTags(row, results);
+  assert.deepEqual(relevance.contained.rubric, { score: 2.88, confidence: 0.95 });
+  assert.ok(tagged.includes(PROJECT_CODES.contained), 'still tagged after a keyword-only rescore');
+});
+
+test('a generic community-grants programme is suppressed on the rubric signal', () => {
+  // Measured: a grant "plausible" for 3+ unrelated projects is a generic small-grants
+  // round, informative for none of them. 9 such grants produced 48 of 76 candidate rows.
+  const rubric = { score: 2.7, confidence: 0.9 };
+  const row = {
+    aligned_projects: [],
+    project_relevance: {
+      rubric_meta: META_OK,
+      justicehub: { rubric }, harvest: { rubric }, farm: { rubric }, contained: { rubric },
+    },
+  };
+  assert.equal(countRubricFits(row.project_relevance), 4);
+  const results = Object.fromEntries(Object.keys(PROJECT_CODES).map(p => [p, { score: 0, signals: {} }]));
+  const { tagged } = applyProjectTags(row, results);
+  assert.deepEqual(tagged, [], 'no project should be tagged by a generic programme');
+});
+
+test('keyword tagging still works with no rubric present at all', () => {
+  // Back-compat: every row predates the rubric until it is scored.
+  const row = { aligned_projects: [], project_relevance: {} };
+  const results = { justicehub: { score: 45, signals: {} } };
+  const { tagged, changes, relevance } = applyProjectTags(row, results);
+  assert.ok(tagged.includes(PROJECT_CODES.justicehub));
+  assert.equal(changes.justicehub.by, 'keyword');
+  assert.equal(relevance.justicehub.rubric, undefined);
+});
+
+test('both signals agreeing is recorded as "both"', () => {
+  const row = {
+    aligned_projects: [],
+    project_relevance: { rubric_meta: META_OK, justicehub: { rubric: { score: 2.84, confidence: 0.99 } } },
+  };
+  const results = { justicehub: { score: 56, signals: {} } };
+  const { changes } = applyProjectTags(row, results);
+  assert.equal(changes.justicehub.by, 'both');
+});
+
+test('losing BOTH signals untags the grant', () => {
+  const row = {
+    aligned_projects: [PROJECT_CODES.farm],
+    project_relevance: { rubric_meta: META_OK, farm: { score: 55, rubric: { score: 0.4, confidence: 0.9 } } },
+  };
+  const results = { farm: { score: 10, signals: {} } };
+  const { tagged, changes } = applyProjectTags(row, results);
+  assert.ok(!tagged.includes(PROJECT_CODES.farm));
+  assert.equal(changes.farm.change, 'removed');
 });

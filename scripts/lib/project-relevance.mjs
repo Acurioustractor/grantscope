@@ -85,11 +85,8 @@ export const PROJECT_CONFIGS = {
     tier1: [
       'shipping container', 'container exhibition', 'touring exhibition',
       'immersive installation', 'pop-up exhibition', 'mobile exhibition',
-      // Added 2026-09-21, same sweep. The two biggest touring-exhibition funds in the
-      // open pool both scored 0-2: "2026 Regional Arts Touring Round 2" (its name says
-      // "Regional Arts Touring", not "touring exhibition") and "Visions of Australia
-      // Round 23" (its description says "touring of quality exhibitions" — the singular
-      // tier1 phrases cannot match across that wording).
+      // Added 2026-09-21. "2026 Regional Arts Touring Round 2" scored 0/30 — its name
+      // says "Regional Arts Touring", which none of the singular phrases above match.
       // Only phrases that carry BOTH travel and visual-arts sense. Two looser
       // attempts were measured against all 26,840 rows and rejected:
       //   bare 'exhibitions' -> tagged four Lord Mayor's craft-fair grants
@@ -218,23 +215,98 @@ export const PROJECT_CODES = {
  * @param {object} row must carry aligned_projects and project_relevance (previous scores)
  * @param {Record<string, {score: number, signals: object}>} results keyed by project id
  */
+/**
+ * Rubric signal thresholds. The keyword tiers above find grants whose WORDING
+ * matches ours; the rubric finds grants that describe the same work in different
+ * words. Both are needed — measured 2026-09-21, the keyword lists alone showed
+ * ACT 19 of 383 open grants and missed two $5M youth-crime rounds outright.
+ *
+ * Written by scripts/score-project-rubric.mjs into
+ * project_relevance.<project>.rubric = { score, confidence, geography_excluded? }
+ * and project_relevance.rubric_meta  = { organisation_fundable, model, scored_at }.
+ */
+// Measured 2026-09-21 over the 380 open grants, against the 7 candidates verified
+// by hand. The rubric's own wording puts 2.0 at "plausible", but auto-tagging there
+// is too loose — it admitted "Mazda Foundation (NZ) Grants" and an already-closed
+// visual-arts program.
+//   2.00 -> 46 tags, 7/7 verified wins kept
+//   2.25 -> 36 tags, 6/7
+//   2.50 -> 21 tags, 6/7   <- chosen: half the volume, and the only win lost is
+//                             "SCC Major Grants", which is a GEOGRAPHY signal
+//                             (our home council) and never was a theme match.
+//   2.75 ->  9 tags, 4/7
+// Raise or lower this only with the same measurement re-run; do not nudge it.
+export const RUBRIC_FIT_AT = 2.5;
+export const RUBRIC_CONFIDENCE_AT = 0.5; // below this the model is not committing
+export const RUBRIC_ORG_FUNDABLE_AT = 0.5;
+// A grant "plausible" for this many unrelated projects is a generic community-grants
+// programme, not a theme match. Measured: 9 such grants produced 48 of 76 candidate
+// rows and drowned the list. They are still scored, just never tagged on the rubric.
+export const RUBRIC_GENERIC_PROJECT_COUNT = 3;
+
+/**
+ * Does the stored rubric result for one project justify a tag on its own?
+ * Pure, so it can be tested without a database or an API call.
+ */
+export function rubricQualifies(rubric, rubricMeta) {
+  if (!rubric) return false;
+  if (rubric.geography_excluded) return false;
+  if (typeof rubric.score !== 'number' || rubric.score < RUBRIC_FIT_AT) return false;
+  if ((rubric.confidence ?? 0) < RUBRIC_CONFIDENCE_AT) return false;
+  if ((rubricMeta?.organisation_fundable ?? 1) < RUBRIC_ORG_FUNDABLE_AT) return false;
+  return true;
+}
+
+/** How many projects the rubric rates as a fit. >= RUBRIC_GENERIC_PROJECT_COUNT means "generic programme". */
+export function countRubricFits(relevance) {
+  const meta = relevance?.rubric_meta;
+  return Object.keys(PROJECT_CODES)
+    .filter((p) => rubricQualifies(relevance?.[p]?.rubric, meta)).length;
+}
+
 export function applyProjectTags(row, results, at = new Date().toISOString()) {
   const before = new Set(row.aligned_projects || []);
   const tagged = new Set(before);
   const changes = {};
   const relevance = { ...(row.project_relevance || {}) };
 
+  // The rubric verdict is computed from what is ALREADY stored on the row, so a
+  // keyword rescore never silently drops a rubric-tagged grant. Generic-programme
+  // suppression needs the cross-project count, so it is computed once up front.
+  const isGenericProgramme = countRubricFits(relevance) >= RUBRIC_GENERIC_PROJECT_COUNT;
+
   for (const [project, code] of Object.entries(PROJECT_CODES)) {
     const result = results[project];
     if (!result) continue;
     const wasTagged = before.has(code);
-    if (result.score >= PROJECT_TAG_THRESHOLD) tagged.add(code);
+
+    const existingRubric = relevance[project]?.rubric ?? null;
+    const byKeyword = result.score >= PROJECT_TAG_THRESHOLD;
+    const byRubric = !isGenericProgramme && rubricQualifies(existingRubric, relevance.rubric_meta);
+
+    if (byKeyword || byRubric) tagged.add(code);
     else tagged.delete(code);
+
     const isTagged = tagged.has(code);
     const change = wasTagged === isTagged ? null : (isTagged ? 'added' : 'removed');
     const previousScore = relevance[project]?.score ?? null;
-    if (change) changes[project] = { change, at, previous_score: previousScore, score: result.score };
-    relevance[project] = { score: result.score, signals: result.signals, scored_at: at };
+    if (change) {
+      changes[project] = {
+        change, at, previous_score: previousScore, score: result.score,
+        // Which signal moved it. Without this, a rubric-only tag looks like a
+        // keyword scorer that has started hallucinating.
+        by: byKeyword && byRubric ? 'both' : byKeyword ? 'keyword' : 'rubric',
+      };
+    }
+    // Preserve `rubric`: this assignment replaces the whole per-project object, so
+    // anything not carried across here is destroyed on the next keyword rescore.
+    relevance[project] = {
+      score: result.score,
+      signals: result.signals,
+      scored_at: at,
+      ...(existingRubric ? { rubric: existingRubric } : {}),
+      tagged_by: isTagged ? (byKeyword && byRubric ? 'both' : byKeyword ? 'keyword' : 'rubric') : null,
+    };
   }
 
   const anyChange = Object.keys(changes).length > 0;
