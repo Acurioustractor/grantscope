@@ -110,6 +110,13 @@ jobs:
       - name: Private exposure (no ACT-owned object open to the public key beyond the allowlist)
         if: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' }}
         run: node scripts/check-private-exposure.mjs
+      # Fails when two columns on one row contradict each other MORE than they did
+      # at the recorded baseline. It does not fail on the baseline itself: those are
+      # known states awaiting a decision, and a check that is red the day it ships
+      # gets muted within a week. What it catches is a tagger running again.
+      - name: Data contradictions (no known contradiction grew)
+        if: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        run: node scripts/check-data-contradictions.mjs
       - name: Parity skipped (no SUPABASE_SERVICE_ROLE_KEY secret)
         if: ${{ env.SUPABASE_SERVICE_ROLE_KEY == '' }}
         run: echo "::warning::migration parity not checked; add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY as repo secrets"
