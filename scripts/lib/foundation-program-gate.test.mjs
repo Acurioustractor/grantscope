@@ -17,7 +17,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isGrantLikeFoundationProgram, evidencedDeadlineOf } from '../sync-foundation-programs.mjs';
+import { isGrantLikeFoundationProgram, evidencedDeadlineOf, isNeverAGrantProgram } from '../sync-foundation-programs.mjs';
 
 const TRUSTED = { id: 'f1', name: 'Example Foundation', type: 'private_ancillary_fund', website: 'https://example.org' };
 const QUOTE = 'Applications for the 2026 round close on 30 June 2026.';
@@ -129,4 +129,75 @@ test('a ticket price is not a structured grant signal', () => {
 test('a plausible amount still proves grant-hood', () => {
   const real = { name: 'Community Fund', description: 'Supports community projects.', amount_max: 50000, metadata: {} };
   assert.equal(isGrantLikeFoundationProgram(real, TRUSTED), true);
+});
+
+// ── the deletion rule, which is NOT the desk rule ──────────────────────────
+// Split on 2026-09-21: --cleanup-invalid was deleting anything the desk rule
+// refused, which on the live data meant 90 rows where only 2 were junk.
+
+test('a closed grant round is kept, not deleted', () => {
+  // Annamila: "grant rounds are currently closed until further notice". Real
+  // programme, real funder, simply paused. It was on the deletion list.
+  const paused = {
+    name: 'Annamila First Nations Foundation Grant Program',
+    description: 'Grants to Aboriginal and Torres Strait Islander led organisations.',
+    amount_max: 30000,
+    application_mode: 'not_accepting',
+    metadata: { applicant_type: 'organisation' },
+  };
+  assert.equal(isGrantLikeFoundationProgram(paused, TRUSTED), false, 'not actionable today');
+  assert.equal(isNeverAGrantProgram(paused, TRUSTED), false, 'but it is still a grant');
+});
+
+test('a scholarship to an individual was never a grant', () => {
+  const scholarship = { name: 'Nursing Development Scholarship', metadata: { applicant_type: 'individual' } };
+  assert.equal(isNeverAGrantProgram(scholarship, TRUSTED), true);
+});
+
+test('a fundraising event was never a grant', () => {
+  const bbq = { name: 'Lions Biggest BBQ', metadata: { applicant_type: 'not_an_application' } };
+  assert.equal(isNeverAGrantProgram(bbq, TRUSTED), true);
+});
+
+test('a child sponsorship appeal was never a grant', () => {
+  const appeal = {
+    name: 'Child Sponsorship Program',
+    description: 'Regular donations provide food packs and clean water to a sponsored child.',
+    metadata: {},
+  };
+  assert.equal(isNeverAGrantProgram(appeal, TRUSTED), true);
+});
+
+test('an unrecognised funder type is not a reason to delete', () => {
+  // isGrantLikeFoundationProgram refuses these; deletion must not.
+  const untyped = { name: 'Community Fund', description: 'Grants for community projects.', metadata: {} };
+  assert.equal(isGrantLikeFoundationProgram(untyped, { id: 'x', name: 'Someone', type: 'other' }), false);
+  assert.equal(isNeverAGrantProgram(untyped, { id: 'x', name: 'Someone', type: 'other' }), false);
+});
+
+test('a legacy row with no metadata and no non-grant language is kept', () => {
+  // Every pre-2026-09-21 row is in this state. Silence is not evidence.
+  const legacy = { name: 'Community Grants Program', description: 'Annual grants program.' };
+  assert.equal(isNeverAGrantProgram(legacy, TRUSTED), false);
+});
+
+test('an individual label alone does not delete — deletion needs a second signal', () => {
+  // $25,000, open, and labelled 'individual' by the v2 prompt on one
+  // unevidenced call. Deletion is permanent; one LLM label is not enough.
+  const seed = {
+    name: 'Wesfarmers Centre Seed & Partnership Grant',
+    description: 'These grants encourage new research activities and partnerships.',
+    amount_max: 25000,
+    metadata: { applicant_type: 'individual' },
+  };
+  assert.equal(isNeverAGrantProgram(seed, TRUSTED), false);
+});
+
+test('an individual label plus award language does delete', () => {
+  const fellowship = {
+    name: 'Frank Lowy Fellowship',
+    description: 'Industry leaders nominate talented individuals in their organisation.',
+    metadata: { applicant_type: 'individual' },
+  };
+  assert.equal(isNeverAGrantProgram(fellowship, TRUSTED), true);
 });

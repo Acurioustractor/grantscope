@@ -102,6 +102,8 @@ async function updateAgentRuntimeState(agentId, patch) {
 const PUBLIC_GRANT_SIGNALS = /(grant|grant round|community giving|fellowship|scholarship|award|bursary|funding round|apply now|how to apply|applications? open|grant guidelines|expression of interest|eoi)/i;
 const URL_GRANT_SIGNALS = /(\/grants?\/|\/grant-programs?\/|\/funding\/|\/apply\/|\/applications?\/|\/community-giving\/|\/fellowships?\/|\/scholarships?\/)/i;
 const NON_GRANT_SIGNALS = /(appeal|donation|donate|sponsorship|sponsor a child|child sponsorship|orphan sponsorship|water project|food packs?|relief fund|crisis relief|family support|support program|housing support|clean water|fiscal sponsorship|disaster relief|donations program|community support|direct sponsorship)/i;
+// Corroboration for deleting a programme the extractor called 'individual'.
+const INDIVIDUAL_AWARD_SIGNALS = /(scholarship|fellowship|bursary|bursaries|prize|medal|traineeship|internship|graduate program|student|nominate|nomination)/i;
 const DIRECT_SERVICE_SIGNALS = /(supports? .*famil(y|ies)|provides? (financial|emotional|practical) support|regular donations|major sponsors?|channeling donations|fundraising campaign|supports the creation of|responding to global disasters|provides access to clean water|vouchers|care packages|hospital stays)/i;
 
 const GRANT_DEPENDENCIES = [
@@ -567,6 +569,50 @@ export function isGrantLikeFoundationProgram(program, foundation) {
   return hasGrantLanguage || hasGrantUrl || hasStructuredGrantSignal;
 }
 
+/**
+ * Is this programme something that was NEVER a grant, as opposed to a grant that
+ * is currently closed?
+ *
+ * Two different questions were sharing one answer (2026-09-21). The desk rule,
+ * isGrantLikeFoundationProgram, asks "can someone act on this now" — so a
+ * funder whose page says "grant rounds are closed until further notice" fails
+ * it, correctly. `--cleanup-invalid` then read that failure as "this was never
+ * a grant" and offered to DELETE the row. On the current data that meant 90
+ * deletions where only 2 were junk: Annamila's Truth And Justice, Healing And
+ * Wellbeing and Country And Culture, the Wesfarmers Centre Seed & Partnership
+ * Grant and the Macquarie Community Resilience Prize were all on the list. A
+ * closed round that reopens is exactly what a funding desk wants to keep.
+ *
+ * So deletion now needs a POSITIVE reason to believe it is not a grant, not
+ * merely the absence of a reason to believe it is. A closed round, an unknown
+ * status, a missing amount or an unrecognised foundation type are all "we
+ * cannot act on it today", which is what `status` is for.
+ */
+export function isNeverAGrantProgram(program, foundation) {
+  const meta = program.metadata || {};
+
+  const text = `${program.name || ''} ${program.description || ''} ${program.eligibility || ''} ${program.application_process || ''}`;
+
+  // The extractor said the page describes something other than an application
+  // an organisation could make. That is a strong claim about the page itself.
+  if (meta.applicant_type === 'not_an_application') return true;
+
+  // 'individual' needs a second signal before it deletes anything. The label is
+  // one unevidenced LLM call with no confidence attached, and deletion is
+  // permanent: "Wesfarmers Centre Seed & Partnership Grant", $25,000 and open,
+  // was labelled individual by the v2 prompt and would have gone on that alone.
+  // A real scholarship or fellowship says so in its own name.
+  if (meta.applicant_type === 'individual' && INDIVIDUAL_AWARD_SIGNALS.test(text)) return true;
+  const url = String(program.url || foundation?.website || '').toLowerCase();
+  const looksLikeNonGrant = NON_GRANT_SIGNALS.test(text) || DIRECT_SERVICE_SIGNALS.test(text);
+  const hasGrantLanguage = PUBLIC_GRANT_SIGNALS.test(text);
+  const hasGrantUrl = URL_GRANT_SIGNALS.test(url);
+
+  // A donation appeal, a sponsorship, a service the funder delivers itself —
+  // with nothing anywhere on the row that reads like a grant.
+  return looksLikeNonGrant && !hasGrantLanguage && !hasGrantUrl;
+}
+
 function getDesiredProgramStatus(program, foundation) {
   if (!isGrantLikeFoundationProgram(program, foundation)) return 'non_grant';
   return hasPastDeadline(program.deadline) ? 'closed' : 'open';
@@ -815,10 +861,12 @@ async function main() {
       process.exit(1);
     }
 
+    // Delete only what was never a grant, or what no longer has a programme row
+    // behind it. A grant whose round is closed keeps its row and its status.
     const invalidGrantIds = (existingFoundationGrants || [])
       .filter((grant) => {
         const program = existingProgramsByKey.get(`${grant.foundation_id}::${grant.name}`);
-        return !program || !isGrantLikeFoundationProgram(program, program.foundations);
+        return !program || isNeverAGrantProgram(program, program.foundations);
       })
       .map((grant) => grant.id);
 
