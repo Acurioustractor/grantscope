@@ -63398,6 +63398,22 @@ export type Database = {
         }
         Relationships: []
       }
+      v_gs_relationships_typed: {
+        Row: {
+          amount: number | null
+          buyer_name: string | null
+          dataset: string | null
+          id: string | null
+          procurement_method: string | null
+          purpose: string | null
+          relationship_type: string | null
+          role_type: string | null
+          source_entity_id: string | null
+          target_entity_id: string | null
+          year: number | null
+        }
+        Relationships: []
+      }
       v_harvest_public_social_posts: {
         Row: {
           account_name: string | null
@@ -64503,6 +64519,19 @@ export type Database = {
           role_types: string[] | null
           slug: string | null
           state_focus: string | null
+        }
+        Relationships: []
+      }
+      v_person_roles_typed: {
+        Row: {
+          charity_size: string | null
+          confidence: string | null
+          entity_id: string | null
+          id: string | null
+          original_role: string | null
+          person_name: string | null
+          person_name_normalised: string | null
+          role_type: string | null
         }
         Relationships: []
       }
