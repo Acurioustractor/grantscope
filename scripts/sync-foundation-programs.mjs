@@ -18,6 +18,8 @@
  */
 
 import 'dotenv/config';
+import { assignProgramUrls, stripFragment } from './lib/foundation-grant-urls.mjs';
+import { normalizeGrantAmount, hasPlausibleAmount } from './lib/grant-amounts.mjs';
 import { createClient } from '@supabase/supabase-js';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
@@ -100,6 +102,8 @@ async function updateAgentRuntimeState(agentId, patch) {
 const PUBLIC_GRANT_SIGNALS = /(grant|grant round|community giving|fellowship|scholarship|award|bursary|funding round|apply now|how to apply|applications? open|grant guidelines|expression of interest|eoi)/i;
 const URL_GRANT_SIGNALS = /(\/grants?\/|\/grant-programs?\/|\/funding\/|\/apply\/|\/applications?\/|\/community-giving\/|\/fellowships?\/|\/scholarships?\/)/i;
 const NON_GRANT_SIGNALS = /(appeal|donation|donate|sponsorship|sponsor a child|child sponsorship|orphan sponsorship|water project|food packs?|relief fund|crisis relief|family support|support program|housing support|clean water|fiscal sponsorship|disaster relief|donations program|community support|direct sponsorship)/i;
+// Corroboration for deleting a programme the extractor called 'individual'.
+const INDIVIDUAL_AWARD_SIGNALS = /(scholarship|fellowship|bursary|bursaries|prize|medal|traineeship|internship|graduate program|student|nominate|nomination)/i;
 const DIRECT_SERVICE_SIGNALS = /(supports? .*famil(y|ies)|provides? (financial|emotional|practical) support|regular donations|major sponsors?|channeling donations|fundraising campaign|supports the creation of|responding to global disasters|provides access to clean water|vouchers|care packages|hospital stays)/i;
 
 const GRANT_DEPENDENCIES = [
@@ -154,14 +158,6 @@ function normalizeUrl(url) {
 // many programs (which often share one page URL) each get a distinct,
 // constraint-safe URL. Same program name always yields the same slug, so
 // re-syncs update in place rather than churning.
-function programSlug(name) {
-  return String(name || 'program')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60) || 'program';
-}
-
 function detectProgramType(name, description) {
   const text = `${name} ${description || ''}`.toLowerCase();
   if (/fellowship/.test(text)) return 'fellowship';
@@ -176,24 +172,27 @@ function buildProgramKey(program) {
   return `${program.foundations.id}::${program.name}`;
 }
 
-function buildGrantPayload(program, foundation) {
+function buildGrantPayload(program, foundation, resolvedUrl) {
   const desiredStatus = getDesiredProgramStatus(program, foundation);
-  // Foundations expose many programs from one page URL, which collides on the
-  // unique-URL index (only one program per foundation would land). Append a
-  // stable per-program fragment (servers ignore it) so each is a distinct,
-  // findable grant. Matching is by source_id/key, not URL, so existing rows
-  // update in place rather than duplicating.
-  const baseUrl = normalizeUrl(program.url || foundation.website);
   return {
     name: program.name,
     provider: foundation.name,
     program: program.name,
     description: program.description,
-    amount_min: program.amount_min ? Number(program.amount_min) : null,
-    amount_max: program.amount_max ? Number(program.amount_max) : null,
-    deadline: program.deadline,
-    closes_at: program.deadline,
-    url: baseUrl ? `${baseUrl.split('#')[0]}#${programSlug(program.name)}` : null,
+    // grant_opportunities.amount_* are INTEGER and foundation_programs.amount_*
+    // are NUMERIC, so a fractional value used to fail the whole row. Rounding
+    // alone would keep a wrong number: see scripts/lib/grant-amounts.mjs for the
+    // ticket prices and tuition percentages this refuses.
+    amount_min: normalizeGrantAmount(program.amount_min),
+    amount_max: normalizeGrantAmount(program.amount_max),
+    // Only an evidenced deadline reaches the desk. An unevidenced one becomes null,
+    // which renders as "no deadline known" rather than invented urgency.
+    deadline: evidencedDeadlineOf(program),
+    closes_at: evidencedDeadlineOf(program),
+    // Resolved in assignProgramUrls: a real programme URL is used as it is, and
+    // an anchor is appended only where it is keeping two rows apart on the
+    // unique url index. Previously EVERY row got an invented `#slug`.
+    url: resolvedUrl?.url ?? null,
     // Carry the funder's geography so state-filtered searches ("queensland ...")
     // surface these programs; previously left null, so geo queries missed them.
     geography: Array.isArray(foundation.geographic_focus) && foundation.geographic_focus.length
@@ -507,6 +506,12 @@ async function runGrantEmbeddingBackfill(grantIds) {
   }
 }
 
+/** The deadline, but only when the extractor quoted the page for it. */
+export function evidencedDeadlineOf(program) {
+  if (!program?.deadline) return null;
+  return program.metadata?.deadline_evidence ? program.deadline : null;
+}
+
 function hasPastDeadline(deadline) {
   if (!deadline) return false;
   const parsed = new Date(deadline);
@@ -516,19 +521,96 @@ function hasPastDeadline(deadline) {
   return parsed < today;
 }
 
-function isGrantLikeFoundationProgram(program, foundation) {
+/**
+ * Is this foundation programme something an organisation could actually apply to?
+ *
+ * Exported for testing. Two fixes went in 2026-09-21 after 22 rows with invented
+ * deadlines were traced back through here:
+ *
+ * 1. A DEADLINE ALONE NO LONGER PROVES GRANT-HOOD. `hasStructuredGrantSignal`
+ *    counted any deadline, and discover-foundation-programs.mjs was filling that
+ *    column with LLM guesses. The circularity is the whole bug: the model invented
+ *    a date, the date satisfied the grant test, and a church mission trip to
+ *    Malaysia and "Lions Biggest BBQ" became grant opportunities. A deadline now
+ *    only counts when metadata.deadline_evidence carries a quote from the page.
+ *    Legacy rows have no metadata, so their dates stop counting — which is the
+ *    intent, since those are exactly the unverified ones.
+ *
+ * 2. APPLICANT TYPE IS RESPECTED. Rows the extractor marked `individual` (a
+ *    scholarship or prize to a person) or `not_an_application` (a fundraising
+ *    event, or a way to DONATE to the foundation) are never grant-like, whatever
+ *    the language on the page looks like. "Family Scholarship Donation" and
+ *    "Corporate Scholarship Partnership" both read as grant language and are both
+ *    ways of giving the foundation money.
+ */
+export function isGrantLikeFoundationProgram(program, foundation) {
   const text = `${program.name || ''} ${program.description || ''} ${program.eligibility || ''} ${program.application_process || ''}`;
   const url = String(program.url || foundation.website || '').toLowerCase();
   const foundationType = String(foundation.type || '').toLowerCase();
+  const meta = program.metadata || {};
+
+  // Hard exclusions from the extractor, ahead of every other signal.
+  if (meta.applicant_type === 'individual' || meta.applicant_type === 'not_an_application') return false;
+  // A page that says it is not taking applications has told us the answer
+  // directly. Amounts and grant language on it describe money already given.
+  if (program.application_mode === 'not_accepting') return false;
+
   const hasGrantLanguage = PUBLIC_GRANT_SIGNALS.test(text);
   const hasGrantUrl = URL_GRANT_SIGNALS.test(url);
-  const hasStructuredGrantSignal = Boolean(program.amount_min || program.amount_max || program.deadline);
+  const evidencedDeadline = Boolean(program.deadline && meta.deadline_evidence);
+  // An amount only counts when it could actually be a grant. A $20 laser tag
+  // ticket used to satisfy this and promote a fundraising event onto the desk.
+  const hasStructuredGrantSignal = Boolean(hasPlausibleAmount(program) || evidencedDeadline);
   const looksLikeNonGrant = NON_GRANT_SIGNALS.test(text) || DIRECT_SERVICE_SIGNALS.test(text);
   const trustedFoundationType = ['private_ancillary_fund', 'public_ancillary_fund', 'trust', 'corporate_foundation', 'grantmaker'].includes(foundationType);
 
   if (looksLikeNonGrant && !hasGrantLanguage && !hasGrantUrl) return false;
   if (!trustedFoundationType) return false;
   return hasGrantLanguage || hasGrantUrl || hasStructuredGrantSignal;
+}
+
+/**
+ * Is this programme something that was NEVER a grant, as opposed to a grant that
+ * is currently closed?
+ *
+ * Two different questions were sharing one answer (2026-09-21). The desk rule,
+ * isGrantLikeFoundationProgram, asks "can someone act on this now" — so a
+ * funder whose page says "grant rounds are closed until further notice" fails
+ * it, correctly. `--cleanup-invalid` then read that failure as "this was never
+ * a grant" and offered to DELETE the row. On the current data that meant 90
+ * deletions where only 2 were junk: Annamila's Truth And Justice, Healing And
+ * Wellbeing and Country And Culture, the Wesfarmers Centre Seed & Partnership
+ * Grant and the Macquarie Community Resilience Prize were all on the list. A
+ * closed round that reopens is exactly what a funding desk wants to keep.
+ *
+ * So deletion now needs a POSITIVE reason to believe it is not a grant, not
+ * merely the absence of a reason to believe it is. A closed round, an unknown
+ * status, a missing amount or an unrecognised foundation type are all "we
+ * cannot act on it today", which is what `status` is for.
+ */
+export function isNeverAGrantProgram(program, foundation) {
+  const meta = program.metadata || {};
+
+  const text = `${program.name || ''} ${program.description || ''} ${program.eligibility || ''} ${program.application_process || ''}`;
+
+  // The extractor said the page describes something other than an application
+  // an organisation could make. That is a strong claim about the page itself.
+  if (meta.applicant_type === 'not_an_application') return true;
+
+  // 'individual' needs a second signal before it deletes anything. The label is
+  // one unevidenced LLM call with no confidence attached, and deletion is
+  // permanent: "Wesfarmers Centre Seed & Partnership Grant", $25,000 and open,
+  // was labelled individual by the v2 prompt and would have gone on that alone.
+  // A real scholarship or fellowship says so in its own name.
+  if (meta.applicant_type === 'individual' && INDIVIDUAL_AWARD_SIGNALS.test(text)) return true;
+  const url = String(program.url || foundation?.website || '').toLowerCase();
+  const looksLikeNonGrant = NON_GRANT_SIGNALS.test(text) || DIRECT_SERVICE_SIGNALS.test(text);
+  const hasGrantLanguage = PUBLIC_GRANT_SIGNALS.test(text);
+  const hasGrantUrl = URL_GRANT_SIGNALS.test(url);
+
+  // A donation appeal, a sponsorship, a service the funder delivers itself —
+  // with nothing anywhere on the row that reads like a grant.
+  return looksLikeNonGrant && !hasGrantLanguage && !hasGrantUrl;
 }
 
 function getDesiredProgramStatus(program, foundation) {
@@ -579,7 +661,7 @@ async function main() {
             .select(`
               id, name, url, description, amount_min, amount_max, deadline,
               status, categories, eligibility, application_process, program_type,
-              scraped_at, created_at,
+              metadata, scraped_at, created_at,
               foundations!inner(id, name, type, website, thematic_focus, geographic_focus)
             `)
             .in('foundation_id', foundationBatch)
@@ -595,7 +677,7 @@ async function main() {
           .select(`
             id, name, url, description, amount_min, amount_max, deadline,
             status, categories, eligibility, application_process, program_type,
-            scraped_at, created_at,
+            metadata, scraped_at, created_at,
             foundations!inner(id, name, type, website, thematic_focus, geographic_focus)
           `)
           .order('created_at', { ascending: false })
@@ -670,6 +752,42 @@ async function main() {
 
   console.log(`  ${existingByKey.size} already synced${targetFoundationIds ? ' in scope' : ''}`);
 
+  // Work out each programme's URL before building any payload. A bare URL is
+  // preferred; the `#slug` anchor is added only where two rows would otherwise
+  // collide on grant_opportunities_url_idx, which is UNIQUE on url.
+  const urlCandidates = eligiblePrograms.map(program => ({
+    id: program.id,
+    name: program.name,
+    baseUrl: stripFragment(normalizeUrl(program.url || program.foundations?.website)),
+  }));
+  const urlOwner = new Map();
+  for (const grant of existing) {
+    const base = stripFragment(grant.url);
+    if (base) urlOwner.set(base, grant.source_id ?? null);
+  }
+  // Rows from other sources hold URLs too, and the unique index does not care
+  // which source owns one. Ask before assuming a bare URL is free.
+  const bases = [...new Set(urlCandidates.map(c => c.baseUrl).filter(Boolean))];
+  for (let i = 0; i < bases.length; i += 200) {
+    const chunk = bases.slice(i, i + 200);
+    const { data: owners, error: ownerError } = await supabase
+      .from('grant_opportunities')
+      .select('url, source_id, source')
+      .in('url', chunk);
+    if (ownerError) {
+      console.error('Failed to check URL ownership:', ownerError.message);
+      process.exit(1);
+    }
+    for (const row of owners || []) {
+      if (row.source === 'foundation_program') continue; // already mapped above
+      const base = stripFragment(row.url);
+      if (base) urlOwner.set(base, row.source_id ?? `foreign:${row.source}`);
+    }
+  }
+  const resolvedUrls = assignProgramUrls(urlCandidates, urlOwner);
+  const syntheticCount = [...resolvedUrls.values()].filter(v => v.synthetic).length;
+  console.log(`  ${resolvedUrls.size - syntheticCount} programmes keep their own URL, ${syntheticCount} need a disambiguating anchor`);
+
   const run = await logStart(supabase, AGENT_ID, AGENT_NAME);
 
   let inserted = 0;
@@ -743,10 +861,12 @@ async function main() {
       process.exit(1);
     }
 
+    // Delete only what was never a grant, or what no longer has a programme row
+    // behind it. A grant whose round is closed keeps its row and its status.
     const invalidGrantIds = (existingFoundationGrants || [])
       .filter((grant) => {
         const program = existingProgramsByKey.get(`${grant.foundation_id}::${grant.name}`);
-        return !program || !isGrantLikeFoundationProgram(program, program.foundations);
+        return !program || isNeverAGrantProgram(program, program.foundations);
       })
       .map((grant) => grant.id);
 
@@ -785,7 +905,7 @@ async function main() {
   for (const program of eligiblePrograms) {
     const foundation = program.foundations;
     const key = buildProgramKey(program);
-    const grant = buildGrantPayload(program, foundation);
+    const grant = buildGrantPayload(program, foundation, resolvedUrls.get(program.id));
     const existingGrant = existingBySourceId.get(String(program.id)) || existingByKey.get(key);
 
     if (DRY_RUN) {
@@ -946,7 +1066,16 @@ async function main() {
   }
 }
 
-main().catch(err => {
-  console.error('Fatal error:', err);
-  process.exit(1);
-});
+// Only run when invoked directly. Without this guard, importing anything from
+// this file — which a unit test for the promotion gate has to do — executes a
+// LIVE sync against grant_opportunities, because DRY_RUN defaults to false.
+// That happened on 2026-09-21: importing isGrantLikeFoundationProgram for a test
+// kicked off a full 4,609-programme sync. No data was lost (--cleanup-invalid was
+// off, and the new gate correctly wrote NULL rather than restoring invented
+// deadlines), but a scheduled job ran unplanned off the back of an import.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch(err => {
+    console.error('Fatal error:', err);
+    process.exit(1);
+  });
+}

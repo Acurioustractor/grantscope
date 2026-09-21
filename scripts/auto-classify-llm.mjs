@@ -58,7 +58,7 @@ const AGENT_ID = 'auto-classify-llm';
 const PROVIDERS = {
   groq: {
     baseUrl: 'https://api.groq.com/openai/v1',
-    model: 'llama-3.3-70b-versatile',
+    model: 'openai/gpt-oss-120b',
     keyEnv: 'GROQ_API_KEY',
   },
   gemini: {

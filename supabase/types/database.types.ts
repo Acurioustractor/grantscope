@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       _backup_articles_310_20260820: {
@@ -239,6 +264,108 @@ export type Database = {
           yj_confidence?: number | null
           yj_evidence_snippet?: string | null
           yj_relevant?: boolean | null
+        }
+        Relationships: []
+      }
+      _backup_goods_palm_island_20260911: {
+        Row: {
+          abn: string | null
+          buyer_role: string | null
+          community_id: string | null
+          contact_surface: string | null
+          contract_cycle: string | null
+          created_at: string | null
+          current_supplier: string | null
+          entity_id: string | null
+          entity_name: string | null
+          entity_type: string | null
+          estimated_annual_spend: number | null
+          fit_score: number | null
+          ghl_contact_id: string | null
+          ghl_last_pushed_at: string | null
+          ghl_last_synced_at: string | null
+          ghl_opportunity_id: string | null
+          ghl_pipeline_id: string | null
+          ghl_stage_id: string | null
+          ghl_stage_name: string | null
+          govt_contract_count: number | null
+          govt_contract_value: number | null
+          gs_id: string | null
+          id: string | null
+          is_community_controlled: boolean | null
+          last_contact_date: string | null
+          next_action: string | null
+          procurement_method: string | null
+          product_fit: string[] | null
+          relationship_status: string | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          abn?: string | null
+          buyer_role?: string | null
+          community_id?: string | null
+          contact_surface?: string | null
+          contract_cycle?: string | null
+          created_at?: string | null
+          current_supplier?: string | null
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type?: string | null
+          estimated_annual_spend?: number | null
+          fit_score?: number | null
+          ghl_contact_id?: string | null
+          ghl_last_pushed_at?: string | null
+          ghl_last_synced_at?: string | null
+          ghl_opportunity_id?: string | null
+          ghl_pipeline_id?: string | null
+          ghl_stage_id?: string | null
+          ghl_stage_name?: string | null
+          govt_contract_count?: number | null
+          govt_contract_value?: number | null
+          gs_id?: string | null
+          id?: string | null
+          is_community_controlled?: boolean | null
+          last_contact_date?: string | null
+          next_action?: string | null
+          procurement_method?: string | null
+          product_fit?: string[] | null
+          relationship_status?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          abn?: string | null
+          buyer_role?: string | null
+          community_id?: string | null
+          contact_surface?: string | null
+          contract_cycle?: string | null
+          created_at?: string | null
+          current_supplier?: string | null
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type?: string | null
+          estimated_annual_spend?: number | null
+          fit_score?: number | null
+          ghl_contact_id?: string | null
+          ghl_last_pushed_at?: string | null
+          ghl_last_synced_at?: string | null
+          ghl_opportunity_id?: string | null
+          ghl_pipeline_id?: string | null
+          ghl_stage_id?: string | null
+          ghl_stage_name?: string | null
+          govt_contract_count?: number | null
+          govt_contract_value?: number | null
+          gs_id?: string | null
+          id?: string | null
+          is_community_controlled?: boolean | null
+          last_contact_date?: string | null
+          next_action?: string | null
+          procurement_method?: string | null
+          product_fit?: string[] | null
+          relationship_status?: string | null
+          updated_at?: string | null
+          website?: string | null
         }
         Relationships: []
       }
@@ -3116,6 +3243,81 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      act_private_grant_rounds: {
+        Row: {
+          aligned_projects: string[] | null
+          amount_max: number | null
+          amount_min: number | null
+          application_status: string | null
+          categories: string[] | null
+          closes_at: string | null
+          created_at: string | null
+          deadline: string | null
+          description: string | null
+          discovery_method: string | null
+          geography: string | null
+          goods_relevance_score: number | null
+          goods_relevance_signals: Json | null
+          id: string
+          metadata: Json | null
+          name: string | null
+          program: string | null
+          provider: string | null
+          source: string | null
+          status: string | null
+          updated_at: string | null
+          url: string | null
+        }
+        Insert: {
+          aligned_projects?: string[] | null
+          amount_max?: number | null
+          amount_min?: number | null
+          application_status?: string | null
+          categories?: string[] | null
+          closes_at?: string | null
+          created_at?: string | null
+          deadline?: string | null
+          description?: string | null
+          discovery_method?: string | null
+          geography?: string | null
+          goods_relevance_score?: number | null
+          goods_relevance_signals?: Json | null
+          id?: string
+          metadata?: Json | null
+          name?: string | null
+          program?: string | null
+          provider?: string | null
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
+          url?: string | null
+        }
+        Update: {
+          aligned_projects?: string[] | null
+          amount_max?: number | null
+          amount_min?: number | null
+          application_status?: string | null
+          categories?: string[] | null
+          closes_at?: string | null
+          created_at?: string | null
+          deadline?: string | null
+          description?: string | null
+          discovery_method?: string | null
+          geography?: string | null
+          goods_relevance_score?: number | null
+          goods_relevance_signals?: Json | null
+          id?: string
+          metadata?: Json | null
+          name?: string | null
+          program?: string | null
+          provider?: string | null
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
+          url?: string | null
+        }
+        Relationships: []
       }
       act_research_experiments: {
         Row: {
@@ -27037,8 +27239,11 @@ export type Database = {
           dgr_required: boolean | null
           discovered_by: string | null
           discovery_method: string | null
+          eligibility_confidence: number | null
           eligibility_criteria: Json | null
+          eligibility_provider: string | null
           eligibility_signals_at: string | null
+          eligibility_summary: string | null
           embedded_at: string | null
           embedding: string | null
           embedding_model: string | null
@@ -27065,6 +27270,8 @@ export type Database = {
           pipeline_stage: string | null
           program: string | null
           program_type: string | null
+          project_relevance: Json
+          project_relevance_scored_at: string | null
           provider: string | null
           provider_org_id: string | null
           relevance_score: number | null
@@ -27103,8 +27310,11 @@ export type Database = {
           dgr_required?: boolean | null
           discovered_by?: string | null
           discovery_method?: string | null
+          eligibility_confidence?: number | null
           eligibility_criteria?: Json | null
+          eligibility_provider?: string | null
           eligibility_signals_at?: string | null
+          eligibility_summary?: string | null
           embedded_at?: string | null
           embedding?: string | null
           embedding_model?: string | null
@@ -27131,6 +27341,8 @@ export type Database = {
           pipeline_stage?: string | null
           program?: string | null
           program_type?: string | null
+          project_relevance?: Json
+          project_relevance_scored_at?: string | null
           provider?: string | null
           provider_org_id?: string | null
           relevance_score?: number | null
@@ -27169,8 +27381,11 @@ export type Database = {
           dgr_required?: boolean | null
           discovered_by?: string | null
           discovery_method?: string | null
+          eligibility_confidence?: number | null
           eligibility_criteria?: Json | null
+          eligibility_provider?: string | null
           eligibility_signals_at?: string | null
+          eligibility_summary?: string | null
           embedded_at?: string | null
           embedding?: string | null
           embedding_model?: string | null
@@ -27197,6 +27412,8 @@ export type Database = {
           pipeline_stage?: string | null
           program?: string | null
           program_type?: string | null
+          project_relevance?: Json
+          project_relevance_scored_at?: string | null
           provider?: string | null
           provider_org_id?: string | null
           relevance_score?: number | null
@@ -54330,6 +54547,125 @@ export type Database = {
           },
         ]
       }
+      video_films: {
+        Row: {
+          audio: string
+          bytes: number
+          created_at: string
+          duration_seconds: number
+          format: string
+          id: string
+          look: string
+          notes: string
+          permission: string
+          permission_set_at: string | null
+          permission_set_by: number | null
+          poster_path: string
+          subject: Json
+          theme: string | null
+          title: string
+          updated_at: string
+          video_path: string
+        }
+        Insert: {
+          audio: string
+          bytes: number
+          created_at?: string
+          duration_seconds: number
+          format: string
+          id: string
+          look: string
+          notes?: string
+          permission?: string
+          permission_set_at?: string | null
+          permission_set_by?: number | null
+          poster_path: string
+          subject?: Json
+          theme?: string | null
+          title: string
+          updated_at?: string
+          video_path: string
+        }
+        Update: {
+          audio?: string
+          bytes?: number
+          created_at?: string
+          duration_seconds?: number
+          format?: string
+          id?: string
+          look?: string
+          notes?: string
+          permission?: string
+          permission_set_at?: string | null
+          permission_set_by?: number | null
+          poster_path?: string
+          subject?: Json
+          theme?: string | null
+          title?: string
+          updated_at?: string
+          video_path?: string
+        }
+        Relationships: []
+      }
+      video_posts: {
+        Row: {
+          copy_checked: boolean
+          copy_checked_at: string | null
+          copy_checked_by: number | null
+          created_at: string
+          facebook: string | null
+          film_id: string
+          ghl: Json
+          id: string
+          instagram: string | null
+          notes: string
+          planned_date: string | null
+          theme: string
+          updated_at: string
+          vars: Json
+        }
+        Insert: {
+          copy_checked?: boolean
+          copy_checked_at?: string | null
+          copy_checked_by?: number | null
+          created_at?: string
+          facebook?: string | null
+          film_id: string
+          ghl?: Json
+          id: string
+          instagram?: string | null
+          notes?: string
+          planned_date?: string | null
+          theme: string
+          updated_at?: string
+          vars?: Json
+        }
+        Update: {
+          copy_checked?: boolean
+          copy_checked_at?: string | null
+          copy_checked_by?: number | null
+          created_at?: string
+          facebook?: string | null
+          film_id?: string
+          ghl?: Json
+          id?: string
+          instagram?: string | null
+          notes?: string
+          planned_date?: string | null
+          theme?: string
+          updated_at?: string
+          vars?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_posts_film_id_fkey"
+            columns: ["film_id"]
+            isOneToOne: false
+            referencedRelation: "video_films"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       voice_notes: {
         Row: {
           action_items: Json | null
@@ -66974,6 +67310,7 @@ export type Database = {
           title: string
         }[]
       }
+      expire_closed_grant_opportunities: { Args: never; Returns: number }
       find_evidence_gaps: {
         Args: {
           p_intervention_type?: string
@@ -69491,6 +69828,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       analysis_job_status_enum: ["queued", "processing", "completed", "failed"],

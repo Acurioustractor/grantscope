@@ -22,6 +22,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { buildEligibilityUpdate } from './lib/grant-eligibility-verdict.mjs';
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 
@@ -42,7 +43,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 // backstop; gemini is free but flaky on real pages. deepseek/anthropic kept last and
 // auto-disable on credit-balance errors (see callLLM). Provider health verified 2026-06-08.
 const PROVIDERS = [
-  { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', envKey: 'GROQ_API_KEY' },
+  { name: 'groq', baseUrl: 'https://api.groq.com/openai/v1/chat/completions', model: 'openai/gpt-oss-120b', envKey: 'GROQ_API_KEY' },
   { name: 'minimax', baseUrl: 'https://api.minimax.io/v1/chat/completions', model: 'MiniMax-M3', envKey: 'MINIMAX_API_KEY', maxTokens: 2000 },
   { name: 'openai', baseUrl: 'https://api.openai.com/v1/chat/completions', model: 'gpt-4o-mini', envKey: 'OPENAI_API_KEY' },
   { name: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.5-flash', envKey: 'GEMINI_API_KEY' },
@@ -86,10 +87,10 @@ async function callLLM(prompt) {
       let body;
       if (p.isAnthropic) {
         headers['x-api-key'] = key; headers['anthropic-version'] = '2023-06-01';
-        body = JSON.stringify({ model: p.model, max_tokens: 400, messages: [{ role: 'user', content: prompt }] });
+        body = JSON.stringify({ model: p.model, max_tokens: 1500, messages: [{ role: 'user', content: prompt }] });
       } else {
         headers['Authorization'] = `Bearer ${key}`;
-        body = JSON.stringify({ model: p.model, messages: [{ role: 'user', content: prompt }], temperature: 0.1, max_tokens: p.maxTokens || 400, response_format: { type: 'json_object' } });
+        body = JSON.stringify({ model: p.model, messages: [{ role: 'user', content: prompt }], temperature: 0.1, max_tokens: p.maxTokens || 1500, response_format: { type: 'json_object' } });
       }
       const res = await fetch(p.baseUrl, { method: 'POST', headers, body, signal: AbortSignal.timeout(40000) });
       if (!res.ok) {
@@ -170,7 +171,7 @@ async function main() {
   const ctx = await browser.newContext({ locale: 'en-AU', viewport: { width: 1280, height: 900 }, userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36' });
   await ctx.addInitScript(() => { Object.defineProperty(navigator, 'webdriver', { get: () => undefined }); });
 
-  const stats = { ok: 0, blocked: 0, empty: 0, cached: 0, dgr: 0 };
+  const stats = { ok: 0, blocked: 0, empty: 0, cached: 0, dgr: 0, refused: 0 };
   for (const g of todo) {
     let rec = cache.get(g.id);
     if (!rec) {
@@ -189,21 +190,23 @@ async function main() {
     log(`✓ ${g.name.slice(0, 48)} | dgr=${v.dgr_required} charity=${v.accepts_charity} pty=${v.accepts_pty_ltd} sole=${v.accepts_sole_trader} conf=${v.confidence}`);
 
     if (APPLY) {
-      const { error: uerr } = await supabase.from('grant_opportunities').update({
-        dgr_required: v.dgr_required,
-        accepts_charity: v.accepts_charity,
-        accepts_pty_ltd: v.accepts_pty_ltd,
-        accepts_sole_trader: v.accepts_sole_trader,
-        accepts_unincorporated: v.accepts_unincorporated,
-        eligibility_signals_at: new Date().toISOString(),
-      }).eq('id', g.id);
+      // The five flags are only written at or above a measured confidence
+      // floor. Below it they stay null, which already means "the page did not
+      // say" -- the honest reading of a verdict we do not trust. See
+      // scripts/lib/grant-eligibility-verdict.mjs.
+      const { update, accepted, suppressed } = buildEligibilityUpdate(v, v.provider, new Date().toISOString());
+      if (!accepted) {
+        stats.refused++;
+        if (suppressed > 0) log(`  refused ${suppressed} flag(s) at confidence ${v.confidence ?? 'none'}: ${g.name.slice(0, 45)}`);
+      }
+      const { error: uerr } = await supabase.from('grant_opportunities').update(update).eq('id', g.id);
       if (uerr) log(`  DB update failed: ${uerr.message}`);
     }
     await sleep(400);
   }
 
   await browser.close();
-  log(`done — ok=${stats.ok} (cached=${stats.cached}) dgr_required=${stats.dgr} blocked=${stats.blocked} empty=${stats.empty}`);
+  log(`done — ok=${stats.ok} (cached=${stats.cached}) dgr_required=${stats.dgr} refused-below-floor=${stats.refused} blocked=${stats.blocked} empty=${stats.empty}`);
   if (!APPLY) log('dry-run — no DB writes. Re-run with --apply to persist (verdicts are cached, so this is cheap).');
 }
 

@@ -25,6 +25,7 @@ import { createClient } from '@supabase/supabase-js';
 import { FoundationScraper } from '../packages/grant-engine/src/foundations/annual-report-scraper.ts';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 import { MINIMAX_CHAT_COMPLETIONS_URL } from './lib/minimax.mjs';
+import { buildProgramRecord } from './lib/foundation-program-record.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -129,7 +130,7 @@ const PROVIDERS = [
   {
     name: 'groq',
     envKey: 'GROQ_API_KEY',
-    model: 'llama-3.3-70b-versatile',
+    model: 'openai/gpt-oss-120b',
   },
   {
     name: 'gemini',
@@ -910,17 +911,34 @@ For EACH program found, extract:
 - description: 1-2 sentences about what it funds and who can apply
 - amount_min: Minimum grant amount in AUD (number or null)
 - amount_max: Maximum grant amount in AUD (number or null)
-- deadline: Next deadline as YYYY-MM-DD (or null if ongoing/unknown)
+- deadline: Next deadline as YYYY-MM-DD, ONLY if the page states one. Otherwise null.
+- deadline_evidence: The exact sentence from the page that states that deadline, copied word for word. If you cannot copy such a sentence, set BOTH deadline and deadline_evidence to null. Never infer a deadline from a financial year, a funding round name, or a pattern of past rounds.
+- round_status: One of "open", "closed", "unknown" — whether applications are being accepted RIGHT NOW
+- round_status_evidence: The exact sentence stating that, copied word for word, or null
+- applicant_type: One of "organisation" (an incorporated body could apply to deliver a project), "individual" (a scholarship, fellowship, bursary or prize awarded to a person), "not_an_application" (a fundraising event, a way to DONATE to the foundation, a service they deliver themselves, or a trip/activity they run)
 - type: One of "grant", "fellowship", "scholarship", "award", "program"
 - categories: Array from [arts, indigenous, health, education, community, environment, enterprise, research, justice, sport, technology, disability, youth, aged_care]
+- eligibility: Who may apply, in the page's own terms (entity type, location, size, sector). Null if the page does not say.
+- eligibility_evidence: The exact sentence stating who may apply, copied word for word, or null
+- how_to_apply: What an applicant actually does — the form, the portal, the EOI, the contact-first step. Null if the page does not say.
+- how_to_apply_evidence: The exact sentence describing that, copied word for word, or null
+- application_mode: One of "online_application", "eoi", "email_application", "invitation_only", "relationship_based", "rolling", "not_accepting", or null
+- assessment_cadence: One of "rolling", "annual", "biannual", "quarterly", "one_off", "unknown" — how often this program is assessed
+- contact: { name, email, phone, url } for the person or team handling applications. Use only details printed on the page. Null for anything not printed.
+- thematic_focus: Array of short theme labels in the page's own words, or []
+- place_focus: Array of places this program funds, as named on the page (state, region, LGA, town), or []
+- source_urls: Array of the page URLs these details came from
 
 Return a JSON array of programs. If NO programs are found, return an empty array [].
 
 IMPORTANT RULES:
 - Only include programs this foundation actually runs or funds — not programs they received funding from
-- Include programs even if applications are currently closed — they may reopen
-- Include ongoing/rolling programs without fixed deadlines
+- Include programs even if applications are currently closed — they may reopen, but set round_status "closed"
+- Include ongoing/rolling programs without fixed deadlines — deadline null is a CORRECT answer and is far better than a guess
+- A deadline you cannot quote from the page is a wrong answer. "null" is right when the page does not say.
 - Be specific with amounts — "$50,000" not "varies"
+- Every quoted field must be copied from the page, not paraphrased. If you cannot copy it, set the field AND its evidence to null.
+- Do not fill eligibility, how_to_apply or contact from what foundations usually say. Null is the right answer when the page is silent.
 - Include both competitive grants AND named fellowships/scholarships
 - Return ONLY valid JSON array, no other text`;
 
@@ -967,21 +985,10 @@ IMPORTANT RULES:
     // Insert into foundation_programs
     let inserted = 0;
     for (const prog of programs) {
-      const record = {
-        foundation_id: foundation.id,
-        name: prog.name.slice(0, 500),
-        url: typeof prog.url === 'string' && prog.url.startsWith('http') ? prog.url : null,
-        description: typeof prog.description === 'string' ? prog.description.slice(0, 2000) : null,
-        amount_min: typeof prog.amount_min === 'number' ? prog.amount_min : null,
-        amount_max: typeof prog.amount_max === 'number' ? prog.amount_max : null,
-        deadline: typeof prog.deadline === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(prog.deadline) ? prog.deadline : null,
-        status: typeof prog.deadline === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(prog.deadline) && new Date(prog.deadline) < new Date()
-          ? 'closed'
-          : 'open',
-        categories: Array.isArray(prog.categories) ? prog.categories : [],
-        program_type: typeof prog.type === 'string' ? prog.type : null,
-        scraped_at: scannedAt,
-      };
+      // Mapping lives in scripts/lib/foundation-program-record.mjs so it can be
+      // tested without running a live sync over 4,609 programmes.
+      const record = buildProgramRecord(prog, { foundationId: foundation.id, scannedAt });
+      if (!record) continue;
 
       const { error: insertError } = await supabase
         .from('foundation_programs')
@@ -1116,9 +1123,13 @@ async function main() {
   log(`Run scripts/sync-foundation-programs.mjs to sync new programs to grants search.`);
 }
 
-main().catch(err => {
-  console.error('Fatal error:', err);
-  const message = err instanceof Error ? err.message : String(err);
-  logFailed(supabase, currentRunId, message).catch(() => {});
-  process.exit(1);
-});
+// Guarded for the same reason as sync-foundation-programs.mjs: importing this
+// file (for a test, or from another script) must not kick off a live discovery run.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch(err => {
+    console.error('Fatal error:', err);
+    const message = err instanceof Error ? err.message : String(err);
+    logFailed(supabase, currentRunId, message).catch(() => {});
+    process.exit(1);
+  });
+}
