@@ -18,6 +18,7 @@
  */
 
 import 'dotenv/config';
+import { assignProgramUrls, stripFragment } from './lib/foundation-grant-urls.mjs';
 import { createClient } from '@supabase/supabase-js';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
@@ -154,14 +155,6 @@ function normalizeUrl(url) {
 // many programs (which often share one page URL) each get a distinct,
 // constraint-safe URL. Same program name always yields the same slug, so
 // re-syncs update in place rather than churning.
-function programSlug(name) {
-  return String(name || 'program')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60) || 'program';
-}
-
 function detectProgramType(name, description) {
   const text = `${name} ${description || ''}`.toLowerCase();
   if (/fellowship/.test(text)) return 'fellowship';
@@ -176,14 +169,8 @@ function buildProgramKey(program) {
   return `${program.foundations.id}::${program.name}`;
 }
 
-function buildGrantPayload(program, foundation) {
+function buildGrantPayload(program, foundation, resolvedUrl) {
   const desiredStatus = getDesiredProgramStatus(program, foundation);
-  // Foundations expose many programs from one page URL, which collides on the
-  // unique-URL index (only one program per foundation would land). Append a
-  // stable per-program fragment (servers ignore it) so each is a distinct,
-  // findable grant. Matching is by source_id/key, not URL, so existing rows
-  // update in place rather than duplicating.
-  const baseUrl = normalizeUrl(program.url || foundation.website);
   return {
     name: program.name,
     provider: foundation.name,
@@ -195,7 +182,10 @@ function buildGrantPayload(program, foundation) {
     // which renders as "no deadline known" rather than invented urgency.
     deadline: evidencedDeadlineOf(program),
     closes_at: evidencedDeadlineOf(program),
-    url: baseUrl ? `${baseUrl.split('#')[0]}#${programSlug(program.name)}` : null,
+    // Resolved in assignProgramUrls: a real programme URL is used as it is, and
+    // an anchor is appended only where it is keeping two rows apart on the
+    // unique url index. Previously EVERY row got an invented `#slug`.
+    url: resolvedUrl?.url ?? null,
     // Carry the funder's geography so state-filtered searches ("queensland ...")
     // surface these programs; previously left null, so geo queries missed them.
     geography: Array.isArray(foundation.geographic_focus) && foundation.geographic_focus.length
@@ -709,6 +699,42 @@ async function main() {
 
   console.log(`  ${existingByKey.size} already synced${targetFoundationIds ? ' in scope' : ''}`);
 
+  // Work out each programme's URL before building any payload. A bare URL is
+  // preferred; the `#slug` anchor is added only where two rows would otherwise
+  // collide on grant_opportunities_url_idx, which is UNIQUE on url.
+  const urlCandidates = eligiblePrograms.map(program => ({
+    id: program.id,
+    name: program.name,
+    baseUrl: stripFragment(normalizeUrl(program.url || program.foundations?.website)),
+  }));
+  const urlOwner = new Map();
+  for (const grant of existing) {
+    const base = stripFragment(grant.url);
+    if (base) urlOwner.set(base, grant.source_id ?? null);
+  }
+  // Rows from other sources hold URLs too, and the unique index does not care
+  // which source owns one. Ask before assuming a bare URL is free.
+  const bases = [...new Set(urlCandidates.map(c => c.baseUrl).filter(Boolean))];
+  for (let i = 0; i < bases.length; i += 200) {
+    const chunk = bases.slice(i, i + 200);
+    const { data: owners, error: ownerError } = await supabase
+      .from('grant_opportunities')
+      .select('url, source_id, source')
+      .in('url', chunk);
+    if (ownerError) {
+      console.error('Failed to check URL ownership:', ownerError.message);
+      process.exit(1);
+    }
+    for (const row of owners || []) {
+      if (row.source === 'foundation_program') continue; // already mapped above
+      const base = stripFragment(row.url);
+      if (base) urlOwner.set(base, row.source_id ?? `foreign:${row.source}`);
+    }
+  }
+  const resolvedUrls = assignProgramUrls(urlCandidates, urlOwner);
+  const syntheticCount = [...resolvedUrls.values()].filter(v => v.synthetic).length;
+  console.log(`  ${resolvedUrls.size - syntheticCount} programmes keep their own URL, ${syntheticCount} need a disambiguating anchor`);
+
   const run = await logStart(supabase, AGENT_ID, AGENT_NAME);
 
   let inserted = 0;
@@ -824,7 +850,7 @@ async function main() {
   for (const program of eligiblePrograms) {
     const foundation = program.foundations;
     const key = buildProgramKey(program);
-    const grant = buildGrantPayload(program, foundation);
+    const grant = buildGrantPayload(program, foundation, resolvedUrls.get(program.id));
     const existingGrant = existingBySourceId.get(String(program.id)) || existingByKey.get(key);
 
     if (DRY_RUN) {
