@@ -97,7 +97,7 @@ export { createFoundationWatcher } from './agents/foundation-watcher';
 export { createGovernmentSpendWatcher } from './agents/government-spend';
 
 // Embeddings & Enrichment
-export { buildEmbeddingText, generateEmbeddings, embedQuery, backfillEmbeddings, searchGrantsSemantic } from './embeddings';
+export { buildEmbeddingText, generateEmbeddings, embedQuery, backfillEmbeddings, searchGrantsSemantic, EMBEDDING_DIMENSIONS, KNOWLEDGE_EMBEDDING_DIMENSIONS } from './embeddings';
 export { enrichGrant, batchEnrich } from './enrichment';
 export { enrichGrantFree, batchEnrichFree } from './enrichment-free';
 

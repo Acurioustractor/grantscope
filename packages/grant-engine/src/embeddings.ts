@@ -11,7 +11,27 @@ import OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const EMBEDDING_MODEL = 'text-embedding-3-small';
-const EMBEDDING_DIMENSIONS = 1536;
+
+/**
+ * Default output width, used by everything in the CivicGraph domain family
+ * (grant_opportunities, foundations, gs_entities, ... are all vector(1536)).
+ *
+ * The ACT knowledge family is a SEPARATE width: knowledge_chunks,
+ * project_knowledge, memory_episodes, archival_memory, voice_notes and
+ * wiki_search_index are all vector(384), written by
+ * act-global-infrastructure/scripts/embed-communications.mjs with the SAME
+ * model at `dimensions: 384`. Callers reading those tables must pass 384 —
+ * see KNOWLEDGE_EMBEDDING_DIMENSIONS. Passing the wrong width makes pgvector
+ * raise `different vector dimensions 384 and 1536` at query time.
+ *
+ * Both widths are the same Matryoshka space, so 384 is a valid truncation of
+ * 1536 — but a query vector must match the width of the column it is compared
+ * against.
+ */
+export const EMBEDDING_DIMENSIONS = 1536;
+
+/** Output width of the ACT knowledge/second-brain tables. */
+export const KNOWLEDGE_EMBEDDING_DIMENSIONS = 384;
 const BATCH_SIZE = 100;
 const BATCH_DELAY_MS = 2000;
 
@@ -46,13 +66,14 @@ export function buildEmbeddingText(grant: GrantForEmbedding): string {
 export async function generateEmbeddings(
   texts: string[],
   apiKey?: string,
+  dimensions: number = EMBEDDING_DIMENSIONS,
 ): Promise<number[][]> {
   const openai = new OpenAI({ apiKey: apiKey || process.env.OPENAI_API_KEY });
 
   const response = await openai.embeddings.create({
     model: EMBEDDING_MODEL,
     input: texts,
-    dimensions: EMBEDDING_DIMENSIONS,
+    dimensions,
   });
 
   return response.data.map(d => d.embedding);
@@ -64,8 +85,9 @@ export async function generateEmbeddings(
 export async function embedQuery(
   query: string,
   apiKey?: string,
+  dimensions: number = EMBEDDING_DIMENSIONS,
 ): Promise<number[]> {
-  const embeddings = await generateEmbeddings([query], apiKey);
+  const embeddings = await generateEmbeddings([query], apiKey, dimensions);
   return embeddings[0];
 }
 

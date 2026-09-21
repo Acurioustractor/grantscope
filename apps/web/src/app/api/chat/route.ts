@@ -2,7 +2,7 @@ import { streamText, type UIMessage } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { requireModule } from '@/lib/api-auth';
 import { getServiceSupabase } from '@/lib/supabase';
-import { embedQuery } from '@grant-engine/embeddings';
+import { embedQuery, KNOWLEDGE_EMBEDDING_DIMENSIONS } from '@grant-engine/embeddings';
 
 export const maxDuration = 30;
 
@@ -125,13 +125,28 @@ export async function POST(req: Request) {
       {
         const orgId = await getEffectiveOrgId(supabase, user.id);
         if (orgId) {
-          const queryEmbedding = await embedQuery(lastMessage, process.env.OPENAI_API_KEY);
-          const { data: orgChunks } = await supabase.rpc('search_org_knowledge', {
+          // knowledge_chunks.embedding is vector(384), not 1536 — see
+          // KNOWLEDGE_EMBEDDING_DIMENSIONS. Passing the default width made
+          // pgvector raise `different vector dimensions 384 and 1536` on every
+          // request; the error was discarded and org knowledge silently
+          // returned nothing from the day it shipped.
+          const queryEmbedding = await embedQuery(
+            lastMessage,
+            process.env.OPENAI_API_KEY,
+            KNOWLEDGE_EMBEDDING_DIMENSIONS,
+          );
+          const { data: orgChunks, error: orgKnowledgeError } = await supabase.rpc('search_org_knowledge', {
             query_embedding: JSON.stringify(queryEmbedding),
             p_org_profile_id: orgId,
             match_threshold: 0.5,
             match_count: 8,
           });
+
+          // Never swallow this again: an empty result and a failed query are
+          // different answers, and only one of them means "nothing matched".
+          if (orgKnowledgeError) {
+            throw new Error(`search_org_knowledge failed: ${orgKnowledgeError.message}`);
+          }
 
           if (orgChunks && orgChunks.length > 0) {
             contextText += '\n\n## Your Organisation Knowledge\n';
