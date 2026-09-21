@@ -6,9 +6,21 @@
 # What does NOT work, so nobody re-derives it:
 #   - the Supabase MCP: returns "Unauthorized", no SUPABASE_ACCESS_TOKEN is set
 #   - `--project-id`: needs that same access token
-#   - DATABASE_URL from .env: points at db.<ref>.supabase.co, which DOES NOT
-#     RESOLVE. Direct IPv4 is gone from this project; the pooler is the only way
-#     in. That env var is stale for every purpose, not just this one.
+#   - DATABASE_URL from .env: points at db.<ref>.supabase.co, which is
+#     IPv6-ONLY. It has an AAAA record and no A record, so on a host without
+#     IPv6 routing getaddrinfo fails and psql reports
+#     "could not translate host name", which reads like a dead hostname and is
+#     not one. Supabase moved direct connections to IPv6-only; the pooler
+#     (aws-0-ap-southeast-2.pooler.supabase.com) is the way in from here.
+#
+#     Corrected 2026-09-21. This comment previously said the host "DOES NOT
+#     RESOLVE", which sends the next person hunting a dead DNS record instead
+#     of an IPv6 route or the IPv4 add-on.
+#
+#     DATABASE_URL is also a DIFFERENT CREDENTIAL from DATABASE_PASSWORD, not
+#     the same secret in another wrapper: the password inside the URL fails
+#     against the pooler with "password authentication failed". Scripts that
+#     need psql want DATABASE_PASSWORD.
 #
 # What the real error was: `LegacyDockerRunError`. `supabase gen types` runs
 # postgres-meta in Docker, so it fails with a connection-shaped message when the
