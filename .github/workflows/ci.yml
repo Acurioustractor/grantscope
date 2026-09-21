@@ -120,6 +120,12 @@ jobs:
       - name: Data contradictions (no known contradiction grew)
         if: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' }}
         run: node scripts/check-data-contradictions.mjs
+      # Fails when a NEW table names organisations (funder_name, organization...)
+      # with no abn/acn/gs_entity_id to join on. The 30 that existed on
+      # 2026-09-22 are the baseline, pinned by name in data/linkage-baseline.json.
+      - name: Table linkage (no new table names organisations it cannot join)
+        if: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        run: node scripts/check-table-linkage.mjs
       # Proves each applied change still does what it claimed, by reading fresh
       # state through the path its CONSUMER uses. A migration that applied is not
       # a change that worked: on 2026-09-21 an index passed a green EXPLAIN that

@@ -35,7 +35,7 @@ if [[ -z "$FILES" ]]; then
 fi
 
 # Paths whose changes cannot surprise a visitor.
-SAFE_RE='^(scripts/|migrations/|docs/|thoughts/|supabase/|\.github/|\.claude/|[^/]*\.md$|apps/web/src/lib/|apps/web/src/app/api/|apps/web/src/app/ops/|apps/web/src/app/admin/|apps/web/tests/|.*\.test\.(ts|tsx)$|apps/web/package\.json$|package\.json$)'
+SAFE_RE='^(data/(linkage-baseline|contradiction-baselines|completion-receipts)\.json$|scripts/|migrations/|docs/|thoughts/|supabase/|\.github/|\.claude/|[^/]*\.md$|apps/web/src/lib/|apps/web/src/app/api/|apps/web/src/app/ops/|apps/web/src/app/admin/|apps/web/tests/|.*\.test\.(ts|tsx)$|apps/web/package\.json$|package\.json$)'
 
 VISIBLE_FILES=()
 while IFS= read -r f; do
