@@ -1,35 +1,27 @@
 {
   "accepted": [
-    "_backup_curated_amount_unknown_20260821",
     "act_opportunity_benchmark_cases",
     "act_opportunity_observatory",
     "act_person_roles",
-    "alma_evidence",
-    "bgfit_budget_items",
-    "bgfit_grants",
-    "canonical_entities",
-    "contact_submissions",
-    "event_registrations",
+    "alma_funding_opportunities",
     "exa_company_intelligence",
-    "fellows",
     "funder_allowlist",
     "funder_blocklist",
     "funder_nudge_log",
-    "funder_profiles",
-    "goods_tranches",
-    "justice_matrix_sources",
-    "knowledge_sources",
-    "media_item",
-    "newsletter_subscriptions",
-    "opportunity_context_events",
-    "org_grants",
-    "pilot_participants",
-    "registered_services",
-    "research_items",
     "se_buyer_prospects",
-    "tracker_evidence_events",
-    "user_identities",
-    "xero_sync_status"
+    "tracker_evidence_events"
   ],
-  "exempt": {}
+  "exempt": {
+    "newsletter_subscriptions": "an organisation a person typed about themselves, not a party to money",
+    "event_registrations": "an organisation a person typed about themselves, not a party to money",
+    "fellows": "an organisation a person typed about themselves, not a party to money",
+    "alma_evidence": "who published a document, not who paid or was paid (26 of 121 names match the register)",
+    "research_items": "who published a document, not who paid or was paid",
+    "justice_matrix_sources": "who published a document, not who paid or was paid",
+    "media_item": "who published a document, not who paid or was paid",
+    "bgfit_budget_items": "vendors on one grant budget; the grant itself links via bgfit_grants.organization_id",
+    "xero_sync_status": "one row, the Xero tenant; private system of record",
+    "_backup_curated_amount_unknown_20260821": "a backup snapshot, not live data",
+    "canonical_entities": "the private CRM; 15% name match, and linking the CRM to the public graph is a separate decision (three-pipeline rule)"
+  }
 }
