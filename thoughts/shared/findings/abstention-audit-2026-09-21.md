@@ -90,11 +90,27 @@ reading a charity record and deciding whether it trades commercially. To that sc
 credit it *does* gate on confidence (`--min-confidence`, default 0.7) — but the tier
 computation neither knows nor checks that, and 0.7 is not a register.
 
-**Measured:** 426 of 3,968 `verified` social enterprises (10.7%) are verified on an
-LLM guess. The registry is the buyer-facing product.
+**Measured:** 426 of 3,968 `verified` social enterprises (10.7%) carry
+`source_primary = 'acnc-classified'`.
 
-**Fix shape:** its own tier between `verified` and `identified`, or a confidence floor
-carried into the tier rule. This is a naming decision, not a code problem.
+### Withdrawn the same day — verified before changing anything
+
+**All 426 of them are in `acnc_charities` by ABN**, so they already qualify through
+`STATUTORY_MATCH` regardless of `source_primary`. Dropping `'acnc-classified'` from
+that list changes zero rows.
+
+The tier also does not claim what this finding assumed. The script states *"Tier =
+strength of external verification, NOT SE-ness"*. ACNC registration, ABN-matched, is
+a statutory register. The LLM guessed whether the charity is a *social enterprise*,
+which the tier does not measure, and the stored basis on all 426 rows reads
+"ACNC-registered charity, ABN matched" — it never says "verified social enterprise".
+
+**No change made.** The mechanism was real, the consequence was not.
+
+**What is real, and small:** all 427 `acnc-classified` rows carry
+`profile_confidence = 'low'`, a hardcoded literal rather than the model's 0.0-1.0
+score. Same shape as §1 — conservative, so it does not over-claim, but a 0.95 and a
+0.71 are stored identically.
 
 ---
 
