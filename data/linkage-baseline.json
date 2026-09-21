@@ -1,14 +1,10 @@
 {
   "accepted": [
-    "act_opportunity_benchmark_cases",
-    "act_opportunity_observatory",
     "act_person_roles",
-    "alma_funding_opportunities",
     "exa_company_intelligence",
     "funder_allowlist",
     "funder_blocklist",
     "funder_nudge_log",
-    "se_buyer_prospects",
     "tracker_evidence_events"
   ],
   "exempt": {
