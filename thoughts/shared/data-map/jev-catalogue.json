@@ -1,0 +1,5067 @@
+{
+  "generated_at": "2026-09-21T11:14:11.672Z",
+  "min_rows": 500,
+  "tables": [
+    {
+      "tablename": "asic_companies",
+      "reltuples": 2173357,
+      "targets": [
+        {
+          "attname": "previous_state_of_registration",
+          "null_frac": 0.910000026226044,
+          "n_distinct": 8,
+          "avg_width": 3,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 1977755,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "austender_contracts",
+      "reltuples": 829497,
+      "targets": [
+        {
+          "attname": "supplier_entity_type",
+          "null_frac": 0.99563330411911,
+          "n_distinct": 3,
+          "avg_width": 8,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 825875,
+      "estCostUsd": 0,
+      "strong": [
+        {
+          "attname": "supplier_entity_type",
+          "null_frac": 0.99563330411911,
+          "n_distinct": 3,
+          "avg_width": 8,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "gs_entities",
+      "reltuples": 610409,
+      "targets": [
+        {
+          "attname": "oric_size",
+          "null_frac": 0.991466641426086,
+          "n_distinct": 3,
+          "avg_width": 6,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "metadata",
+          "null_frac": 0,
+          "n_distinct": 3913,
+          "avg_width": 50,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [
+        {
+          "attname": "oric_sector",
+          "null_frac": 0.99260002374649,
+          "n_distinct": 354,
+          "avg_width": 135,
+          "typname": "text"
+        },
+        {
+          "attname": "sector",
+          "null_frac": 0.704599976539612,
+          "n_distinct": 182,
+          "avg_width": 12,
+          "typname": "text"
+        },
+        {
+          "attname": "sub_sector",
+          "null_frac": 0.998399972915649,
+          "n_distinct": 529,
+          "avg_width": 25,
+          "typname": "text"
+        }
+      ],
+      "needsScoping": true,
+      "estUnknownRows": 605200,
+      "estCostUsd": 0.31773,
+      "strong": []
+    },
+    {
+      "tablename": "acnc_ais",
+      "reltuples": 415095,
+      "targets": [
+        {
+          "attname": "cash_or_accrual",
+          "null_frac": 0.440066665410995,
+          "n_distinct": 2,
+          "avg_width": 5,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "financial_statement_type",
+          "null_frac": 0.715733349323273,
+          "n_distinct": 11,
+          "avg_width": 40,
+          "typname": "text",
+          "strength": "strong"
+        },
+        {
+          "attname": "modification_type",
+          "null_frac": 0.976033329963684,
+          "n_distinct": 3,
+          "avg_width": 23,
+          "typname": "text",
+          "strength": "strong"
+        },
+        {
+          "attname": "num_key_management_personnel",
+          "null_frac": 0.962066650390625,
+          "n_distinct": 31,
+          "avg_width": 4,
+          "typname": "int4",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "how_purposes_pursued",
+          "null_frac": 0.0346333347260952,
+          "n_distinct": -0.252640962600708,
+          "avg_width": 265,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 405147,
+      "estCostUsd": 1.1273215275000001,
+      "strong": [
+        {
+          "attname": "financial_statement_type",
+          "null_frac": 0.715733349323273,
+          "n_distinct": 11,
+          "avg_width": 40,
+          "typname": "text",
+          "strength": "strong"
+        },
+        {
+          "attname": "modification_type",
+          "null_frac": 0.976033329963684,
+          "n_distinct": 3,
+          "avg_width": 23,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "state_tenders",
+      "reltuples": 199718,
+      "targets": [
+        {
+          "attname": "justice_keywords",
+          "null_frac": 0.687333345413208,
+          "n_distinct": 11,
+          "avg_width": 41,
+          "typname": "_text",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 137273,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "justice_funding",
+      "reltuples": 156626,
+      "targets": [
+        {
+          "attname": "funding_type",
+          "null_frac": 0.382566660642624,
+          "n_distinct": 8,
+          "avg_width": 7,
+          "typname": "text",
+          "strength": "strong"
+        },
+        {
+          "attname": "link_basis",
+          "null_frac": 0.855199992656708,
+          "n_distinct": 4,
+          "avg_width": 20,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "program_name",
+          "null_frac": 0,
+          "n_distinct": 2475,
+          "avg_width": 40,
+          "typname": "text"
+        },
+        {
+          "attname": "project_description",
+          "null_frac": 0.17399999499321,
+          "n_distinct": 9761,
+          "avg_width": 114,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 133947,
+      "estCostUsd": 0.21659229900000002,
+      "strong": [
+        {
+          "attname": "funding_type",
+          "null_frac": 0.382566660642624,
+          "n_distinct": 8,
+          "avg_width": 7,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "organizations",
+      "reltuples": 104426,
+      "targets": [
+        {
+          "attname": "charity_size",
+          "null_frac": 0.433733344078064,
+          "n_distinct": 3,
+          "avg_width": 6,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "geocode_precision",
+          "null_frac": 0.985966682434082,
+          "n_distinct": 2,
+          "avg_width": 4,
+          "typname": "geocode_precision",
+          "strength": "review"
+        },
+        {
+          "attname": "indigenous_org_basis",
+          "null_frac": 0.973399996757507,
+          "n_distinct": 6,
+          "avg_width": 15,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "location",
+          "null_frac": 0.999800026416779,
+          "n_distinct": 10,
+          "avg_width": 12,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "merge_basis",
+          "null_frac": 0.954933345317841,
+          "n_distinct": 2,
+          "avg_width": 24,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "type",
+          "null_frac": 0.271899998188019,
+          "n_distinct": 22,
+          "avg_width": 10,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 104405,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "money_flows",
+      "reltuples": 56017,
+      "targets": [
+        {
+          "attname": "notes",
+          "null_frac": 0.993366658687592,
+          "n_distinct": 13,
+          "avg_width": 9,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "destination_name",
+          "null_frac": 0,
+          "n_distinct": 1635,
+          "avg_width": 44,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 55645,
+      "estCostUsd": 0.02570799,
+      "strong": []
+    },
+    {
+      "tablename": "communications_history",
+      "reltuples": 30478,
+      "targets": [
+        {
+          "attname": "project_code",
+          "null_frac": 0.997933328151703,
+          "n_distinct": 3,
+          "avg_width": 7,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "sentiment",
+          "null_frac": 0.76746666431427,
+          "n_distinct": 4,
+          "avg_width": 8,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "content_preview",
+          "null_frac": 0,
+          "n_distinct": -0.618019580841064,
+          "avg_width": 85,
+          "typname": "text"
+        },
+        {
+          "attname": "key_decisions",
+          "null_frac": 0.732233345508575,
+          "n_distinct": 1283,
+          "avg_width": 99,
+          "typname": "_text"
+        },
+        {
+          "attname": "metadata",
+          "null_frac": 0,
+          "n_distinct": -0.335225403308868,
+          "avg_width": 220,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "subject",
+          "null_frac": 0.444833338260651,
+          "n_distinct": -0.351860344409943,
+          "avg_width": 49,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 30415,
+      "estCostUsd": 0.1446689475,
+      "strong": [
+        {
+          "attname": "sentiment",
+          "null_frac": 0.76746666431427,
+          "n_distinct": 4,
+          "avg_width": 8,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "grant_opportunities",
+      "reltuples": 26883,
+      "targets": [
+        {
+          "attname": "accepts_charity",
+          "null_frac": 0.980173349380493,
+          "n_distinct": 2,
+          "avg_width": 1,
+          "typname": "bool",
+          "strength": "strong"
+        },
+        {
+          "attname": "accepts_pty_ltd",
+          "null_frac": 0.930402100086212,
+          "n_distinct": 2,
+          "avg_width": 1,
+          "typname": "bool",
+          "strength": "strong"
+        },
+        {
+          "attname": "accepts_sole_trader",
+          "null_frac": 0.996094167232513,
+          "n_distinct": 2,
+          "avg_width": 1,
+          "typname": "bool",
+          "strength": "strong"
+        },
+        {
+          "attname": "accepts_unincorporated",
+          "null_frac": 0.99040287733078,
+          "n_distinct": 2,
+          "avg_width": 1,
+          "typname": "bool",
+          "strength": "strong"
+        },
+        {
+          "attname": "act_readiness",
+          "null_frac": 0.997768104076385,
+          "n_distinct": 58,
+          "avg_width": 18,
+          "typname": "jsonb",
+          "strength": "review"
+        },
+        {
+          "attname": "dgr_required",
+          "null_frac": 0.999330461025238,
+          "n_distinct": 2,
+          "avg_width": 1,
+          "typname": "bool",
+          "strength": "strong"
+        },
+        {
+          "attname": "requirements",
+          "null_frac": 0.999553620815277,
+          "n_distinct": 2,
+          "avg_width": 67,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "categories",
+          "null_frac": 0.0108990808948874,
+          "n_distinct": 1835,
+          "avg_width": 45,
+          "typname": "_text"
+        },
+        {
+          "attname": "description",
+          "null_frac": 0.00792322307825089,
+          "n_distinct": -0.965628862380981,
+          "avg_width": 129,
+          "typname": "text"
+        },
+        {
+          "attname": "goods_relevance_signals",
+          "null_frac": 0.00412900326773524,
+          "n_distinct": -0.108098052442074,
+          "avg_width": 205,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "metadata",
+          "null_frac": 0,
+          "n_distinct": -0.229699060320854,
+          "avg_width": 77,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "name",
+          "null_frac": 0,
+          "n_distinct": -0.988431334495544,
+          "avg_width": 80,
+          "typname": "text"
+        },
+        {
+          "attname": "project_relevance",
+          "null_frac": 0,
+          "n_distinct": -0.998437702655792,
+          "avg_width": 316,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "sources",
+          "null_frac": 0,
+          "n_distinct": -0.327009648084641,
+          "avg_width": 65,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [
+        {
+          "attname": "eligibility_criteria",
+          "null_frac": 0.983335196971893,
+          "n_distinct": 431,
+          "avg_width": 129,
+          "typname": "jsonb"
+        }
+      ],
+      "needsScoping": true,
+      "estUnknownRows": 26871,
+      "estCostUsd": 0.2587274235,
+      "strong": [
+        {
+          "attname": "accepts_charity",
+          "null_frac": 0.980173349380493,
+          "n_distinct": 2,
+          "avg_width": 1,
+          "typname": "bool",
+          "strength": "strong"
+        },
+        {
+          "attname": "accepts_pty_ltd",
+          "null_frac": 0.930402100086212,
+          "n_distinct": 2,
+          "avg_width": 1,
+          "typname": "bool",
+          "strength": "strong"
+        },
+        {
+          "attname": "accepts_sole_trader",
+          "null_frac": 0.996094167232513,
+          "n_distinct": 2,
+          "avg_width": 1,
+          "typname": "bool",
+          "strength": "strong"
+        },
+        {
+          "attname": "accepts_unincorporated",
+          "null_frac": 0.99040287733078,
+          "n_distinct": 2,
+          "avg_width": 1,
+          "typname": "bool",
+          "strength": "strong"
+        },
+        {
+          "attname": "dgr_required",
+          "null_frac": 0.999330461025238,
+          "n_distinct": 2,
+          "avg_width": 1,
+          "typname": "bool",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "alma_funding_opportunities",
+      "reltuples": 22232,
+      "targets": [
+        {
+          "attname": "category",
+          "null_frac": 0.998965442180634,
+          "n_distinct": 5,
+          "avg_width": 18,
+          "typname": "text",
+          "strength": "strong"
+        },
+        {
+          "attname": "funding_duration",
+          "null_frac": 0.998965442180634,
+          "n_distinct": 5,
+          "avg_width": 9,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "auto_classify_reason",
+          "null_frac": 0.521365582942963,
+          "n_distinct": -0.2538683116436,
+          "avg_width": 108,
+          "typname": "text"
+        },
+        {
+          "attname": "description",
+          "null_frac": 0.00778157589957118,
+          "n_distinct": -0.158600211143494,
+          "avg_width": 204,
+          "typname": "text"
+        },
+        {
+          "attname": "focus_areas",
+          "null_frac": 0,
+          "n_distinct": 1286,
+          "avg_width": 58,
+          "typname": "_text"
+        },
+        {
+          "attname": "keywords",
+          "null_frac": 0,
+          "n_distinct": 1703,
+          "avg_width": 59,
+          "typname": "_text"
+        },
+        {
+          "attname": "name",
+          "null_frac": 0,
+          "n_distinct": -0.139663547277451,
+          "avg_width": 46,
+          "typname": "text"
+        },
+        {
+          "attname": "raw_data",
+          "null_frac": 0.00251889158971608,
+          "n_distinct": -0.243477866053581,
+          "avg_width": 328,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "search_text",
+          "null_frac": 0,
+          "n_distinct": -0.240374237298965,
+          "avg_width": 295,
+          "typname": "text"
+        },
+        {
+          "attname": "verification_notes",
+          "null_frac": 0.000224901043111458,
+          "n_distinct": -0.441840589046478,
+          "avg_width": 160,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 22209,
+      "estCostUsd": 0.293358681,
+      "strong": [
+        {
+          "attname": "category",
+          "null_frac": 0.998965442180634,
+          "n_distinct": 5,
+          "avg_width": 18,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "rogs_justice_spending",
+      "reltuples": 25632,
+      "targets": [
+        {
+          "attname": "service_type",
+          "null_frac": 0.767673194408417,
+          "n_distinct": 33,
+          "avg_width": 22,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 19677,
+      "estCostUsd": 0,
+      "strong": [
+        {
+          "attname": "service_type",
+          "null_frac": 0.767673194408417,
+          "n_distinct": 33,
+          "avg_width": 22,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "knowledge_chunks",
+      "reltuples": 19413,
+      "targets": [
+        {
+          "attname": "topics",
+          "null_frac": 0.997574865818024,
+          "n_distinct": 12,
+          "avg_width": 246,
+          "typname": "_text",
+          "strength": "strong"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "content",
+          "null_frac": 0,
+          "n_distinct": -0.588043034076691,
+          "avg_width": 93,
+          "typname": "text"
+        },
+        {
+          "attname": "embedding",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 1338,
+          "typname": "vector"
+        },
+        {
+          "attname": "metadata",
+          "null_frac": 0,
+          "n_distinct": -0.692323923110962,
+          "avg_width": 195,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 19366,
+      "estCostUsd": 0.330635718,
+      "strong": [
+        {
+          "attname": "topics",
+          "null_frac": 0.997574865818024,
+          "n_distinct": 12,
+          "avg_width": 246,
+          "typname": "_text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "clarity_column",
+      "reltuples": 17071,
+      "targets": [
+        {
+          "attname": "vector_dim",
+          "null_frac": 0.998359799385071,
+          "n_distinct": 2,
+          "avg_width": 4,
+          "typname": "int4",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 17043,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "canonical_entities",
+      "reltuples": 14921,
+      "targets": [
+        {
+          "attname": "projects",
+          "null_frac": 0.959999978542328,
+          "n_distinct": 2,
+          "avg_width": 21,
+          "typname": "_text",
+          "strength": "review"
+        },
+        {
+          "attname": "tags",
+          "null_frac": 0.959999978542328,
+          "n_distinct": 21,
+          "avg_width": 79,
+          "typname": "_text",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 14324,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "funder_intelligence",
+      "reltuples": 11159,
+      "targets": [
+        {
+          "attname": "derived_thematics",
+          "null_frac": 0.997938871383667,
+          "n_distinct": 19,
+          "avg_width": 67,
+          "typname": "_text",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 11136,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "foundations",
+      "reltuples": 11226,
+      "targets": [
+        {
+          "attname": "has_dgr",
+          "null_frac": 0.932745397090912,
+          "n_distinct": 2,
+          "avg_width": 1,
+          "typname": "bool",
+          "strength": "strong"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "application_tips",
+          "null_frac": 0.375734895467758,
+          "n_distinct": -0.624086916446686,
+          "avg_width": 273,
+          "typname": "text"
+        },
+        {
+          "attname": "board_members",
+          "null_frac": 0.0880099758505821,
+          "n_distinct": -0.789684653282166,
+          "avg_width": 119,
+          "typname": "_text"
+        },
+        {
+          "attname": "giving_philosophy",
+          "null_frac": 0.36566898226738,
+          "n_distinct": -0.634241938591003,
+          "avg_width": 292,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 10471,
+      "estCostUsd": 0.075202722,
+      "strong": [
+        {
+          "attname": "has_dgr",
+          "null_frac": 0.932745397090912,
+          "n_distinct": 2,
+          "avg_width": 1,
+          "typname": "bool",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "phidu_lga_health",
+      "reltuples": 7176,
+      "targets": [
+        {
+          "attname": "suppression",
+          "null_frac": 0.98397433757782,
+          "n_distinct": 2,
+          "avg_width": 24,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 7061,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "site_health_checks",
+      "reltuples": 8099,
+      "targets": [
+        {
+          "attname": "github_last_commit_sha",
+          "null_frac": 0.857501864433289,
+          "n_distinct": 5,
+          "avg_width": 41,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "raw_data",
+          "null_frac": 0,
+          "n_distinct": -0.383639097213745,
+          "avg_width": 489,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 6945,
+      "estCostUsd": 0.035659102500000005,
+      "strong": []
+    },
+    {
+      "tablename": "oric_corporations",
+      "reltuples": 7369,
+      "targets": [
+        {
+          "attname": "assets_year1",
+          "null_frac": 0.729406952857971,
+          "n_distinct": 4,
+          "avg_width": 7,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "assets_year2",
+          "null_frac": 0.757497608661652,
+          "n_distinct": 4,
+          "avg_width": 7,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "employees_year1",
+          "null_frac": 0.708508610725403,
+          "n_distinct": 4,
+          "avg_width": 3,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "employees_year2",
+          "null_frac": 0.736192166805267,
+          "n_distinct": 4,
+          "avg_width": 3,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "enrichment_provider",
+          "null_frac": 0.543221592903137,
+          "n_distinct": 5,
+          "avg_width": 7,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "income_year1",
+          "null_frac": 0.729406952857971,
+          "n_distinct": 4,
+          "avg_width": 6,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "income_year2",
+          "null_frac": 0.757497608661652,
+          "n_distinct": 4,
+          "avg_width": 6,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "enriched_community_served",
+          "null_frac": 0.634414434432983,
+          "n_distinct": -0.365314155817032,
+          "avg_width": 281,
+          "typname": "text"
+        },
+        {
+          "attname": "enriched_description",
+          "null_frac": 0.555706322193146,
+          "n_distinct": -0.444293677806854,
+          "avg_width": 426,
+          "typname": "text"
+        },
+        {
+          "attname": "enriched_focus_areas",
+          "null_frac": 0.543221592903137,
+          "n_distinct": -0.328538477420807,
+          "avg_width": 114,
+          "typname": "_text"
+        },
+        {
+          "attname": "industry_sectors",
+          "null_frac": 0,
+          "n_distinct": -0.270321607589722,
+          "avg_width": 70,
+          "typname": "_text"
+        },
+        {
+          "attname": "industry_sectors_raw",
+          "null_frac": 0.393540501594543,
+          "n_distinct": -0.353372246026993,
+          "avg_width": 145,
+          "typname": "text"
+        },
+        {
+          "attname": "name",
+          "null_frac": 0,
+          "n_distinct": -0.997285902500153,
+          "avg_width": 45,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 5582,
+      "estCostUsd": 0.063358491,
+      "strong": []
+    },
+    {
+      "tablename": "ghl_contacts",
+      "reltuples": 5583,
+      "targets": [
+        {
+          "attname": "auto_created_from",
+          "null_frac": 0.848289430141449,
+          "n_distinct": 3,
+          "avg_width": 11,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "xero_match_method",
+          "null_frac": 0.986566364765167,
+          "n_distinct": 4,
+          "avg_width": 11,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "tags",
+          "null_frac": 0,
+          "n_distinct": -0.154397279024124,
+          "avg_width": 91,
+          "typname": "_text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 5508,
+      "estCostUsd": 0.005262894000000001,
+      "strong": []
+    },
+    {
+      "tablename": "xero_bank_transactions",
+      "reltuples": 5717,
+      "targets": [
+        {
+          "attname": "reference",
+          "null_frac": 0.916666686534882,
+          "n_distinct": 10,
+          "avg_width": 18,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 5241,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "vic_grants_awarded",
+      "reltuples": 5202,
+      "targets": [
+        {
+          "attname": "region",
+          "null_frac": 0.987697064876556,
+          "n_distinct": 28,
+          "avg_width": 9,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 5138,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "foundation_programs",
+      "reltuples": 4596,
+      "targets": [
+        {
+          "attname": "application_mode",
+          "null_frac": 0.996953845024109,
+          "n_distinct": 7,
+          "avg_width": 14,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "categories",
+          "null_frac": 0.540469944477081,
+          "n_distinct": -0.16449086368084,
+          "avg_width": 62,
+          "typname": "_text"
+        },
+        {
+          "attname": "description",
+          "null_frac": 0.00587467383593321,
+          "n_distinct": -0.991514384746552,
+          "avg_width": 166,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 4582,
+      "estCostUsd": 0.010969308000000002,
+      "strong": []
+    },
+    {
+      "tablename": "finance_receipt_documents",
+      "reltuples": 7172,
+      "targets": [
+        {
+          "attname": "attachment_content_type",
+          "null_frac": 0.343279421329498,
+          "n_distinct": 8,
+          "avg_width": 13,
+          "typname": "text",
+          "strength": "strong"
+        },
+        {
+          "attname": "mailbox",
+          "null_frac": 0.459286123514175,
+          "n_distinct": 6,
+          "avg_width": 18,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "project_code",
+          "null_frac": 0.593000531196594,
+          "n_distinct": 38,
+          "avg_width": 7,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "provenance",
+          "null_frac": 0,
+          "n_distinct": -0.319018393754959,
+          "avg_width": 273,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 4253,
+      "estCostUsd": 0.0121912245,
+      "strong": [
+        {
+          "attname": "attachment_content_type",
+          "null_frac": 0.343279421329498,
+          "n_distinct": 8,
+          "avg_width": 13,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "goods_procurement_entities",
+      "reltuples": 4952,
+      "targets": [
+        {
+          "attname": "next_action",
+          "null_frac": 0.685783505439758,
+          "n_distinct": 2,
+          "avg_width": 62,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "product_fit",
+          "null_frac": 0.685783505439758,
+          "n_distinct": 3,
+          "avg_width": 59,
+          "typname": "_text",
+          "strength": "review"
+        },
+        {
+          "attname": "website",
+          "null_frac": 0.842083990573883,
+          "n_distinct": 7,
+          "avg_width": 25,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 4170,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "finance_receipt_bank_line_links",
+      "reltuples": 4243,
+      "targets": [
+        {
+          "attname": "review_note",
+          "null_frac": 0.972660839557648,
+          "n_distinct": 9,
+          "avg_width": 90,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "review_owner",
+          "null_frac": 0.973132193088531,
+          "n_distinct": 2,
+          "avg_width": 5,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 4129,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "xero_transactions",
+      "reltuples": 4949,
+      "targets": [
+        {
+          "attname": "project_code",
+          "null_frac": 0.456253796815872,
+          "n_distinct": 28,
+          "avg_width": 7,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "rd_category",
+          "null_frac": 0.776318430900574,
+          "n_distinct": 4,
+          "avg_width": 6,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "line_items",
+          "null_frac": 0,
+          "n_distinct": -0.527177214622498,
+          "avg_width": 207,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 3842,
+      "estCostUsd": 0.008350587,
+      "strong": [
+        {
+          "attname": "rd_category",
+          "null_frac": 0.776318430900574,
+          "n_distinct": 4,
+          "avg_width": 6,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "calendar_events",
+      "reltuples": 3807,
+      "targets": [
+        {
+          "attname": "calendar_color",
+          "null_frac": 0.268190175294876,
+          "n_distinct": 9,
+          "avg_width": 8,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "detected_project_code",
+          "null_frac": 0.777777791023254,
+          "n_distinct": 43,
+          "avg_width": 7,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "project_code",
+          "null_frac": 0.777777791023254,
+          "n_distinct": 43,
+          "avg_width": 7,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "visibility",
+          "null_frac": 0.69687420129776,
+          "n_distinct": 2,
+          "avg_width": 7,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "attendees",
+          "null_frac": 0,
+          "n_distinct": -0.26188600063324,
+          "avg_width": 150,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "html_link",
+          "null_frac": 0.0496453903615475,
+          "n_distinct": -0.950354635715485,
+          "avg_width": 131,
+          "typname": "text"
+        },
+        {
+          "attname": "metadata",
+          "null_frac": 0,
+          "n_distinct": -0.615445256233215,
+          "avg_width": 303,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 2961,
+      "estCostUsd": 0.018156852,
+      "strong": []
+    },
+    {
+      "tablename": "relationship_health",
+      "reltuples": 3330,
+      "targets": [
+        {
+          "attname": "overall_sentiment",
+          "null_frac": 0.827327311038971,
+          "n_distinct": 2,
+          "avg_width": 8,
+          "typname": "text",
+          "strength": "strong"
+        },
+        {
+          "attname": "risk_flags",
+          "null_frac": 0.85795795917511,
+          "n_distinct": 6,
+          "avg_width": 18,
+          "typname": "_text",
+          "strength": "review"
+        },
+        {
+          "attname": "suggested_actions",
+          "null_frac": 0.827327311038971,
+          "n_distinct": 28,
+          "avg_width": 80,
+          "typname": "_text",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 2857,
+      "estCostUsd": 0,
+      "strong": [
+        {
+          "attname": "overall_sentiment",
+          "null_frac": 0.827327311038971,
+          "n_distinct": 2,
+          "avg_width": 8,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "saved_grants",
+      "reltuples": 2504,
+      "targets": [
+        {
+          "attname": "color",
+          "null_frac": 0.992412149906158,
+          "n_distinct": 3,
+          "avg_width": 5,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 2485,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "alma_discovered_links",
+      "reltuples": 2544,
+      "targets": [
+        {
+          "attname": "predicted_type",
+          "null_frac": 0.95333331823349,
+          "n_distinct": 7,
+          "avg_width": 9,
+          "typname": "text",
+          "strength": "strong"
+        },
+        {
+          "attname": "rejection_reason",
+          "null_frac": 0.636666655540466,
+          "n_distinct": 4,
+          "avg_width": 66,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "relevance_category",
+          "null_frac": 0.850000023841858,
+          "n_distinct": 4,
+          "avg_width": 17,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "discovered_from",
+          "null_frac": 0,
+          "n_distinct": -0.102201260626316,
+          "avg_width": 104,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 2425,
+      "estCostUsd": 0.0026481,
+      "strong": [
+        {
+          "attname": "predicted_type",
+          "null_frac": 0.95333331823349,
+          "n_distinct": 7,
+          "avg_width": 9,
+          "typname": "text",
+          "strength": "strong"
+        },
+        {
+          "attname": "relevance_category",
+          "null_frac": 0.850000023841858,
+          "n_distinct": 4,
+          "avg_width": 17,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "ndis_compliance_actions",
+      "reltuples": 2322,
+      "targets": [
+        {
+          "attname": "provider_number",
+          "null_frac": 0.97459089756012,
+          "n_distinct": 49,
+          "avg_width": 10,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "relevant_information",
+          "null_frac": 0.000430663232691586,
+          "n_distinct": -0.998277366161346,
+          "avg_width": 711,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 2263,
+      "estCostUsd": 0.0168944265,
+      "strong": []
+    },
+    {
+      "tablename": "xero_invoices",
+      "reltuples": 2293,
+      "targets": [
+        {
+          "attname": "income_type",
+          "null_frac": 0.952900111675262,
+          "n_distinct": 5,
+          "avg_width": 9,
+          "typname": "text",
+          "strength": "strong"
+        },
+        {
+          "attname": "project_code",
+          "null_frac": 0.354993462562561,
+          "n_distinct": 32,
+          "avg_width": 7,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "line_items",
+          "null_frac": 0,
+          "n_distinct": -0.836894869804382,
+          "avg_width": 392,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 2185,
+      "estCostUsd": 0.00899346,
+      "strong": [
+        {
+          "attname": "income_type",
+          "null_frac": 0.952900111675262,
+          "n_distinct": 5,
+          "avg_width": 9,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "alma_interventions",
+      "reltuples": 2135,
+      "targets": [
+        {
+          "attname": "community_authority_signal",
+          "null_frac": 0.445433259010315,
+          "n_distinct": 7,
+          "avg_width": 5,
+          "typname": "numeric",
+          "strength": "review"
+        },
+        {
+          "attname": "coordinate_precision",
+          "null_frac": 0.32880562543869,
+          "n_distinct": 4,
+          "avg_width": 15,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "current_funding",
+          "null_frac": 0.563934445381165,
+          "n_distinct": 4,
+          "avg_width": 11,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "data_provenance",
+          "null_frac": 0.418266981840134,
+          "n_distinct": 22,
+          "avg_width": 16,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "estimated_annual_capacity",
+          "null_frac": 0.520843088626862,
+          "n_distinct": 34,
+          "avg_width": 4,
+          "typname": "int4",
+          "strength": "review"
+        },
+        {
+          "attname": "evidence_strength_signal",
+          "null_frac": 0.341920375823975,
+          "n_distinct": 21,
+          "avg_width": 5,
+          "typname": "numeric",
+          "strength": "review"
+        },
+        {
+          "attname": "harm_risk_signal",
+          "null_frac": 0.445433259010315,
+          "n_distinct": 2,
+          "avg_width": 5,
+          "typname": "numeric",
+          "strength": "review"
+        },
+        {
+          "attname": "implementation_capability_signal",
+          "null_frac": 0.445433259010315,
+          "n_distinct": 21,
+          "avg_width": 4,
+          "typname": "numeric",
+          "strength": "review"
+        },
+        {
+          "attname": "implementation_cost",
+          "null_frac": 0.800000011920929,
+          "n_distinct": 3,
+          "avg_width": 17,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "location_type",
+          "null_frac": 0.967213094234467,
+          "n_distinct": 4,
+          "avg_width": 9,
+          "typname": "text",
+          "strength": "strong"
+        },
+        {
+          "attname": "option_value_signal",
+          "null_frac": 0.445433259010315,
+          "n_distinct": 6,
+          "avg_width": 5,
+          "typname": "numeric",
+          "strength": "review"
+        },
+        {
+          "attname": "service_area_km",
+          "null_frac": 0.988290369510651,
+          "n_distinct": 5,
+          "avg_width": 4,
+          "typname": "int4",
+          "strength": "review"
+        },
+        {
+          "attname": "service_role",
+          "null_frac": 0.589695572853088,
+          "n_distinct": 10,
+          "avg_width": 12,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "cultural_authority",
+          "null_frac": 0.147072598338127,
+          "n_distinct": -0.302576124668121,
+          "avg_width": 40,
+          "typname": "text"
+        },
+        {
+          "attname": "description",
+          "null_frac": 0,
+          "n_distinct": -0.903044521808624,
+          "avg_width": 149,
+          "typname": "text"
+        },
+        {
+          "attname": "metadata",
+          "null_frac": 0,
+          "n_distinct": -0.516159236431122,
+          "avg_width": 116,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "search_vector",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 282,
+          "typname": "tsvector"
+        },
+        {
+          "attname": "target_cohort",
+          "null_frac": 0.178454339504242,
+          "n_distinct": -0.434192031621933,
+          "avg_width": 59,
+          "typname": "_text"
+        },
+        {
+          "attname": "website",
+          "null_frac": 0.589227139949799,
+          "n_distinct": -0.263231843709946,
+          "avg_width": 53,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 2110,
+      "estCostUsd": 0.015486345000000002,
+      "strong": [
+        {
+          "attname": "location_type",
+          "null_frac": 0.967213094234467,
+          "n_distinct": 4,
+          "avg_width": 9,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "receipt_emails",
+      "reltuples": 2582,
+      "targets": [
+        {
+          "attname": "project_code",
+          "null_frac": 0.805189788341522,
+          "n_distinct": 15,
+          "avg_width": 7,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 2079,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "clarity_delta",
+      "reltuples": 6380,
+      "targets": [
+        {
+          "attname": "degree_delta",
+          "null_frac": 0.258307218551636,
+          "n_distinct": 4,
+          "avg_width": 4,
+          "typname": "int4",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 1648,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "clarity_object",
+      "reltuples": 1595,
+      "targets": [
+        {
+          "attname": "anon_execute",
+          "null_frac": 0.704075217247009,
+          "n_distinct": 2,
+          "avg_width": 1,
+          "typname": "bool",
+          "strength": "review"
+        },
+        {
+          "attname": "domain",
+          "null_frac": 0.490909099578857,
+          "n_distinct": 17,
+          "avg_width": 19,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "freshness_column",
+          "null_frac": 0.540438890457153,
+          "n_distinct": 17,
+          "avg_width": 11,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "freshness_ms",
+          "null_frac": 0.578683376312256,
+          "n_distinct": 46,
+          "avg_width": 4,
+          "typname": "int4",
+          "strength": "review"
+        },
+        {
+          "attname": "missing_since",
+          "null_frac": 0.993730425834656,
+          "n_distinct": 2,
+          "avg_width": 8,
+          "typname": "timestamptz",
+          "strength": "review"
+        },
+        {
+          "attname": "noun",
+          "null_frac": 0.366144210100174,
+          "n_distinct": 6,
+          "avg_width": 8,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "noun_proposed",
+          "null_frac": 0.823197484016418,
+          "n_distinct": 6,
+          "avg_width": 8,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "nullable_columns",
+          "null_frac": 0.295924752950668,
+          "n_distinct": 59,
+          "avg_width": 4,
+          "typname": "int4",
+          "strength": "review"
+        },
+        {
+          "attname": "owner_app_proposed",
+          "null_frac": 0.473981201648712,
+          "n_distinct": 3,
+          "avg_width": 9,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "project_codes",
+          "null_frac": 0.989968657493591,
+          "n_distinct": 4,
+          "avg_width": 33,
+          "typname": "_text",
+          "strength": "review"
+        },
+        {
+          "attname": "routine_kind",
+          "null_frac": 0.704075217247009,
+          "n_distinct": 3,
+          "avg_width": 8,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "routine_language",
+          "null_frac": 0.704075217247009,
+          "n_distinct": 2,
+          "avg_width": 6,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "routine_volatility",
+          "null_frac": 0.704075217247009,
+          "n_distinct": 3,
+          "avg_width": 2,
+          "typname": "bpchar",
+          "strength": "review"
+        },
+        {
+          "attname": "security_definer",
+          "null_frac": 0.704075217247009,
+          "n_distinct": 2,
+          "avg_width": 1,
+          "typname": "bool",
+          "strength": "review"
+        },
+        {
+          "attname": "security_invoker",
+          "null_frac": 0.855172395706177,
+          "n_distinct": 2,
+          "avg_width": 1,
+          "typname": "bool",
+          "strength": "review"
+        },
+        {
+          "attname": "verdict_reason",
+          "null_frac": 0.824451386928558,
+          "n_distinct": 3,
+          "avg_width": 108,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "caveat",
+          "null_frac": 0.543573677539825,
+          "n_distinct": -0.412539184093475,
+          "avg_width": 97,
+          "typname": "text"
+        },
+        {
+          "attname": "join_keys",
+          "null_frac": 0.490909099578857,
+          "n_distinct": -0.405642628669739,
+          "avg_width": 49,
+          "typname": "text"
+        },
+        {
+          "attname": "purpose",
+          "null_frac": 0.0683385580778122,
+          "n_distinct": -0.931034505367279,
+          "avg_width": 96,
+          "typname": "text"
+        },
+        {
+          "attname": "routine_returns",
+          "null_frac": 0.704702198505402,
+          "n_distinct": -0.108463950455189,
+          "avg_width": 56,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 1585,
+      "estCostUsd": 0.004959465000000001,
+      "strong": []
+    },
+    {
+      "tablename": "goods_communities",
+      "reltuples": 1543,
+      "targets": [
+        {
+          "attname": "land_council",
+          "null_frac": 0.566429018974304,
+          "n_distinct": 4,
+          "avg_width": 21,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "local_government",
+          "null_frac": 0.56772518157959,
+          "n_distinct": 17,
+          "avg_width": 11,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "main_language",
+          "null_frac": 0.952689588069916,
+          "n_distinct": 29,
+          "avg_width": 16,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "notes",
+          "null_frac": 0.998055756092072,
+          "n_distinct": 2,
+          "avg_width": 163,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "region_label",
+          "null_frac": 0.9500972032547,
+          "n_distinct": 13,
+          "avg_width": 16,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "service_region",
+          "null_frac": 0.953985750675201,
+          "n_distinct": 9,
+          "avg_width": 16,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "aliases",
+          "null_frac": 0,
+          "n_distinct": -0.670123159885406,
+          "avg_width": 43,
+          "typname": "_text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 1540,
+      "estCostUsd": 0.0006953100000000001,
+      "strong": []
+    },
+    {
+      "tablename": "project_intelligence_snapshots",
+      "reltuples": 1594,
+      "targets": [
+        {
+          "attname": "blockers",
+          "null_frac": 0.944792985916138,
+          "n_distinct": 2,
+          "avg_width": 53,
+          "typname": "_text",
+          "strength": "review"
+        },
+        {
+          "attname": "current_focus",
+          "null_frac": 0.890213310718536,
+          "n_distinct": 4,
+          "avg_width": 55,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 1506,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "org_project_foundations",
+      "reltuples": 1525,
+      "targets": [
+        {
+          "attname": "evidence_grade",
+          "null_frac": 0.302950829267502,
+          "n_distinct": 3,
+          "avg_width": 2,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "ghl_tags",
+          "null_frac": 0.984918057918549,
+          "n_distinct": 17,
+          "avg_width": 258,
+          "typname": "_text",
+          "strength": "review"
+        },
+        {
+          "attname": "next_step",
+          "null_frac": 0.68459016084671,
+          "n_distinct": 21,
+          "avg_width": 76,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "fit_summary",
+          "null_frac": 0,
+          "n_distinct": -0.459016382694244,
+          "avg_width": 108,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 1502,
+      "estCostUsd": 0.0017032680000000002,
+      "strong": []
+    },
+    {
+      "tablename": "xero_payments",
+      "reltuples": 1500,
+      "targets": [
+        {
+          "attname": "bank_account_code",
+          "null_frac": 0.988666653633118,
+          "n_distinct": 2,
+          "avg_width": 4,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "raw_payload",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 1083,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 1483,
+      "estCostUsd": 0.016863934500000004,
+      "strong": []
+    },
+    {
+      "tablename": "alma_org_enrichment_candidates",
+      "reltuples": 1807,
+      "targets": [
+        {
+          "attname": "rejection_reason",
+          "null_frac": 0.789706707000732,
+          "n_distinct": 4,
+          "avg_width": 20,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "extracted_fields",
+          "null_frac": 0,
+          "n_distinct": -0.790260076522827,
+          "avg_width": 431,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "provenance",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 481,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "raw_data",
+          "null_frac": 0,
+          "n_distinct": -0.787493109703064,
+          "avg_width": 119,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "source_query",
+          "null_frac": 0,
+          "n_distinct": -0.997232973575592,
+          "avg_width": 106,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 1427,
+      "estCostUsd": 0.0170362395,
+      "strong": []
+    },
+    {
+      "tablename": "receipt_pipeline_status",
+      "reltuples": 2195,
+      "targets": [
+        {
+          "attname": "notes",
+          "null_frac": 0.633713006973267,
+          "n_distinct": 6,
+          "avg_width": 34,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 1391,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "ghl_opportunities",
+      "reltuples": 1322,
+      "targets": [
+        {
+          "attname": "assigned_to",
+          "null_frac": 0.973524987697601,
+          "n_distinct": 2,
+          "avg_width": 21,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "pile",
+          "null_frac": 0.634644448757172,
+          "n_distinct": 6,
+          "avg_width": 6,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "project_code",
+          "null_frac": 0.279122531414032,
+          "n_distinct": 30,
+          "avg_width": 6,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "custom_fields",
+          "null_frac": 0,
+          "n_distinct": -0.157337367534637,
+          "avg_width": 193,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "name",
+          "null_frac": 0,
+          "n_distinct": -0.965960681438446,
+          "avg_width": 46,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 1287,
+      "estCostUsd": 0.0032297265,
+      "strong": []
+    },
+    {
+      "tablename": "funder_context_snapshot",
+      "reltuples": 1193,
+      "targets": [
+        {
+          "attname": "notion_org_name",
+          "null_frac": 0.982397317886353,
+          "n_distinct": 16,
+          "avg_width": 19,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "thematic_focus",
+          "null_frac": 0.00335289188660681,
+          "n_distinct": -0.233864203095436,
+          "avg_width": 56,
+          "typname": "_text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 1172,
+      "estCostUsd": 0.000689136,
+      "strong": []
+    },
+    {
+      "tablename": "alma_media_articles",
+      "reltuples": 1146,
+      "targets": [
+        {
+          "attname": "community_mentions",
+          "null_frac": 0.931937158107758,
+          "n_distinct": 12,
+          "avg_width": 117,
+          "typname": "jsonb",
+          "strength": "review"
+        },
+        {
+          "attname": "government_mentions",
+          "null_frac": 0.854275763034821,
+          "n_distinct": 22,
+          "avg_width": 82,
+          "typname": "jsonb",
+          "strength": "review"
+        },
+        {
+          "attname": "key_quotes",
+          "null_frac": 0.896160542964935,
+          "n_distinct": 52,
+          "avg_width": 204,
+          "typname": "_text",
+          "strength": "review"
+        },
+        {
+          "attname": "programs_mentioned",
+          "null_frac": 0.915357768535614,
+          "n_distinct": 19,
+          "avg_width": 46,
+          "typname": "_text",
+          "strength": "review"
+        },
+        {
+          "attname": "sentiment",
+          "null_frac": 0.490401387214661,
+          "n_distinct": 4,
+          "avg_width": 8,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "full_text",
+          "null_frac": 0.555846393108368,
+          "n_distinct": -0.428446769714355,
+          "avg_width": 127,
+          "typname": "text"
+        },
+        {
+          "attname": "headline",
+          "null_frac": 0,
+          "n_distinct": -0.934554994106293,
+          "avg_width": 70,
+          "typname": "text"
+        },
+        {
+          "attname": "summary",
+          "null_frac": 0.523560225963593,
+          "n_distinct": -0.417102962732315,
+          "avg_width": 170,
+          "typname": "text"
+        },
+        {
+          "attname": "topics",
+          "null_frac": 0.495636999607086,
+          "n_distinct": -0.167539268732071,
+          "avg_width": 76,
+          "typname": "_text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 1068,
+      "estCostUsd": 0.004967802,
+      "strong": [
+        {
+          "attname": "sentiment",
+          "null_frac": 0.490401387214661,
+          "n_distinct": 4,
+          "avg_width": 8,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "el_sync_results",
+      "reltuples": 1172,
+      "targets": [
+        {
+          "attname": "detail",
+          "null_frac": 0.887372016906738,
+          "n_distinct": 2,
+          "avg_width": 110,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "title",
+          "null_frac": 0,
+          "n_distinct": -0.145904436707497,
+          "avg_width": 54,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 1040,
+      "estCostUsd": 0.0005896800000000001,
+      "strong": []
+    },
+    {
+      "tablename": "clarity_edge",
+      "reltuples": 1338,
+      "targets": [
+        {
+          "attname": "match_rate",
+          "null_frac": 0.698056817054749,
+          "n_distinct": 8,
+          "avg_width": 5,
+          "typname": "numeric",
+          "strength": "review"
+        },
+        {
+          "attname": "tgt_column",
+          "null_frac": 0.523168921470642,
+          "n_distinct": 12,
+          "avg_width": 3,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 934,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "project_knowledge",
+      "reltuples": 989,
+      "targets": [
+        {
+          "attname": "contact_ids",
+          "null_frac": 0.934850037097931,
+          "n_distinct": 19,
+          "avg_width": 50,
+          "typname": "_text",
+          "strength": "review"
+        },
+        {
+          "attname": "meeting_duration_minutes",
+          "null_frac": 0.927611172199249,
+          "n_distinct": 28,
+          "avg_width": 4,
+          "typname": "int4",
+          "strength": "review"
+        },
+        {
+          "attname": "sentiment",
+          "null_frac": 0.851085841655731,
+          "n_distinct": 4,
+          "avg_width": 8,
+          "typname": "text",
+          "strength": "strong"
+        },
+        {
+          "attname": "topics",
+          "null_frac": 0.870734214782715,
+          "n_distinct": 28,
+          "avg_width": 38,
+          "typname": "_text",
+          "strength": "strong"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "content",
+          "null_frac": 0,
+          "n_distinct": -0.651499509811401,
+          "avg_width": 148,
+          "typname": "text"
+        },
+        {
+          "attname": "embedding",
+          "null_frac": 0.251292645931244,
+          "n_distinct": -0.748707354068756,
+          "avg_width": 707,
+          "typname": "vector"
+        },
+        {
+          "attname": "metadata",
+          "null_frac": 0,
+          "n_distinct": -0.246122032403946,
+          "avg_width": 82,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "title",
+          "null_frac": 0,
+          "n_distinct": -0.719751834869385,
+          "avg_width": 54,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 925,
+      "estCostUsd": 0.0096250875,
+      "strong": [
+        {
+          "attname": "sentiment",
+          "null_frac": 0.851085841655731,
+          "n_distinct": 4,
+          "avg_width": 8,
+          "typname": "text",
+          "strength": "strong"
+        },
+        {
+          "attname": "topics",
+          "null_frac": 0.870734214782715,
+          "n_distinct": 28,
+          "avg_width": 38,
+          "typname": "_text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "relationship_pipeline",
+      "reltuples": 1000,
+      "targets": [
+        {
+          "attname": "key_contact",
+          "null_frac": 0.915000021457672,
+          "n_distinct": 50,
+          "avg_width": 26,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "entity_name",
+          "null_frac": 0,
+          "n_distinct": -0.907999992370605,
+          "avg_width": 61,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 915,
+      "estCostUsd": 0.0005860575,
+      "strong": []
+    },
+    {
+      "tablename": "notion_actions",
+      "reltuples": 957,
+      "targets": [
+        {
+          "attname": "action_type",
+          "null_frac": 0.710553824901581,
+          "n_distinct": 9,
+          "avg_width": 9,
+          "typname": "text",
+          "strength": "strong"
+        },
+        {
+          "attname": "assigned_to",
+          "null_frac": 0.464994788169861,
+          "n_distinct": 5,
+          "avg_width": 18,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "location",
+          "null_frac": 0.889237225055695,
+          "n_distinct": 17,
+          "avg_width": 9,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "ai_summary",
+          "null_frac": 0.0344827584922314,
+          "n_distinct": -0.730407536029816,
+          "avg_width": 295,
+          "typname": "text"
+        },
+        {
+          "attname": "data",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 610,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 851,
+      "estCostUsd": 0.0080866275,
+      "strong": [
+        {
+          "attname": "action_type",
+          "null_frac": 0.710553824901581,
+          "n_distinct": 9,
+          "avg_width": 9,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "alma_research_findings",
+      "reltuples": 1012,
+      "targets": [
+        {
+          "attname": "entity_type",
+          "null_frac": 0.804347813129425,
+          "n_distinct": 3,
+          "avg_width": 12,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "content",
+          "null_frac": 0,
+          "n_distinct": -0.99604743719101,
+          "avg_width": 833,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "sources",
+          "null_frac": 0,
+          "n_distinct": -0.723320186138153,
+          "avg_width": 122,
+          "typname": "_text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 814,
+      "estCostUsd": 0.008162385000000001,
+      "strong": [
+        {
+          "attname": "entity_type",
+          "null_frac": 0.804347813129425,
+          "n_distinct": 3,
+          "avg_width": 12,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "alma_evidence",
+      "reltuples": 631,
+      "targets": [
+        {
+          "attname": "limitations",
+          "null_frac": 0.961965143680573,
+          "n_distinct": 21,
+          "avg_width": 115,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "sample_size",
+          "null_frac": 0.957210779190063,
+          "n_distinct": 24,
+          "avg_width": 4,
+          "typname": "int4",
+          "strength": "review"
+        },
+        {
+          "attname": "timeframe",
+          "null_frac": 0.898573696613312,
+          "n_distinct": 51,
+          "avg_width": 14,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "findings",
+          "null_frac": 0,
+          "n_distinct": -0.993660867214203,
+          "avg_width": 282,
+          "typname": "text"
+        },
+        {
+          "attname": "metadata",
+          "null_frac": 0,
+          "n_distinct": -0.461172729730606,
+          "avg_width": 189,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "methodology",
+          "null_frac": 0.391442149877548,
+          "n_distinct": -0.589540421962738,
+          "avg_width": 73,
+          "typname": "text"
+        },
+        {
+          "attname": "search_vector",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 442,
+          "typname": "tsvector"
+        },
+        {
+          "attname": "title",
+          "null_frac": 0,
+          "n_distinct": -0.987321734428406,
+          "avg_width": 59,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 607,
+      "estCostUsd": 0.0066603075,
+      "strong": []
+    },
+    {
+      "tablename": "clarity_answer",
+      "reltuples": 647,
+      "targets": [
+        {
+          "attname": "payload",
+          "null_frac": 0.918083488941193,
+          "n_distinct": 29,
+          "avg_width": 398,
+          "typname": "jsonb",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 594,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "receipt_status",
+      "reltuples": 592,
+      "targets": [
+        {
+          "attname": "project_code",
+          "null_frac": 0.946666657924652,
+          "n_distinct": 2,
+          "avg_width": 7,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 560,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "imessage_attachments",
+      "reltuples": 1026,
+      "targets": [
+        {
+          "attname": "mime_type",
+          "null_frac": 0.491228073835373,
+          "n_distinct": 9,
+          "avg_width": 11,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 504,
+      "estCostUsd": 0,
+      "strong": [
+        {
+          "attname": "mime_type",
+          "null_frac": 0.491228073835373,
+          "n_distinct": 9,
+          "avg_width": 11,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "services",
+      "reltuples": 508,
+      "targets": [
+        {
+          "attname": "eligibility_criteria",
+          "null_frac": 0.933333337306976,
+          "n_distinct": 19,
+          "avg_width": 63,
+          "typname": "_text",
+          "strength": "strong"
+        },
+        {
+          "attname": "location_address",
+          "null_frac": 0.966666638851166,
+          "n_distinct": 11,
+          "avg_width": 21,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "target_age_max",
+          "null_frac": 0.966666638851166,
+          "n_distinct": 4,
+          "avg_width": 4,
+          "typname": "int4",
+          "strength": "review"
+        },
+        {
+          "attname": "target_age_min",
+          "null_frac": 0.966666638851166,
+          "n_distinct": 4,
+          "avg_width": 4,
+          "typname": "int4",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "description",
+          "null_frac": 0,
+          "n_distinct": -0.627952754497528,
+          "avg_width": 63,
+          "typname": "text"
+        },
+        {
+          "attname": "metadata",
+          "null_frac": 0,
+          "n_distinct": -0.165354326367378,
+          "avg_width": 55,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "service_category",
+          "null_frac": 0,
+          "n_distinct": -0.228346452116966,
+          "avg_width": 56,
+          "typname": "_text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 491,
+      "estCostUsd": 0.000897057,
+      "strong": [
+        {
+          "attname": "eligibility_criteria",
+          "null_frac": 0.933333337306976,
+          "n_distinct": 19,
+          "avg_width": 63,
+          "typname": "_text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "vendor_project_rules",
+      "reltuples": 508,
+      "targets": [
+        {
+          "attname": "income_type",
+          "null_frac": 0.940944910049438,
+          "n_distinct": 5,
+          "avg_width": 8,
+          "typname": "text",
+          "strength": "strong"
+        },
+        {
+          "attname": "rd_category",
+          "null_frac": 0.887795269489288,
+          "n_distinct": 2,
+          "avg_width": 7,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 478,
+      "estCostUsd": 0,
+      "strong": [
+        {
+          "attname": "income_type",
+          "null_frac": 0.940944910049438,
+          "n_distinct": 5,
+          "avg_width": 8,
+          "typname": "text",
+          "strength": "strong"
+        },
+        {
+          "attname": "rd_category",
+          "null_frac": 0.887795269489288,
+          "n_distinct": 2,
+          "avg_width": 7,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "civic_hansard",
+      "reltuples": 510,
+      "targets": [
+        {
+          "attname": "speaker_party",
+          "null_frac": 0.717647075653076,
+          "n_distinct": 10,
+          "avg_width": 3,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "body_text",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 436,
+          "typname": "text"
+        },
+        {
+          "attname": "subject",
+          "null_frac": 0.241176471114159,
+          "n_distinct": -0.539215683937073,
+          "avg_width": 112,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 366,
+      "estCostUsd": 0.002105964,
+      "strong": []
+    },
+    {
+      "tablename": "civic_org_classifications",
+      "reltuples": 597,
+      "targets": [
+        {
+          "attname": "sector_category",
+          "null_frac": 0.489112228155136,
+          "n_distinct": 8,
+          "avg_width": 12,
+          "typname": "text",
+          "strength": "strong"
+        },
+        {
+          "attname": "tier",
+          "null_frac": 0.494137346744537,
+          "n_distinct": 3,
+          "avg_width": 2,
+          "typname": "int2",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "llm_evidence_snippet",
+          "null_frac": 0,
+          "n_distinct": -0.993299841880798,
+          "avg_width": 97,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 295,
+      "estCostUsd": 0.0003004575,
+      "strong": [
+        {
+          "attname": "sector_category",
+          "null_frac": 0.489112228155136,
+          "n_distinct": 8,
+          "avg_width": 12,
+          "typname": "text",
+          "strength": "strong"
+        }
+      ]
+    },
+    {
+      "tablename": "stg_oric_dupe_pairs",
+      "reltuples": 847,
+      "targets": [
+        {
+          "attname": "a_state",
+          "null_frac": 0.284533649682999,
+          "n_distinct": 8,
+          "avg_width": 3,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "o_state",
+          "null_frac": 0.303423851728439,
+          "n_distinct": 8,
+          "avg_width": 3,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "canonical_name",
+          "null_frac": 0,
+          "n_distinct": -0.989374279975891,
+          "avg_width": 41,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 257,
+      "estCostUsd": 0.0001106385,
+      "strong": []
+    },
+    {
+      "tablename": "dedup_tranche1_20260809",
+      "reltuples": 822,
+      "targets": [
+        {
+          "attname": "a_state",
+          "null_frac": 0.291970789432526,
+          "n_distinct": 8,
+          "avg_width": 3,
+          "typname": "text",
+          "strength": "review"
+        },
+        {
+          "attname": "o_state",
+          "null_frac": 0.307785898447037,
+          "n_distinct": 8,
+          "avg_width": 3,
+          "typname": "text",
+          "strength": "review"
+        }
+      ],
+      "sources": [
+        {
+          "attname": "canonical_name",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 41,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 253,
+      "estCostUsd": 0.0001089165,
+      "strong": []
+    },
+    {
+      "tablename": "clarity_edge_history",
+      "reltuples": 638,
+      "targets": [
+        {
+          "attname": "match_rate",
+          "null_frac": 0.366771161556244,
+          "n_distinct": 8,
+          "avg_width": 5,
+          "typname": "numeric",
+          "strength": "review"
+        }
+      ],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 234,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "abr_registry",
+      "reltuples": 20006350,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "abs_iloc_health",
+      "reltuples": 1138,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "abs_iloc_overcrowding",
+      "reltuples": 1138,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "abs_lga_population",
+      "reltuples": 546,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "abs_locality_lga",
+      "reltuples": 16631,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "abs_poa_lga_ratio",
+      "reltuples": 3968,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "abs_sal_lga_ratio",
+      "reltuples": 16372,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "acara_schools",
+      "reltuples": 9755,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "acnc_charities",
+      "reltuples": 66404,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "beneficiaries",
+          "null_frac": 0,
+          "n_distinct": -0.210183128714561,
+          "avg_width": 123,
+          "typname": "_text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "acnc_programs",
+      "reltuples": 98196,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "operating_locations",
+          "null_frac": 0.0594666674733162,
+          "n_distinct": -0.183337405323982,
+          "avg_width": 70,
+          "typname": "_text"
+        },
+        {
+          "attname": "operating_locations_coords",
+          "null_frac": 0.0594666674733162,
+          "n_distinct": -0.176361560821533,
+          "avg_width": 65,
+          "typname": "_text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "act_private_grant_rounds",
+      "reltuples": 648,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "description",
+          "null_frac": 0,
+          "n_distinct": -0.811728417873383,
+          "avg_width": 603,
+          "typname": "text"
+        },
+        {
+          "attname": "goods_relevance_signals",
+          "null_frac": 0,
+          "n_distinct": -0.192901238799095,
+          "avg_width": 193,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "metadata",
+          "null_frac": 0,
+          "n_distinct": -0.168209880590439,
+          "avg_width": 101,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "name",
+          "null_frac": 0,
+          "n_distinct": -0.99845677614212,
+          "avg_width": 40,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "agent_runs",
+      "reltuples": 11040,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "agent_tasks",
+      "reltuples": 1514,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "agil_locations",
+      "reltuples": 1546,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "alternate_names",
+          "null_frac": 0,
+          "n_distinct": -0.672056913375854,
+          "avg_width": 43,
+          "typname": "_text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "aihw_child_protection",
+      "reltuples": 2981,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "alert_events",
+      "reltuples": 662,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "alma_outcomes",
+      "reltuples": 3163,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "measurement_method",
+          "null_frac": 0,
+          "n_distinct": -0.908631026744843,
+          "avg_width": 85,
+          "typname": "text"
+        },
+        {
+          "attname": "search_vector",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 167,
+          "typname": "tsvector"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "asic_name_lookup",
+      "reltuples": 2149868,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "assertions",
+      "reltuples": 58352,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "note",
+          "null_frac": 0,
+          "n_distinct": -0.503221809864044,
+          "avg_width": 156,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "asx_companies",
+      "reltuples": 2055,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "ato_tax_transparency",
+      "reltuples": 26241,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "bank_statement_lines",
+      "reltuples": 1618,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "notes",
+          "null_frac": 0.640296638011932,
+          "n_distinct": -0.210135966539383,
+          "avg_width": 85,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "campaign_alignment_entities",
+      "reltuples": 4141,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "alignment_signals",
+          "null_frac": 0,
+          "n_distinct": -0.759236872196198,
+          "avg_width": 243,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "civic_intelligence_chunks",
+      "reltuples": 7022,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "chunk_text",
+          "null_frac": 0,
+          "n_distinct": -0.997721433639526,
+          "avg_width": 1191,
+          "typname": "text"
+        },
+        {
+          "attname": "metadata",
+          "null_frac": 0,
+          "n_distinct": -0.214326396584511,
+          "avg_width": 121,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "civic_ministerial_diaries",
+      "reltuples": 1728,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "organisation",
+          "null_frac": 0,
+          "n_distinct": -0.666087985038757,
+          "avg_width": 108,
+          "typname": "text"
+        },
+        {
+          "attname": "who_met",
+          "null_frac": 0,
+          "n_distinct": -0.666087985038757,
+          "avg_width": 108,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "civic_ministerial_statements",
+      "reltuples": 774,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "body_text",
+          "null_frac": 0,
+          "n_distinct": -0.772609829902649,
+          "avg_width": 48,
+          "typname": "text"
+        },
+        {
+          "attname": "headline",
+          "null_frac": 0,
+          "n_distinct": -0.997416019439697,
+          "avg_width": 67,
+          "typname": "text"
+        },
+        {
+          "attname": "linked_funding_ids",
+          "null_frac": 0,
+          "n_distinct": -0.478036165237427,
+          "avg_width": 63,
+          "typname": "_uuid"
+        },
+        {
+          "attname": "mentioned_programs",
+          "null_frac": 0,
+          "n_distinct": -0.678294599056244,
+          "avg_width": 151,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "portfolio",
+          "null_frac": 0,
+          "n_distinct": -0.959948301315308,
+          "avg_width": 283,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "civicscope_act_entity_bridge",
+      "reltuples": 2846,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "clarity_code_ref",
+      "reltuples": 24510,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "clarity_gap_measurement",
+      "reltuples": 666,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "clarity_object_history",
+      "reltuples": 62133,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "communication_project_links",
+      "reltuples": 517,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "reasoning",
+          "null_frac": 0,
+          "n_distinct": -0.909090936183929,
+          "avg_width": 103,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "community_directory_orgs",
+      "reltuples": 74968,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "description",
+          "null_frac": 0.00163333339150995,
+          "n_distinct": -0.60141658782959,
+          "avg_width": 184,
+          "typname": "text"
+        },
+        {
+          "attname": "raw",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 1054,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "community_orgs",
+      "reltuples": 1244,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "description",
+          "null_frac": 0.414790987968445,
+          "n_distinct": -0.585209012031555,
+          "avg_width": 420,
+          "typname": "text"
+        },
+        {
+          "attname": "domain",
+          "null_frac": 0,
+          "n_distinct": -0.441318333148956,
+          "avg_width": 67,
+          "typname": "_text"
+        },
+        {
+          "attname": "geographic_focus",
+          "null_frac": 0,
+          "n_distinct": -0.404340833425522,
+          "avg_width": 48,
+          "typname": "_text"
+        },
+        {
+          "attname": "outcomes",
+          "null_frac": 0.418810278177261,
+          "n_distinct": -0.348874598741531,
+          "avg_width": 199,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "programs",
+          "null_frac": 0.418006420135498,
+          "n_distinct": -0.508842468261719,
+          "avg_width": 480,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "contact_enrichments",
+      "reltuples": 812,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "enrichment",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 207,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "reasoning",
+          "null_frac": 0.00333333341404796,
+          "n_distinct": -0.831280767917633,
+          "avg_width": 112,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "contact_entity_links",
+      "reltuples": 661,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "link_evidence",
+          "null_frac": 0,
+          "n_distinct": -0.267776101827621,
+          "avg_width": 88,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "contact_intelligence",
+      "reltuples": 509,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "intelligence",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 183,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "contact_intelligence_insights",
+      "reltuples": 2197,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "highlights",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 121,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "crime_stats_lga",
+      "reltuples": 57435,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "data_catalog_snapshots",
+      "reltuples": 2994,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "dext_forwarded_emails",
+      "reltuples": 541,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "subject",
+          "null_frac": 0,
+          "n_distinct": -0.661737501621246,
+          "avg_width": 58,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "discoveries",
+      "reltuples": 3084,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "description",
+          "null_frac": 0,
+          "n_distinct": -0.657911777496338,
+          "avg_width": 130,
+          "typname": "text"
+        },
+        {
+          "attname": "metadata",
+          "null_frac": 0,
+          "n_distinct": -0.729571998119354,
+          "avg_width": 184,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "title",
+          "null_frac": 0,
+          "n_distinct": -0.788262009620667,
+          "avg_width": 44,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "donor_entity_matches",
+      "reltuples": 9758,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "dss_payment_demographics",
+      "reltuples": 105529,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "entity_identifiers",
+      "reltuples": 30934,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "identifier_value",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 40,
+          "typname": "text"
+        },
+        {
+          "attname": "normalized_value",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 40,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "entity_potential_matches",
+      "reltuples": 620,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "entity_xref",
+      "reltuples": 1193379,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "foundation_category_assignments",
+      "reltuples": 42599,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "evidence_text",
+          "null_frac": 0,
+          "n_distinct": -0.713584840297699,
+          "avg_width": 194,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "foundation_geo_focus",
+      "reltuples": 16942,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "evidence_text",
+          "null_frac": 0,
+          "n_distinct": -0.280899554491043,
+          "avg_width": 101,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "foundation_grantees",
+      "reltuples": 5695,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "evidence_text",
+          "null_frac": 0.0175592619925737,
+          "n_distinct": -0.269359081983566,
+          "avg_width": 74,
+          "typname": "text"
+        },
+        {
+          "attname": "metadata",
+          "null_frac": 0,
+          "n_distinct": -0.886918365955353,
+          "avg_width": 508,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "yj_evidence_snippet",
+          "null_frac": 0.000526777876075357,
+          "n_distinct": -0.430553108453751,
+          "avg_width": 70,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "foundation_power_profiles",
+      "reltuples": 10114,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "evidence",
+          "null_frac": 0,
+          "n_distinct": -0.168874830007553,
+          "avg_width": 353,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "funder_board_paths",
+      "reltuples": 2651,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "connected_entity_name",
+          "null_frac": 0,
+          "n_distinct": -0.249339878559113,
+          "avg_width": 40,
+          "typname": "text"
+        },
+        {
+          "attname": "foundation_name",
+          "null_frac": 0,
+          "n_distinct": -0.164843454957008,
+          "avg_width": 41,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "funding_agent_workflows",
+      "reltuples": 741,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "input_payload",
+          "null_frac": 0,
+          "n_distinct": -0.140350878238678,
+          "avg_width": 97,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "output_payload",
+          "null_frac": 0,
+          "n_distinct": -0.982456147670746,
+          "avg_width": 186,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "funding_ghl_alignment_runs",
+      "reltuples": 549,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "funding_ghl_sync_runs",
+      "reltuples": 543,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "geo_resolution_gaps",
+      "reltuples": 600,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "ghl_sync_log",
+      "reltuples": 11631,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "goods_procurement_signals",
+      "reltuples": 1260,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "description",
+          "null_frac": 0,
+          "n_distinct": -0.515079379081726,
+          "avg_width": 119,
+          "typname": "text"
+        },
+        {
+          "attname": "title",
+          "null_frac": 0,
+          "n_distinct": -0.761904776096344,
+          "avg_width": 51,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "goods_supply_routes",
+      "reltuples": 32075,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "grant_frontier_source_snapshots",
+      "reltuples": 4781,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "grant_notification_outbox",
+      "reltuples": 771,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "body",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 266,
+          "typname": "text"
+        },
+        {
+          "attname": "subject",
+          "null_frac": 0,
+          "n_distinct": -0.942931234836578,
+          "avg_width": 74,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "grantconnect_awards",
+      "reltuples": 277532,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "grant_activity",
+          "null_frac": 0,
+          "n_distinct": 11193,
+          "avg_width": 52,
+          "typname": "text"
+        },
+        {
+          "attname": "pbs_program",
+          "null_frac": 0,
+          "n_distinct": 1057,
+          "avg_width": 52,
+          "typname": "text"
+        },
+        {
+          "attname": "purpose",
+          "null_frac": 0,
+          "n_distinct": 8956,
+          "avg_width": 244,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "gs_entity_aliases",
+      "reltuples": 16634,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "gs_relationships",
+      "reltuples": 3019530,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "properties",
+          "null_frac": 0,
+          "n_distinct": 14289,
+          "avg_width": 134,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "health_alerts",
+      "reltuples": 1067,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "integration_events",
+      "reltuples": 12920,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "payload",
+          "null_frac": 0,
+          "n_distinct": -0.701857566833496,
+          "avg_width": 935,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "intelligence_insights",
+      "reltuples": 5303,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "data",
+          "null_frac": 0,
+          "n_distinct": -0.567037522792816,
+          "avg_width": 163,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "description",
+          "null_frac": 0,
+          "n_distinct": -0.2166698127985,
+          "avg_width": 100,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "jr_site_research_items",
+      "reltuples": 690,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "detail",
+          "null_frac": 0.508695662021637,
+          "n_distinct": -0.466666668653488,
+          "avg_width": 50,
+          "typname": "text"
+        },
+        {
+          "attname": "title",
+          "null_frac": 0,
+          "n_distinct": -0.915942013263702,
+          "avg_width": 76,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "knowledge_edges",
+      "reltuples": 1100,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "linkedin_contacts",
+      "reltuples": 13804,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "llm_usage",
+      "reltuples": 3928,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "memory_episodes",
+      "reltuples": 3636,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "embedding",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 42,
+          "typname": "vector"
+        },
+        {
+          "attname": "key_events",
+          "null_frac": 0,
+          "n_distinct": -0.428767889738083,
+          "avg_width": 545,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "mv_refresh_log",
+      "reltuples": 3540,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "name_aliases",
+      "reltuples": 8046,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "ndis_active_providers",
+      "reltuples": 201412,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "ndis_first_nations",
+      "reltuples": 1486,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "ndis_market_concentration",
+      "reltuples": 15319,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "ndis_participants",
+      "reltuples": 67353,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "ndis_participants_lga",
+      "reltuples": 8329,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "ndis_registered_providers",
+      "reltuples": 48510,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "ndis_utilisation",
+      "reltuples": 143987,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "newsletter_candidates",
+      "reltuples": 839,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "payload",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 218,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "summary",
+          "null_frac": 0.607866525650024,
+          "n_distinct": -0.392133474349976,
+          "avg_width": 76,
+          "typname": "text"
+        },
+        {
+          "attname": "title",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 62,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "nz_charities",
+      "reltuples": 45192,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "purposes",
+          "null_frac": 0.197699993848801,
+          "n_distinct": -0.756217896938324,
+          "avg_width": 321,
+          "typname": "_text"
+        },
+        {
+          "attname": "raw_data",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 502,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "opportunities_unified",
+      "reltuples": 17790,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "description",
+          "null_frac": 0.130185499787331,
+          "n_distinct": -0.782293438911438,
+          "avg_width": 272,
+          "typname": "text"
+        },
+        {
+          "attname": "metadata",
+          "null_frac": 0,
+          "n_distinct": -0.19184935092926,
+          "avg_width": 129,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "title",
+          "null_frac": 0,
+          "n_distinct": -0.831534564495087,
+          "avg_width": 91,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "organization_funding_summaries",
+      "reltuples": 1093,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "source_row_ids",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 136,
+          "typname": "_uuid"
+        },
+        {
+          "attname": "summary_text",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 276,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "outcomes_metrics",
+      "reltuples": 9180,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "page_views",
+      "reltuples": 36403,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "person_entity_links",
+      "reltuples": 2572,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "link_evidence",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 203,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "person_identities",
+      "reltuples": 230392,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "person_identity_map",
+      "reltuples": 14919,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "contact_data",
+          "null_frac": 0,
+          "n_distinct": -0.373078495264053,
+          "avg_width": 137,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "person_roles",
+      "reltuples": 339286,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "properties",
+          "null_frac": 0,
+          "n_distinct": -0.997126340866089,
+          "avg_width": 174,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "political_donations",
+      "reltuples": 3315587,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "postcode_geo",
+      "reltuples": 12299,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "postcode_sa2_concordance",
+      "reltuples": 6904,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "privacy_audit_log",
+      "reltuples": 1278440,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "procurement_alerts",
+      "reltuples": 53223,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "body",
+          "null_frac": 0,
+          "n_distinct": -0.938540458679199,
+          "avg_width": 136,
+          "typname": "text"
+        },
+        {
+          "attname": "payload",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 341,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "title",
+          "null_frac": 0,
+          "n_distinct": 3223,
+          "avg_width": 53,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "project_health_history",
+      "reltuples": 1977,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "raw_payload",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 954,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "qld_watchhouse_snapshot_rows",
+      "reltuples": 11502,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "receipt_matches",
+      "reltuples": 2569,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "research_grants",
+      "reltuples": 46378,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "investigators",
+          "null_frac": 0.240299999713898,
+          "n_distinct": -0.639613628387451,
+          "avg_width": 67,
+          "typname": "text"
+        },
+        {
+          "attname": "national_interest",
+          "null_frac": 0.610866665840149,
+          "n_distinct": -0.361852616071701,
+          "avg_width": 398,
+          "typname": "text"
+        },
+        {
+          "attname": "title",
+          "null_frac": 0.0000666666674078442,
+          "n_distinct": -0.968390166759491,
+          "avg_width": 558,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "sa2_reference",
+      "reltuples": 2473,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "schema_ownership",
+      "reltuples": 1000,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "evidence",
+          "null_frac": 0,
+          "n_distinct": -0.611000001430511,
+          "avg_width": 151,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "se_search_index",
+      "reltuples": 12192,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "description",
+          "null_frac": 0.57726377248764,
+          "n_distinct": -0.420603662729263,
+          "avg_width": 376,
+          "typname": "text"
+        },
+        {
+          "attname": "search_tsv",
+          "null_frac": 0,
+          "n_distinct": -1,
+          "avg_width": 274,
+          "typname": "tsvector"
+        },
+        {
+          "attname": "sectors",
+          "null_frac": 0.161991477012634,
+          "n_distinct": -0.433973103761673,
+          "avg_width": 92,
+          "typname": "_text"
+        },
+        {
+          "attname": "sectors_text",
+          "null_frac": 0.161991477012634,
+          "n_distinct": -0.433973103761673,
+          "avg_width": 58,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "seifa_2021",
+      "reltuples": 10572,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "social_enterprises",
+      "reltuples": 12177,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "description",
+          "null_frac": 0.577400028705597,
+          "n_distinct": -0.418822377920151,
+          "avg_width": 367,
+          "typname": "text"
+        },
+        {
+          "attname": "geographic_focus",
+          "null_frac": 0.124250635504723,
+          "n_distinct": -0.105608932673931,
+          "avg_width": 51,
+          "typname": "_text"
+        },
+        {
+          "attname": "sector",
+          "null_frac": 0.165558025240898,
+          "n_distinct": -0.432783126831055,
+          "avg_width": 93,
+          "typname": "_text"
+        },
+        {
+          "attname": "sources",
+          "null_frac": 0,
+          "n_distinct": -0.711012542247772,
+          "avg_width": 352,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "target_beneficiaries",
+          "null_frac": 0.101174347102642,
+          "n_distinct": -0.155292764306068,
+          "avg_width": 59,
+          "typname": "_text"
+        },
+        {
+          "attname": "website",
+          "null_frac": 0.592838943004608,
+          "n_distinct": -0.387369632720947,
+          "avg_width": 83,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "source_frontier",
+      "reltuples": 57253,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "metadata",
+          "null_frac": 0,
+          "n_distinct": -0.754021644592285,
+          "avg_width": 201,
+          "typname": "jsonb"
+        },
+        {
+          "attname": "source_name",
+          "null_frac": 0,
+          "n_distinct": -0.70111608505249,
+          "avg_width": 46,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "sprint_suggestions",
+      "reltuples": 573,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "title",
+          "null_frac": 0,
+          "n_distinct": -0.762652695178986,
+          "avg_width": 65,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "stg_ratio_winners",
+      "reltuples": 15353,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "stg_straddler_refill",
+      "reltuples": 693,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "supporter_comms_summary",
+      "reltuples": 1169,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "last_touch_snippet",
+          "null_frac": 0,
+          "n_distinct": -0.701454222202301,
+          "avg_width": 174,
+          "typname": "text"
+        },
+        {
+          "attname": "last_touch_subject",
+          "null_frac": 0,
+          "n_distinct": -0.965782701969147,
+          "avg_width": 48,
+          "typname": "text"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "tracker_site_snapshots",
+      "reltuples": 774,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "webhook_delivery_log",
+      "reltuples": 23396,
+      "targets": [],
+      "sources": [
+        {
+          "attname": "raw_body",
+          "null_frac": 0.5,
+          "n_distinct": -0.364111512899399,
+          "avg_width": 956,
+          "typname": "jsonb"
+        }
+      ],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "xero_contacts",
+      "reltuples": 1416,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    },
+    {
+      "tablename": "xero_sync_log",
+      "reltuples": 554,
+      "targets": [],
+      "sources": [],
+      "large": [],
+      "needsScoping": true,
+      "estUnknownRows": 0,
+      "estCostUsd": 0,
+      "strong": []
+    }
+  ]
+}
