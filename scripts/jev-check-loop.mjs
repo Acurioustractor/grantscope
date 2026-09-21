@@ -64,6 +64,49 @@ const MIN_CONFIDENCE = 0.9
  */
 const AUDITS = {
   /**
+   * Adjudicate the rows where the youth-justice TOPIC TAG and the
+   * serves_youth_justice FLAG disagree outright (flag = false, tag present).
+   *
+   * 94 rows. Not the 248 first reported: that query said `IS NOT TRUE`, which
+   * folds NULL in with false. 154 of the 248 have a NULL flag, meaning nobody
+   * ever assessed them — an abstention, not a contradiction. Conflating the two
+   * was the same mistake this whole body of work exists to catch, made in the
+   * guard written to catch it.
+   *
+   * Why a second signal is required before anything is deleted: 85 of the 94
+   * have "youth" in the name without "justice" ("Youth Worship Service (Sunday
+   * 3rd Service)", "Pursue Youth Camp"), so a name-keyword rule would strip
+   * those tags correctly. But the same rule keeps "Climate Justice" and
+   * "Migration Justice" from the Human Rights Law Centre, which match "justice"
+   * and are not youth justice, and it would strip "Department of Children,
+   * Youth Justice and Multicultural Affairs", where the FLAG is what looks
+   * wrong. One keyword is how these tags got written. It is not how they get
+   * removed.
+   */
+  alma_yj_tag_dispute: {
+    table: 'alma_interventions',
+    id: 'id',
+    textCols: ['name', 'description', 'operating_organization'],
+    impliedLabel: 'youth_justice',
+    minChars: 20,
+    where: [['eq', 'serves_youth_justice', false]],
+    rawFilter: "topics @> ARRAY['youth-justice']::text[]",
+    question: {
+      instructions:
+        'This is an Australian programme, service or organisation. Decide whether it works with ' +
+        'young people involved with, or at risk of involvement with, the criminal justice system: ' +
+        'youth justice, youth diversion, youth crime prevention or reoffending. Judge only from the text.',
+      notStated: 'The text does not say enough to tell.',
+    },
+    buckets: {
+      youth_justice: ['youth_justice', 'work with young people in or at risk of the criminal justice system'],
+      youth_other: ['youth_other', 'work with young people, but not about justice, offending or crime prevention'],
+      justice_other: ['justice_other', 'justice, legal or rights work, but not about young people'],
+      neither: ['neither', 'neither youth work nor justice work'],
+    },
+  },
+
+  /**
    * A VALIDITY audit. There is no label column here: the claim being checked is
    * membership in the table itself. Every row of alma_interventions asserts "I
    * am a youth justice or community support programme", and that assertion is
@@ -347,6 +390,8 @@ async function run() {
       .not(textCols(audit)[0], 'is', null)
       .limit(perLabel * (audit.impliedLabel ? 4 : 20))
     if (label !== null) q = q.eq(audit.label, label)
+    for (const [op, col, val] of audit.where ?? []) q = q[op](col, val)
+    if (audit.rawFilter) q = q.filter('topics', 'cs', '{youth-justice}')
     const { data, error } = await q
     if (error) throw new Error(`fetch ${label ?? 'all'}: ${error.message}`)
     // Dedup by text: the same wording repeats across awards of one programme,

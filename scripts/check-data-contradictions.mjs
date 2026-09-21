@@ -49,11 +49,40 @@ const CHECKS = [
      *
      * Full reasoning: thoughts/shared/findings/alma-interventions-off-domain-2026-09-21.md
      */
+    /**
+     * `= false`, NOT `IS NOT TRUE`.
+     *
+     * The first version of this check used IS NOT TRUE and counted 248. That
+     * folds NULL in with false, and 154 of those rows have a NULL flag: nobody
+     * ever assessed them. Unassessed is an abstention, not a contradiction, and
+     * treating the two as one overstated the defect by a factor of two and a
+     * half. That is precisely the mistake this file exists to catch, made
+     * inside it.
+     *
+     * The unassessed rows are counted separately below, as a backlog.
+     */
     sql: `SELECT count(*)::int AS n FROM alma_interventions
-           WHERE serves_youth_justice IS NOT TRUE
+           WHERE serves_youth_justice = false
              AND topics @> ARRAY['youth-justice']::text[]`,
     why: 'a keyword tagger matched "youth" and wrote the youth-justice topic onto rows the table itself marks as not youth justice',
     owner: 'unknown — no writer in this repo assigns these tags; provenance is template_generated and web_scraped, Jan 2026',
+  },
+  {
+    id: 'alma_youth_justice_tagged_but_unassessed',
+    title: 'alma_interventions: tagged youth-justice, but serves_youth_justice was never assessed',
+    /**
+     * A backlog, not a contradiction. These rows carry the tag and a NULL flag,
+     * so nothing has ever ruled on them either way. They are tracked because a
+     * RISE means new rows are arriving pre-tagged and unassessed, which is how
+     * the 64 stripped on 2026-09-21 got in.
+     *
+     * Do not "fix" these by setting the flag false. Nobody has looked.
+     */
+    sql: `SELECT count(*)::int AS n FROM alma_interventions
+           WHERE serves_youth_justice IS NULL
+             AND topics @> ARRAY['youth-justice']::text[]`,
+    why: 'rows carry a youth-justice tag that nobody has ever assessed; a rise means new rows arrive pre-tagged',
+    owner: 'same unidentified tagger',
   },
 ]
 

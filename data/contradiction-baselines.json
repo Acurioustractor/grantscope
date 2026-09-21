@@ -1,6 +1,10 @@
 {
   "alma_youth_justice_tag_vs_flag": {
-    "count": 248,
+    "count": 30,
+    "recorded_at": "2026-09-21"
+  },
+  "alma_youth_justice_tagged_but_unassessed": {
+    "count": 154,
     "recorded_at": "2026-09-21"
   }
 }
