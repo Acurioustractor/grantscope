@@ -62,6 +62,18 @@ const MIN_CONFIDENCE = 0.9
  * label is in the map are audited: a label the question cannot express would
  * produce a guaranteed disagreement that means nothing.
  */
+/** Shared by every audit that wants to know why its coverage is what it is. */
+const TEXT_QUALITY = {
+  instructions:
+    'Ignore what the text is about. Judge only whether there is enough here for a careful reader ' +
+    'to say what this record is.',
+  criteria: {
+    rich: 'Several sentences of real description that a reader could act on.',
+    thin: 'A name or a label and little else, so most questions about it could not be answered.',
+    boilerplate: 'Navigation, headings, page furniture or repeated template text rather than a description.',
+  },
+}
+
 const AUDITS = {
   /**
    * Adjudicate the rows where the youth-justice TOPIC TAG and the
@@ -137,6 +149,7 @@ const AUDITS = {
         'support PROGRAMME operating in Australia. Decide what it actually is. Judge only from the text.',
       notStated: 'The text is too thin to tell what it is.',
     },
+    alongside: { text_quality: TEXT_QUALITY },
     buckets: {
       real_programme: ['real_programme', 'a specific programme, service or initiative that someone can take part in or be referred to'],
       web_page: ['web_page', 'website navigation, an agency overview, a report, a statistics page or page furniture rather than a programme'],
@@ -223,13 +236,37 @@ const arg = (f, d) => {
 const LIMIT = Number(arg('--limit', 300))
 const AUDIT = arg('--audit', null)
 
-function buildQuestion(audit) {
+/**
+ * Build the batch.
+ *
+ * The API takes several questions over one state and answers them together, and
+ * this loop was asking one per call. That is a straight waste of the evidence
+ * already assembled and paid for.
+ *
+ * The rule for what may share a batch is the dependency test: **could you write
+ * this question using only the original state?** If a question needs another
+ * question's answer, it belongs in a later call, not this one. Nothing here
+ * reads another answer.
+ *
+ * `audit.alongside` holds the extra judgments. They do not change the verdict;
+ * they explain it. `text_quality` is the one that earns its place: a run can
+ * come back at 18% confident coverage and, on its own, that number cannot tell
+ * you whether the text was too thin or the question was wrong. Asked in the same
+ * call for no extra evidence-gathering, it separates the two.
+ */
+function buildQuestions(audit) {
   const criteria = {}
   for (const [, [key, desc]] of Object.entries(audit.buckets)) {
     criteria[key] = `The text describes ${desc}.`
   }
   criteria.not_stated = audit.question.notStated
-  return { verdict: { type: 'choice', instructions: audit.question.instructions, criteria } }
+  const questions = {
+    verdict: { type: 'choice', instructions: audit.question.instructions, criteria },
+  }
+  for (const [id, q] of Object.entries(audit.alongside ?? {})) {
+    questions[id] = { type: 'choice', instructions: q.instructions, criteria: q.criteria }
+  }
+  return questions
 }
 
 async function ask(text, questions, attempt = 0) {
@@ -299,6 +336,52 @@ function report(name, audit, rows) {
     L.push('To make this audit conclusive, give it better text or a question the text can answer.')
     L.push('')
   }
+  // Why the coverage is what it is. Asked in the same call, so it costs no
+  // extra evidence-gathering, and it separates "the text is too thin" from
+  // "the question is wrong" — which a coverage percentage alone cannot do.
+  const withQuality = rows.filter((r) => r.alongside?.text_quality?.answer)
+  if (withQuality.length) {
+    L.push('## Was the text able to answer at all?')
+    L.push('')
+    L.push('Asked in the same call as the verdict, over the same state. A low confident coverage means')
+    L.push('one of two very different things, and this separates them.')
+    L.push('')
+    L.push('| text quality | rows | reached >= ' + MIN_CONFIDENCE + ' |')
+    L.push('|---|---|---|')
+    for (const q of ['rich', 'thin', 'boilerplate']) {
+      const mine = withQuality.filter((r) => r.alongside.text_quality.answer === q)
+      if (!mine.length) continue
+      const conf = mine.filter((r) => (r.confidence ?? 0) >= MIN_CONFIDENCE)
+      L.push(`| \`${q}\` | ${mine.length} | ${pc(conf.length, mine.length)} |`)
+    }
+    L.push('')
+    // Read the direction off the data. The first version of this asserted that
+    // thin text means low coverage, and the first run contradicted it: thin rows
+    // reached the threshold MORE often than rich ones, because a name like
+    // "Youth Worship Service" settles the question on its own while several
+    // sentences of real description can be genuinely ambiguous. An
+    // interpretation printed without checking its own direction is the failure
+    // this whole script exists to catch.
+    const rate = (q) => {
+      const mine = withQuality.filter((r) => r.alongside.text_quality.answer === q)
+      if (mine.length < 5) return null
+      return mine.filter((r) => (r.confidence ?? 0) >= MIN_CONFIDENCE).length / mine.length
+    }
+    const rich = rate('rich')
+    const poor = rate('thin')
+    if (rich !== null && poor !== null && Math.abs(rich - poor) >= 0.15) {
+      L.push(
+        poor < rich
+          ? '**Thin text is where the confidence is lost.** Low coverage here is a statement about the records, not the question: better text, or a different question.'
+          : '**Thin text is NOT what is costing coverage here** — short records reached the threshold more often than detailed ones. A bare name can settle a question that several sentences leave open, so low coverage points at the question, not the records.',
+      )
+      L.push('')
+    } else {
+      L.push('_Too few rows in one band, or too small a gap between bands, to say which way this runs._')
+      L.push('')
+    }
+  }
+
   L.push('## Disagreement patterns')
   L.push('')
   if (!ranked.length) {
@@ -371,7 +454,7 @@ async function run() {
   if (!process.env.JEV_API_KEY) throw new Error('JEV_API_KEY missing from env')
 
   const audit = AUDITS[AUDIT]
-  const questions = buildQuestion(audit)
+  const questions = buildQuestions(audit)
   const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
   const OUT = `data/jev-check/${AUDIT}.jsonl`
@@ -423,6 +506,11 @@ async function run() {
         try {
           const out = await ask(row.text, questions)
           const a = out?.answers?.verdict ?? {}
+          const alongside = {}
+          for (const id of Object.keys(audit.alongside ?? {})) {
+            const ans = out?.answers?.[id]
+            if (ans) alongside[id] = { answer: ans.choice ?? null, confidence: ans.confidence ?? null }
+          }
           appendFileSync(
             OUT,
             JSON.stringify({
@@ -430,6 +518,7 @@ async function run() {
               expected: row.expected,
               answer: a.choice ?? null,
               confidence: a.confidence ?? null,
+              alongside,
               text: row.text.slice(0, 300),
             }) + '\n',
           )
