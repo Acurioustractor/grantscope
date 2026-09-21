@@ -21,7 +21,7 @@ import { createClient } from '@supabase/supabase-js';
 import { spawnSync } from 'node:child_process';
 import { resolveBin, withRetry } from './lib/agent-resilience.mjs';
 import { edgeDataset, JUSTICE_PROGRAM_ENSURE_SQL, JUSTICE_BUILD_GUARD } from './lib/graph-edge-datasets.mjs';
-import { makeGsId } from './lib/gs-id.mjs';
+import { makeGsId, isValidAbn } from './lib/gs-id.mjs';
 import 'dotenv/config';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -187,6 +187,14 @@ async function buildRelationshipsSetBased(label, cols, selectSql, prelude = '') 
 
 // makeGsId now lives in ./lib/gs-id.mjs — see #324 for why it had to be validated and shared.
 
+// An ABN that is present but fails the checksum (ACNC group placeholders such as 91111111272)
+// made makeGsId throw and killed every build from 2026-09-18 on. Skip the row, and say so.
+function validAbn(abn, source) {
+  if (isValidAbn(abn)) return true;
+  if (abn) log(`  skipped ${source} row: ABN ${abn} fails the checksum`);
+  return false;
+}
+
 
 // ─── Phase 1: Build entity registry ──────────────────────────────────────────
 
@@ -207,7 +215,7 @@ async function buildEntities() {
     if (!charities?.length) break;
 
     const entities = charities
-      .filter(c => c.abn)
+      .filter(c => validAbn(c.abn, 'acnc'))
       .map(c => ({
         entity_type: c.is_foundation ? 'foundation' : 'charity',
         canonical_name: c.name,
@@ -241,7 +249,7 @@ async function buildEntities() {
     if (!dryRun) {
       // Batch: build upsert array with foundation-enriched data
       const updates = foundations
-        .filter(f => f.acnc_abn)
+        .filter(f => validAbn(f.acnc_abn, 'foundations'))
         .map(f => ({
           gs_id: makeGsId({ abn: f.acnc_abn }),
           canonical_name: f.name,
@@ -530,7 +538,7 @@ async function buildEntities() {
     if (!donors?.length) break;
 
     if (!dryRun) {
-      const donorEntities = donors.map(d => ({
+      const donorEntities = donors.filter(d => validAbn(d.matched_abn, 'donors')).map(d => ({
         entity_type: d.matched_entity_type === 'acnc' ? 'charity' : 'company',
         canonical_name: d.donor_name,
         abn: d.matched_abn,
@@ -566,7 +574,7 @@ async function buildEntities() {
     // Deduplicate by ABN (keep latest year)
     const byAbn = new Map();
     for (const t of taxRecords) {
-      if (!byAbn.has(t.abn)) byAbn.set(t.abn, t);
+      if (validAbn(t.abn, 'ato') && !byAbn.has(t.abn)) byAbn.set(t.abn, t);
     }
 
     if (!dryRun) {
@@ -627,7 +635,7 @@ async function buildEntities() {
   log('  Loading ASX companies...');
   const asxCompanies = await selectJsonRows('asx companies',
     `SELECT asx_code, company_name, abn, gics_industry_group FROM asx_companies`);
-  const asxWithAbn = asxCompanies.filter(c => c.abn);
+  const asxWithAbn = asxCompanies.filter(c => validAbn(c.abn, 'asx'));
 
   if (!dryRun && asxWithAbn.length) {
     const asxEntities = asxWithAbn
@@ -665,7 +673,7 @@ async function buildEntities() {
     if (!ses?.length) break;
 
     if (!dryRun) {
-      const seEntities = ses.map(s => ({
+      const seEntities = ses.filter(s => validAbn(s.abn, 'social_enterprises')).map(s => ({
         entity_type: 'social_enterprise',
         canonical_name: s.name,
         abn: s.abn,
@@ -705,7 +713,7 @@ async function buildEntities() {
     // every run. Re-processing all 104K with a per-row SELECT + UPDATE was the
     // N+1 loop (~208K sequential round-trips) that ran this stage past the
     // orchestrator's wall-clock timeout.
-    const unlinked = jhOrgs.filter(o => !o.gs_entity_id);
+    const unlinked = jhOrgs.filter(o => !o.gs_entity_id && validAbn(o.abn, 'justicehub'));
     if (!dryRun && unlinked.length) {
       const jhEntities = unlinked.map(o => ({
         entity_type: o.type === 'government' ? 'government_body' : (o.type === 'indigenous' ? 'indigenous_corp' : 'charity'),
