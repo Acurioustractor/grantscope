@@ -22,6 +22,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { buildEligibilityUpdate } from './lib/grant-eligibility-verdict.mjs';
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 
@@ -170,7 +171,7 @@ async function main() {
   const ctx = await browser.newContext({ locale: 'en-AU', viewport: { width: 1280, height: 900 }, userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36' });
   await ctx.addInitScript(() => { Object.defineProperty(navigator, 'webdriver', { get: () => undefined }); });
 
-  const stats = { ok: 0, blocked: 0, empty: 0, cached: 0, dgr: 0 };
+  const stats = { ok: 0, blocked: 0, empty: 0, cached: 0, dgr: 0, refused: 0 };
   for (const g of todo) {
     let rec = cache.get(g.id);
     if (!rec) {
@@ -189,21 +190,23 @@ async function main() {
     log(`✓ ${g.name.slice(0, 48)} | dgr=${v.dgr_required} charity=${v.accepts_charity} pty=${v.accepts_pty_ltd} sole=${v.accepts_sole_trader} conf=${v.confidence}`);
 
     if (APPLY) {
-      const { error: uerr } = await supabase.from('grant_opportunities').update({
-        dgr_required: v.dgr_required,
-        accepts_charity: v.accepts_charity,
-        accepts_pty_ltd: v.accepts_pty_ltd,
-        accepts_sole_trader: v.accepts_sole_trader,
-        accepts_unincorporated: v.accepts_unincorporated,
-        eligibility_signals_at: new Date().toISOString(),
-      }).eq('id', g.id);
+      // The five flags are only written at or above a measured confidence
+      // floor. Below it they stay null, which already means "the page did not
+      // say" -- the honest reading of a verdict we do not trust. See
+      // scripts/lib/grant-eligibility-verdict.mjs.
+      const { update, accepted, suppressed } = buildEligibilityUpdate(v, v.provider, new Date().toISOString());
+      if (!accepted) {
+        stats.refused++;
+        if (suppressed > 0) log(`  refused ${suppressed} flag(s) at confidence ${v.confidence ?? 'none'}: ${g.name.slice(0, 45)}`);
+      }
+      const { error: uerr } = await supabase.from('grant_opportunities').update(update).eq('id', g.id);
       if (uerr) log(`  DB update failed: ${uerr.message}`);
     }
     await sleep(400);
   }
 
   await browser.close();
-  log(`done — ok=${stats.ok} (cached=${stats.cached}) dgr_required=${stats.dgr} blocked=${stats.blocked} empty=${stats.empty}`);
+  log(`done — ok=${stats.ok} (cached=${stats.cached}) dgr_required=${stats.dgr} refused-below-floor=${stats.refused} blocked=${stats.blocked} empty=${stats.empty}`);
   if (!APPLY) log('dry-run — no DB writes. Re-run with --apply to persist (verdicts are cached, so this is cheap).');
 }
 
