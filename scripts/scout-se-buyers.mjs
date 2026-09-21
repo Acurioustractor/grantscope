@@ -60,7 +60,9 @@ CREATE TABLE IF NOT EXISTS se_buyer_prospects (
   certified_supplier_count int,
   example_suppliers jsonb,
   states jsonb,
-  computed_at timestamptz DEFAULT now()
+  computed_at timestamptz DEFAULT now(),
+  gs_entity_id uuid,
+  link_method text CHECK (link_method IN ('graph_edge', 'unique_name'))
 );
 
 TRUNCATE se_buyer_prospects;
@@ -83,6 +85,11 @@ FROM austender_contracts ac
 JOIN _se_abns se ON se.abn = ac.supplier_abn
 WHERE ac.buyer_name IS NOT NULL
 GROUP BY ac.buyer_name;
+
+-- Key each buyer into gs_entities. Defined once in
+-- supabase/migrations/20260922090000_key_buyer_prospects_and_funders.sql,
+-- because TRUNCATE above wipes whatever a backfill wrote.
+SELECT link_se_buyer_prospects();
 `;
 
 const RANK_SQL = `
