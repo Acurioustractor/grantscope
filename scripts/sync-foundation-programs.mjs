@@ -191,8 +191,10 @@ function buildGrantPayload(program, foundation) {
     description: program.description,
     amount_min: program.amount_min ? Number(program.amount_min) : null,
     amount_max: program.amount_max ? Number(program.amount_max) : null,
-    deadline: program.deadline,
-    closes_at: program.deadline,
+    // Only an evidenced deadline reaches the desk. An unevidenced one becomes null,
+    // which renders as "no deadline known" rather than invented urgency.
+    deadline: evidencedDeadlineOf(program),
+    closes_at: evidencedDeadlineOf(program),
     url: baseUrl ? `${baseUrl.split('#')[0]}#${programSlug(program.name)}` : null,
     // Carry the funder's geography so state-filtered searches ("queensland ...")
     // surface these programs; previously left null, so geo queries missed them.
@@ -507,6 +509,12 @@ async function runGrantEmbeddingBackfill(grantIds) {
   }
 }
 
+/** The deadline, but only when the extractor quoted the page for it. */
+export function evidencedDeadlineOf(program) {
+  if (!program?.deadline) return null;
+  return program.metadata?.deadline_evidence ? program.deadline : null;
+}
+
 function hasPastDeadline(deadline) {
   if (!deadline) return false;
   const parsed = new Date(deadline);
@@ -516,13 +524,41 @@ function hasPastDeadline(deadline) {
   return parsed < today;
 }
 
-function isGrantLikeFoundationProgram(program, foundation) {
+/**
+ * Is this foundation programme something an organisation could actually apply to?
+ *
+ * Exported for testing. Two fixes went in 2026-09-21 after 22 rows with invented
+ * deadlines were traced back through here:
+ *
+ * 1. A DEADLINE ALONE NO LONGER PROVES GRANT-HOOD. `hasStructuredGrantSignal`
+ *    counted any deadline, and discover-foundation-programs.mjs was filling that
+ *    column with LLM guesses. The circularity is the whole bug: the model invented
+ *    a date, the date satisfied the grant test, and a church mission trip to
+ *    Malaysia and "Lions Biggest BBQ" became grant opportunities. A deadline now
+ *    only counts when metadata.deadline_evidence carries a quote from the page.
+ *    Legacy rows have no metadata, so their dates stop counting — which is the
+ *    intent, since those are exactly the unverified ones.
+ *
+ * 2. APPLICANT TYPE IS RESPECTED. Rows the extractor marked `individual` (a
+ *    scholarship or prize to a person) or `not_an_application` (a fundraising
+ *    event, or a way to DONATE to the foundation) are never grant-like, whatever
+ *    the language on the page looks like. "Family Scholarship Donation" and
+ *    "Corporate Scholarship Partnership" both read as grant language and are both
+ *    ways of giving the foundation money.
+ */
+export function isGrantLikeFoundationProgram(program, foundation) {
   const text = `${program.name || ''} ${program.description || ''} ${program.eligibility || ''} ${program.application_process || ''}`;
   const url = String(program.url || foundation.website || '').toLowerCase();
   const foundationType = String(foundation.type || '').toLowerCase();
+  const meta = program.metadata || {};
+
+  // Hard exclusions from the extractor, ahead of every other signal.
+  if (meta.applicant_type === 'individual' || meta.applicant_type === 'not_an_application') return false;
+
   const hasGrantLanguage = PUBLIC_GRANT_SIGNALS.test(text);
   const hasGrantUrl = URL_GRANT_SIGNALS.test(url);
-  const hasStructuredGrantSignal = Boolean(program.amount_min || program.amount_max || program.deadline);
+  const evidencedDeadline = Boolean(program.deadline && meta.deadline_evidence);
+  const hasStructuredGrantSignal = Boolean(program.amount_min || program.amount_max || evidencedDeadline);
   const looksLikeNonGrant = NON_GRANT_SIGNALS.test(text) || DIRECT_SERVICE_SIGNALS.test(text);
   const trustedFoundationType = ['private_ancillary_fund', 'public_ancillary_fund', 'trust', 'corporate_foundation', 'grantmaker'].includes(foundationType);
 
@@ -579,7 +615,7 @@ async function main() {
             .select(`
               id, name, url, description, amount_min, amount_max, deadline,
               status, categories, eligibility, application_process, program_type,
-              scraped_at, created_at,
+              metadata, scraped_at, created_at,
               foundations!inner(id, name, type, website, thematic_focus, geographic_focus)
             `)
             .in('foundation_id', foundationBatch)
@@ -595,7 +631,7 @@ async function main() {
           .select(`
             id, name, url, description, amount_min, amount_max, deadline,
             status, categories, eligibility, application_process, program_type,
-            scraped_at, created_at,
+            metadata, scraped_at, created_at,
             foundations!inner(id, name, type, website, thematic_focus, geographic_focus)
           `)
           .order('created_at', { ascending: false })
@@ -946,7 +982,16 @@ async function main() {
   }
 }
 
-main().catch(err => {
-  console.error('Fatal error:', err);
-  process.exit(1);
-});
+// Only run when invoked directly. Without this guard, importing anything from
+// this file — which a unit test for the promotion gate has to do — executes a
+// LIVE sync against grant_opportunities, because DRY_RUN defaults to false.
+// That happened on 2026-09-21: importing isGrantLikeFoundationProgram for a test
+// kicked off a full 4,609-programme sync. No data was lost (--cleanup-invalid was
+// off, and the new gate correctly wrote NULL rather than restoring invented
+// deadlines), but a scheduled job ran unplanned off the back of an import.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch(err => {
+    console.error('Fatal error:', err);
+    process.exit(1);
+  });
+}

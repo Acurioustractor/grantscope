@@ -910,7 +910,11 @@ For EACH program found, extract:
 - description: 1-2 sentences about what it funds and who can apply
 - amount_min: Minimum grant amount in AUD (number or null)
 - amount_max: Maximum grant amount in AUD (number or null)
-- deadline: Next deadline as YYYY-MM-DD (or null if ongoing/unknown)
+- deadline: Next deadline as YYYY-MM-DD, ONLY if the page states one. Otherwise null.
+- deadline_evidence: The exact sentence from the page that states that deadline, copied word for word. If you cannot copy such a sentence, set BOTH deadline and deadline_evidence to null. Never infer a deadline from a financial year, a funding round name, or a pattern of past rounds.
+- round_status: One of "open", "closed", "unknown" — whether applications are being accepted RIGHT NOW
+- round_status_evidence: The exact sentence stating that, copied word for word, or null
+- applicant_type: One of "organisation" (an incorporated body could apply to deliver a project), "individual" (a scholarship, fellowship, bursary or prize awarded to a person), "not_an_application" (a fundraising event, a way to DONATE to the foundation, a service they deliver themselves, or a trip/activity they run)
 - type: One of "grant", "fellowship", "scholarship", "award", "program"
 - categories: Array from [arts, indigenous, health, education, community, environment, enterprise, research, justice, sport, technology, disability, youth, aged_care]
 
@@ -918,8 +922,9 @@ Return a JSON array of programs. If NO programs are found, return an empty array
 
 IMPORTANT RULES:
 - Only include programs this foundation actually runs or funds — not programs they received funding from
-- Include programs even if applications are currently closed — they may reopen
-- Include ongoing/rolling programs without fixed deadlines
+- Include programs even if applications are currently closed — they may reopen, but set round_status "closed"
+- Include ongoing/rolling programs without fixed deadlines — deadline null is a CORRECT answer and is far better than a guess
+- A deadline you cannot quote from the page is a wrong answer. "null" is right when the page does not say.
 - Be specific with amounts — "$50,000" not "varies"
 - Include both competitive grants AND named fellowships/scholarships
 - Return ONLY valid JSON array, no other text`;
@@ -967,6 +972,29 @@ IMPORTANT RULES:
     // Insert into foundation_programs
     let inserted = 0;
     for (const prog of programs) {
+      // A quote has to look like a sentence, not a restatement of the date. Short
+      // strings ("2026-06-30", "June") are the shape the model produces when it is
+      // manufacturing evidence for a value it already guessed.
+      const MIN_QUOTE = 15;
+      const quote = (v) => (typeof v === 'string' && v.trim().length >= MIN_QUOTE ? v.trim().slice(0, 500) : null);
+
+      const rawDeadline = typeof prog.deadline === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(prog.deadline)
+        ? prog.deadline
+        : null;
+      const deadlineEvidence = quote(prog.deadline_evidence);
+      const acceptedDeadline = rawDeadline && deadlineEvidence ? rawDeadline : null;
+      // Keep what we threw away, so the damage of this gate is measurable later.
+      const rejectedDeadline = rawDeadline && !deadlineEvidence ? rawDeadline : null;
+
+      const roundStatus = ['open', 'closed', 'unknown'].includes(prog.round_status) ? prog.round_status : 'unknown';
+      const applicantType = ['organisation', 'individual', 'not_an_application'].includes(prog.applicant_type)
+        ? prog.applicant_type
+        : 'unknown';
+
+      const programStatus = (acceptedDeadline && new Date(acceptedDeadline) < new Date()) || roundStatus === 'closed'
+        ? 'closed'
+        : roundStatus === 'open' ? 'open' : 'unknown';
+
       const record = {
         foundation_id: foundation.id,
         name: prog.name.slice(0, 500),
@@ -974,13 +1002,30 @@ IMPORTANT RULES:
         description: typeof prog.description === 'string' ? prog.description.slice(0, 2000) : null,
         amount_min: typeof prog.amount_min === 'number' ? prog.amount_min : null,
         amount_max: typeof prog.amount_max === 'number' ? prog.amount_max : null,
-        deadline: typeof prog.deadline === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(prog.deadline) ? prog.deadline : null,
-        status: typeof prog.deadline === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(prog.deadline) && new Date(prog.deadline) < new Date()
-          ? 'closed'
-          : 'open',
+        // A deadline is only accepted with a quote from the page behind it. Without
+        // this gate the model returned plausible month-end dates instead of null:
+        // on 2026-09-21, 50 different funders shared 2026-06-30 and Annamila's three
+        // streams all carried 2026-09-30 while their site said "grant rounds are
+        // currently closed until further notice". Those invented dates then satisfied
+        // hasStructuredGrantSignal in sync-foundation-programs.mjs, which is how a
+        // church mission trip and "Lions Biggest BBQ" became grant opportunities.
+        deadline: acceptedDeadline,
+        // 'open' used to be the default for anything without a past deadline, so a
+        // paused funder read as open forever. Unknown is now its own answer.
+        status: programStatus,
         categories: Array.isArray(prog.categories) ? prog.categories : [],
         program_type: typeof prog.type === 'string' ? prog.type : null,
         scraped_at: scannedAt,
+        metadata: {
+          // Kept so a later pass can audit WHY a deadline was or was not accepted,
+          // and so sync can refuse to treat an unevidenced date as a grant signal.
+          deadline_evidence: quote(prog.deadline_evidence),
+          deadline_rejected: rejectedDeadline,
+          round_status: roundStatus,
+          round_status_evidence: quote(prog.round_status_evidence),
+          applicant_type: applicantType,
+          extraction_version: 2,
+        },
       };
 
       const { error: insertError } = await supabase
@@ -1116,9 +1161,13 @@ async function main() {
   log(`Run scripts/sync-foundation-programs.mjs to sync new programs to grants search.`);
 }
 
-main().catch(err => {
-  console.error('Fatal error:', err);
-  const message = err instanceof Error ? err.message : String(err);
-  logFailed(supabase, currentRunId, message).catch(() => {});
-  process.exit(1);
-});
+// Guarded for the same reason as sync-foundation-programs.mjs: importing this
+// file (for a test, or from another script) must not kick off a live discovery run.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch(err => {
+    console.error('Fatal error:', err);
+    const message = err instanceof Error ? err.message : String(err);
+    logFailed(supabase, currentRunId, message).catch(() => {});
+    process.exit(1);
+  });
+}
