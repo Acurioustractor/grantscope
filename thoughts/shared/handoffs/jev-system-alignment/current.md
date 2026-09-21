@@ -1,7 +1,7 @@
 ---
-date: 2026-09-21T20:45:00Z
+date: 2026-09-21T23:30:00Z
 session_name: jev-system-alignment
-branch: fix/knowledge-embedding-dims
+branch: main
 status: active
 ---
 
@@ -9,68 +9,76 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-09-21T20:45:00Z
-**Goal:** Finish the half of Ben's original ask the abstention sessions never reached (graph/recall), then audit the whole workspace for where JEV would help. **Both done. Three repos touched, one merge, three PRs open.**
-**Branch:** grantscope `fix/knowledge-embedding-dims` · JusticeHub `fix/acquittal-report-grounding` (worktree) · empathy-ledger `fix/cultural-sensitivity-fail-open` (worktree)
-**Test:** `bash scripts/precheck.sh` (grantscope) · `npx jest src/__tests__/lib/acquittal-grounding.test.ts` (JusticeHub) · `npx vitest run src/lib/ai` (empathy-ledger)
+**Updated:** 2026-09-21T23:30:00Z
+**Goal:** Point a typed classifier at everything the database holds: catalogue where it could help, measure whether its confidence is real, then use it to find data that lies. **Done and merged.** Three repair PRs in other repos still await Ben.
+**Branch:** grantscope `main` (PRs #466 #468 #469 merged) · JusticeHub + empathy-ledger worktrees still on disk
+**Test:** `bash scripts/precheck.sh` · `node --env-file=.env scripts/check-data-contradictions.mjs` · `node --env-file=.env scripts/check-migration-parity.mjs`
 
 ### Now
-[->] Three PRs open across three repos, all green, all waiting on Ben's eyes. Nothing in flight.
+[->] Nothing in flight in grantscope. Three PRs in other repos waiting on Ben's eyes.
 
 ### This Session
-- [x] **grantscope: org knowledge search was dead from the day it shipped. FIXED, PR #467.** `knowledge_chunks.embedding` is `vector(384)` on all 19,413 rows; `/api/chat` sent the 1536 default; pgvector raised `different vector dimensions 384 and 1536` on every request and the error was destructured away. Writer is act-global's `embed-communications.mjs` using the SAME model (`text-embedding-3-small`) at `dimensions: 384`, so it is the same Matryoshka space and **no re-embedding was needed** — only the query width was wrong. Verified live: 1536 errors, 384 returns 5 chunks at 0.530.
-- [x] **grantscope: the provenance layer is stillborn.** `knowledge_sources` has 12 rows, **0 with a `source_url`, 0 with `verified_at`**; `current_knowledge` has 1 row; nothing in grantscope writes either. `mv_search_index` has no provenance column (`href` is an internal route). So it is not that citations are unverified — **there are effectively none**.
-- [x] **Workspace JEV audit, 10 active repos, 3 parallel read-only agents. MERGED `bb4368e1`** → `thoughts/shared/findings/jev-workspace-audit-2026-09-21.md`.
-- [x] **JusticeHub: grant acquittal had no grounding check. FIXED, PR #485.** Generated a funder-facing acquittal for a grassroots Indigenous org — sessions, participants, dollars — and returned the model's text raw. New `acquittal-grounding.ts` compares every number in the prose against the figures we handed over; flags computed percentages on purpose; checks `stop_reason`; renders the warning above the draft. 13 tests.
-- [x] **empathy-ledger: two cultural-safety fail-opens. FIXED, PR #662.** (a) A missing analysis row defaulted to `'low'`, so an unassessed transcript could publish itself (readiness `approved` writes `story_drafts.status`). (b) `computeReadinessScore` tested only for `'high'`, so **SACRED fell through and scored higher than HIGH**. Plus five defaults across two vocabularies, incl. the persistence layer writing `'standard'` (kinship/tags enum, not this one) which the cultural flag never matches. All five now route through `cultural-sensitivity-level.ts`.
+- [x] **grantscope #467 (OPEN, waiting on Ben):** org knowledge search was dead since it shipped. `knowledge_chunks.embedding` is vector(384), `/api/chat` sent 1536, pgvector errored every request and the error was destructured away. Same model both sides (`text-embedding-3-small` at `dimensions:384`), so **no re-embedding needed**. Verified live.
+- [x] **JEV workspace audit, 10 active repos, MERGED `bb4368e1`.** Every candidate has one shape: a chat model asked for JSON, regex-sliced back out, only an enum and a number used.
+- [x] **JusticeHub #485 (OPEN):** grant acquittal for a grassroots Indigenous org returned the model's prose RAW. Added an arithmetic-in-code grounding check. Prompt demanded 6 sections; the data supports 4.
+- [x] **empathy-ledger #662 (OPEN):** two cultural-safety fail-opens. Missing analysis defaulted to `'low'` so an unassessed transcript could publish itself; `'sacred'` fell through the gate and scored HIGHER than `'high'`. Five defaults across two vocabularies now route through one module.
+- [x] **Whole-database catalogue, MERGED `494ed875`.** 1,135 prose-bearing columns, ~392M tokens, ~$16 to read every piece of free text once. 261 tables hold prose with NO typed column to fill — the larger half, which the first version missed entirely.
+- [x] **JSONB census.** 215 columns, 220 keys are enums in hiding (a migration, not a model), 58 hold prose.
+- [x] **Two migrations applied + a third:** jsonb expression indexes, the predicate fix, `philanthropic-grant` folded into `philanthropic` (20 rows, $1.749M, exactly reversible via `source`).
+- [x] **`gen-types.sh` works.** The blocker was Docker not running, not the pooler. `DATABASE_URL` in .env is stale: `db.<ref>.supabase.co` does not resolve, direct IPv4 is gone.
+- [x] **CALIBRATION ANSWERED.** Measured against 291,264 agency-assigned labels: **95% correct at >= 0.90**, which carries 86% of answers. Below 0.90 nothing is conclusive (n of 7, 5, 5).
+- [x] **Check loop + contradiction guard, both in CI.** Found 248 alma rows where `topics` says youth-justice and `serves_youth_justice` says otherwise.
 
 ### Next
-- [ ] **Merge the three PRs.** grantscope #467 (VISIBLE, needs Ben's preview), JusticeHub #485, empathy-ledger #662. All green.
-- [ ] **Clean up two worktrees** once merged: `~/Code/JusticeHub-acquittal`, `~/Code/el-failopen`. Tier 3.
-- [ ] **Grade `data/jev-pilot/adjudication-sheet-choice.csv`** — STILL the blocker. Every threshold in the audit is a made-up number until this is graded.
-- [ ] **Pilot JH-2**, JusticeHub's faithfulness judge: already a 3-option typed verdict, already behind `callBackgroundLLM()`, can only clamp confidence DOWN, deterministic cache key for replay. JH-6 (data-sufficiency scorer) is the easier demo — its 0-1 scale and both cut points already exist.
-- [ ] **EL-1**, the 856 unexamined articles, as a queue sorter that NEVER writes `no_human_subject_confirmed_by`.
-- [ ] **PR #463 (sidebar labels) is now 6+ days old.** Still unlooked-at.
-- [ ] Carried from last session: `parse-foundation-grants.mjs:79-95` mental-health→child-protection mis-tag; the `closes_at >= today OR deadline >= today` leak; orphan `foundation_programs` rows; "Epworth Research Grants" duplicate.
-- [ ] `requires_elder_review ?? false` in empathy-ledger has the same fabrication shape. Left alone deliberately — flipping it would hold every fallback-analysed transcript. Policy call.
+- [ ] **Merge the three open PRs:** grantscope #467 (VISIBLE, needs preview), JusticeHub #485, empathy-ledger #662. All green.
+- [ ] **Rule on the 248.** Which is authoritative, the topic tag or `serves_youth_justice`? Then correct the other. The published report path reads the TAG.
+- [ ] **Clean 131 alma rows with regex-detectable scraper artefacts** (URL in name, markdown, "Print this page"). Free, deterministic.
+- [ ] **Clean up two worktrees** once PRs land: `~/Code/JusticeHub-acquittal`, `~/Code/el-failopen`. Tier 3.
+- [ ] `grantconnect_awards.category` is a PROGRAMME label, not a topic. Find what reads it as a subject classifier.
+- [ ] **PR #463 (sidebar labels) is now 7+ days old.**
+- [ ] Carried: `parse-foundation-grants.mjs:79-95` mental-health→child-protection mis-tag; `closes_at >= today OR deadline >= today` leak; orphan `foundation_programs`; "Epworth Research Grants" duplicate.
+- [ ] empathy-ledger `requires_elder_review ?? false` has the same fabrication shape. Left deliberately; policy call.
 
 ### Decisions
-- **The thesis held a third time, across three repos.** Every bug this session was the system having an "I don't know" available and discarding it at the boundary: a pgvector error destructured into silence, model prose accepted as fact because nothing compared it to the rows, a missing analysis row read as `'low'`. **Not one was a model being wrong.**
-- **Match the dimension AND the model.** Same width is not enough — two different embedding models at the same width give plausible nonsense instead of an error, which is worse. Always find the writer first. grantscope has two deliberate families: **384** (knowledge_chunks, project_knowledge, memory_episodes, archival_memory, voice_notes, wiki_search_index) and **1536** (grants, foundations, gs_entities, alma_*, org_profiles, wiki_pages).
-- **A model is never the check on a model's numbers.** The acquittal check is arithmetic, in code. It flags an arithmetically-correct percentage on purpose: nothing in the data states it, and a funder cannot tell a measured figure from a computed one.
-- **Verify the guard against the OLD code.** 4 of 7 empathy-ledger tests fail pre-fix and pass after; the other 3 are controls proving the gate was not simply made to refuse everything. A guard that would also pass on the broken code is worthless.
-- **Bind tests to the real function, not a copy of it.** First version of the persistence test re-implemented the rule and would have kept passing while the service drifted. Extracted the rule into a module instead.
-- **`--no-verify` is not a fix.** empathy-ledger's pre-push hook wanted Supabase env; symlinked the gitignored `.env.local` rather than skipping a gate the repo means to run.
-- **Worktrees when the tree is dirty.** JusticeHub had 164 uncommitted files on an unrelated branch, empathy-ledger 12 on `main`. Neither was touched.
-- **Split SAFE from VISIBLE before pushing.** Batching the docs commit onto the code branch would have parked a docs-only change behind a preview for no reason.
+- **The thesis held across three repos.** Every bug was a system with an "I don't know" available, discarded at the boundary. Not one was a model being wrong.
+- **I produced SEVEN confident-but-wrong results today and each is now a guard.** A 1000-row PostgREST cap reading as "43 tables"; a filter offering join-derived columns as model work; a 60-option cap silently dropping the biggest field; a distinct-count threshold tested against a smaller sample; first-page sampling on a phase-written table; **a green post-check on an index the planner never used, which reached production**; "no separator exists" when `serves_youth_justice` was right there. **Scripts now refuse to be read past their evidence:** UNDERPOWERED below 40% coverage, "a pattern of three is noise", exit 2 on missing credentials.
+- **Verify the guard against the BROKEN state, not the passing one.** 4 of 7 empathy-ledger tests fail pre-fix; the contradiction guard exits 1 at baseline 247 and 0 at 248. A test that would also pass on the bug is decoration.
+- **Check the code path, not the object.** The index EXPLAIN was green because I wrote the index's own predicate back at it. Through the view it was a Seq Scan over 3M rows.
+- **Match the embedding MODEL, not just the width.** Two models at one width return plausible nonsense instead of an error. 384 family = ACT knowledge tables; 1536 = CivicGraph domain.
+- **Cardinality from a sample is a LOWER BOUND.** `original_role` read as 12 distinct on 200 rows; it is 999.
+- **A null is not a gap.** `gs_entities.sector` looks like 428,449 missing until you split by entity_type: 240,584 are people. Real gap 185,504 organisations.
+- **Enums in hiding are a migration, not a model.** Never pay a classifier to read what `->>` already knows.
+- **Report patterns, not rows.** 8 of 12 disagreements were one pair: the column's meaning, not 12 bad rows.
+- **Baselines, not zero.** A check red on the day it ships gets muted within a week.
 
 ### Open Questions
-- UNCONFIRMED: **is JEV's confidence calibrated on our data?** Unanswerable until the adjudication sheet is graded. Gates everything.
-- UNCONFIRMED: **does `/api/chat` scope=knowledge now work END TO END?** The query layer is proven against the live DB; the request path is NOT — it needs an authenticated user with an org, which cannot be produced locally. Ben is the first to see it work. If it still blanks, the fault is upstream in `getEffectiveOrgId` or the scope plumbing.
-- UNKNOWN: cost, call volume and latency for every incumbent LLM call in every repo. **No metering table exists anywhere.** The whole audit is code-reads, not traffic measurements.
-- UNVERIFIED: every §2-§5 claim in the audit doc is an agent code-read. Re-read the file before acting on any of it.
-- NOT INSPECTED: ~8.2GB of act-global (`archive/`, `ralph/`, `apps/`, `training-data/`). A `build-training-dataset` + `deploy-fine-tuned-model` + `monitor-training` trio there may overlap or compete with a JEV decision.
-- UNCONFIRMED: empathy-ledger's `transcript_analysis_results` schema was read from MIGRATIONS, not queried — that repo uses its own Supabase project, not `tednluwflfhxyucgwigh`. The column is `TEXT DEFAULT NULL` with no CHECK per `20260202000001`.
+- UNCONFIRMED: does `/api/chat` scope=knowledge work END TO END? Query layer proven live; the request path needs an authenticated org user that cannot be made locally. **Ben is the first to see it.**
+- UNCONFIRMED: which column is authoritative for the 248 — the topic tag or `serves_youth_justice`?
+- UNKNOWN: **the ingest that wrote those tags was never found.** Provenance `template_generated` (85) and `web_scraped` (55), Jan 2026. No writer in this repo. The guard is keyed on the symptom for that reason.
+- UNKNOWN: calibration below 0.90. Bands of n=7, 5, 5, 2 cannot support a threshold. Anything routing on 0.7–0.8 needs its own measurement.
+- UNKNOWN: LLM cost, volume and latency in every repo. No metering exists anywhere. The workspace audit is code-reads, not traffic.
+- UNVERIFIED: every §2–§5 claim in the workspace audit is an agent code-read. Re-read before acting.
 
 ### Workflow State
-pattern: audit-then-repair
-phase: 5
-total_phases: 5
+pattern: catalogue-measure-repair
+phase: 6
+total_phases: 6
 retries: 0
 max_retries: 3
 
 #### Resolved
-- goal: "finish the graph/recall half, then find where JEV helps across the workspace"
+- goal: "point a typed classifier at the whole database; catalogue, calibrate, then find data that lies"
 - resource_allocation: balanced
-- scope: graph/recall DONE · workspace audit DONE and merged · 3 repair PRs open
+- scope: catalogue DONE · calibration DONE (95% @ >=0.90) · check loop DONE and in CI · three repair PRs OPEN
 
 #### Unknowns
-- jev_calibration_on_our_data: UNKNOWN (adjudication sheet still ungraded)
+- alma_248_authoritative_column: UNKNOWN (Ben's ruling)
+- alma_tagging_ingest: UNKNOWN (not in this repo)
+- jev_calibration_below_0.90: UNKNOWN (n too small)
 - chat_knowledge_end_to_end: UNKNOWN (needs an authenticated org user)
-- llm_cost_and_volume_anywhere: UNKNOWN (no metering exists)
 
 #### Last Failure
-(none — grantscope precheck green 875 tests; JusticeHub 20 tests; empathy-ledger 136 tests; tsc clean on every touched file in all three)
+(none — main green: parity 466/47, contradiction guard clean and passing in CI, precheck green)
 
 ---
 
