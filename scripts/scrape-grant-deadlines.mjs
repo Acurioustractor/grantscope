@@ -19,6 +19,7 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import * as cheerio from 'cheerio';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
+import { buildDeadlineUpdate } from './lib/grant-deadline-update.mjs';
 import { MINIMAX_CHAT_COMPLETIONS_URL } from './lib/minimax.mjs';
 
 // --- Config ---
@@ -132,7 +133,9 @@ Today's date is ${new Date().toISOString().split('T')[0]}.
 Respond with JSON only:
 {
   "status": "open" | "closed" | "ongoing" | "unknown",
+  "status_evidence": "the exact sentence stating that, copied word for word" or null,
   "deadline": "YYYY-MM-DD" or null,
+  "deadline_evidence": "the exact sentence stating that deadline, copied word for word" or null,
   "amount_min": number or null,
   "amount_max": number or null,
   "eligibility_summary": "brief summary" or null,
@@ -141,10 +144,14 @@ Respond with JSON only:
 
 Rules:
 - "ongoing" means always open / no closing date / rolling applications
-- "open" means currently accepting applications with a known or implied deadline
+- "open" means the page says applications are being accepted right now
 - "closed" means applications are no longer accepted
+- "unknown" is a correct answer and is far better than a guess
 - If you see a date that has already passed, set status to "closed"
-- For deadline, only provide if a specific date is mentioned
+- Only give a deadline the page states outright. Never infer one from a financial
+  year, a round name, or a pattern of past rounds. A deadline you cannot quote is
+  a wrong answer — set BOTH deadline and deadline_evidence to null.
+- Copy evidence sentences from the page. Do not paraphrase them.
 - For amounts, extract dollar figures if mentioned (as integers, no decimals)
 - For eligibility_summary, provide 1-2 sentences max`;
 
@@ -257,7 +264,9 @@ Rules:
       return {
         provider: provider.name,
         status,
+        status_evidence: typeof parsed.status_evidence === 'string' ? parsed.status_evidence : null,
         deadline,
+        deadline_evidence: typeof parsed.deadline_evidence === 'string' ? parsed.deadline_evidence : null,
         amount_min: typeof parsed.amount_min === 'number' ? Math.round(parsed.amount_min) : null,
         amount_max: typeof parsed.amount_max === 'number' ? Math.round(parsed.amount_max) : null,
         eligibility_summary: typeof parsed.eligibility_summary === 'string'
@@ -282,7 +291,7 @@ async function main() {
   // Fetch grants needing deadline/status enrichment
   const { data: grants, error } = await supabase
     .from('grant_opportunities')
-    .select('id, name, url, status, deadline, closes_at, amount_min, amount_max')
+    .select('id, name, url, status, deadline, closes_at, amount_min, amount_max, metadata')
     .not('url', 'is', null)
     .neq('url', '')
     .or('deadline.is.null,status.is.null,status.eq.unknown')
@@ -318,6 +327,7 @@ async function main() {
   let deadlinesFound = 0;
   let statusUpdates = 0;
   let amountUpdates = 0;
+  let deadlinesRefused = 0;
   let fetchErrors = 0;
   let llmErrors = 0;
   const providerCounts = {};
@@ -358,41 +368,21 @@ async function main() {
     successfullyScraped++;
     providerCounts[extraction.provider] = (providerCounts[extraction.provider] || 0) + 1;
 
-    // 3. Build update
-    const update = {
-      last_verified_at: new Date().toISOString(),
-    };
-
-    // Only update status if we got a non-unknown result, or existing was null/unknown
-    if (extraction.status !== 'unknown' || !grant.status || grant.status === 'unknown') {
-      if (extraction.status !== 'unknown') {
-        update.status = extraction.status;
-        statusUpdates++;
-      }
+    // 3. Build update — gated in scripts/lib/grant-deadline-update.mjs, which
+    // refuses a deadline the page cannot be quoted for and stamps provenance so
+    // this script's writes stay attributable.
+    const { update, deadlineAccepted, deadlineRejected } = buildDeadlineUpdate(
+      extraction,
+      grant,
+      new Date().toISOString(),
+    );
+    if (update.status && update.status !== grant.status) statusUpdates++;
+    if (deadlineAccepted) deadlinesFound++;
+    if (deadlineRejected) {
+      deadlinesRefused++;
+      log(`  refused unquoted deadline ${deadlineRejected} for ${grant.name?.slice(0, 40)}`);
     }
-
-    if (extraction.deadline && !grant.deadline) {
-      update.deadline = extraction.deadline;
-      update.closes_at = extraction.deadline;
-      deadlinesFound++;
-    }
-
-    if (extraction.amount_min && !grant.amount_min) {
-      update.amount_min = extraction.amount_min;
-      amountUpdates++;
-    }
-
-    if (extraction.amount_max && !grant.amount_max) {
-      update.amount_max = extraction.amount_max;
-    }
-
-    if (extraction.eligibility_summary) {
-      update.requirements_summary = extraction.eligibility_summary;
-    }
-
-    if (extraction.is_rolling) {
-      update.status = 'ongoing';
-    }
+    if (update.amount_min || update.amount_max) amountUpdates++;
 
     // 4. Write to DB
     const { error: updateError } = await supabase
@@ -442,6 +432,7 @@ async function main() {
   log(`Total checked:        ${totalChecked}`);
   log(`Successfully scraped: ${successfullyScraped}`);
   log(`Deadlines found:      ${deadlinesFound}`);
+  log(`Deadlines refused:    ${deadlinesRefused} (stated but not quotable on the page)`);
   log(`Status updates:       ${statusUpdates}`);
   log(`Amount updates:       ${amountUpdates}`);
   log(`Fetch errors:         ${fetchErrors}`);

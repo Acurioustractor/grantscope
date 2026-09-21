@@ -13,10 +13,9 @@
  * null, and null is a correct answer.
  */
 
-// A quote has to look like a sentence, not a restatement of the value.
-// Short strings ("2026-06-30", "June") are the shape the model produces when
-// it is manufacturing evidence for something it already guessed.
-export const MIN_QUOTE = 15;
+// The quote rule is shared with every other extractor — see llm-evidence.mjs.
+export { MIN_QUOTE, quote } from './llm-evidence.mjs';
+import { quote } from './llm-evidence.mjs';
 
 export const APPLICANT_TYPES = ['organisation', 'individual', 'not_an_application'];
 export const ROUND_STATUSES = ['open', 'closed', 'unknown'];
@@ -30,12 +29,6 @@ export const APPLICATION_MODES = [
   'not_accepting',
 ];
 export const CADENCES = ['rolling', 'annual', 'biannual', 'quarterly', 'one_off', 'unknown'];
-
-export function quote(value) {
-  return typeof value === 'string' && value.trim().length >= MIN_QUOTE
-    ? value.trim().slice(0, 500)
-    : null;
-}
 
 function oneOf(value, allowed, fallback = null) {
   return typeof value === 'string' && allowed.includes(value) ? value : fallback;

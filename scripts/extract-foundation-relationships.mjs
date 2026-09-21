@@ -20,6 +20,7 @@
  */
 
 import 'dotenv/config';
+import { hasPageEvidence } from './lib/llm-evidence.mjs';
 import { createClient } from '@supabase/supabase-js';
 import { execFileSync } from 'child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'fs';
@@ -940,6 +941,10 @@ async function extractStructuredRelationships(foundation, sourceTexts) {
       };
     })
     .filter(Boolean)
+    // The prompt requires a quote and a source URL per person. Until now the
+    // writer did `evidence_text || null` and inserted anyway, so a name the
+    // model produced with no evidence still reached the person graph.
+    .filter(hasPageEvidence)
     .filter(looksLikeGovernancePerson);
 
   const normalizedLlmGrantees = llmGrantees
@@ -960,6 +965,7 @@ async function extractStructuredRelationships(foundation, sourceTexts) {
       };
     })
     .filter(Boolean)
+    .filter(hasPageEvidence)
     .filter(looksLikeTrueGrantee);
 
   const llmComparableNames = normalizedLlmGrantees
