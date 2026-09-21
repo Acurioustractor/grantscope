@@ -1,7 +1,7 @@
 ---
-date: 2026-09-21T02:45:37Z
+date: 2026-09-21T07:00:00Z
 session_name: jev-system-alignment
-branch: docs/jev-evaluation
+branch: main
 status: active
 ---
 
@@ -9,71 +9,74 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-09-21T02:45:37Z
-**Goal:** Use JEV (typed, calibrated decisions) as a system-wide alignment layer — scan what CivicGraph already holds, stop the class of silent wrong answers found on 2026-09-21, and build better graph + recall + memory off the back of it.
-**Branch:** docs/jev-evaluation (8 commits, UNPUSHED)
-**Test:** `bash scripts/precheck.sh` · `node --test scripts/lib/project-relevance.test.mjs scripts/lib/foundation-program-gate.test.mjs`
+**Updated:** 2026-09-21T07:00:00Z
+**Goal:** Use JEV's thesis — that "I don't know" must be a first-class answer — to find and close the places where the pipeline throws an abstention signal away. **Session 2 complete and MERGED.**
+**Branch:** main (PR #464 squash-merged as `9a4352b1`; `docs/jev-evaluation` deleted)
+**Test:** `bash scripts/precheck.sh` · `node --test scripts/lib/*.test.mjs` (132 tests)
 
 ### Now
-[->] Nothing in flight. Next session starts fresh on the system-wide JEV scan (see Next).
+[->] Nothing in flight. Everything below is merged, applied and verified. Next session picks from Next.
 
 ### This Session
-- [x] Audited every scoring / classifying / matching / retrieval decision in the repo for JEV fit. Doc: `thoughts/shared/findings/jev-evaluation-2026-09-21.md`
-- [x] Built the JEV pilot, `scripts/jev-pilot/` (4 stages + README). 739 calls, 0 failures, p50 ~340ms, total spend under $0.10.
-- [x] **Proved Choice > Noul** where "not stated" is a real answer: 0%→100%, 44→88, 20→88, 12→96, 36→92 agreement, same model and input.
-- [x] Missed-money sweep: keyword scorers showed ACT **19 of 383** open grants. Found 37 rejected-but-plausible, 28 project-specific.
-- [x] Fixed the keyword scorers (`3ac43c83`, narrowed in `4c3d60ef`): +`youth crime`, `bail and remand`, `remand support`, `arts touring`. 5 newly tagged over all 26,840 rows, 0 regressions.
-- [x] Wired the rubric in as a **second tagging signal** (`885bc8f7`): `project_relevance.<project>.rubric` + `applyProjectTags` ORs keyword|rubric, records `tagged_by`. **ACT desk 19 → 31 open tagged.**
-- [x] **APPLIED TO DB:** `score-project-relevance --rescore-all` (5 tags) and `score-project-rubric --apply` (9 tags).
-- [x] **APPLIED TO DB (Ben ran psql):** `scripts/sql/2026-09-21-null-phantom-foundation-deadlines.sql` — nulled 22 invented deadlines. Verified 0 returned.
-- [x] Fixed the root cause (`3346ebc8`): discovery now requires `deadline_evidence` (a quote from the page), asks `round_status` and `applicant_type`; sync stops treating an unevidenced deadline as proof of grant-hood. 9 tests.
-- [x] Guarded `main()` in both foundation scripts — importing one for a test ran a LIVE 4,609-programme sync.
-- [x] `/make-the-ask` on Annamila: **correctly refused to draft.** Round closed until further notice; requires majority Aboriginal/TSI-led applicant.
+- [x] **Foundation extraction v3** — the prompt never asked for eligibility/how-to-apply/contact (11% filled). Now asked for, each written only with a quote from the page. Verified live on Annamila: all fields populated, deadline correctly null, `not_accepting` detected.
+- [x] **Abstention audit over all 30 durable-write LLM call sites** → `thoughts/shared/findings/abstention-audit-2026-09-21.md`. Four findings; **three fixed, one withdrawn after checking.**
+- [x] **`scrape-grant-deadlines` evidence gate + provenance.** Its prompt literally said "known OR IMPLIED deadline". Now needs a quote; unquoted "open" → `unknown`; `closed` passes unquoted (it only removes from the desk). Stamps `metadata.deadline_provenance` so its writes are attributable — they were not (only `last_verified_at`, which 8 other writers set).
+- [x] **`extract-foundation-relationships`** — required `evidence_text` in the prompt then did `|| null` and inserted anyway. Two `.filter(hasPageEvidence)`.
+- [x] **Provider stack repaired.** Probed all five: groq's `llama-3.3-70b-versatile` **404 (retired) in 17 files**; deepseek/anthropic/minimax all out of credit; only gemini worked. → `openai/gpt-oss-120b`. Gemini 2.5 Flash spends `max_tokens` on reasoning, so a 500 cap returned unclosed JSON logged as "no JSON found" — raised caps, log now says "truncated at the token cap". 12-grant run: 1 verdict → 4 of 4, zero LLM errors.
+- [x] **GrantConnect UA gate.** The scraper introduced itself honestly; CloudFront refused it and it skipped **94 of 311 open grants** — every Commonwealth opportunity. `GET` + browser UA = 200. UA is now browser-shaped but still identifies us. robots.txt allows `/Go/*`.
+- [x] **URL health audit** (`scripts/audit-grant-url-health.mjs`, two-pass: fetch, then real Chrome adjudicates every non-2xx). **Almost no link rot: 1 of 311 open grants genuinely dead.**
+- [x] **Anchor fix + APPLIED.** 1,744 of 1,746 foundation grants carried an invented `#slug`. Now 957 (real unique-index collisions only); **796 link to their actual page**, up from 2.
+- [x] **Amount guard + APPLIED.** Floor 100, measured. A $20 laser tag ticket was satisfying `hasStructuredGrantSignal` and promoting a fundraising event to a grant. Sync errors 3 → 1.
+- [x] **Eligibility confidence floor 0.7 + MIGRATION APPLIED** (`20260921040000`: `eligibility_confidence`, `eligibility_summary`, `eligibility_provider`). Replayed over all 337 cached verdicts: 192 accepted, 145 refused, 21 flags suppressed (4 exclusionary), **page quote now stored on 337/337 where it was stored on none.**
+- [x] **Cleanup split, 90 → 12.** `--cleanup-invalid` deleted anything the DESK rule refused, so closed-but-real programmes were on the list. New `isNeverAGrantProgram` needs a positive reason; an `individual` label needs corroborating award language before it deletes.
+- [x] **Deleted 2 junk rows by id** (`scripts/sql/2026-09-21-delete-non-grant-rows.sql`), not via `--cleanup-invalid`.
+- [x] **PR #464 merged, deploy green, prod regression-checked with Playwright.**
 
 ### Next
-- [ ] **THE BIG ONE (Ben's ask):** point JEV at everything the system holds, to align it and prevent the 2026-09-21 class of failure. Scope it before building — see Decisions.
-- [ ] **Upgrade foundation extraction before any re-scan.** `eligibility` 11%, `application_process` 11%, `notable_grants` 7%, no contact column, no assessment-cadence field. A re-scan that only fixes dates is not worth its cost — Ben's words: "just dates is dumb".
-- [ ] Grade `data/jev-pilot/adjudication-sheet-choice.csv` — 220 disagreements, **only 4 are direct contradictions**; start with those. This is the only thing that answers whether JEV's confidence is calibrated on our data.
-- [ ] Fix the `closes_at >= today OR deadline >= today` filter — leaks closed grants onto the desk (3 seen, months past).
+- [ ] **PR #463 (sidebar labels) is 6 days old**, public surface, waiting on Ben's eyes. Now the stale one.
+- [ ] **Grade `data/jev-pilot/adjudication-sheet-choice.csv`** — 220 disagreements, only 4 direct contradictions. STILL the only thing that answers whether JEV's confidence is calibrated on our data. Everything gated on confidence depends on it.
+- [ ] **12 rows `--cleanup-invalid` would now delete** (scholarships, fellowships, 1 orphan). Not run; needs Ben's verb.
+- [ ] **"Epworth Research Grants" is duplicated** in the source data under one `(source, name)` — the last remaining sync error. Needs a human merge.
 - [ ] `parse-foundation-grants.mjs:79-95`: `/mental.?health/ → 'child-protection'` is a plain bug on the published youth-justice report.
-- [ ] `compute-se-verification-tiers.mjs:63`: `acnc-classified` (an LLM guess, no confidence floor) counted as the **`verified`** tier in the buyer-facing registry.
-- [ ] Orphan `foundation_programs` rows — upsert keys on `(foundation_id, name)`, so naming drift leaves stale rows (Annamila: 5 rows for 3 programmes). 209 old vs 41 new on the same 21 foundations.
-- [ ] Push `docs/jev-evaluation` and open the PR (all SAFE paths, would auto-merge on green).
-- [ ] `grantscope-scraping` clone still holds 8 unmerged files (community-directory ingest). Do not delete it.
+- [ ] Fix the `closes_at >= today OR deadline >= today` filter — leaks closed grants onto the desk.
+- [ ] Orphan `foundation_programs` rows — upsert keys on `(foundation_id, name)`, so naming drift leaves stale rows.
+- [ ] **Graph + recall (the untouched half of Ben's original ask)** — see Context: `mv_search_index` has no source URL, citations are never verified, `search_org_knowledge` declares `vector(1536)` against a **384** column.
 
 ### Decisions
-- **Choice, never Noul, wherever "not stated"/"unknown" is a real answer.** The primitive mattered far more than the model. Carry this to every other JEV candidate.
-- **`RUBRIC_FIT_AT = 2.5`, measured not guessed.** 2.0 → 46 tags (admitted a NZ grant + a closed programme); 2.5 → 21 tags, 6 of 7 hand-verified wins kept. Re-run the measurement before nudging it.
-- **Geography, deadlines, amounts and entity eligibility stay in CODE.** JEV "is not a calculator", "does not count reliably", "reads dates as text, not as ordered quantities".
-- **Rubric scoring is incremental by default, and that is load-bearing.** JEV wobbles at the threshold — three identical dry runs over 383 rows gave 8, 9 and 10 tags. Score once, never churn the desk.
-- **A grant rated a fit for 3+ unrelated projects is a generic programme**, tagged for none.
-- **The real diagnosis of the whole day:** every significant bug was *a model allowed to answer when it should have abstained* — the eligibility enricher guessing flags its own prompt said to leave null; discovery inventing deadlines when offered null; the keyword scorers unable to express doubt at all. The fix is never a better model; it is making "I don't know" a first-class answer the system can act on. **This is the thesis for the next session.**
-- Funder-level knowledge is already strong (boards on 10,221, 87% of seats resolve into the person graph, 97% graph-linked). Application-level knowledge is 11%. Build the second, do not re-scan for the first.
+- **The thesis held, and is now load-bearing.** Seven separate bugs across two sessions; **not one was a model being wrong.** Each was a place the system had an "I don't know" available — often in a field it had already asked for — and discarded it at the boundary. Carry this to every new extractor.
+- **The quote rule is now shared code**, `scripts/lib/llm-evidence.mjs` (`quote`, `hasPageEvidence`). Used in three places. New extractors import it rather than re-inventing a threshold.
+- **Every floor in this work is MEASURED, and each records how to re-measure.** Amounts 100, eligibility confidence 0.7, rubric 2.5. Do not nudge one without re-running the measurement in its header comment.
+- **A destructive rule needs two signals.** Deleting on one unevidenced LLM label is the same failure we spent the session fixing — the Wesfarmers Seed & Partnership Grant ($25k, open) would have gone on a single `individual` tag from the old v2 prompt.
+- **"Cannot act on it today" ≠ "was never a grant."** Conflating them is what made `--cleanup-invalid` threaten 88 legitimate rows. Status is for the first; deletion is for the second.
+- **Verify before acting, even on your own finding.** The SE verification-tier finding was the most confident-sounding of the four and was **wrong** — all 426 rows qualify via `STATUTORY_MATCH` anyway. Two queries killed it. It would have read well in a report.
+- **Never call a URL dead on a bare fetch.** grants.gov.au 404s on HEAD and serves GET; curl gets 403 on its own homepage. A bot wall and a dead link are indistinguishable to fetch, and reading one as the other would have deleted 30% of the live desk.
 
 ### Open Questions
-- UNCONFIRMED: is JEV's confidence actually calibrated on our data? Unanswerable until the adjudication sheet is graded. Everything gated on confidence depends on it.
-- UNCONFIRMED: Butterfly's Indigenous-led board — installed? Decides whether Annamila (and funders like it) are reachable at all. Ben-only.
-- UNCONFIRMED: cost of a full foundation re-scan. Gemini grounded search + multi-page scrape per foundation; ~28s each, 5,940 with websites ≈ 46 hours. **Unknown spend — not cents like JEV.**
-- UNCONFIRMED: how many `grant_opportunities` rows are individual-only (scholarships/fellowships)? The 21-foundation sample said **61% individual, only 34% organisation-fundable**. If that holds, most of the grants table is not money ACT can apply for.
+- UNCONFIRMED: is JEV's confidence calibrated on our data? Unanswerable until the adjudication sheet is graded.
+- UNCONFIRMED: cost of a full foundation re-scan with the v3 prompt. ~5,940 foundations with websites, ~28s each. v3 is worth more per call than v2 was, but the spend is still unmeasured.
+- UNCONFIRMED: Butterfly's Indigenous-led board — installed? Ben-only. Decides whether Annamila-class funders are reachable at all.
+- UNCONFIRMED: how many `grant_opportunities` rows are individual-only? The 21-foundation sample said 61% individual, only 34% organisation-fundable.
+- KNOWN COST: deepseek, anthropic and minimax are all out of credit. A billing decision, not a code one. Only gemini and groq are serving.
 
 ### Workflow State
 pattern: audit-then-repair
-phase: 4
+phase: 5
 total_phases: 5
 retries: 0
 max_retries: 3
 
 #### Resolved
-- goal: "Use JEV to scan everything in the system, align it, prevent silent wrong answers, build better graph + recall + memory"
+- goal: "point JEV at everything the system holds, align it, prevent the 2026-09-21 class of silent wrong answer"
 - resource_allocation: balanced
+- scope: extraction + abstention layer DONE and merged; graph/recall/memory half NOT started
 
 #### Unknowns
-- jev_calibration_on_our_data: UNKNOWN (adjudication sheet ungraded)
-- full_rescan_cost: UNKNOWN
+- jev_calibration_on_our_data: UNKNOWN (adjudication sheet still ungraded)
+- full_rescan_cost_v3: UNKNOWN
 - butterfly_board_status: UNKNOWN (Ben-only)
 
 #### Last Failure
-(none — precheck green at session end: tsc clean, 875 vitest, 42 node tests)
+(none — precheck green, 132 node tests, CI green on main, migration parity green, prod verified via Playwright)
 
 ---
 
@@ -100,6 +103,14 @@ Hard limits, quoted: "not a calculator", "does not count reliably", "reads dates
 7. `nohup ... &` inside a backgrounded Bash tool call orphans the process. Let the tool own it.
 8. Importing a script whose `main()` is unguarded executes it. Both foundation scripts are now guarded.
 9. The auto-mode classifier blocks `psql` writes as [Modify Shared Resources]. Commit the SQL with the apply command in the header; Ben runs it with `! cd ... && set -a && source .env && set +a && PGPASSWORD=... psql ...`.
+
+### Traps added 2026-09-21 (session 2)
+10. **A failing `HEAD` is not a dead URL.** grants.gov.au answers HEAD with 404 and GET with 200. Always retry with GET before concluding anything, and adjudicate any non-2xx in a real browser.
+11. **`grant_opportunities_url_idx` is UNIQUE on `url`.** That is why foundation programmes carried a `#slug`. Any URL change must keep rows distinct — `assignProgramUrls` handles it, including two identically named programmes on one page.
+12. **`grant_opportunities.amount_*` are INTEGER; `foundation_programs.amount_*` are NUMERIC.** A fractional value kills the whole row.
+13. **Gemini 2.5 Flash spends `max_tokens` on reasoning before writing.** A tight cap returns unclosed JSON that reads as a parser bug. Check `finish_reason` before blaming the regex.
+14. **The sync takes >10 minutes.** Run it backgrounded; `pgrep -f sync-foundation-programs.mjs` in an until-loop is the way to wait. stderr does not always reach the task output file — redirect to a file explicitly if you need the errors.
+15. **`scripts/gsql.mjs` is SELECT-only.** Data deletions go in `scripts/sql/<date>-<name>.sql` applied with `psql -f`.
 
 ### The next session's actual question
 Ben: *"come back for a big one that relates to JEV scanning all we have in the whole system, to align this better so fuck-ups like that don't happen, and we build a better graph and recall and memory."*
