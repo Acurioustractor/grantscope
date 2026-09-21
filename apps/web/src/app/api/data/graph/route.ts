@@ -745,7 +745,7 @@ export async function GET(request: Request) {
         const idList = linkedEntityIds.map(id => `'${id}'`).join(',');
         const almaRows = await paginatedRpc<AlmaEnrichment>(supabase,
           `SELECT ai.gs_entity_id, ai.type as intervention_type, ai.evidence_level, ai.name
-           FROM alma_interventions ai
+           FROM alma_interventions_valid ai
            WHERE ai.gs_entity_id IN (${idList})`,
           5000);
         for (const a of almaRows) {
@@ -1208,7 +1208,7 @@ export async function GET(request: Request) {
       return response;
     }
 
-    // ── ALMA mode: intervention → entity graph from alma_interventions ──
+    // ── ALMA mode: intervention → entity graph from alma_interventions_valid ──
     if (mode === 'alma') {
       const geoFilter = state ? `AND ai.geography::text ILIKE '%${state.replace(/'/g, "''")}%'` : '';
       const topicFilter = topic ? `AND ai.topics @> ARRAY['${topic.replace(/'/g, "''")}']` : '';
@@ -1227,7 +1227,7 @@ export async function GET(request: Request) {
                 e.canonical_name as entity_name, e.entity_type, e.gs_id as entity_gs_id,
                 e.abn as entity_abn, e.state as entity_state, e.remoteness as entity_remoteness,
                 COALESCE(e.is_community_controlled, false) as is_community_controlled
-         FROM alma_interventions ai
+         FROM alma_interventions_valid ai
          LEFT JOIN gs_entities e ON e.id = ai.gs_entity_id
          WHERE 1=1 ${geoFilter} ${topicFilter}
          ORDER BY ai.type, ai.name`,

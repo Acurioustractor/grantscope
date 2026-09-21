@@ -77,7 +77,7 @@ export async function GET(
       ),
       alma AS (
         SELECT COUNT(*)::int AS linked
-        FROM alma_interventions ai JOIN placed p ON p.id = ai.gs_entity_id
+        FROM alma_interventions_valid ai JOIN placed p ON p.id = ai.gs_entity_id
       ),
       stamps AS (
         SELECT COALESCE(jsonb_object_agg(lga_source, n), '{}'::jsonb) AS counts

@@ -26,7 +26,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       .eq('id', entity.id)
       .single(),
     db
-      .from('alma_interventions')
+      .from('alma_interventions_valid')
       .select('id, name, type, description, evidence_level, cultural_authority, target_cohort, geography, years_operating, portfolio_score, review_status')
       .eq('gs_entity_id', entity.id)
       .order('portfolio_score', { ascending: false, nullsFirst: false }),

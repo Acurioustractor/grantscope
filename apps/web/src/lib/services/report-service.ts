@@ -155,7 +155,7 @@ export async function getAlmaInterventions(topic: Topic, limit = 25, state?: str
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT ai.name, ai.type, ai.evidence_level, ai.geography, ai.portfolio_score::float,
               e.gs_id, e.canonical_name as org_name, e.abn as org_abn
-       FROM alma_interventions ai
+       FROM alma_interventions_valid ai
        LEFT JOIN gs_entities e ON e.id = ai.gs_entity_id
        WHERE ${almaTopicFilter(topic, 'ai')}${stateFilter}
        ORDER BY ai.portfolio_score DESC NULLS LAST
@@ -179,7 +179,7 @@ export async function getAlmaCount(topic: Topic, state?: string): Promise<number
   const supabase = getServiceSupabase();
   const stateFilter = state ? ` AND geography::text ILIKE '%${esc(state)}%'` : '';
   const data = await safe(supabase.rpc('exec_sql', {
-    query: `SELECT COUNT(*)::int as cnt FROM alma_interventions WHERE ${almaTopicFilter(topic)}${stateFilter}`,
+    query: `SELECT COUNT(*)::int as cnt FROM alma_interventions_valid WHERE ${almaTopicFilter(topic)}${stateFilter}`,
   }), 'getAlmaCount');
   return (data as Array<{ cnt: number }> | null)?.[0]?.cnt ?? 0;
 }
@@ -455,7 +455,7 @@ export async function getEntityEvidencePrograms(db: SupabaseClient, entityId: st
         COALESCE(ou.n, 0)::int AS outcome_count,
         COALESCE(ev.items, '[]'::json) AS evidence_items,
         COALESCE(ou.items, '[]'::json) AS outcome_items
-      FROM alma_interventions ai
+      FROM alma_interventions_valid ai
       LEFT JOIN LATERAL (
         SELECT COUNT(*) AS n,
           json_agg(json_build_object(
@@ -805,7 +805,7 @@ export async function getAlmaByLga(topic: Topic) {
   const supabase = getServiceSupabase();
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT ge.lga_name, COUNT(*)::int as alma_count
-            FROM alma_interventions ai
+            FROM alma_interventions_valid ai
             JOIN gs_entities ge ON ge.id = ai.gs_entity_id
             WHERE ${almaTopicFilter(topic, 'ai')} AND ge.lga_name IS NOT NULL
             GROUP BY ge.lga_name`,
@@ -900,7 +900,7 @@ export async function getUnfundedEffectivePrograms(topic: Topic) {
   const supabase = getServiceSupabase();
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT ai.name, ai.type, ai.evidence_level, ai.cultural_authority, ai.geography
-            FROM alma_interventions ai
+            FROM alma_interventions_valid ai
             WHERE ${almaTopicFilter(topic, 'ai')}
               AND (ai.evidence_level ILIKE '%Effective%' OR ai.evidence_level ILIKE '%Indigenous%')
               AND ai.gs_entity_id IS NULL
@@ -1095,7 +1095,7 @@ export async function getPiccAlmaInterventions() {
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT ai.name, ai.type, ai.evidence_level,
               ai.target_cohort, ai.description
-       FROM alma_interventions ai
+       FROM alma_interventions_valid ai
        JOIN gs_entities ge ON ge.id = ai.gs_entity_id
        WHERE ge.abn = '${PICC_ABN}'
        ORDER BY ai.name`,
@@ -1331,7 +1331,7 @@ export async function getPiccPeerOrgs() {
        -- PICC peer-organisations panel rendered empty. The name is the trap: gs_entity_id reads
        -- as if it pairs with gs_id, and it pairs with id.
        -- (No backticks in this comment: it lives inside a JS template literal.)
-       JOIN alma_interventions a ON a.gs_entity_id = e.id
+       JOIN alma_interventions_valid a ON a.gs_entity_id = e.id
        WHERE a.type IN ('Cultural Connection', 'Community-Led', 'Wraparound Support', 'Diversion', 'Family Strengthening')
          AND e.is_community_controlled = true
          AND e.abn != '14640793728'
@@ -1419,7 +1419,7 @@ export async function getEvidenceCoverage(topic: Topic, state?: string) {
               COUNT(DISTINCT aie.intervention_id)::int as with_evidence,
               (COUNT(DISTINCT ai.id) - COUNT(DISTINCT aie.intervention_id))::int as without_evidence,
               ROUND(COUNT(DISTINCT aie.intervention_id)::numeric / NULLIF(COUNT(DISTINCT ai.id),0) * 100)::int as coverage_pct
-       FROM alma_interventions ai
+       FROM alma_interventions_valid ai
        LEFT JOIN alma_intervention_evidence aie ON aie.intervention_id = ai.id
        WHERE ${almaTopicFilter(topic, 'ai')}${stateFilter}`,
   }), 'getEvidenceCoverage') as Promise<Array<{
@@ -1441,7 +1441,7 @@ export async function getEvidenceGapDetail(topic: Topic, state?: string, limit =
               CASE WHEN aie.id IS NOT NULL THEN true ELSE false END as has_evidence,
               ae.evidence_type, ae.methodology,
               e.gs_id, e.abn as org_abn
-       FROM alma_interventions ai
+       FROM alma_interventions_valid ai
        LEFT JOIN alma_intervention_evidence aie ON aie.intervention_id = ai.id
        LEFT JOIN alma_evidence ae ON ae.id = aie.evidence_id
        LEFT JOIN gs_entities e ON e.id = ai.gs_entity_id

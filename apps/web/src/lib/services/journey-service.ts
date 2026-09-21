@@ -387,7 +387,7 @@ export async function matchStepToData(step: { title: string; system?: string | n
   const [almaMatches, fundingMatches] = await Promise.all([
     safe(supabase.rpc('exec_sql', {
       query: `SELECT id, name, type, evidence_level, target_cohort, LEFT(description, 200) as description
-        FROM alma_interventions
+        FROM alma_interventions_valid
         WHERE ${ilikeClauses}
         LIMIT 5`,
     }), 'journey-service') as Promise<AlmaMatchResult[] | null>,

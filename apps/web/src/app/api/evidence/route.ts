@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       query: `SELECT ai.name, ai.type, ai.evidence_level, ai.description,
                 ai.cultural_authority, ai.target_cohort, ai.geography,
                 ai.portfolio_score::float, ge.canonical_name as org_name, ge.state as org_state
-         FROM alma_interventions ai
+         FROM alma_interventions_valid ai
          LEFT JOIN gs_entities ge ON ge.id = ai.gs_entity_id
          WHERE ai.topics @> ARRAY['${topic}']::text[]
          ${stateFilter}
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
                 ai.name as intervention_name
          FROM alma_evidence ae
          JOIN alma_intervention_evidence aie ON aie.evidence_id = ae.id
-         JOIN alma_interventions ai ON ai.id = aie.intervention_id
+         JOIN alma_interventions_valid ai ON ai.id = aie.intervention_id
          ${state ? `LEFT JOIN gs_entities ge ON ge.id = ai.gs_entity_id` : ''}
          WHERE ai.topics @> ARRAY['${topic}']::text[]
          ${stateFilter}
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
                 ai.name as intervention_name
          FROM alma_outcomes ao
          JOIN alma_intervention_outcomes aio ON aio.outcome_id = ao.id
-         JOIN alma_interventions ai ON ai.id = aio.intervention_id
+         JOIN alma_interventions_valid ai ON ai.id = aio.intervention_id
          ${state ? `LEFT JOIN gs_entities ge ON ge.id = ai.gs_entity_id` : ''}
          WHERE ai.topics @> ARRAY['${topic}']::text[]
          ${stateFilter}
@@ -102,17 +102,17 @@ export async function POST(request: NextRequest) {
     // Summary stats
     safe(supabase.rpc('exec_sql', {
       query: `SELECT
-         (SELECT COUNT(*)::int FROM alma_interventions ai
+         (SELECT COUNT(*)::int FROM alma_interventions_valid ai
           ${state ? `LEFT JOIN gs_entities ge ON ge.id = ai.gs_entity_id` : ''}
           WHERE ai.topics @> ARRAY['${topic}']::text[] ${stateFilter}) as interventions,
          (SELECT COUNT(*)::int FROM alma_evidence ae
           JOIN alma_intervention_evidence aie ON aie.evidence_id = ae.id
-          JOIN alma_interventions ai ON ai.id = aie.intervention_id
+          JOIN alma_interventions_valid ai ON ai.id = aie.intervention_id
           ${state ? `LEFT JOIN gs_entities ge ON ge.id = ai.gs_entity_id` : ''}
           WHERE ai.topics @> ARRAY['${topic}']::text[] ${stateFilter}) as evidence,
          (SELECT COUNT(*)::int FROM alma_outcomes ao
           JOIN alma_intervention_outcomes aio ON aio.outcome_id = ao.id
-          JOIN alma_interventions ai ON ai.id = aio.intervention_id
+          JOIN alma_interventions_valid ai ON ai.id = aio.intervention_id
           ${state ? `LEFT JOIN gs_entities ge ON ge.id = ai.gs_entity_id` : ''}
           WHERE ai.topics @> ARRAY['${topic}']::text[] ${stateFilter}) as outcomes`,
     }), 'api/evidence'),

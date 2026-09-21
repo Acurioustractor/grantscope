@@ -379,7 +379,7 @@ async function runCommitmentTracker(db: SupabaseClient, dryRun: boolean) {
     db.from('civic_charter_commitments').select('*'),
     db.from('civic_ministerial_statements').select('id, headline, body_text, minister_name, mentioned_amounts, published_at'),
     db.from('justice_funding').select('id, program_name, recipient_name, amount_dollars').eq('state', 'QLD').limit(200),
-    db.from('alma_interventions').select('id, name').neq('verification_status', 'ai_generated').not('gs_entity_id', 'is', null).limit(200),
+    db.from('alma_interventions_valid').select('id, name').neq('verification_status', 'ai_generated').not('gs_entity_id', 'is', null).limit(200),
   ]);
 
   if (!commitments?.length || !statements?.length) return { updated: 0, message: 'No data' };

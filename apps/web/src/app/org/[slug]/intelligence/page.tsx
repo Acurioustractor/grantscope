@@ -145,7 +145,7 @@ export default async function IntelligencePage({ params }: { params: Promise<{ s
     safe(db.rpc('exec_sql', {
       query: `SELECT
                 (SELECT COUNT(*)::int FROM gs_entities) as entity_count,
-                (SELECT COUNT(*)::int FROM alma_interventions) as intervention_count,
+                (SELECT COUNT(*)::int FROM alma_interventions_valid) as intervention_count,
                 (SELECT COALESCE(SUM(amount_dollars), 0)::bigint FROM justice_funding
                    WHERE measure_kind = 'grant' AND is_aggregate IS NOT TRUE) as justice_funding_total,
                 (SELECT COUNT(*)::int FROM alma_evidence) as evidence_count,

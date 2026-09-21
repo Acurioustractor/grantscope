@@ -232,8 +232,8 @@ export default async function EntityDossierPage({
   let almaInterventions: AlmaIntervention[] = [];
   if (jhOrg) {
     const [interventions, interventionIds] = await Promise.all([
-      safeOptionalData(supabase.from('alma_interventions').select('id, name, type').eq('operating_organization_id', jhOrg.id).order('name'), [] as AlmaIntervention[]),
-      safeOptionalData(supabase.from('alma_interventions').select('id').eq('operating_organization_id', jhOrg.id), [] as Array<{ id: string }>),
+      safeOptionalData(supabase.from('alma_interventions_valid').select('id, name, type').eq('operating_organization_id', jhOrg.id).order('name'), [] as AlmaIntervention[]),
+      safeOptionalData(supabase.from('alma_interventions_valid').select('id').eq('operating_organization_id', jhOrg.id), [] as Array<{ id: string }>),
     ]);
     almaInterventions = interventions;
     almaInterventionCount = almaInterventions.length;

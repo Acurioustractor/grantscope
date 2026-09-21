@@ -44,7 +44,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     const [interventionRows, interventionIds] = await Promise.all([
       safeOptionalData(
         db
-          .from('alma_interventions')
+          .from('alma_interventions_valid')
           .select('id, name, type')
           .eq('operating_organization_id', jhOrg.id)
           .order('name'),
@@ -52,7 +52,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       ),
       safeOptionalData(
         db
-          .from('alma_interventions')
+          .from('alma_interventions_valid')
           .select('id')
           .eq('operating_organization_id', jhOrg.id),
         [] as Array<{ id: string }>,

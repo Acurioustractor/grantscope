@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
 async function buildInterventionPack(supabase: ReturnType<typeof getServiceSupabase>, id: string, format: string) {
   const { data: intervention } = await supabase
-    .from('alma_interventions')
+    .from('alma_interventions_valid')
     .select('*')
     .eq('id', id)
     .single();
@@ -171,7 +171,7 @@ async function buildEntityPack(supabase: ReturnType<typeof getServiceSupabase>, 
 
   // ALMA interventions delivered by this entity
   const { data: interventions } = await supabase
-    .from('alma_interventions')
+    .from('alma_interventions_valid')
     .select('id, name, type, evidence_level, target_cohort, geography, portfolio_score, serves_youth_justice')
     .eq('gs_entity_id', entity.id);
 
@@ -305,7 +305,7 @@ async function buildStatePack(supabase: ReturnType<typeof getServiceSupabase>, s
 
   // ALMA interventions in this state
   const { data: almaData } = await supabase
-    .from('alma_interventions')
+    .from('alma_interventions_valid')
     .select('id, name, type, evidence_level, gs_entity_id, serves_youth_justice')
     .contains('geography', [state]);
 

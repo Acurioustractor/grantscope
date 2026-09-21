@@ -75,7 +75,7 @@ async function getChanges() {
                 (SELECT count(*) FROM public.vic_grants_awarded)::bigint AS vic_grants,
                 (SELECT count(*) FROM public.acnc_charities)::bigint AS charities,
                 (SELECT count(*) FROM public.foundations)::bigint AS foundations,
-                (SELECT count(*) FROM public.alma_interventions)::bigint AS alma_interventions`,
+                (SELECT count(*) FROM public.alma_interventions_valid)::bigint AS alma_interventions`,
     }), 'changes') as Promise<Array<{ entities: number; contracts: number; justice_grants: number; vic_grants: number; charities: number; foundations: number; alma_interventions: number }> | null>,
   ]);
 

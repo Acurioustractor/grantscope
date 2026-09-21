@@ -166,7 +166,7 @@ async function getData() {
          ROUND(AVG(ai.portfolio_score), 3)::float as avg_portfolio_score,
          COUNT(DISTINCT jf.recipient_abn)::int as funded_count,
          COALESCE(SUM(jf.amount_dollars), 0)::bigint as total_funded
-       FROM alma_interventions ai
+       FROM alma_interventions_valid ai
        LEFT JOIN gs_entities e ON e.id = ai.gs_entity_id
        LEFT JOIN justice_funding jf ON jf.recipient_abn = e.abn AND jf.recipient_abn IS NOT NULL
        GROUP BY ai.type

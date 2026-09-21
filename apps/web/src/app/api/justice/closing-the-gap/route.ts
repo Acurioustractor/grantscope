@@ -57,8 +57,8 @@ export async function GET() {
 
     // ALMA interventions with geography matching this state
     const almaFilter = state === 'National'
-      ? supabase.from('alma_interventions').select('id, type, gs_entity_id', { count: 'exact' })
-      : supabase.from('alma_interventions').select('id, type, gs_entity_id', { count: 'exact' }).contains('geography', [state]);
+      ? supabase.from('alma_interventions_valid').select('id, type, gs_entity_id', { count: 'exact' })
+      : supabase.from('alma_interventions_valid').select('id, type, gs_entity_id', { count: 'exact' }).contains('geography', [state]);
 
     const almaResult = await almaFilter.limit(2000);
     const almaInterventions = almaResult.data || [];

@@ -64,7 +64,7 @@ async function getPageData() {
   const [almaData, ntOutcomes] = await Promise.all([
     safe(supabase.rpc('exec_sql', {
       query: `SELECT name, type, evidence_level, geography::text, portfolio_score, gs_entity_id
-              FROM alma_interventions
+              FROM alma_interventions_valid
               WHERE geography::text ILIKE '%Alice Springs%'
               ORDER BY type, name`,
     }), 'reports/youth-justice/alice-springs') as Promise<AlmaRow[] | null>,

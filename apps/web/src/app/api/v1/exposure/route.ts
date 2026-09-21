@@ -162,7 +162,7 @@ async function buildDossier(db: any, entity: any, sections: Set<string>) {
   if (sections.has('interventions') && entityId) {
     promises.push(
       db
-        .from('alma_interventions')
+        .from('alma_interventions_valid')
         .select('id, name, type, description, evidence_level, cultural_authority, target_cohort, geography, operating_organization, years_operating, portfolio_score, review_status')
         .eq('gs_entity_id', entityId)
         .order('portfolio_score', { ascending: false, nullsFirst: false })

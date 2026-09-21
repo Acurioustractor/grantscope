@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
 
     // Query ALMA interventions linked to this entity
     const { data: almaData } = await db
-      .from('alma_interventions')
+      .from('alma_interventions_valid')
       .select('name, type, evidence_level, description')
       .eq('gs_entity_id', entity.id)
       .limit(10);
