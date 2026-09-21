@@ -70,12 +70,71 @@ cleanup, and a cheaper one.
 So roughly **6% is scraped page furniture** and a further **19%+ of what remains is a real
 programme in the wrong domain**.
 
-## Why this needed a classifier
+## CORRECTION (same day): the separator exists, and the real defect is narrower
 
-There is no deterministic separator. `operating_organization` is present on 1,558 of 2,154 rows
-and does not split curated from dumped; both groups carry the same `type` values, the same
-`evidence_level` coverage, and `source_documents` is set on every row. Nothing in the schema
-distinguishes "Heart Week" from a real diversion programme except the meaning of the text.
+The section above originally said "there is no deterministic separator" and that "nothing in the
+schema distinguishes Heart Week from a real diversion programme". **That was wrong.** I checked
+`operating_organization` and stopped. The table has a `serves_youth_justice` column:
+
+| serves_youth_justice | rows |
+|---|---|
+| false | 995 |
+| true | 752 |
+| null | 407 |
+
+**52 of the 53 rows I flagged already carry `serves_youth_justice = false`.** The table knows.
+So the database is not contaminated in the sense first claimed; the rows are labelled, and the
+19% figure above describes rows that are already marked as not youth justice.
+
+### The actual defect: two columns in the same table disagree
+
+**248 rows have `serves_youth_justice IS NOT TRUE` and are tagged `youth-justice` in `topics`.**
+
+That matters because the published report path does not read `serves_youth_justice`. It filters
+on the topic tag: `report-service.ts` uses `topics @> ARRAY['<topic>']`. Only five files in
+`apps/web/src` reference `serves_youth_justice` at all, against 145 references to
+`alma_interventions`.
+
+### The mechanism: the tag was assigned on the word "youth"
+
+Of those 248 rows, **195 have "youth" in the name and 177 have "youth" without "justice"**:
+
+- "Youth Worship Service (Sunday 3rd Service)" — Melbourne Full Gospel Church Inc
+- "Pursue Youth Camp" — New Beginnings Baptist Church
+- "National Office for Youth - Promotion of STEM"
+- "eSafety Youth Advisory Council"
+
+A keyword tagger matched "youth" and wrote `youth-justice`. This is the same failure class as the
+LCAA phase bug in act-regenerative-studio, where any document containing "art" or "action" got
+stamped, and the same one the keyword grant scorers had.
+
+### Where they came from
+
+`data_provenance` on the contradicting rows: **`template_generated` 85 rows (2026-01-05)**,
+**`web_scraped` 55 (2026-01-04) + 6 (2025-12-31)**, `jr-census-2026-06` 13, and 38 with no
+provenance across three days in March 2026.
+
+**No writer in this repo assigns these tags.** The ingest is not in grantscope/scripts. It was not
+identified.
+
+### The durable fix is a guard, not finding the ingest
+
+Since the contradiction is deterministic, it does not need a model or the ingest's identity:
+
+```sql
+SELECT count(*) FROM alma_interventions
+ WHERE serves_youth_justice IS NOT TRUE AND topics @> ARRAY['youth-justice'];
+-- 248 on 2026-09-21. A rise means a tagger ran again.
+```
+
+That check is free, runs anywhere, and catches the next occurrence whichever repo causes it.
+
+### What the classifier was still worth here
+
+It found the problem, and nothing deterministic would have pointed at it: the query above only
+gets written once someone suspects the two columns disagree. The reading that led there came from
+seeing "Heart Week" and "Papua New Guinea Snakebite Partnership" in a youth justice table. But the
+fix, the measurement and the ongoing guard are all SQL.
 
 ## What was NOT the question
 
