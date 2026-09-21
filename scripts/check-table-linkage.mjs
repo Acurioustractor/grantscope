@@ -35,16 +35,37 @@ const ORG = `'^(organisation|organization|operating_organi[sz]ation|canonical_na
 // Anything the graph can join on. recipient_abn and supplier_abn count.
 const KEY = `'(^|_)(abn|acn|gs_id|gs_entity_id|entity_id|icn)$'`
 
+// A table counts as linked if it has a key column itself, or a foreign key to a
+// table that does (fellows -> organizations is linked; organizations has abn).
+// Key columns must not be boolean: requires_abn is a flag, not an identifier,
+// and until 2026-09-22 it hid alma_funding_opportunities from this check.
 const SQL = `
-SELECT c.table_name
-  FROM information_schema.columns c
-  JOIN information_schema.tables t
-    ON t.table_schema = c.table_schema AND t.table_name = c.table_name
- WHERE c.table_schema = 'public' AND t.table_type = 'BASE TABLE'
- GROUP BY c.table_name
-HAVING bool_or(c.column_name ~ ${ORG})
-   AND NOT bool_or(c.column_name ~ ${KEY})
- ORDER BY c.table_name`
+WITH cols AS (
+  SELECT c.table_name, c.column_name, c.data_type
+    FROM information_schema.columns c
+    JOIN information_schema.tables t
+      ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+   WHERE c.table_schema = 'public' AND t.table_type = 'BASE TABLE'
+),
+keyed AS (
+  SELECT DISTINCT table_name FROM cols
+   WHERE column_name ~ ${KEY} AND data_type <> 'boolean'
+),
+via_fk AS (
+  SELECT DISTINCT src.relname AS table_name
+    FROM pg_constraint k
+    JOIN pg_class src ON src.oid = k.conrelid
+    JOIN pg_class dst ON dst.oid = k.confrelid
+    JOIN pg_namespace n ON n.oid = src.relnamespace
+   WHERE k.contype = 'f' AND n.nspname = 'public'
+     AND dst.relname IN (SELECT table_name FROM keyed)
+)
+SELECT table_name FROM cols
+ GROUP BY table_name
+HAVING bool_or(column_name ~ ${ORG})
+   AND table_name NOT IN (SELECT table_name FROM keyed)
+   AND table_name NOT IN (SELECT table_name FROM via_fk)
+ ORDER BY table_name`
 
 const UPDATE = process.argv.includes('--update-baseline')
 
@@ -90,7 +111,7 @@ async function run() {
     return
   }
 
-  for (const t of gone) console.log(`✓ ${t}: no longer unlinked (gained a key, or dropped)`)
+  for (const t of gone) console.log(`✓ ${t}: now linked (a key column, a foreign key to a keyed table, or dropped)`)
   if (added.length) {
     for (const t of added) console.error(`✗ ${t}: names organisations, has no join key, not in the baseline`)
     console.error(`\n${added.length} new unlinked table(s). Add an abn/gs_entity_id column, or exempt it in ${BASELINE} with a reason.`)
