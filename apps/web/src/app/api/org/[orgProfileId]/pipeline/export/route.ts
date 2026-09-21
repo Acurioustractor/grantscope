@@ -47,7 +47,7 @@ export async function GET(req: NextRequest, { params }: Params) {
   const [almaResult, fundingResult, programsResult] = await Promise.all([
     profile.abn
       ? db.rpc('exec_sql', {
-          query: `SELECT COUNT(*)::int as n FROM alma_interventions a JOIN gs_entities e ON e.id = a.gs_entity_id WHERE e.abn = '${profile.abn}'`,
+          query: `SELECT COUNT(*)::int as n FROM alma_interventions_valid a JOIN gs_entities e ON e.id = a.gs_entity_id WHERE e.abn = '${profile.abn}'`,
         })
       : Promise.resolve({ data: null }),
     profile.abn

@@ -50,7 +50,7 @@ export default async function FundingFlowPage({ params }: { params: Promise<{ gs
     // ALMA interventions
     safe(supabase.rpc('exec_sql', {
       query: `SELECT name, type, evidence_level, target_cohort, description
-         FROM alma_interventions WHERE gs_entity_id = '${e.id}'
+         FROM alma_interventions_valid WHERE gs_entity_id = '${e.id}'
          ORDER BY type`,
     })),
 

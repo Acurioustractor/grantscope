@@ -142,7 +142,7 @@ export async function GET(
       safe(
         supabase.rpc('exec_sql', {
           query: `SELECT COUNT(*)::int as count
-                    FROM alma_interventions WHERE gs_entity_id = '${esc(e.id)}'`,
+                    FROM alma_interventions_valid WHERE gs_entity_id = '${esc(e.id)}'`,
         })
       ),
     ]);

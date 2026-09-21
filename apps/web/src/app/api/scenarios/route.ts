@@ -185,7 +185,7 @@ function getTargetQuery(target: Target, stateWhere: string, stateWhereJf: string
                 COUNT(DISTINCT jf.recipient_name)::int as orgs
         FROM justice_funding jf
         WHERE jf.gs_entity_id IN (
-          SELECT gs_entity_id FROM alma_interventions WHERE gs_entity_id IS NOT NULL
+          SELECT gs_entity_id FROM alma_interventions_valid WHERE gs_entity_id IS NOT NULL
         )
         ${stateWhereJf}`;
     case 'community-controlled':
@@ -203,7 +203,7 @@ function getEntityFilter(target: Target): string {
     case 'community':
       return `entity_type IN ('charity', 'indigenous_corp', 'social_enterprise')`;
     case 'evidence-backed':
-      return `id IN (SELECT gs_entity_id FROM alma_interventions WHERE gs_entity_id IS NOT NULL)`;
+      return `id IN (SELECT gs_entity_id FROM alma_interventions_valid WHERE gs_entity_id IS NOT NULL)`;
     case 'community-controlled':
       return `is_community_controlled = true`;
   }

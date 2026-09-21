@@ -614,7 +614,7 @@ export async function getOrgAlmaInterventions(abn: string | string[]): Promise<A
   return safe(supabase.rpc('exec_sql', {
     query: `SELECT ai.name, ai.type, ai.evidence_level,
               ai.target_cohort, ai.description
-       FROM alma_interventions ai
+       FROM alma_interventions_valid ai
        JOIN gs_entities ge ON ge.id = ai.gs_entity_id
        WHERE ge.abn IN (${abnInList(abn)})
        ORDER BY ai.name`,
@@ -1407,7 +1407,7 @@ export async function getOrgPeerOrgs(abn: string): Promise<PeerOrg[]> {
   // First get this org's ALMA program types
   const orgTypes = await safe(supabase.rpc('exec_sql', {
     query: `SELECT DISTINCT a.type
-       FROM alma_interventions a
+       FROM alma_interventions_valid a
        JOIN gs_entities e ON e.id = a.gs_entity_id
        WHERE e.abn = '${abn}'`,
   }), 'org-dashboard-service') as Array<{ type: string }> | null;
@@ -1424,7 +1424,7 @@ export async function getOrgPeerOrgs(abn: string): Promise<PeerOrg[]> {
               COUNT(DISTINCT a.id)::int as alma_programs,
               STRING_AGG(DISTINCT a.type, ', ') as program_types
        FROM gs_entities e
-       JOIN alma_interventions a ON a.gs_entity_id = e.id
+       JOIN alma_interventions_valid a ON a.gs_entity_id = e.id
        WHERE e.abn != '${abn}'
          ${typeFilter}
        GROUP BY e.gs_id, e.canonical_name, e.abn, e.state, e.lga_name

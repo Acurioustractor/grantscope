@@ -140,10 +140,10 @@ async function getNumbers() {
  AND (topics @> ARRAY['mental-health'] OR topics @> ARRAY['aod'])`,
  }), 'reports/youth-justice/qld/sector/long-read') as Promise<Array<{ c: number }> | null>,
  safe(supabase.rpc('exec_sql', {
- query: `SELECT count(*)::int AS c FROM public.alma_interventions WHERE topics @> ARRAY['youth-justice']`,
+ query: `SELECT count(*)::int AS c FROM public.alma_interventions_valid WHERE topics @> ARRAY['youth-justice']`,
  }), 'reports/youth-justice/qld/sector/long-read') as Promise<Array<{ c: number }> | null>,
  safe(supabase.rpc('exec_sql', {
- query: `SELECT count(*)::int AS c FROM public.alma_interventions
+ query: `SELECT count(*)::int AS c FROM public.alma_interventions_valid
  WHERE ('QLD' = ANY(geography) OR 'Queensland' = ANY(geography))`,
  }), 'reports/youth-justice/qld/sector/long-read') as Promise<Array<{ c: number }> | null>,
  safe(supabase.rpc('exec_sql', {

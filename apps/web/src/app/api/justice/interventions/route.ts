@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
   // Build intervention query
   let query = supabase
-    .from('alma_interventions')
+    .from('alma_interventions_valid')
     .select(`
       id, name, type, description, target_cohort, geography,
       evidence_level, cultural_authority, implementation_cost,

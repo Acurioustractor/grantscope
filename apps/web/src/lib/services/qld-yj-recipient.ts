@@ -81,7 +81,7 @@ export async function getRecipientChain(recipientName: string): Promise<Recipien
     SELECT j.recipient_name,
            jsonb_agg(DISTINCT jsonb_build_object('name', a.name, 'evidence_level', a.evidence_level, 'type', a.type)) AS interventions
     FROM public.justice_funding j
-    JOIN public.alma_interventions a ON a.id = j.alma_intervention_id
+    JOIN public.alma_interventions_valid a ON a.id = j.alma_intervention_id
     WHERE j.state='QLD' AND j.topics @> ARRAY['youth-justice']
       AND j.recipient_name = '${safeName}'
     GROUP BY 1

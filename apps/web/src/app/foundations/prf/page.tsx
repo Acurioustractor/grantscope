@@ -172,7 +172,7 @@ async function getData() {
     db.rpc('exec_sql', {
       query: `SELECT ai.name, ai.type, ai.evidence_level, ai.portfolio_score,
                      ai.target_cohort, ai.geography, ge.canonical_name as org, ge.gs_id as org_gs_id
-              FROM alma_interventions ai
+              FROM alma_interventions_valid ai
               JOIN gs_entities ge ON ge.id::text = ai.gs_entity_id::text
               WHERE ge.id IN (SELECT gs_entity_id FROM justice_funding
                              WHERE program_name = 'PRF Justice Reinvestment Portfolio'

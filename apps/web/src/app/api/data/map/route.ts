@@ -185,7 +185,7 @@ export async function GET(request: Request) {
       alma AS MATERIALIZED (
         SELECT e.lga_name, UPPER(e.state) AS state,
                COUNT(*)::int AS alma_linked
-        FROM alma_interventions ai
+        FROM alma_interventions_valid ai
         JOIN gs_entities e ON e.id = ai.gs_entity_id
         WHERE e.lga_name IS NOT NULL
         GROUP BY 1, 2

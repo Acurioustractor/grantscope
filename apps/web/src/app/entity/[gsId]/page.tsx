@@ -141,7 +141,7 @@ export default async function EntityPage({ params }: { params: Promise<{ gsId: s
     })) as Promise<RelRow[] | null>,
     safe(supabase.rpc('exec_sql', {
       query: `SELECT ai.name, ai.type, ai.evidence_level, ai.target_cohort, ai.description
-         FROM alma_interventions ai
+         FROM alma_interventions_valid ai
          JOIN gs_entities ge ON ge.id = ai.gs_entity_id
          WHERE ge.id = '${entity.id}' ORDER BY ai.name`,
     })) as Promise<AlmaRow[] | null>,

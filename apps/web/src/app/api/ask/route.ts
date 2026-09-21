@@ -41,14 +41,14 @@ Summing all rows overstates donated dollars roughly 8x ('other receipt' is 85.3%
 Note donor_abn is populated on only ~24.8% of rows, so ABN joins silently drop most donations —
 prefer donor_name matching, and say so when reporting coverage.
 
-## alma_interventions (~2,136 rows) — evidence-based interventions (Australian Living Map of Alternatives)
+## alma_interventions_valid (~1,900 rows) — evidence-based interventions, quarantined rows removed. Always query this, never alma_interventions (Australian Living Map of Alternatives)
 Columns: id, name, type (text: 'Wraparound Support', 'Cultural Connection', 'Prevention', 'Diversion', 'Community-Led', etc.), description, evidence_level, cultural_authority, target_cohort, geography, portfolio_score (numeric), gs_entity_id (uuid), topics (text[])
 
 ## alma_evidence (~631 rows) — evidence records linked to ALMA interventions
-Columns: id, intervention_id (->alma_interventions.id), evidence_type (text: 'Program evaluation', 'Policy analysis', 'Case study', 'Community-led research', 'Quasi-experimental', 'RCT'), methodology, sample_size, effect_size
+Columns: id, intervention_id (->alma_interventions_valid.id), evidence_type (text: 'Program evaluation', 'Policy analysis', 'Case study', 'Community-led research', 'Quasi-experimental', 'RCT'), methodology, sample_size, effect_size
 
 ## alma_outcomes (~2,869 rows) — outcomes measured for interventions
-Columns: id, intervention_id (->alma_interventions.id), outcome_type, measurement_method, indicators
+Columns: id, intervention_id (->alma_interventions_valid.id), outcome_type, measurement_method, indicators
 
 ## acnc_charities (~66K rows) — ACNC charity register
 Columns: abn, name, charity_size (text: 'Small', 'Medium', 'Large'), state, postcode, purposes (text), beneficiaries (text)
@@ -71,10 +71,10 @@ Columns: id, person_name, person_name_normalised, role_type (text: director, sec
 
 ## Key relationships:
 - gs_entities.abn joins to most tables (austender_contracts.supplier_abn, justice_funding.recipient_abn, political_donations.donor_abn, acnc_charities.abn)
-- gs_entities.id joins to justice_funding.gs_entity_id, alma_interventions.gs_entity_id, person_roles.entity_id
+- gs_entities.id joins to justice_funding.gs_entity_id, alma_interventions_valid.gs_entity_id, person_roles.entity_id
 - gs_relationships links entities via source_entity_id/target_entity_id
-- alma_evidence.intervention_id -> alma_interventions.id
-- alma_outcomes.intervention_id -> alma_interventions.id
+- alma_evidence.intervention_id -> alma_interventions_valid.id
+- alma_outcomes.intervention_id -> alma_interventions_valid.id
 
 ## Rules:
 1. Always return SELECT queries only. Never INSERT, UPDATE, DELETE, DROP, or ALTER.
@@ -87,7 +87,7 @@ Columns: id, person_name, person_name_normalised, role_type (text: director, sec
 8. For entity lookups, prefer returning gs_id, canonical_name, entity_type, and relevant amounts.
 9. If the question is about a specific place, join to postcode_geo or filter by state.
 10. For "community-controlled" or "Indigenous" orgs, use is_community_controlled = true OR entity_type = 'indigenous_corp'.
-11. For topic filtering on justice_funding or alma_interventions, use: topics @> ARRAY['topic-name']::text[]
+11. For topic filtering on justice_funding or alma_interventions_valid, use: topics @> ARRAY['topic-name']::text[]
 12. Use materialized views when they answer the question directly — they are pre-computed and fast.
 13. For power/influence questions, use mv_entity_power_index or mv_revolving_door.
 14. For funding desert/gap questions, use mv_funding_deserts.

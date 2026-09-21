@@ -104,7 +104,7 @@ export async function getPlaceBrief(
   if (locality) {
     const { data } = await db.rpc('exec_sql', {
       query: `SELECT name, type, evidence_level, gs_entity_id IS NOT NULL as linked
-        FROM alma_interventions
+        FROM alma_interventions_valid
         WHERE geography::text ILIKE '%${locality.replace(/'/g, "''")}%'
         ORDER BY CASE WHEN gs_entity_id IS NOT NULL THEN 0 ELSE 1 END, name
         LIMIT 30`,

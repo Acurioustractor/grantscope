@@ -121,14 +121,14 @@ async function getCardData(): Promise<CardData[]> {
 
   // Card 4: Evidence-Based Policy — ALMA
   const almaStats = await safe(supabase.rpc('exec_sql', {
-    query: `SELECT COUNT(*)::int as total FROM alma_interventions`,
+    query: `SELECT COUNT(*)::int as total FROM alma_interventions_valid`,
   }), 'alma-count');
 
   const almaFunded = await safe(supabase.rpc('exec_sql', {
     query: `SELECT
       COUNT(DISTINCT a.id)::int as funded_interventions,
       COUNT(DISTINCT a.id) FILTER (WHERE a.evidence_level IN ('Strong', 'Promising'))::int as strong_evidence
-    FROM alma_interventions a
+    FROM alma_interventions_valid a
     LEFT JOIN justice_funding j ON j.gs_entity_id = a.gs_entity_id AND j.gs_entity_id IS NOT NULL
     WHERE j.id IS NOT NULL`,
   }), 'alma-funded');

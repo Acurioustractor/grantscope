@@ -247,7 +247,7 @@ export async function assembleDueDiligencePack(gsId: string): Promise<DueDiligen
       : Promise.resolve(null),
 
     // ALMA interventions with evidence + outcome counts
-    safe(supabase.from('alma_interventions')
+    safe(supabase.from('alma_interventions_valid')
       .select('id, name, type, evidence_level, target_cohort, geography, portfolio_score, serves_youth_justice, years_operating, current_funding, website')
       .eq('gs_entity_id', entity.id)
       .neq('data_quality', 'quarantined'), 'due-diligence-service'),
