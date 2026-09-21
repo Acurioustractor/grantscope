@@ -1,0 +1,33 @@
+{
+  "checked_at": "2026-09-21T13:16:31.996Z",
+  "results": [
+    {
+      "id": "index_usable_through_view",
+      "status": "not_checked",
+      "claim": "Filtering role_type through v_gs_relationships_typed uses an index instead of scanning 3.0M rows.",
+      "reason": "no DATABASE_PASSWORD, and this receipt needs psql (exec_sql is SELECT-only)"
+    },
+    {
+      "id": "philanthropic_label_folded",
+      "migrations": [
+        "20260921230000"
+      ],
+      "claim": "One concept has one label: philanthropic-grant no longer exists, and its 20 rows are counted as philanthropic.",
+      "consumer": "the model behind /api/ask and /api/query, which is given funding_type in its column list and writes SQL against it",
+      "status": "proven",
+      "saw": "philanthropic 190, no philanthropic-grant",
+      "checked_at": "2026-09-21T13:16:31.909Z"
+    },
+    {
+      "id": "wrong_youth_justice_tags_gone",
+      "migrations": [
+        "20260921234500"
+      ],
+      "claim": "A church Sunday service is no longer reachable as a youth justice intervention: the 64 wrong tags are gone and 30 unresolved cases remain.",
+      "consumer": "report-service.ts, which filters on topics @> ARRAY[...] and never reads serves_youth_justice",
+      "status": "proven",
+      "saw": "30 contradicting rows, down from 94",
+      "checked_at": "2026-09-21T13:16:31.996Z"
+    }
+  ]
+}
