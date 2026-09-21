@@ -63,6 +63,45 @@ const MIN_CONFIDENCE = 0.9
  * produce a guaranteed disagreement that means nothing.
  */
 const AUDITS = {
+  /**
+   * justice_funding.funding_type decides which LANE a row belongs to, and
+   * CLAUDE.md records that mixing the lanes publishes figures wrong by an order
+   * of magnitude. So a defect here is a money defect, not a tagging one.
+   *
+   * Only the four real values are audited. The tail is vocabulary drift from
+   * separate ingests rather than a classification problem: philanthropic (170)
+   * beside philanthropic-grant (20), and total_budget / grants_program /
+   * budget_program_net_cost with one or two rows each. A model cannot fix a
+   * vocabulary that disagrees with itself; that is a migration.
+   *
+   * Expect capital to disagree. "Gambling Community Benefit Fund | Upgrade
+   * Facility" is a grant that pays for capital works, so grant and capital are
+   * not mutually exclusive in this vocabulary. If that shows up as a large
+   * pattern it is evidence about the taxonomy, not about the rows.
+   */
+  justice_funding_type: {
+    table: 'justice_funding',
+    id: 'id',
+    textCols: ['program_name', 'project_description'],
+    label: 'funding_type',
+    // contract rows average 42 characters of combined text. The default floor
+    // of 60 would drop most of them and quietly bias the sample toward the
+    // verbose types, which would then look like the whole column.
+    minChars: 25,
+    question: {
+      instructions:
+        'Read the description of a payment made by an Australian government or funder. ' +
+        'Decide what KIND of payment it is. Judge only from the text.',
+      notStated: 'The text does not say clearly enough what kind of payment this is.',
+    },
+    buckets: {
+      grant: ['grant', 'a grant or funding awarded to an organisation to deliver a programme or project'],
+      contract: ['contract', 'a procurement contract to buy goods, services, supplies or labour'],
+      capital: ['capital', 'funding for buildings, facilities, construction or physical infrastructure'],
+      appropriation: ['appropriation', 'a government budget appropriation or departmental allocation, not money paid to an external recipient'],
+    },
+  },
+
   grantconnect_category: {
     table: 'grantconnect_awards',
     id: 'ga_id',
@@ -163,6 +202,20 @@ function report(name, audit, rows) {
   L.push(`so expect roughly 1 in 20 flags to be the classifier rather than the label. **A pattern of`)
   L.push(`two or three is noise. A pattern of thirty is a defect.**`)
   L.push('')
+  const coverage = scored.length ? confident.length / scored.length : 0
+  if (coverage < 0.4) {
+    L.push('## UNDERPOWERED — do not read the patterns below as findings')
+    L.push('')
+    L.push(`Only **${pc(confident.length, scored.length)}** of scored answers reached ${MIN_CONFIDENCE} confidence.`)
+    L.push('For comparison, `grantconnect_awards.category` reached 86% on the same threshold.')
+    L.push('')
+    L.push('Low confident coverage is a statement about the TEXT, not the label: the columns being')
+    L.push('read do not carry enough to answer the question. Nothing here supports a conclusion')
+    L.push('either way, and the patterns below are too small to separate from the ~5% error rate.')
+    L.push('')
+    L.push('To make this audit conclusive, give it better text or a question the text can answer.')
+    L.push('')
+  }
   L.push('## Disagreement patterns')
   L.push('')
   if (!ranked.length) {
@@ -199,6 +252,11 @@ function report(name, audit, rows) {
   console.log(`confident:     ${confident.length}`)
   console.log(`agreed:        ${agree.length} (${pc(agree.length, confident.length)})`)
   console.log(`DISAGREED:     ${disagree.length} (${pc(disagree.length, confident.length)})`)
+  const cov = scored.length ? confident.length / scored.length : 0
+  if (cov < 0.4) {
+    console.log(`\n!! UNDERPOWERED: only ${pc(confident.length, scored.length)} of scored answers were confident.`)
+    console.log('   The text cannot answer the question. Do not read the patterns as findings.')
+  }
   console.log('\npatterns:')
   for (const [pair, items] of ranked.slice(0, 8)) {
     console.log(`  ${String(items.length).padStart(4)}  ${pair}${known.has(pair) ? '   (known)' : ''}`)
@@ -208,9 +266,12 @@ function report(name, audit, rows) {
 
 const pc = (a, b) => (b ? `${((100 * a) / b).toFixed(0)}%` : 'n/a')
 
+/** An audit reads one column or several joined together. */
+const textCols = (audit) => audit.textCols ?? [audit.text]
+
 async function run() {
   if (argv.includes('--list')) {
-    for (const [k, a] of Object.entries(AUDITS)) console.log(`${k}  ->  ${a.table}.${a.label} judged from ${a.text}`)
+    for (const [k, a] of Object.entries(AUDITS)) console.log(`${k}  ->  ${a.table}.${a.label} judged from ${textCols(a).join(' + ')}`)
     return
   }
   if (!AUDIT || !AUDITS[AUDIT]) throw new Error(`--audit required; one of: ${Object.keys(AUDITS).join(', ')}`)
@@ -232,17 +293,17 @@ async function run() {
   for (const label of labels) {
     const { data, error } = await sb
       .from(audit.table)
-      .select(`${audit.id}, ${audit.text}, ${audit.label}`)
+      .select([audit.id, ...textCols(audit), audit.label].join(', '))
       .eq(audit.label, label)
-      .not(audit.text, 'is', null)
+      .not(textCols(audit)[0], 'is', null)
       .limit(perLabel * 20)
     if (error) throw new Error(`fetch ${label}: ${error.message}`)
     // Dedup by text: the same wording repeats across awards of one programme,
     // and counting it many times would manufacture a pattern out of one example.
     const seen = new Set()
     for (const r of data || []) {
-      const t = (r[audit.text] || '').trim()
-      if (t.length < 60) continue
+      const t = textCols(audit).map((c) => r[c] || '').join(' | ').trim()
+      if (t.length < (audit.minChars ?? 60)) continue
       const k = t.slice(0, 200)
       if (seen.has(k)) continue
       seen.add(k)
