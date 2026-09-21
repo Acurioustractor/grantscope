@@ -399,10 +399,22 @@ async function buildEntities() {
       GROUP BY 1`);
   for (const r of anyRows) existingAnyByName.set(r.k, Number(r.n) === 1 ? r.gs_id : null);
 
+  // RUNG 0 (2026-09-22): a buyer name a human reviewed (buyer_entity_links) goes to that entity.
+  // Without it the bare acronym "DoE" matched nothing by name and a stub was minted every night.
+  const reviewedByName = new Map();
+  const reviewedRows = await selectJsonRows('reviewed buyer links',
+    `SELECT l.buyer_key, e.gs_id FROM buyer_entity_links l JOIN gs_entities e ON e.id = l.gs_entity_id`);
+  for (const r of reviewedRows) reviewedByName.set(r.buyer_key, r.gs_id);
+
   let govReused = 0;
   let linkedByName = 0;
   function govGsId(buyerId, name) {
     const key = String(name ?? '').trim().toLowerCase();
+    const reviewed = reviewedByName.get(key);
+    if (reviewed) {
+      govReused += 1;
+      return reviewed;
+    }
     const existing = existingByName.get(key);
     if (existing) {
       govReused += 1;

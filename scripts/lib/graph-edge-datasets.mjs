@@ -115,6 +115,8 @@ export const GRAPH_EDGE_DATASETS = [
     //      state buyer that already exists under an ABN (universities, TAFE NSW, NSW Police) links to
     //      that node instead of getting a second one.
     // An ambiguous name (two entities) resolves to nothing at rungs 2 and 3, as in the entity phase.
+    // Rung 0 (2026-09-22): a reviewed link in buyer_entity_links beats all of these. Acronym
+    // buyers ("DoE", 11,726 QLD contracts) and renamed departments cannot be resolved by name.
     prelude: `CREATE TEMP TABLE austender_buyer_map AS
       WITH keys AS (
         SELECT DISTINCT coalesce(NULLIF(buyer_id, ''), buyer_name) AS key, lower(trim(buyer_name)) AS name_key
@@ -129,10 +131,11 @@ export const GRAPH_EDGE_DATASETS = [
         WHERE entity_type NOT IN ('person', 'political_party')
           AND lower(trim(canonical_name)) IN (SELECT name_key FROM keys)
         GROUP BY 1)
-      SELECT k.key, coalesce(g.id,
+      SELECT k.key, coalesce(rv.gs_entity_id, g.id,
                              CASE WHEN n.n = 1 THEN n.entity_id END,
                              CASE WHEN a.n = 1 THEN a.entity_id END) AS entity_id
       FROM keys k
+      LEFT JOIN buyer_entity_links rv ON rv.buyer_key = k.name_key
       LEFT JOIN gs_entities g ON g.gs_id = 'AU-GOV-' || k.key
       LEFT JOIN gov_by_name n ON n.name_key = k.name_key
       LEFT JOIN any_by_name a ON a.name_key = k.name_key;
