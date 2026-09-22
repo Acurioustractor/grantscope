@@ -9,13 +9,13 @@ status: active
 
 ## Ledger
 <!-- This section is extracted by SessionStart hook for quick resume -->
-**Updated:** 2026-09-22T23:00:00Z
-**Goal:** Make the database linkable: every table that names organisations joins the entity register, a CI guard stops new gaps, JEV handles only the judgement residue. **All 438 buyers linked, 28 reviewed funders linked, ALMA quarantine enforced, graph build unblocked.** Nothing in flight.
-**Branch:** `main` @ `219325d1` (PRs #486–#491 merged; migrations 120000–180000 applied, parity green)
-**Test:** `bash scripts/precheck.sh` · `node --env-file=.env scripts/check-table-linkage.mjs` · `scripts/check-migration-parity.mjs`
+**Updated:** 2026-09-23T06:50:00Z
+**Goal:** SUPERSEDED. This work stream is backlog. The live work is `thoughts/shared/handoffs/community-money-finder/current.md` (power-and-philanthropy story + the community money finder). Read that one first.
+**Branch:** `main` @ `1b1c9d33`
+**Test:** `bash scripts/precheck.sh`
 
 ### Now
-[->] Nothing in flight. Next check: tomorrow's nightly build-entity-graph ran clean and austender edge drift (was 697,106/751,008) closed.
+[->] Nothing active here. Ben stopped graph-edge cleanup on 2026-09-22: months of churn with no usable result. Open items below are backlog, to be picked up only when something someone uses depends on them.
 
 ### This Session (2026-09-22, second session)
 - [x] **Graph build unblocked** (#486): 3 ACNC placeholder ABNs (91111111272/3, 99111111119) failed the checksum → makeGsId threw → every run since 2026-09-18 died before edges. `validAbn()` guard at 7 sites. Entity dry-run clean. Full rebuild NOT yet observed.
