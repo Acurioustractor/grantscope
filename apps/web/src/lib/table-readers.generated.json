@@ -1060,6 +1060,9 @@
   "app/api/grants/send/route.ts",
   "app/reports/power-map/page.tsx"
  ],
+ "gs_charity_classification": [
+  "lib/community-funders.ts"
+ ],
  "gs_entities": [
   "app/api/agent/route.ts",
   "app/api/board-report/route.ts",

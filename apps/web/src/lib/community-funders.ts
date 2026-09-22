@@ -10,7 +10,7 @@
  * PROTOTYPE: Jev labels are read from data/jev-check/charity-classify.jsonl on local disk
  * (scripts/jev-charity-classify.mjs). They need a table before this can deploy.
  */
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { applyGrantFilters, isRealRecipient } from '@/lib/justice-money';
@@ -40,41 +40,62 @@ export const SECTORS: Record<string, string> = {
   other: 'Other',
 };
 
-type Label = { sector: string | null; sector_conf: number | null };
-let labels: Map<string, Label> | null = null;
-let labelsMtime = 0;
+export type Label = { sector: string | null; sector_conf: number | null };
+export type Labels = Map<string, Label>;
 
-function jevLabels(): Map<string, Label> {
+let cache: { at: number; labels: Labels } | null = null;
+const TTL_MS = 60 * 60 * 1000;
+
+/** The jsonl the classifier writes, for local dev before the table is loaded. */
+function fileLabels(): Labels {
   const candidates = [
     path.resolve(process.cwd(), '../../data/jev-check/charity-classify.jsonl'),
     path.resolve(process.cwd(), 'data/jev-check/charity-classify.jsonl'),
   ];
   const file = candidates.find((p) => existsSync(p));
-  // Re-read when the file changes: the Jev run appends while the page is being used.
-  const mtime = file ? statSync(file).mtimeMs : 0;
-  if (labels && mtime === labelsMtime) return labels;
-  labelsMtime = mtime;
-  labels = new Map();
-  if (!file) return labels;
+  const out: Labels = new Map();
+  if (!file) return out;
   for (const line of readFileSync(file, 'utf8').split('\n')) {
     if (!line) continue;
     try {
       const r = JSON.parse(line);
-      labels.set(r.abn, { sector: r.sector, sector_conf: r.sector_conf });
+      out.set(r.abn, { sector: r.sector, sector_conf: r.sector_conf });
     } catch {
-      // a half-written last line while the run is still going
+      // a half-written last line while a classification run is going
     }
   }
-  return labels;
+  return out;
 }
 
-export function sectorFor(abn: string): { sector: string | null; confidence: number | null } {
-  const l = jevLabels().get(abn);
+/**
+ * gs_charity_classification (migration 20260923060000) is the real source; the jsonl is the
+ * fallback so local dev works before the table is loaded. Cached per server process for an hour:
+ * 53,879 rows is one pass of ~54 paged reads, and the labels only change when the classifier re-runs.
+ */
+export async function getLabels(db: SupabaseClient): Promise<Labels> {
+  if (cache && Date.now() - cache.at < TTL_MS) return cache.labels;
+  const labels: Labels = new Map();
+  try {
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await db
+        .from('gs_charity_classification')
+        .select('abn, sector, sector_conf')
+        .range(from, from + 999);
+      if (error) throw new Error(error.message);
+      for (const r of data ?? []) labels.set(r.abn, { sector: r.sector, sector_conf: r.sector_conf });
+      if (!data || data.length < 1000) break;
+    }
+  } catch {
+    // table not there yet (or unreadable): fall back to the classifier's output on disk
+  }
+  const resolved = labels.size ? labels : fileLabels();
+  cache = { at: Date.now(), labels: resolved };
+  return resolved;
+}
+
+export function sectorOf(labels: Labels, abn: string): { sector: string | null; confidence: number | null } {
+  const l = labels.get(abn);
   return { sector: l?.sector ?? null, confidence: l?.sector_conf ?? null };
-}
-
-export function labelledCount(): number {
-  return jevLabels().size;
 }
 
 const band = (s: string | null | undefined) => (s ? s.trim().toLowerCase() : null);
@@ -88,9 +109,9 @@ export interface Org {
 
 export async function findPeers(
   db: SupabaseClient,
+  L: Labels,
   me: { abn: string; sector: string; state: string; size: string | null },
 ): Promise<Org[]> {
-  const L = jevLabels();
   const peers: Org[] = [];
   for (let from = 0; ; from += 1000) {
     const { data, error } = await db
@@ -239,9 +260,9 @@ export interface Holder {
  */
 export async function regionHolders(
   db: SupabaseClient,
+  L: Labels,
   opts: { sector: string; state: string; peerAbns: Set<string> },
 ): Promise<Holder[]> {
-  const L = jevLabels();
   const totals = new Map<string, Holder & { agencies: Map<string, number> }>();
   for (let from = 0; from < 20000; from += 1000) {
     const { data, error } = await db

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getServiceSupabase } from '@/lib/supabase';
 import { money } from '@/lib/justice-money';
 import {
-  SECTORS, SINCE_YEAR, MIN_CONFIDENCE, sectorFor, labelledCount, findPeers, peerGrants, rankPrograms, regionHolders,
+  SECTORS, SINCE_YEAR, MIN_CONFIDENCE, getLabels, sectorOf, findPeers, peerGrants, rankPrograms, regionHolders,
 } from '@/lib/community-funders';
 
 export const dynamic = 'force-dynamic';
@@ -24,7 +24,8 @@ export default async function FundersLikeMine({
     ? { data: null }
     : await db.from('gs_entities').select('canonical_name, state').eq('abn', abn).limit(1).maybeSingle();
   const name = charity?.name ?? entity?.canonical_name ?? `ABN ${abn}`;
-  const jev = sectorFor(abn);
+  const labels = await getLabels(db);
+  const jev = sectorOf(labels, abn);
   const sector = q.sector && SECTORS[q.sector] ? q.sector : (jev.confidence ?? 0) >= MIN_CONFIDENCE ? jev.sector : null;
   const state = q.state && STATES.includes(q.state) ? q.state : charity?.state ?? entity?.state ?? null;
   const size = q.size ?? (charity?.charity_size ? charity.charity_size.toLowerCase() : 'not_large');
@@ -33,10 +34,10 @@ export default async function FundersLikeMine({
   const qs = (o: Record<string, string | null>) =>
     '?' + new URLSearchParams(Object.entries({ sector, state, size, ...o }).filter(([, v]) => v) as [string, string][]).toString();
 
-  const peers = sector && state ? await findPeers(db, { abn, sector, state, size }) : [];
+  const peers = sector && state ? await findPeers(db, labels, { abn, sector, state, size }) : [];
   const programs = peers.length ? rankPrograms(await peerGrants(db, peers)) : [];
   const peerAbns = new Set(peers.map((p) => p.abn));
-  const holders = sector && state ? await regionHolders(db, { sector, state, peerAbns }) : [];
+  const holders = sector && state ? await regionHolders(db, labels, { sector, state, peerAbns }) : [];
   const holderTotal = holders.reduce((s, h) => s + h.total, 0);
 
   return (
@@ -183,7 +184,7 @@ export default async function FundersLikeMine({
         <p className="font-black uppercase tracking-widest">How this works</p>
         <p className="mt-1">
           Main work is judged by Jev, a decision model, from each charity&apos;s own ACNC description. Only judgements at{' '}
-          {Math.round(MIN_CONFIDENCE * 100)}% confidence or higher count ({labelledCount().toLocaleString()} charities judged so
+          {Math.round(MIN_CONFIDENCE * 100)}% confidence or higher count ({labels.size.toLocaleString()} charities judged so
           far). Grants come from GrantConnect (Commonwealth awards) and justice funding records, grant payments only, with
           totals and placeholder rows removed. Foundation grants are not yet included. Every grant shows its source reference.
         </p>
