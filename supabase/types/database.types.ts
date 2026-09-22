@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -27977,6 +27982,42 @@ export type Database = {
           },
         ]
       }
+      gs_charity_classification: {
+        Row: {
+          abn: string
+          classified_at: string
+          control: string | null
+          control_conf: number | null
+          model: string
+          school: string | null
+          school_conf: number | null
+          sector: string | null
+          sector_conf: number | null
+        }
+        Insert: {
+          abn: string
+          classified_at?: string
+          control?: string | null
+          control_conf?: number | null
+          model?: string
+          school?: string | null
+          school_conf?: number | null
+          sector?: string | null
+          sector_conf?: number | null
+        }
+        Update: {
+          abn?: string
+          classified_at?: string
+          control?: string | null
+          control_conf?: number | null
+          model?: string
+          school?: string | null
+          school_conf?: number | null
+          sector?: string | null
+          sector_conf?: number | null
+        }
+        Relationships: []
+      }
       gs_entities: {
         Row: {
           abn: string | null
@@ -28677,6 +28718,30 @@ export type Database = {
         }
         Relationships: []
       }
+      gs_entity_name_restores_20260922: {
+        Row: {
+          entity_id: string
+          gs_id: string | null
+          new_name: string | null
+          old_name: string | null
+          reason: string | null
+        }
+        Insert: {
+          entity_id: string
+          gs_id?: string | null
+          new_name?: string | null
+          old_name?: string | null
+          reason?: string | null
+        }
+        Update: {
+          entity_id?: string
+          gs_id?: string | null
+          new_name?: string | null
+          old_name?: string | null
+          reason?: string | null
+        }
+        Relationships: []
+      }
       gs_graph_completeness_log: {
         Row: {
           actual_edges: number
@@ -29097,6 +29162,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      gs_relationships_deleted_20260922: {
+        Row: {
+          amount: number | null
+          confidence: string | null
+          created_at: string | null
+          currency: string | null
+          dataset: string | null
+          delete_reason: string | null
+          end_date: string | null
+          first_seen: string | null
+          id: string
+          last_seen: string | null
+          properties: Json | null
+          relationship_type: string | null
+          source_entity_id: string | null
+          source_record_id: string | null
+          source_url: string | null
+          start_date: string | null
+          target_entity_id: string | null
+          year: number | null
+        }
+        Insert: {
+          amount?: number | null
+          confidence?: string | null
+          created_at?: string | null
+          currency?: string | null
+          dataset?: string | null
+          delete_reason?: string | null
+          end_date?: string | null
+          first_seen?: string | null
+          id: string
+          last_seen?: string | null
+          properties?: Json | null
+          relationship_type?: string | null
+          source_entity_id?: string | null
+          source_record_id?: string | null
+          source_url?: string | null
+          start_date?: string | null
+          target_entity_id?: string | null
+          year?: number | null
+        }
+        Update: {
+          amount?: number | null
+          confidence?: string | null
+          created_at?: string | null
+          currency?: string | null
+          dataset?: string | null
+          delete_reason?: string | null
+          end_date?: string | null
+          first_seen?: string | null
+          id?: string
+          last_seen?: string | null
+          properties?: Json | null
+          relationship_type?: string | null
+          source_entity_id?: string | null
+          source_record_id?: string | null
+          source_url?: string | null
+          start_date?: string | null
+          target_entity_id?: string | null
+          year?: number | null
+        }
+        Relationships: []
       }
       gs_relationships_selfloop_backup_20260820: {
         Row: {
@@ -57343,13 +57471,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "community_programs_profiles_program_id_fkey"
-            columns: ["program_id"]
-            isOneToOne: false
-            referencedRelation: "programs_catalog_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "community_programs_profiles_program_id_fkey"
             columns: ["community_program_id"]
             isOneToOne: false
             referencedRelation: "programs_catalog_v"
@@ -57358,27 +57479,34 @@ export type Database = {
           {
             foreignKeyName: "community_programs_profiles_program_id_fkey"
             columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs_catalog_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_programs_profiles_program_id_fkey"
+            columns: ["community_program_id"]
             isOneToOne: false
             referencedRelation: "registered_services"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "community_programs_profiles_program_id_fkey"
-            columns: ["community_program_id"]
+            columns: ["program_id"]
             isOneToOne: false
             referencedRelation: "registered_services"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "community_programs_profiles_public_profile_id_fkey"
-            columns: ["profile_id"]
+            columns: ["public_profile_id"]
             isOneToOne: false
             referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "community_programs_profiles_public_profile_id_fkey"
-            columns: ["public_profile_id"]
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "public_profiles"
             referencedColumns: ["id"]
@@ -71182,4 +71310,3 @@ export const Constants = {
     },
   },
 } as const
-

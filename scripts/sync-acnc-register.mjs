@@ -80,8 +80,36 @@ async function main() {
   let inserted = 0;
   let errors = 0;
 
-  for (let i = 0; i < unique.length; i += BATCH_SIZE) {
-    const batch = unique.slice(i, i + BATCH_SIZE).map(f => ({
+  // Existing rows get ONLY what the register owns. The importer returns null/'low' for every
+  // enrichment column (description, parent_company, open_programs, profile_confidence, …), and
+  // writing those over existing rows wiped the profiling agents' work on every sync since at least
+  // July: 10,166 profiles on 2026-09-22 alone, visible as a sawtooth in the foundations edge count.
+  const existing = new Set();
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase.from('foundations').select('acnc_abn').range(from, from + 999);
+    if (error) throw new Error(`Could not read existing foundations: ${error.message}`);
+    for (const r of data) existing.add(r.acnc_abn);
+    if (data.length < 1000) break;
+  }
+  const refresh = unique.filter(f => existing.has(f.acnc_abn))
+    .map(f => ({ acnc_abn: f.acnc_abn, name: f.name, acnc_data: f.acnc_data }));
+  const fresh = unique.filter(f => !existing.has(f.acnc_abn));
+  log(`${refresh.length} existing (register fields only), ${fresh.length} new`);
+
+  for (let i = 0; i < refresh.length; i += BATCH_SIZE) {
+    const { error } = await supabase
+      .from('foundations')
+      .upsert(refresh.slice(i, i + BATCH_SIZE), { onConflict: 'acnc_abn' });
+    if (error) {
+      console.error(`Refresh batch error at ${i}: ${error.message}`);
+      errors += Math.min(BATCH_SIZE, refresh.length - i);
+    } else {
+      inserted += Math.min(BATCH_SIZE, refresh.length - i);
+    }
+  }
+
+  for (let i = 0; i < fresh.length; i += BATCH_SIZE) {
+    const batch = fresh.slice(i, i + BATCH_SIZE).map(f => ({
       acnc_abn: f.acnc_abn,
       name: f.name,
       type: f.type,
@@ -119,7 +147,7 @@ async function main() {
     }
 
     if ((i + BATCH_SIZE) % 500 === 0) {
-      log(`  Progress: ${Math.min(i + BATCH_SIZE, unique.length)}/${unique.length}`);
+      log(`  Progress: ${Math.min(i + BATCH_SIZE, fresh.length)}/${fresh.length} new`);
     }
   }
 
