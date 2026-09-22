@@ -1,5 +1,9 @@
 import Link from 'next/link';
 import { getServiceSupabase } from '@/lib/supabase';
+import { ATLAS_SQL, LINK_LABEL, fmtRows, linkStatus, type AtlasRow } from '@/lib/table-atlas';
+import tableReaders from '@/lib/table-readers.generated.json';
+
+const READERS = tableReaders as Record<string, string[]>;
 
 export const dynamic = 'force-dynamic';
 
@@ -72,8 +76,18 @@ export default async function SchemaRegisterPage({
                   WHEN relkind = 'v' AND invoker THEN 'via base RLS' END AS anon_state
       FROM x ORDER BY owner, object`,
   });
+  const { data: atlasData, error: atlasError } = await db.rpc('exec_sql', { query: ATLAS_SQL });
+  const atlas = new Map(((atlasData ?? []) as AtlasRow[]).map((a) => [a.object, a]));
   const rows = ((data ?? []) as Row[]).filter((r) => (!owner || r.owner === owner) && (!q || r.object.includes(q)));
   const all = (data ?? []) as Row[];
+  const statuses = all.map((r) => (atlas.has(r.object) ? linkStatus(atlas.get(r.object)!) : null));
+  const gaps = {
+    joined: statuses.filter((s) => s?.kind === 'keyed' || s?.kind === 'via_fk').length,
+    accepted: statuses.filter((s) => s?.kind === 'unlinked_accepted' || s?.kind === 'unlinked_exempt').length,
+    fresh: statuses.filter((s) => s?.kind === 'unlinked_new').length,
+  };
+  // Objects the catalogue has but the register does not: nobody declared an owner.
+  const unregistered = ((atlasData ?? []) as AtlasRow[]).filter((a) => !a.registered).map((a) => a.object).sort();
   const byOwner = OWNERS.map((o) => ({ owner: o, n: all.filter((r) => r.owner === o).length }));
   const leaks = all.filter((r) => PRIVATE_OWNERS.has(r.owner) && OPEN(r.anon_state));
 
@@ -90,7 +104,40 @@ export default async function SchemaRegisterPage({
           <code>supabase/migrations/README.md</code>.
         </p>
         {error && <p className="text-bauhaus-red text-sm">Register query failed: {error.message}</p>}
+        {atlasError && <p className="text-bauhaus-red text-sm">Link query failed, link columns are blank: {atlasError.message}</p>}
       </header>
+
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-0 border-4 border-bauhaus-black">
+        <div className="p-4 border-2 border-bauhaus-black">
+          <p className="font-black uppercase tracking-widest text-xs">Tables that join the entity register</p>
+          <p className="font-black text-3xl tabular-nums">{gaps.joined}</p>
+          <p className="text-xs">a key column (abn, gs_entity_id, ...) or a foreign key to a table with one</p>
+        </div>
+        <div className="p-4 border-2 border-bauhaus-black">
+          <p className="font-black uppercase tracking-widest text-xs">Name organisations, cannot join: known</p>
+          <p className="font-black text-3xl tabular-nums">{gaps.accepted}</p>
+          <p className="text-xs">recorded in data/linkage-baseline.json, exempt ones with a reason</p>
+        </div>
+        <div className={`p-4 border-2 ${gaps.fresh ? 'border-bauhaus-red' : 'border-bauhaus-black'}`}>
+          <p className="font-black uppercase tracking-widest text-xs">Name organisations, cannot join: new</p>
+          <p className={`font-black text-3xl tabular-nums ${gaps.fresh ? 'text-bauhaus-red' : ''}`}>{gaps.fresh}</p>
+          <p className="text-xs">CI fails on these (scripts/check-table-linkage.mjs)</p>
+        </div>
+      </section>
+
+      <section className={`border-4 p-4 ${unregistered.length ? 'border-bauhaus-red' : 'border-bauhaus-black'}`}>
+        <p className="font-black uppercase tracking-widest text-xs">In the database, missing from this register</p>
+        <p className="font-black text-3xl tabular-nums">{unregistered.length}</p>
+        {unregistered.length > 0 ? (
+          <ul className="mt-2 text-sm font-mono flex flex-wrap gap-x-4">
+            {unregistered.map((o) => (
+              <li key={o}><Link className="underline" href={`/ops/schema/${encodeURIComponent(o)}`}>{o}</Link></li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm">None. Every relation has a declared owner.</p>
+        )}
+      </section>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-0 border-4 border-bauhaus-black">
         {byOwner.map(({ owner: o, n }) => (
@@ -135,7 +182,10 @@ export default async function SchemaRegisterPage({
               <th className="text-left p-2">kind</th>
               <th className="text-left p-2">owner</th>
               <th className="text-left p-2">consumers</th>
+              <th className="text-right p-2">rows</th>
               <th className="text-right p-2">size</th>
+              <th className="text-left p-2">links</th>
+              <th className="text-right p-2">app readers</th>
               <th className="text-left p-2">public key</th>
               <th className="text-left p-2">evidence</th>
             </tr>
@@ -143,16 +193,25 @@ export default async function SchemaRegisterPage({
           <tbody>
             {rows.map((r) => {
               const leak = PRIVATE_OWNERS.has(r.owner) && OPEN(r.anon_state);
+              const a = atlas.get(r.object);
+              const link = a ? linkStatus(a) : null;
               return (
                 <tr key={r.object} className={`border-t-2 border-bauhaus-black/20 ${leak ? 'bg-bauhaus-red/10' : ''}`}>
-                  <td className="p-2 font-mono">{r.object}</td>
+                  <td className="p-2 font-mono">
+                    <Link href={`/ops/schema/${encodeURIComponent(r.object)}`} className="underline">{r.object}</Link>
+                  </td>
                   <td className="p-2">
                     {KIND[r.kind] ?? r.kind}
                     {r.kind === 'v' && r.invoker === false && <span className="ml-1 text-xs uppercase tracking-widest">definer</span>}
                   </td>
                   <td className="p-2">{r.owner}</td>
                   <td className="p-2">{(r.consumers ?? []).join(', ')}</td>
+                  <td className="p-2 text-right tabular-nums">{fmtRows(a?.est_rows ?? null)}</td>
                   <td className="p-2 text-right tabular-nums">{fmtBytes(r.bytes)}</td>
+                  <td className={`p-2 text-xs uppercase tracking-widest ${link?.kind === 'unlinked_new' ? 'font-black text-bauhaus-red' : ''}`}>
+                    {link ? LINK_LABEL[link.kind] : ''}
+                  </td>
+                  <td className="p-2 text-right tabular-nums">{READERS[r.object]?.length || ''}</td>
                   <td className={`p-2 ${leak ? 'font-black text-bauhaus-red' : ''}`}>{r.anon_state}</td>
                   <td className="p-2 text-xs max-w-md truncate" title={r.evidence ?? ''}>{r.evidence}</td>
                 </tr>
