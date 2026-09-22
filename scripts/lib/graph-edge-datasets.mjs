@@ -56,7 +56,11 @@ export const GRAPH_EDGE_DATASETS = [
          SELECT upper(trim(donor_name_normalized)), matched_abn, verified, match_confidence, 1
            FROM donor_entity_matches
            WHERE donor_name_normalized IS NOT NULL AND matched_abn IS NOT NULL
-       ) z ORDER BY key, verified DESC NULLS LAST, match_confidence DESC NULLS LAST, via, matched_abn;
+       ) z
+       -- An all-zero ABN is "no ABN": left in, it won ties against the real one and the donation
+       -- got no edge (Aurizon, Saxonvale, WorkPac...). A blank key matched 14 unrelated trusts.
+       WHERE key <> '' AND matched_abn !~ '^[0\\s]*$'
+       ORDER BY key, verified DESC NULLS LAST, match_confidence DESC NULLS LAST, via, matched_abn;
      CREATE INDEX ON donor_map(key);
      ANALYZE donor_map;`,
     selectSql: `SELECT
