@@ -5747,6 +5747,13 @@ export type Database = {
             foreignKeyName: "alma_intervention_evidence_intervention_id_fkey"
             columns: ["intervention_id"]
             isOneToOne: false
+            referencedRelation: "alma_interventions_valid"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_intervention_evidence_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
             referencedRelation: "v_funding_outcomes_chain"
             referencedColumns: ["alma_id"]
           },
@@ -5777,6 +5784,13 @@ export type Database = {
             columns: ["intervention_id"]
             isOneToOne: false
             referencedRelation: "alma_interventions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_intervention_outcomes_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "alma_interventions_valid"
             referencedColumns: ["id"]
           },
           {
@@ -6242,6 +6256,13 @@ export type Database = {
             foreignKeyName: "alma_maturation_log_intervention_id_fkey"
             columns: ["intervention_id"]
             isOneToOne: false
+            referencedRelation: "alma_interventions_valid"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_maturation_log_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
             referencedRelation: "v_funding_outcomes_chain"
             referencedColumns: ["alma_id"]
           },
@@ -6482,6 +6503,13 @@ export type Database = {
             columns: ["intervention_id"]
             isOneToOne: false
             referencedRelation: "alma_interventions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_program_interventions_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "alma_interventions_valid"
             referencedColumns: ["id"]
           },
           {
@@ -9278,6 +9306,157 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      buyer_entity_links: {
+        Row: {
+          buyer_key: string
+          gs_entity_id: string
+          link_method: string
+          linked_at: string
+          note: string | null
+        }
+        Insert: {
+          buyer_key: string
+          gs_entity_id: string
+          link_method?: string
+          linked_at?: string
+          note?: string | null
+        }
+        Update: {
+          buyer_key?: string
+          gs_entity_id?: string
+          link_method?: string
+          linked_at?: string
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "gs_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_charity_rankings"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_entity_power_index"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_foundation_grantees"
+            referencedColumns: ["grantee_entity_id"]
+          },
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_funding_outcomes_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_gs_donor_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_gs_entity_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_intervention_funding_chain"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_person_entity_crosswalk"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revolving_door"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_youth_justice_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_act_organisations"
+            referencedColumns: ["gs_entity_uuid"]
+          },
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_entity_abr"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_goods_central_channels"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_nt_community_buyer_crosswalk"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_nt_community_entity_matches"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_org_funding_profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_entity_links_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_youth_justice_entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       calendar_events: {
         Row: {
@@ -15980,6 +16159,36 @@ export type Database = {
             referencedColumns: ["sa3_code"]
           },
         ]
+      }
+      donor_entity_match_rejections: {
+        Row: {
+          donor_name: string
+          jev_confidence: number | null
+          reason: string
+          register_name: string | null
+          rejected_abn: string
+          rejected_at: string
+          total_donated: number | null
+        }
+        Insert: {
+          donor_name: string
+          jev_confidence?: number | null
+          reason?: string
+          register_name?: string | null
+          rejected_abn: string
+          rejected_at?: string
+          total_donated?: number | null
+        }
+        Update: {
+          donor_name?: string
+          jev_confidence?: number | null
+          reason?: string
+          register_name?: string | null
+          rejected_abn?: string
+          rejected_at?: string
+          total_donated?: number | null
+        }
+        Relationships: []
       }
       donor_entity_matches: {
         Row: {
@@ -28444,6 +28653,30 @@ export type Database = {
         }
         Relationships: []
       }
+      gs_entity_merge_map_20260922: {
+        Row: {
+          loser_gs_id: string
+          loser_id: string
+          reason: string
+          winner_gs_id: string
+          winner_id: string
+        }
+        Insert: {
+          loser_gs_id: string
+          loser_id: string
+          reason: string
+          winner_gs_id: string
+          winner_id: string
+        }
+        Update: {
+          loser_gs_id?: string
+          loser_id?: string
+          reason?: string
+          winner_gs_id?: string
+          winner_id?: string
+        }
+        Relationships: []
+      }
       gs_graph_completeness_log: {
         Row: {
           actual_edges: number
@@ -31374,6 +31607,13 @@ export type Database = {
             columns: ["alma_intervention_id"]
             isOneToOne: false
             referencedRelation: "alma_interventions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "justice_funding_alma_intervention_id_fkey"
+            columns: ["alma_intervention_id"]
+            isOneToOne: false
+            referencedRelation: "alma_interventions_valid"
             referencedColumns: ["id"]
           },
           {
@@ -47869,6 +48109,13 @@ export type Database = {
             foreignKeyName: "community_programs_alma_intervention_id_fkey"
             columns: ["alma_intervention_id"]
             isOneToOne: false
+            referencedRelation: "alma_interventions_valid"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_programs_alma_intervention_id_fkey"
+            columns: ["alma_intervention_id"]
+            isOneToOne: false
             referencedRelation: "v_funding_outcomes_chain"
             referencedColumns: ["alma_id"]
           },
@@ -50108,6 +50355,13 @@ export type Database = {
             columns: ["alma_intervention_id"]
             isOneToOne: false
             referencedRelation: "alma_interventions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_alma_intervention_id_fkey"
+            columns: ["alma_intervention_id"]
+            isOneToOne: false
+            referencedRelation: "alma_interventions_valid"
             referencedColumns: ["id"]
           },
           {
@@ -56471,6 +56725,356 @@ export type Database = {
         }
         Relationships: []
       }
+      alma_interventions_valid: {
+        Row: {
+          community_authority_signal: number | null
+          consent_level: string | null
+          contact_email: string | null
+          contact_person: string | null
+          contact_phone: string | null
+          contributors: string[] | null
+          coordinate_note: string | null
+          coordinate_precision: string | null
+          cost_per_young_person: number | null
+          created_at: string | null
+          cultural_authority: string | null
+          current_funding: string | null
+          data_provenance: string | null
+          data_quality: string | null
+          description: string | null
+          estimated_annual_capacity: number | null
+          evidence_level: string | null
+          evidence_strength_signal: number | null
+          geography: string[] | null
+          gs_entity_id: string | null
+          harm_risk_level: string | null
+          harm_risk_signal: number | null
+          id: string | null
+          implementation_capability_signal: number | null
+          implementation_cost: string | null
+          latitude: number | null
+          linked_community_program_id: string | null
+          linked_service_id: string | null
+          location_type: string | null
+          longitude: number | null
+          metadata: Json | null
+          name: string | null
+          operating_organization: string | null
+          operating_organization_id: string | null
+          option_value_signal: number | null
+          permitted_uses: string[] | null
+          portfolio_score: number | null
+          replication_readiness: string | null
+          review_status: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          risks: string | null
+          scalability: string | null
+          search_vector: unknown
+          serves_youth_justice: boolean | null
+          service_area_km: number | null
+          service_role: string | null
+          source_documents: Json | null
+          target_cohort: string[] | null
+          topics: string[] | null
+          type: string | null
+          updated_at: string | null
+          verification_status: string | null
+          website: string | null
+          years_operating: number | null
+        }
+        Insert: {
+          community_authority_signal?: number | null
+          consent_level?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          contributors?: string[] | null
+          coordinate_note?: string | null
+          coordinate_precision?: string | null
+          cost_per_young_person?: number | null
+          created_at?: string | null
+          cultural_authority?: string | null
+          current_funding?: string | null
+          data_provenance?: string | null
+          data_quality?: string | null
+          description?: string | null
+          estimated_annual_capacity?: number | null
+          evidence_level?: string | null
+          evidence_strength_signal?: number | null
+          geography?: string[] | null
+          gs_entity_id?: string | null
+          harm_risk_level?: string | null
+          harm_risk_signal?: number | null
+          id?: string | null
+          implementation_capability_signal?: number | null
+          implementation_cost?: string | null
+          latitude?: number | null
+          linked_community_program_id?: string | null
+          linked_service_id?: string | null
+          location_type?: string | null
+          longitude?: number | null
+          metadata?: Json | null
+          name?: string | null
+          operating_organization?: string | null
+          operating_organization_id?: string | null
+          option_value_signal?: number | null
+          permitted_uses?: string[] | null
+          portfolio_score?: number | null
+          replication_readiness?: string | null
+          review_status?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risks?: string | null
+          scalability?: string | null
+          search_vector?: unknown
+          serves_youth_justice?: boolean | null
+          service_area_km?: number | null
+          service_role?: string | null
+          source_documents?: Json | null
+          target_cohort?: string[] | null
+          topics?: string[] | null
+          type?: string | null
+          updated_at?: string | null
+          verification_status?: string | null
+          website?: string | null
+          years_operating?: number | null
+        }
+        Update: {
+          community_authority_signal?: number | null
+          consent_level?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          contributors?: string[] | null
+          coordinate_note?: string | null
+          coordinate_precision?: string | null
+          cost_per_young_person?: number | null
+          created_at?: string | null
+          cultural_authority?: string | null
+          current_funding?: string | null
+          data_provenance?: string | null
+          data_quality?: string | null
+          description?: string | null
+          estimated_annual_capacity?: number | null
+          evidence_level?: string | null
+          evidence_strength_signal?: number | null
+          geography?: string[] | null
+          gs_entity_id?: string | null
+          harm_risk_level?: string | null
+          harm_risk_signal?: number | null
+          id?: string | null
+          implementation_capability_signal?: number | null
+          implementation_cost?: string | null
+          latitude?: number | null
+          linked_community_program_id?: string | null
+          linked_service_id?: string | null
+          location_type?: string | null
+          longitude?: number | null
+          metadata?: Json | null
+          name?: string | null
+          operating_organization?: string | null
+          operating_organization_id?: string | null
+          option_value_signal?: number | null
+          permitted_uses?: string[] | null
+          portfolio_score?: number | null
+          replication_readiness?: string | null
+          review_status?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risks?: string | null
+          scalability?: string | null
+          search_vector?: unknown
+          serves_youth_justice?: boolean | null
+          service_area_km?: number | null
+          service_role?: string | null
+          source_documents?: Json | null
+          target_cohort?: string[] | null
+          topics?: string[] | null
+          type?: string | null
+          updated_at?: string | null
+          verification_status?: string | null
+          website?: string | null
+          years_operating?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "gs_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_charity_rankings"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_entity_power_index"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_foundation_grantees"
+            referencedColumns: ["grantee_entity_id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_funding_outcomes_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_gs_donor_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_gs_entity_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_intervention_funding_chain"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_person_entity_crosswalk"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revolving_door"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_youth_justice_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_act_organisations"
+            referencedColumns: ["gs_entity_uuid"]
+          },
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_entity_abr"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_goods_central_channels"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_nt_community_buyer_crosswalk"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_nt_community_entity_matches"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_org_funding_profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_gs_entity_id_fkey"
+            columns: ["gs_entity_id"]
+            isOneToOne: false
+            referencedRelation: "v_youth_justice_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_linked_community_program_id_fkey"
+            columns: ["linked_community_program_id"]
+            isOneToOne: false
+            referencedRelation: "programs_catalog_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_linked_community_program_id_fkey"
+            columns: ["linked_community_program_id"]
+            isOneToOne: false
+            referencedRelation: "registered_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_linked_service_id_fkey"
+            columns: ["linked_service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_operating_organization_id_fkey"
+            columns: ["operating_organization_id"]
+            isOneToOne: false
+            referencedRelation: "canonical_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_operating_organization_id_fkey"
+            columns: ["operating_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_operating_organization_id_fkey"
+            columns: ["operating_organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_entity_360"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "alma_interventions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alma_media_articles_publishable: {
         Row: {
           community_mentions: Json | null
@@ -56739,13 +57343,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "community_programs_profiles_program_id_fkey"
-            columns: ["community_program_id"]
-            isOneToOne: false
-            referencedRelation: "programs_catalog_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "community_programs_profiles_program_id_fkey"
             columns: ["program_id"]
             isOneToOne: false
             referencedRelation: "programs_catalog_v"
@@ -56754,27 +57351,34 @@ export type Database = {
           {
             foreignKeyName: "community_programs_profiles_program_id_fkey"
             columns: ["community_program_id"]
+            isOneToOne: false
+            referencedRelation: "programs_catalog_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_programs_profiles_program_id_fkey"
+            columns: ["program_id"]
             isOneToOne: false
             referencedRelation: "registered_services"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "community_programs_profiles_program_id_fkey"
-            columns: ["program_id"]
+            columns: ["community_program_id"]
             isOneToOne: false
             referencedRelation: "registered_services"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "community_programs_profiles_public_profile_id_fkey"
-            columns: ["public_profile_id"]
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "community_programs_profiles_public_profile_id_fkey"
-            columns: ["profile_id"]
+            columns: ["public_profile_id"]
             isOneToOne: false
             referencedRelation: "public_profiles"
             referencedColumns: ["id"]
@@ -57113,6 +57717,13 @@ export type Database = {
             columns: ["alma_intervention_id"]
             isOneToOne: false
             referencedRelation: "alma_interventions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "justice_funding_alma_intervention_id_fkey"
+            columns: ["alma_intervention_id"]
+            isOneToOne: false
+            referencedRelation: "alma_interventions_valid"
             referencedColumns: ["id"]
           },
           {
