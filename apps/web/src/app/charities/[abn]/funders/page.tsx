@@ -52,7 +52,10 @@ export default async function FundersLikeMine({
           Between one and a half and six cents in each dollar reached organisations those communities control.
           Big institutions pay people to know where the money is. This page is that knowledge, free.
         </p>
-        <p className="mt-2 text-xs">Draft figure from ACNC filings 2022 to 2024, being re-checked. Not for publication yet.</p>
+        <p className="mt-2 text-xs">
+          ACNC Annual Information Statements, each charity&apos;s latest filing for 2022 to 2024. The range is 1.5 cents
+          counting only the 209 organisations Jev is sure of, 6.4 cents counting every organisation that might be.
+        </p>
       </section>
 
       <section className="mt-8 border-4 border-bauhaus-black p-5">
