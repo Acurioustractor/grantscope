@@ -39,8 +39,8 @@ const PSQL_CONN = [
   '-X', '-A', '-t', '-v', 'ON_ERROR_STOP=1',
 ];
 
-const DEDUP_TARGET =
-  "(source_entity_id, target_entity_id, relationship_type, dataset, COALESCE(source_record_id, ''::text))";
+// ON CONFLICT is untargeted to skip either unique index; see buildRelationshipsSetBased in
+// build-entity-graph.mjs for why targeting only the dedup key crashed the build (2026-09-22).
 
 // Person identity, shared by every step so entities, edges and backfill agree:
 //   normname = person_name_normalised, else upper(trim(person_name))  (mirrors JS `a || b`)
@@ -139,7 +139,7 @@ async function main() {
 
     log('Step 2/3: inserting person→company edges (additive)...');
     const ins = await runDml('person edges',
-      `INSERT INTO gs_relationships ${EDGE_COLS}\n${EDGE_SELECT}\nON CONFLICT ${DEDUP_TARGET} DO NOTHING;`);
+      `INSERT INTO gs_relationships ${EDGE_COLS}\n${EDGE_SELECT}\nON CONFLICT DO NOTHING;`);
     const relsCreated = Number(tag(ins, /INSERT\s+\d+\s+(\d+)/));
     log(`  Edges inserted: ${relsCreated} (existing skipped via ON CONFLICT)`);
 

@@ -11,7 +11,7 @@
  *     relationship_type / source_record_id) are what let the check count
  *     distinct edge-keys without re-deriving the joins.
  *
- * The dedup key mirrors build-entity-graph's DEDUP_TARGET:
+ * The dedup key mirrors the idx_gs_rel_dedup unique index on gs_relationships:
  *   (source_entity_id, target_entity_id, relationship_type, dataset, COALESCE(source_record_id,''))
  * Within one dataset, `dataset` is a constant literal, so the per-dataset
  * distinct key reduces to (source_entity_id, target_entity_id, relationship_type,
@@ -33,11 +33,6 @@ export const GRAPH_EDGE_DATASETS = [
     relationshipType: 'donation',
     relationshipTypes: ['donation', 'party_receipt'],
     label: 'Donation relationships',
-    // One edge per donation row. Skip on the record key, not the five-column dedup key: when a
-    // donor re-resolves, the new edge differs on source_entity_id, slips past the dedup key and
-    // hits gs_relationships_dataset_source_record_uniq instead (build killed 2026-09-22). Keeps
-    // the existing edge; 38,932 edges resolved under the old random pick are left as they are.
-    conflictTarget: '(dataset, source_record_id) WHERE source_record_id IS NOT NULL',
     sourceTable: 'political_donations',
     cols: '(source_entity_id, target_entity_id, relationship_type, amount, year, dataset, source_record_id, confidence, properties)',
     // prelude: materialise + index the donor name→ABN map so the join below is an index scan,
@@ -177,7 +172,11 @@ export const GRAPH_EDGE_DATASETS = [
      JOIN gs_entities supplier
        ON supplier.gs_id = 'AU-ABN-' || regexp_replace(c.supplier_abn, '\\s', '', 'g')
      WHERE c.supplier_abn IS NOT NULL
-       AND regexp_replace(c.supplier_abn, '\\s', '', 'g') ~ '^[0-9]{11}$'`,
+       AND regexp_replace(c.supplier_abn, '\\s', '', 'g') ~ '^[0-9]{11}$'
+       -- A department buying from its own ABN (inter-agency) is a self-loop, which
+       -- gs_relationships_no_judged_selfloops forbids for austender. Surfaced 2026-09-22 once
+       -- buyer_entity_links resolved buyers to their ABN node; before, it crashed the build.
+       AND buyer.id <> supplier.id`,
   },
   // `grant_opportunities` was RETIRED as an edge dataset on 2026-09-06. Its only derivation was a
   // self-loop (foundation -> itself, one per program), which the 2026-08-20 self-loop migration
@@ -203,6 +202,7 @@ export const GRAPH_EDGE_DATASETS = [
      JOIN gs_entities parent
        ON upper(parent.canonical_name) = upper(f.parent_company)
      WHERE f.parent_company IS NOT NULL AND f.acnc_abn IS NOT NULL
+       AND parent.id <> f_ent.id  -- a parent_company naming the foundation itself is a forbidden self-loop
      ORDER BY f.acnc_abn, parent.id`,
   },
   {
@@ -257,7 +257,8 @@ export const GRAPH_EDGE_DATASETS = [
          'purpose',        left(g.purpose, 500))
      FROM grantconnect_awards g
      JOIN gc_agency_map m ON m.agency_key = upper(trim(g.agency))
-     WHERE g.gs_entity_id IS NOT NULL AND g.agency IS NOT NULL`,
+     WHERE g.gs_entity_id IS NOT NULL AND g.agency IS NOT NULL
+       AND m.ent_id <> g.gs_entity_id  -- an agency granting to its own entity is a forbidden self-loop`,
   },
   {
     dataset: 'justice_funding',

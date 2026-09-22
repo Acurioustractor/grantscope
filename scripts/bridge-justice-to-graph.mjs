@@ -38,9 +38,8 @@ const PSQL_CONN = [
   '-X', '-A', '-t', '-v', 'ON_ERROR_STOP=1',
 ];
 
-// Mirrors build-entity-graph's DEDUP_TARGET (the idx_gs_rel_dedup expression).
-const DEDUP_TARGET =
-  "(source_entity_id, target_entity_id, relationship_type, dataset, COALESCE(source_record_id, ''::text))";
+// ON CONFLICT is untargeted to skip either unique index; see buildRelationshipsSetBased in
+// build-entity-graph.mjs for why targeting only the dedup key crashed the build (2026-09-22).
 
 function log(msg) {
   console.log(`[${new Date().toISOString()}] ${msg}`);
@@ -89,7 +88,7 @@ async function main() {
 
   log('Step 2/2: inserting program→recipient grant edges (additive, guarded)...');
   const ins = await runDml('justice edges',
-    `${d.prelude}\nINSERT INTO gs_relationships ${d.cols}\n${d.selectSql}${JUSTICE_BUILD_GUARD}\nON CONFLICT ${DEDUP_TARGET} DO NOTHING;`);
+    `${d.prelude}\nINSERT INTO gs_relationships ${d.cols}\n${d.selectSql}${JUSTICE_BUILD_GUARD}\nON CONFLICT DO NOTHING;`);
   log(`  Grant edges inserted: ${insertedCount(ins)} (existing skipped via ON CONFLICT)`);
 
   log('=== COMPLETE ===');
