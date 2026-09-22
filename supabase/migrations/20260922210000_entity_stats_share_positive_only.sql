@@ -11,6 +11,9 @@
 -- A materialized view cannot be replaced in place, and mv_search_index reads this one, so both
 -- are dropped and recreated from their live definitions (pg_get_viewdef, 2026-09-22), with the
 -- same indexes and grants. mv_search_index is otherwise byte-for-byte unchanged.
+-- counterparty_count(mv_gs_entity_stats), a PostgREST computed column, takes the view's row
+-- type, so it is dropped first and recreated with its grants. (The first apply stopped on it
+-- and rolled back cleanly, 2026-09-22.)
 --
 -- Apply AFTER this file is on main (.claude/skills/db-apply/SKILL.md step 5):
 --   scripts/db-apply.sh supabase/migrations/20260922210000_entity_stats_share_positive_only.sql
@@ -18,6 +21,7 @@
 BEGIN;
 SET LOCAL statement_timeout = 0;
 
+DROP FUNCTION public.counterparty_count(mv_gs_entity_stats);
 DROP MATERIALIZED VIEW mv_search_index;
 DROP MATERIALIZED VIEW mv_gs_entity_stats;
 
@@ -131,6 +135,17 @@ CREATE INDEX idx_mv_gs_es_abn ON public.mv_gs_entity_stats USING btree (abn) WHE
 REVOKE ALL ON public.mv_gs_entity_stats FROM PUBLIC, anon, authenticated;
 GRANT ALL ON public.mv_gs_entity_stats TO service_role;
 GRANT SELECT ON public.mv_gs_entity_stats TO agent_readonly;
+
+CREATE FUNCTION public.counterparty_count(mv_gs_entity_stats)
+ RETURNS bigint
+ LANGUAGE sql
+ STABLE
+ SET search_path TO 'public', 'extensions', 'pg_temp'
+AS $function$
+  select $1.distinct_counterparties;
+$function$;
+REVOKE ALL ON FUNCTION public.counterparty_count(mv_gs_entity_stats) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.counterparty_count(mv_gs_entity_stats) TO anon, authenticated, service_role;
 
 CREATE MATERIALIZED VIEW mv_search_index AS
  WITH ent AS (
