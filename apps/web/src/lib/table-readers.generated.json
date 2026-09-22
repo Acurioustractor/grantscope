@@ -40,12 +40,14 @@
   "app/api/charities/claim/route.ts",
   "app/api/ops/claims/route.ts",
   "app/changes/page.tsx",
+  "app/charities/[abn]/funders/page.tsx",
   "app/entities/[gsId]/page.tsx",
   "app/entity/[gsId]/page.tsx",
   "app/reports/cross-reference/page.tsx",
   "app/reports/multicultural-sector/fecca-eccv/page.tsx",
   "app/reports/power-map/page.tsx",
   "app/social-enterprises/[id]/page.tsx",
+  "lib/community-funders.ts",
   "lib/place-organisations.ts",
   "lib/services/due-diligence-service.ts"
  ],
@@ -1045,6 +1047,7 @@
  "grantconnect_awards": [
   "app/api/data/map/route.ts",
   "app/api/data/place/[code]/route.ts",
+  "lib/community-funders.ts",
   "lib/grant-place-capture.ts",
   "lib/place-organisations.ts",
   "lib/services/place-intelligence.ts"
@@ -1110,6 +1113,7 @@
   "app/api/watches/route.ts",
   "app/briefing/page.tsx",
   "app/changes/page.tsx",
+  "app/charities/[abn]/funders/page.tsx",
   "app/dashboard/browse/foundations/[id]/page.tsx",
   "app/dashboard/entities/page.tsx",
   "app/entities/[gsId]/page.tsx",
@@ -1277,6 +1281,7 @@
   "app/reports/youth-justice/qld/sector/page.tsx",
   "app/reports/youth-justice/qld/tracker/page.tsx",
   "app/social-enterprises/[id]/page.tsx",
+  "lib/community-funders.ts",
   "lib/justice-money.ts",
   "lib/services/act-barkly-field.ts",
   "lib/services/act-saved-queries.ts",
