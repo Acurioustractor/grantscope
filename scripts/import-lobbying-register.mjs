@@ -350,7 +350,10 @@ async function importToEntityGraph(lobbyists) {
       .ilike('company_name', lob.business_name)
       .limit(1);
 
-    const abn = asicMatch?.[0]?.abn || null;
+    // asic_companies carries ABN '0' for companies with no ABN; that joins the placeholder node
+    // AU-ABN-0 ('112 Trenerry Crescent Pty Ltd') and filed five lobbyists' clients under it.
+    const rawAbn = asicMatch?.[0]?.abn;
+    const abn = rawAbn && !/^[0\s]*$/.test(rawAbn) ? rawAbn : null;
     const gsId = makeGsId({ abn, name: lob.business_name });
 
     // Check if entity already exists
