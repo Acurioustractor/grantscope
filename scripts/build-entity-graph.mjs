@@ -170,7 +170,7 @@ async function selectJsonRows(label, selectSql) {
  * an index scan instead of a nested-loop-over-a-Materialize (the latter turned the donations
  * join into a ~4-billion-op runaway). Dry-run counts candidate rows instead of writing.
  */
-async function buildRelationshipsSetBased(label, cols, selectSql, prelude = '') {
+async function buildRelationshipsSetBased(label, cols, selectSql, prelude = '', conflictTarget = DEDUP_TARGET) {
   const pre = prelude ? `${prelude.trim()}\n` : '';
   if (dryRun) {
     const out = await runDml(label, `${pre}SELECT count(*) FROM (${selectSql}) _q;`);
@@ -179,7 +179,7 @@ async function buildRelationshipsSetBased(label, cols, selectSql, prelude = '') 
   }
   const out = await runDml(
     label,
-    `${pre}INSERT INTO gs_relationships ${cols}\n${selectSql}\nON CONFLICT ${DEDUP_TARGET} DO NOTHING;`,
+    `${pre}INSERT INTO gs_relationships ${cols}\n${selectSql}\nON CONFLICT ${conflictTarget} DO NOTHING;`,
   );
   const m = out.match(/INSERT\s+\d+\s+(\d+)/);
   log(`  ${label}: ${m ? m[1] : '0'} inserted (existing rows skipped via ON CONFLICT)`);
@@ -789,7 +789,7 @@ async function buildEntities() {
 async function buildDonationRelationships() {
   log('\nPhase 2a: Political donation relationships...');
   const d = edgeDataset('aec_donations');
-  await buildRelationshipsSetBased(d.label, d.cols, d.selectSql, d.prelude);
+  await buildRelationshipsSetBased(d.label, d.cols, d.selectSql, d.prelude, d.conflictTarget);
 }
 
 // ─── Phase 2b: AusTender contracts → relationships ──────────────────────────

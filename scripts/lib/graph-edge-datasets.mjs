@@ -33,19 +33,30 @@ export const GRAPH_EDGE_DATASETS = [
     relationshipType: 'donation',
     relationshipTypes: ['donation', 'party_receipt'],
     label: 'Donation relationships',
+    // One edge per donation row. Skip on the record key, not the five-column dedup key: when a
+    // donor re-resolves, the new edge differs on source_entity_id, slips past the dedup key and
+    // hits gs_relationships_dataset_source_record_uniq instead (build killed 2026-09-22). Keeps
+    // the existing edge; 38,932 edges resolved under the old random pick are left as they are.
+    conflictTarget: '(dataset, source_record_id) WHERE source_record_id IS NOT NULL',
     sourceTable: 'political_donations',
     cols: '(source_entity_id, target_entity_id, relationship_type, amount, year, dataset, source_record_id, confidence, properties)',
     // prelude: materialise + index the donor name→ABN map so the join below is an index scan,
     // not a nested loop over an unindexed Materialize node (~4B ops → runaway).
+    //
+    // The ORDER BY must fully decide the pick. It was `ORDER BY key` alone until 2026-09-22, and
+    // 32 donor names map to more than one ABN, so 10,829 donations resolved to a different
+    // donor on different runs (Origin Energy one night, Origin Energy - NSW the next). The new
+    // edge then collided with last run's on (dataset, source_record_id) and killed the build.
+    // Verified first, then confidence, then the exact name over the normalised one.
     prelude: `CREATE TEMP TABLE donor_map AS
        SELECT DISTINCT ON (key) key, matched_abn FROM (
-         SELECT upper(trim(donor_name)) AS key, matched_abn
+         SELECT upper(trim(donor_name)) AS key, matched_abn, verified, match_confidence, 0 AS via
            FROM donor_entity_matches WHERE matched_abn IS NOT NULL
          UNION ALL
-         SELECT upper(trim(donor_name_normalized)), matched_abn
+         SELECT upper(trim(donor_name_normalized)), matched_abn, verified, match_confidence, 1
            FROM donor_entity_matches
            WHERE donor_name_normalized IS NOT NULL AND matched_abn IS NOT NULL
-       ) z ORDER BY key;
+       ) z ORDER BY key, verified DESC NULLS LAST, match_confidence DESC NULLS LAST, via, matched_abn;
      CREATE INDEX ON donor_map(key);
      ANALYZE donor_map;`,
     selectSql: `SELECT
