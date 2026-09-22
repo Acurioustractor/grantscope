@@ -546,16 +546,30 @@ async function buildEntities() {
   while (true) {
     const { data: donors, error } = await supabase
       .from('donor_entity_matches')
-      .select('donor_name, matched_abn, matched_entity_type, match_confidence')
+      .select('donor_name, matched_abn, matched_entity_name, matched_entity_type, match_confidence')
       .not('matched_abn', 'is', null)
       .range(offset, offset + batchSize - 1);
     if (error) { log(`  ERROR: ${error.message}`); break; }
     if (!donors?.length) break;
 
+    // Name a new node after the ABN, never after the donor. The donor name is what a disclosure
+    // called someone we MATCHED to this ABN; when the match is wrong (187 rejected 2026-09-22),
+    // the node was born with another organisation's name and, because every later source
+    // ignores duplicates, kept it: an ABN held by one body labelled "Australia Post" or "NAB".
+    // Order: the ABN register, the name the match was made against, the disclosed name.
+    const registerName = new Map();
+    const abns = [...new Set(donors.map(d => d.matched_abn).filter(a => validAbn(a, 'donors')))];
+    for (let i = 0; i < abns.length; i += 200) {
+      const { data: reg, error: regErr } = await supabase
+        .from('abr_registry').select('abn, entity_name').in('abn', abns.slice(i, i + 200));
+      if (regErr) log(`  WARN: abr_registry lookup failed, falling back to match names: ${regErr.message}`);
+      for (const r of reg || []) if (r.entity_name) registerName.set(r.abn, r.entity_name);
+    }
+
     if (!dryRun) {
       const donorEntities = donors.filter(d => validAbn(d.matched_abn, 'donors')).map(d => ({
         entity_type: d.matched_entity_type === 'acnc' ? 'charity' : 'company',
-        canonical_name: d.donor_name,
+        canonical_name: registerName.get(d.matched_abn) || d.matched_entity_name || d.donor_name,
         abn: d.matched_abn,
         gs_id: makeGsId({ abn: d.matched_abn }),
         source_datasets: ['aec_donations'],
