@@ -134,8 +134,11 @@ const PSQL_CONN = [
   '-v', 'ON_ERROR_STOP=1',
 ];
 
-const DEDUP_TARGET =
-  "(source_entity_id, target_entity_id, relationship_type, dataset, COALESCE(source_record_id, ''::text))";
+// Untargeted ON CONFLICT: skip a candidate that breaks EITHER unique index on gs_relationships,
+// the five-column dedup key (idx_gs_rel_dedup) or one edge per source record
+// (gs_relationships_dataset_source_record_uniq). Targeting only the dedup key killed the build
+// twice on 2026-09-22 (aec_donations, then austender): a source row that re-resolved to a
+// different entity passed the dedup key and hit the record key. The existing edge is kept.
 
 /** Run one DML/SELECT statement via psql, retrying transient pooler failures. Returns stdout. */
 async function runDml(label, sql) {
@@ -170,7 +173,7 @@ async function selectJsonRows(label, selectSql) {
  * an index scan instead of a nested-loop-over-a-Materialize (the latter turned the donations
  * join into a ~4-billion-op runaway). Dry-run counts candidate rows instead of writing.
  */
-async function buildRelationshipsSetBased(label, cols, selectSql, prelude = '', conflictTarget = DEDUP_TARGET) {
+async function buildRelationshipsSetBased(label, cols, selectSql, prelude = '') {
   const pre = prelude ? `${prelude.trim()}\n` : '';
   if (dryRun) {
     const out = await runDml(label, `${pre}SELECT count(*) FROM (${selectSql}) _q;`);
@@ -179,7 +182,7 @@ async function buildRelationshipsSetBased(label, cols, selectSql, prelude = '', 
   }
   const out = await runDml(
     label,
-    `${pre}INSERT INTO gs_relationships ${cols}\n${selectSql}\nON CONFLICT ${conflictTarget} DO NOTHING;`,
+    `${pre}INSERT INTO gs_relationships ${cols}\n${selectSql}\nON CONFLICT DO NOTHING;`,
   );
   const m = out.match(/INSERT\s+\d+\s+(\d+)/);
   log(`  ${label}: ${m ? m[1] : '0'} inserted (existing rows skipped via ON CONFLICT)`);
@@ -789,7 +792,7 @@ async function buildEntities() {
 async function buildDonationRelationships() {
   log('\nPhase 2a: Political donation relationships...');
   const d = edgeDataset('aec_donations');
-  await buildRelationshipsSetBased(d.label, d.cols, d.selectSql, d.prelude, d.conflictTarget);
+  await buildRelationshipsSetBased(d.label, d.cols, d.selectSql, d.prelude);
 }
 
 // ─── Phase 2b: AusTender contracts → relationships ──────────────────────────
