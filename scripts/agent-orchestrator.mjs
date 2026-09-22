@@ -21,6 +21,7 @@ import { createClient } from '@supabase/supabase-js';
 import { execFile } from 'child_process';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 import { AGENTS } from './lib/agent-registry.mjs';
+import { findStaleTasks } from './lib/stale-tasks.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -103,6 +104,32 @@ async function recoverStuckTasks() {
  * job queued. Keep the newest pending scheduler task per agent so a restart does
  * not replay obsolete nightly work. User-created tasks are never coalesced.
  */
+// Mid-run counterpart to recoverStuckTasks. A 'running' row whose completion write was lost
+// holds a concurrency slot forever (queue stalled 2026-09-18 → 09-22). Marked failed, not
+// pending: a task that may have half-run a side effect should not replay unattended.
+async function sweepStaleTasks() {
+  const { data: running, error } = await supabase
+    .from('agent_tasks')
+    .select('id, agent_id, started_at')
+    .eq('status', 'running');
+  if (error || !running?.length) return;
+
+  const stale = findStaleTasks(running, { agents: AGENTS, activeIds: new Set(activeChildren.keys()) });
+  for (const task of stale) {
+    const { error: updateError } = await supabase
+      .from('agent_tasks')
+      .update({
+        status: 'failed',
+        completed_at: new Date().toISOString(),
+        error: `stale: running since ${task.started_at} with no live process; swept by orchestrator`,
+      })
+      .eq('id', task.id)
+      .eq('status', 'running');
+    if (updateError) console.error(`[orchestrator] Stale sweep failed for ${task.agent_id}:`, updateError.message);
+    else console.log(`[${timestamp()}] Swept stale task: ${task.agent_id} (task=${task.id.slice(0, 8)}, started ${task.started_at})`);
+  }
+}
+
 async function coalesceScheduledTasks() {
   const { data, error } = await supabase
     .from('agent_tasks')
@@ -301,6 +328,8 @@ async function pollOnce() {
 
 async function runScheduler() {
   if (shuttingDown) return;
+
+  await sweepStaleTasks();
 
   try {
     const { data: schedules, error } = await supabase
