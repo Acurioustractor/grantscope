@@ -305,7 +305,10 @@ export const GRAPH_EDGE_DATASETS = [
      JOIN gs_entities rec ON rec.abn = jf.recipient_abn
      JOIN jf_prog_map pm ON pm.canonical_name = jf.program_name
                         AND pm.norm_state    = coalesce(NULLIF(trim(jf.state),''),'NAT')
-     WHERE jf.recipient_abn IS NOT NULL AND jf.amount_dollars > 0`,
+     WHERE jf.recipient_abn IS NOT NULL AND jf.amount_dollars > 0
+       -- 231 rows carry ABN 0 / 00000000000, which joins the placeholder nodes ('112 Trenerry
+       -- Crescent Pty Ltd' and a namesake) and credited them with $773M. Same guard as donations.
+       AND jf.recipient_abn !~ '^[0\\s]*$'`,
   },
 ];
 
