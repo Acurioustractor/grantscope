@@ -214,3 +214,67 @@ export function rankPrograms(grants: Grant[]): Program[] {
   }
   return progs.sort((a, b) => b.peersFunded - a.peersFunded || b.total - a.total);
 }
+
+export interface Holder {
+  abn: string;
+  name: string;
+  total: number;
+  grants: number;
+  topAgency: string;
+  latestYear: number | null;
+  isPeer: boolean;
+}
+
+/**
+ * Who holds the money for your region and your kind of work.
+ *
+ * Ampilatwatja Health Centre showed why this is needed: six small NT health organisations, not one
+ * public grant between them since 2021. The money for remote health goes to intermediaries (the NT
+ * Primary Health Network took $50m, $32.5m and $26.1m) which then subcontract. "No grants" reads as
+ * an absence; naming who does hold it is the thing a small organisation can act on.
+ *
+ * Money DELIVERED in the state (delivery_state), by recipients whose own main work Jev puts in the
+ * same sector, at any size. It does not prove any of them subcontract: it says where the money for
+ * this work in this place lands.
+ */
+export async function regionHolders(
+  db: SupabaseClient,
+  opts: { sector: string; state: string; peerAbns: Set<string> },
+): Promise<Holder[]> {
+  const L = jevLabels();
+  const totals = new Map<string, Holder & { agencies: Map<string, number> }>();
+  for (let from = 0; from < 20000; from += 1000) {
+    const { data, error } = await db
+      .from('grantconnect_awards')
+      .select('agency, recipient_name, recipient_abn, value_aud, approval_date')
+      .eq('delivery_state', opts.state)
+      .gte('approval_date', `${SINCE_YEAR}-07-01`)
+      .range(from, from + 999);
+    if (error) throw new Error(`holders: ${error.message}`);
+    for (const g of data ?? []) {
+      const abn = g.recipient_abn ?? '';
+      const l = L.get(abn);
+      if (!l || l.sector !== opts.sector || (l.sector_conf ?? 0) < MIN_CONFIDENCE) continue;
+      const h = totals.get(abn) ?? {
+        abn,
+        name: g.recipient_name ?? abn,
+        total: 0,
+        grants: 0,
+        topAgency: '',
+        latestYear: null,
+        isPeer: opts.peerAbns.has(abn),
+        agencies: new Map<string, number>(),
+      };
+      h.total += g.value_aud ?? 0;
+      h.grants += 1;
+      const year = g.approval_date ? Number(g.approval_date.slice(0, 4)) : null;
+      if (year && (!h.latestYear || year > h.latestYear)) h.latestYear = year;
+      if (g.agency) h.agencies.set(g.agency, (h.agencies.get(g.agency) ?? 0) + (g.value_aud ?? 0));
+      totals.set(abn, h);
+    }
+    if (!data || data.length < 1000) break;
+  }
+  return [...totals.values()]
+    .map((h) => ({ ...h, topAgency: [...h.agencies.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'Unknown' }))
+    .sort((a, b) => b.total - a.total);
+}

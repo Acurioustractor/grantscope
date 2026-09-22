@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getServiceSupabase } from '@/lib/supabase';
 import { money } from '@/lib/justice-money';
 import {
-  SECTORS, SINCE_YEAR, MIN_CONFIDENCE, sectorFor, labelledCount, findPeers, peerGrants, rankPrograms,
+  SECTORS, SINCE_YEAR, MIN_CONFIDENCE, sectorFor, labelledCount, findPeers, peerGrants, rankPrograms, regionHolders,
 } from '@/lib/community-funders';
 
 export const dynamic = 'force-dynamic';
@@ -35,6 +35,9 @@ export default async function FundersLikeMine({
 
   const peers = sector && state ? await findPeers(db, { abn, sector, state, size }) : [];
   const programs = peers.length ? rankPrograms(await peerGrants(db, peers)) : [];
+  const peerAbns = new Set(peers.map((p) => p.abn));
+  const holders = sector && state ? await regionHolders(db, { sector, state, peerAbns }) : [];
+  const holderTotal = holders.reduce((s, h) => s + h.total, 0);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
@@ -141,6 +144,35 @@ export default async function FundersLikeMine({
                     </li>
                   ))}
                 </ul>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {sector && state && holders.length > 0 && (
+        <section className="mt-10">
+          <p className="text-sm font-black uppercase tracking-widest text-bauhaus-red">Who holds the money for your region</p>
+          <p className="mt-2 text-xl font-black">
+            {money(holderTotal)} of Commonwealth grants for {SECTORS[sector]?.toLowerCase()} was delivered in {state} since {SINCE_YEAR}.
+            It went to {holders.length} organisations.
+          </p>
+          <p className="mt-1 text-sm">
+            Ranked by what they received. Big recipients usually deliver through others, so this is who to approach about
+            partnering, subcontracting or auspicing. It does not prove any of them subcontract.
+          </p>
+          <ol className="mt-4 border-4 border-bauhaus-black">
+            {holders.slice(0, 15).map((h, i) => (
+              <li key={h.abn} className={`flex flex-wrap items-baseline justify-between gap-2 p-3 ${i ? 'border-t-2 border-bauhaus-black' : ''}`}>
+                <span>
+                  <Link href={`/charities/${h.abn}`} className="font-black underline">{h.name}</Link>
+                  {h.isPeer ? <span className="ml-2 border-2 border-bauhaus-black px-1 text-xs uppercase">like you</span> : null}
+                  <span className="block text-xs text-bauhaus-black/70">mostly {h.topAgency} · latest {h.latestYear ?? 'unknown'}</span>
+                </span>
+                <span className="text-right">
+                  <span className="font-black">{money(h.total)}</span>
+                  <span className="block text-xs text-bauhaus-black/70">{h.grants} grants</span>
+                </span>
               </li>
             ))}
           </ol>
