@@ -274,6 +274,44 @@ export interface EntityEnrichment {
   topContracts: TopContract[];
   sharedDirectors: SharedDirector[];
   crossSystemSummary: CrossSystemSummary;
+  /** mv_entity_power_index row, moved here from the retired /entity page (2026-09-23). */
+  power: PowerProfile | null;
+  /** mv_revolving_door row: present only when the entity works two or more influence channels. */
+  revolvingDoor: RevolvingDoor | null;
+  /** ATO corporate tax transparency, latest five report years. */
+  taxYears: TaxYear[];
+}
+
+export interface PowerProfile {
+  power_score: number;
+  system_count: number;
+  procurement_dollars: number;
+  recorded_grants_dollars: number;
+  donation_dollars: number;
+  distinct_govt_buyers: number;
+  distinct_parties_funded: number;
+}
+
+export interface RevolvingDoor {
+  lobbies: boolean;
+  donates: boolean;
+  contracts: boolean;
+  receives_funding: boolean;
+  influence_vectors: number;
+  total_donated: number;
+  /** Party NAMES (text[] in mv_revolving_door), not a count. */
+  parties_funded: string[] | null;
+  total_contracts: number;
+  distinct_buyers: number;
+  total_funded: number;
+}
+
+export interface TaxYear {
+  report_year: string;
+  total_income: number;
+  taxable_income: number;
+  tax_payable: number;
+  effective_tax_rate: number | null;
 }
 
 export interface OrgPersonRole {

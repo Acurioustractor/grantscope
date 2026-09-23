@@ -14,21 +14,44 @@ import { EvidenceTab } from './_components/evidence-tab';
 import { getShortlistIdFromPath, hasDisabilitySignal, districtLabel, validNdisDistrict } from './_lib/formatters';
 import { formatMoney } from './_lib/formatters';
 import { EmpathyLedgerStories } from '@/components/empathy-ledger-stories';
+import { applyGrantFilters, isRealRecipient } from '@/lib/justice-money';
 import type {
   Entity, MvEntityStats, AcncYear,
   FoundationEnrichment, FoundationProgram, CharityEnrichment,
   SocialEnterpriseEnrichment, NdisSupplyRow, NdisConcentrationRow,
   AlmaIntervention, PlaceGeo, SeifaData, GovernedProofBundle,
   EntityEnrichment, WorkspaceContext, PersonRole,
+  PowerProfile, RevolvingDoor, TaxYear,
 } from './_lib/types';
 
 export const revalidate = 300; // ISR: 5 min
 
-export async function generateMetadata({ params }: { params: Promise<{ gsId: string }> }): Promise<Metadata> {
-  const { gsId } = await params;
+/**
+ * The entity for a gs_id. Report links for rows that carry only an ABN arrive as AU-ABN-<abn>
+ * (lib/entity-href.ts); most ABN entities have exactly that gs_id, but ORIC corporations and merged
+ * government bodies do not, so fall back to the ABN itself rather than 404.
+ */
+async function resolveEntity(gsId: string) {
   const supabase = getServiceSupabase();
-  const { data: entity } = await supabase.from('gs_entities').select('canonical_name, entity_type').eq('gs_id', gsId).single();
+  const { data } = await supabase.from('gs_entities').select('*').eq('gs_id', gsId).maybeSingle();
+  if (data) return data as Entity;
+  const abn = /^AU-ABN-(\d{11})$/.exec(gsId)?.[1];
+  if (!abn) return null;
+  const { data: byAbn } = await supabase
+    .from('gs_entities')
+    .select('*')
+    .eq('abn', abn)
+    .order('source_count', { ascending: false, nullsFirst: false })
+    .limit(1);
+  return ((byAbn || [])[0] as Entity | undefined) ?? null;
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ gsId: string }> }): Promise<Metadata> {
+  const { gsId: rawGsId } = await params;
+  const supabase = getServiceSupabase();
+  const entity = await resolveEntity(decodeURIComponent(rawGsId));
   if (!entity) return { title: 'Entity Not Found | CivicGraph' };
+  const gsId = entity.gs_id;
 
   const { data: stats } = await supabase.from('mv_gs_entity_stats').select('total_relationships, total_outbound_amount, total_inbound_amount').eq('gs_id', gsId).single();
 
@@ -53,7 +76,7 @@ export default async function EntityDossierPage({
   params: Promise<{ gsId: string }>;
   searchParams: Promise<{ from?: string | string[]; tab?: string }>;
 }) {
-  const { gsId } = await params;
+  const { gsId: rawGsId } = await params;
   const resolvedSearchParams = await searchParams;
   const supabase = getServiceSupabase();
 
@@ -70,14 +93,9 @@ export default async function EntityDossierPage({
   const preferredShortlistId = getShortlistIdFromPath(returnHref);
 
   // Fetch entity
-  const { data: entity } = await supabase
-    .from('gs_entities')
-    .select('*')
-    .eq('gs_id', gsId)
-    .single();
-
+  const entity = await resolveEntity(decodeURIComponent(rawGsId));
   if (!entity) notFound();
-  const e = entity as Entity;
+  const e = entity;
 
   // Fetch MV stats + enrichment data in parallel
   const [
@@ -284,12 +302,15 @@ export default async function EntityDossierPage({
 
   // Justice funding (for overview tab — only server-side for initial render)
   let justiceFunding: Array<{ id: string; recipient_name: string; recipient_abn: string | null; program_name: string; amount_dollars: number | null; sector: string | null; source: string; financial_year: string | null; location: string | null; project_description: string | null }> = [];
+  // Grant lane only: without measure_kind and is_aggregate, whole-of-state budgets and spreadsheet
+  // TOTAL rows were summed into "Government Funding" (CLAUDE.md, the three mandatory filters).
+  const JF_COLS = 'id, recipient_name, recipient_abn, program_name, amount_dollars, sector, source, financial_year, location, project_description';
   if (e.abn) {
-    const { data } = await supabase.from('justice_funding').select('id, recipient_name, recipient_abn, program_name, amount_dollars, sector, source, financial_year, location, project_description').eq('recipient_abn', e.abn).order('amount_dollars', { ascending: false, nullsFirst: false });
-    justiceFunding = data || [];
+    const { data } = await applyGrantFilters(supabase.from('justice_funding').select(JF_COLS).eq('recipient_abn', e.abn)).order('amount_dollars', { ascending: false, nullsFirst: false });
+    justiceFunding = (data || []).filter((r) => isRealRecipient(r.recipient_name));
   } else {
-    const { data } = await supabase.from('justice_funding').select('id, recipient_name, recipient_abn, program_name, amount_dollars, sector, source, financial_year, location, project_description').ilike('recipient_name', `%${e.canonical_name.replace(/[%_]/g, '')}%`).order('amount_dollars', { ascending: false, nullsFirst: false }).limit(50);
-    justiceFunding = data || [];
+    const { data } = await applyGrantFilters(supabase.from('justice_funding').select(JF_COLS).ilike('recipient_name', `%${e.canonical_name.replace(/[%_]/g, '')}%`)).order('amount_dollars', { ascending: false, nullsFirst: false }).limit(50);
+    justiceFunding = (data || []).filter((r) => isRealRecipient(r.recipient_name));
   }
   const totalJusticeFunding = justiceFunding.reduce((sum, r) => sum + (r.amount_dollars || 0), 0);
 
@@ -383,6 +404,32 @@ export default async function EntityDossierPage({
     topContracts = (contractData || []) as TopContractRow[];
   }
 
+  // Power profile, revolving door and tax transparency: the sections only /entity used to show.
+  // exec_sql because /reports/who-runs-australia reads mv_revolving_door through PostgREST and gets
+  // nothing back (cause not found, 2026-09-23); the SQL path is the one /entity used and it works.
+  const [powerRows, revolvingRows, taxRows] = await Promise.all([
+    supabase.rpc('exec_sql', {
+      query: `SELECT power_score, system_count, procurement_dollars, recorded_grants_dollars, donation_dollars,
+                     distinct_govt_buyers, distinct_parties_funded
+                FROM mv_entity_power_index WHERE id = '${e.id}' LIMIT 1`,
+    }),
+    supabase.rpc('exec_sql', {
+      query: `SELECT lobbies, donates, contracts, receives_funding, influence_vectors,
+                     total_donated, parties_funded, total_contracts, distinct_buyers, total_funded
+                FROM mv_revolving_door WHERE id = '${e.id}' AND influence_vectors >= 2 LIMIT 1`,
+    }),
+    e.abn
+      ? supabase.rpc('exec_sql', {
+          query: `SELECT report_year, total_income::bigint, taxable_income::bigint, tax_payable::bigint, effective_tax_rate
+                    FROM ato_tax_transparency WHERE abn = '${e.abn}'
+                   ORDER BY report_year DESC LIMIT 5`,
+        })
+      : Promise.resolve({ data: [] }),
+  ]);
+  const power = ((powerRows.data || []) as PowerProfile[])[0] ?? null;
+  const revolvingDoor = ((revolvingRows.data || []) as RevolvingDoor[])[0] ?? null;
+  const taxYears = (taxRows.data || []) as TaxYear[];
+
   // Shared directors — people who sit on this entity's board AND other boards
   interface SharedDirectorRow { person_name: string; person_gs_id: string | null; shared_entities: Array<{ name: string; gs_id: string | null }> }
   let sharedDirectors: SharedDirectorRow[] = [];
@@ -451,6 +498,9 @@ export default async function EntityDossierPage({
     topContracts,
     sharedDirectors,
     crossSystemSummary,
+    power,
+    revolvingDoor,
+    taxYears,
   };
 
   const workspace: WorkspaceContext = {
@@ -463,6 +513,7 @@ export default async function EntityDossierPage({
       <EntityHeader
         entity={e}
         stats={mvStats}
+        donationsTotal={e.abn ? totalDonations : undefined}
         charity={charity}
         socialEnterprise={socialEnterprise}
         returnHref={returnHref}

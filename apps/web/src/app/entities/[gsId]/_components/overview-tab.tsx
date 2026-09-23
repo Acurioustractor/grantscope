@@ -32,6 +32,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
     justiceFunding, totalJusticeFunding,
     politicalDonations, totalDonations, lobbyingTargets,
     topContracts, sharedDirectors, crossSystemSummary,
+    power, revolvingDoor, taxYears,
   } = enrichment;
 
   const {
@@ -246,6 +247,66 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
         </div>
       )}
 
+      {/* Revolving door: two or more influence channels at once (moved from /entity, 2026-09-23) */}
+      {revolvingDoor && (
+        <div className="mb-6 border-4 border-bauhaus-red bg-error-light p-4">
+          <p className="text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
+            Works {revolvingDoor.influence_vectors} influence channels at once
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {revolvingDoor.lobbies && (
+              <span className="border-2 border-bauhaus-black bg-white px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-bauhaus-black">
+                Lobbies government
+              </span>
+            )}
+            {revolvingDoor.donates && (
+              <span
+                className="border-2 border-bauhaus-red bg-white px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-bauhaus-red"
+                title={(revolvingDoor.parties_funded ?? []).join(', ')}
+              >
+                Political donor
+                {(revolvingDoor.parties_funded?.length ?? 0) > 0 &&
+                  ` · ${revolvingDoor.parties_funded!.length} ${revolvingDoor.parties_funded!.length === 1 ? 'party' : 'parties'}`}
+              </span>
+            )}
+            {revolvingDoor.contracts && (
+              <span className="border-2 border-bauhaus-blue bg-white px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-bauhaus-blue">
+                Government contractor · {revolvingDoor.distinct_buyers} {revolvingDoor.distinct_buyers === 1 ? 'buyer' : 'buyers'}
+              </span>
+            )}
+            {revolvingDoor.receives_funding && (
+              <span className="border-2 border-money bg-white px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-money">
+                Receives government funding
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Power profile: score, reach and counts. Dollar figures stay in the sections below, where
+          each one is filtered, so the page never shows two different numbers for the same money. */}
+      {power && Number(power.system_count) > 0 && (
+        <Section title="Power Profile">
+          <div className="grid grid-cols-1 sm:grid-cols-3 border-4 border-bauhaus-black bg-white">
+            <div className="p-4 border-b-2 sm:border-b-0 sm:border-r-2 border-bauhaus-black">
+              <p className="text-[11px] font-black uppercase tracking-widest text-bauhaus-muted">Power score</p>
+              <p className="mt-1 text-3xl font-black tabular-nums text-bauhaus-black">{Number(power.power_score).toFixed(1)}</p>
+              <p className="mt-1 text-xs text-bauhaus-muted">present in {power.system_count} of 7 systems: contracts, grants, donations, charity, foundation, evidence, tax</p>
+            </div>
+            <div className="p-4 border-b-2 sm:border-b-0 sm:border-r-2 border-bauhaus-black">
+              <p className="text-[11px] font-black uppercase tracking-widest text-bauhaus-muted">Government buyers</p>
+              <p className="mt-1 text-3xl font-black tabular-nums text-bauhaus-black">{Number(power.distinct_govt_buyers) || 0}</p>
+              <p className="mt-1 text-xs text-bauhaus-muted">agencies it holds contracts with</p>
+            </div>
+            <div className="p-4">
+              <p className="text-[11px] font-black uppercase tracking-widest text-bauhaus-muted">Parties funded</p>
+              <p className="mt-1 text-3xl font-black tabular-nums text-bauhaus-red">{Number(power.distinct_parties_funded) || 0}</p>
+              <p className="mt-1 text-xs text-bauhaus-muted">received its donations</p>
+            </div>
+          </div>
+        </Section>
+      )}
+
       {/* Two column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main content */}
@@ -401,6 +462,39 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
                   </div>
                 ))}
               </div>
+            </Section>
+          )}
+
+          {/* ATO corporate tax transparency (moved from /entity, 2026-09-23) */}
+          {taxYears.length > 0 && (
+            <Section title="Tax Paid (ATO transparency)">
+              <div className="overflow-x-auto border-4 border-bauhaus-black bg-white">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-bauhaus-black text-white">
+                      <th scope="col" className="px-3 py-2 text-left text-[11px] font-black uppercase tracking-widest">Year</th>
+                      <th scope="col" className="px-3 py-2 text-right text-[11px] font-black uppercase tracking-widest">Total income</th>
+                      <th scope="col" className="px-3 py-2 text-right text-[11px] font-black uppercase tracking-widest">Taxable income</th>
+                      <th scope="col" className="px-3 py-2 text-right text-[11px] font-black uppercase tracking-widest">Tax payable</th>
+                      <th scope="col" className="px-3 py-2 text-right text-[11px] font-black uppercase tracking-widest">Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {taxYears.map((t) => (
+                      <tr key={t.report_year} className="border-t border-bauhaus-black/20">
+                        <td className="px-3 py-2 font-bold text-bauhaus-black">{t.report_year}</td>
+                        <td className="px-3 py-2 text-right font-mono tabular-nums">{formatMoney(Number(t.total_income))}</td>
+                        <td className="px-3 py-2 text-right font-mono tabular-nums">{formatMoney(Number(t.taxable_income))}</td>
+                        <td className="px-3 py-2 text-right font-mono font-bold tabular-nums">{formatMoney(Number(t.tax_payable))}</td>
+                        <td className="px-3 py-2 text-right font-mono tabular-nums">
+                          {t.effective_tax_rate != null ? `${Number(t.effective_tax_rate).toFixed(1)}%` : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-2 text-xs text-bauhaus-muted">Source: ATO corporate tax transparency report, latest five years published.</p>
             </Section>
           )}
 

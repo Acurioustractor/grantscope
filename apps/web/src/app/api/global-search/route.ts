@@ -51,7 +51,9 @@ export async function GET(req: NextRequest) {
     state: h.state,
     sourceCount: h.source_count ?? 0,
     revenue: h.money_in,
-    href: h.href ?? `/entity/${encodeURIComponent(h.id)}`,
+    // mv_search_index still stores /entity/<gs_id>; that page now redirects to /entities, the one
+    // profile page, so link there directly and skip the hop.
+    href: (h.href ?? `/entities/${encodeURIComponent(h.id)}`).replace(/^\/entity\//, '/entities/'),
   }));
   const grants = lane('grants').map((h) => ({
     id: h.id,

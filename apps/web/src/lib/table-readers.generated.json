@@ -42,7 +42,6 @@
   "app/changes/page.tsx",
   "app/charities/[abn]/funders/page.tsx",
   "app/entities/[gsId]/page.tsx",
-  "app/entity/[gsId]/page.tsx",
   "app/reports/cross-reference/page.tsx",
   "app/reports/multicultural-sector/fecca-eccv/page.tsx",
   "app/reports/power-map/page.tsx",
@@ -262,7 +261,6 @@
   "app/changes/page.tsx",
   "app/entities/[gsId]/page.tsx",
   "app/entity/[gsId]/funding-flow/page.tsx",
-  "app/entity/[gsId]/page.tsx",
   "app/foundations/prf/page.tsx",
   "app/org/[slug]/intelligence/page.tsx",
   "app/reports/convergence/page.tsx",
@@ -291,11 +289,9 @@
   "lib/services/report-service.ts"
  ],
  "anao_mmr_compliance": [
-  "app/entity/[gsId]/page.tsx",
   "lib/services/report-service.ts"
  ],
  "anao_mmr_exemptions": [
-  "app/entity/[gsId]/page.tsx",
   "lib/services/report-service.ts"
  ],
  "api_keys": [
@@ -316,7 +312,7 @@
   "app/api/data/tax-transparency/route.ts",
   "app/api/entities/[gsId]/route.ts",
   "app/api/v1/exposure/route.ts",
-  "app/entity/[gsId]/page.tsx",
+  "app/entities/[gsId]/page.tsx",
   "app/reports/cross-reference/page.tsx",
   "app/reports/power-map/page.tsx",
   "app/reports/tax-transparency/page.tsx",
@@ -340,7 +336,6 @@
   "app/changes/page.tsx",
   "app/entities/[gsId]/page.tsx",
   "app/entity/[gsId]/funding-flow/page.tsx",
-  "app/entity/[gsId]/page.tsx",
   "app/entity/[gsId]/print/page.tsx",
   "app/insights/page.tsx",
   "app/opportunities/ecosystem/page.tsx",
@@ -410,7 +405,6 @@
  ],
  "charity_impact_reports": [
   "app/changes/page.tsx",
-  "app/entity/[gsId]/page.tsx",
   "app/reports/multicultural-sector/fecca-eccv/long-read/page.tsx",
   "app/reports/multicultural-sector/fecca-eccv/page.tsx"
  ],
@@ -1122,7 +1116,6 @@
   "app/entities/[gsId]/page.tsx",
   "app/entities/page.tsx",
   "app/entity/[gsId]/funding-flow/page.tsx",
-  "app/entity/[gsId]/page.tsx",
   "app/entity/[gsId]/print/page.tsx",
   "app/foundations/compare/page.tsx",
   "app/foundations/prf/page.tsx",
@@ -1207,7 +1200,6 @@
   "app/entities/[gsId]/page.tsx",
   "app/entities/page.tsx",
   "app/entity/[gsId]/funding-flow/page.tsx",
-  "app/entity/[gsId]/page.tsx",
   "app/foundations/backlog/page.tsx",
   "app/foundations/compare/page.tsx",
   "app/foundations/prf/page.tsx",
@@ -1267,7 +1259,6 @@
   "app/changes/page.tsx",
   "app/entities/[gsId]/page.tsx",
   "app/entity/[gsId]/funding-flow/page.tsx",
-  "app/entity/[gsId]/page.tsx",
   "app/entity/[gsId]/print/page.tsx",
   "app/foundations/prf/page.tsx",
   "app/insights/page.tsx",
@@ -1362,8 +1353,7 @@
   "app/api/data/board-power/route.ts"
  ],
  "mv_charity_rankings": [
-  "app/api/data/rankings/route.ts",
-  "app/entity/[gsId]/page.tsx"
+  "app/api/data/rankings/route.ts"
  ],
  "mv_charity_trajectory": [
   "lib/charity-trajectory.ts"
@@ -1407,7 +1397,7 @@
   "app/api/data/power-index/route.ts",
   "app/api/data/sector/route.ts",
   "app/api/power/accountability/route.ts",
-  "app/entity/[gsId]/page.tsx",
+  "app/entities/[gsId]/page.tsx",
   "app/entity/[gsId]/print/page.tsx",
   "app/pipeline/page.tsx",
   "app/reports/community-efficiency/page.tsx",
@@ -1575,7 +1565,7 @@
   "app/api/data/political-money/route.ts",
   "app/api/data/who-runs-australia/route.ts",
   "app/api/power/accountability/route.ts",
-  "app/entity/[gsId]/page.tsx",
+  "app/entities/[gsId]/page.tsx",
   "app/entity/[gsId]/print/page.tsx",
   "app/reports/influence-network/page.tsx",
   "app/reports/political-money/page.tsx",
@@ -1842,7 +1832,6 @@
  "outcomes_metrics": [
   "app/api/data/outcomes/route.ts",
   "app/api/data/route.ts",
-  "app/entity/[gsId]/page.tsx",
   "app/reports/youth-justice/qld/sector/long-read/page.tsx",
   "app/reports/youth-justice/qld/sector/page.tsx",
   "lib/services/report-service.ts"
@@ -1894,7 +1883,6 @@
   "app/api/entities/[gsId]/network/route.ts",
   "app/api/power/accountability/route.ts",
   "app/entities/[gsId]/page.tsx",
-  "app/entity/[gsId]/page.tsx",
   "app/entity/[gsId]/print/page.tsx",
   "app/foundations/[id]/page.tsx",
   "app/foundations/backlog/page.tsx",
@@ -1963,7 +1951,6 @@
   "app/api/data/place/[code]/route.ts"
  ],
  "policy_events": [
-  "app/entity/[gsId]/page.tsx",
   "lib/services/report-service.ts"
  ],
  "political_donations": [
@@ -1975,7 +1962,6 @@
   "app/api/justice/evidence-pack/route.ts",
   "app/api/v1/exposure/route.ts",
   "app/entities/[gsId]/page.tsx",
-  "app/entity/[gsId]/page.tsx",
   "app/entity/[gsId]/print/page.tsx",
   "app/insights/page.tsx",
   "app/reports/consulting-class/page.tsx",

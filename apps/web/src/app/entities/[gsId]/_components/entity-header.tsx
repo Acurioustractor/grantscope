@@ -44,9 +44,11 @@ interface EntityHeaderProps {
   socialEnterprise: SocialEnterpriseEnrichment | undefined;
   returnHref: string;
   returnLabel: string;
+  /** Donations made, from the page's own filtered query. Keeps the header and the donations section on one number. */
+  donationsTotal?: number;
 }
 
-export function EntityHeader({ entity: e, stats, charity, socialEnterprise, returnHref, returnLabel }: EntityHeaderProps) {
+export function EntityHeader({ entity: e, stats, donationsTotal, charity, socialEnterprise, returnHref, returnLabel }: EntityHeaderProps) {
   const badge = confidenceBadge(e.confidence);
   const isDonorContractor =
     stats?.type_breakdown['donation:outbound'] && stats?.type_breakdown['contract:inbound'];
@@ -62,7 +64,13 @@ export function EntityHeader({ entity: e, stats, charity, socialEnterprise, retu
     stats?.type_breakdown['donation:outbound'] || stats?.type_breakdown['donation:inbound'];
   const contractBreakdown =
     stats?.type_breakdown['contract:outbound'] || stats?.type_breakdown['contract:inbound'];
-  const donationTotal = donationBreakdown ? donationBreakdown.amount : 0;
+  // A donor's header used the graph's donation edges while the section used political_donations
+  // filtered to 'donation received'; on 2026-09-23 Qantas read $600K above and $24K below. For a
+  // donor, use the section's figure. A party (inbound only) keeps the graph's received total.
+  const isDonor = !!stats?.type_breakdown['donation:outbound'] || (donationsTotal ?? 0) > 0;
+  const donationTotal = donationsTotal !== undefined && isDonor
+    ? donationsTotal
+    : donationBreakdown ? donationBreakdown.amount : 0;
   const contractTotal = contractBreakdown ? contractBreakdown.amount : 0;
 
   return (
