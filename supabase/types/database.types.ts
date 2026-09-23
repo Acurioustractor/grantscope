@@ -28438,6 +28438,33 @@ export type Database = {
         }
         Relationships: []
       }
+      gs_entities_neutralised_20260923: {
+        Row: {
+          abn: string | null
+          canonical_name: string | null
+          gs_id: string | null
+          id: string
+          metadata: Json | null
+          neutralised_at: string | null
+        }
+        Insert: {
+          abn?: string | null
+          canonical_name?: string | null
+          gs_id?: string | null
+          id: string
+          metadata?: Json | null
+          neutralised_at?: string | null
+        }
+        Update: {
+          abn?: string | null
+          canonical_name?: string | null
+          gs_id?: string | null
+          id?: string
+          metadata?: Json | null
+          neutralised_at?: string | null
+        }
+        Relationships: []
+      }
       gs_entities_reason_backup_20260809b: {
         Row: {
           abn: string | null
@@ -29164,6 +29191,132 @@ export type Database = {
         ]
       }
       gs_relationships_deleted_20260922: {
+        Row: {
+          amount: number | null
+          confidence: string | null
+          created_at: string | null
+          currency: string | null
+          dataset: string | null
+          delete_reason: string | null
+          end_date: string | null
+          first_seen: string | null
+          id: string
+          last_seen: string | null
+          properties: Json | null
+          relationship_type: string | null
+          source_entity_id: string | null
+          source_record_id: string | null
+          source_url: string | null
+          start_date: string | null
+          target_entity_id: string | null
+          year: number | null
+        }
+        Insert: {
+          amount?: number | null
+          confidence?: string | null
+          created_at?: string | null
+          currency?: string | null
+          dataset?: string | null
+          delete_reason?: string | null
+          end_date?: string | null
+          first_seen?: string | null
+          id: string
+          last_seen?: string | null
+          properties?: Json | null
+          relationship_type?: string | null
+          source_entity_id?: string | null
+          source_record_id?: string | null
+          source_url?: string | null
+          start_date?: string | null
+          target_entity_id?: string | null
+          year?: number | null
+        }
+        Update: {
+          amount?: number | null
+          confidence?: string | null
+          created_at?: string | null
+          currency?: string | null
+          dataset?: string | null
+          delete_reason?: string | null
+          end_date?: string | null
+          first_seen?: string | null
+          id?: string
+          last_seen?: string | null
+          properties?: Json | null
+          relationship_type?: string | null
+          source_entity_id?: string | null
+          source_record_id?: string | null
+          source_url?: string | null
+          start_date?: string | null
+          target_entity_id?: string | null
+          year?: number | null
+        }
+        Relationships: []
+      }
+      gs_relationships_deleted_20260923: {
+        Row: {
+          amount: number | null
+          confidence: string | null
+          created_at: string | null
+          currency: string | null
+          dataset: string | null
+          delete_reason: string | null
+          end_date: string | null
+          first_seen: string | null
+          id: string
+          last_seen: string | null
+          properties: Json | null
+          relationship_type: string | null
+          source_entity_id: string | null
+          source_record_id: string | null
+          source_url: string | null
+          start_date: string | null
+          target_entity_id: string | null
+          year: number | null
+        }
+        Insert: {
+          amount?: number | null
+          confidence?: string | null
+          created_at?: string | null
+          currency?: string | null
+          dataset?: string | null
+          delete_reason?: string | null
+          end_date?: string | null
+          first_seen?: string | null
+          id: string
+          last_seen?: string | null
+          properties?: Json | null
+          relationship_type?: string | null
+          source_entity_id?: string | null
+          source_record_id?: string | null
+          source_url?: string | null
+          start_date?: string | null
+          target_entity_id?: string | null
+          year?: number | null
+        }
+        Update: {
+          amount?: number | null
+          confidence?: string | null
+          created_at?: string | null
+          currency?: string | null
+          dataset?: string | null
+          delete_reason?: string | null
+          end_date?: string | null
+          first_seen?: string | null
+          id?: string
+          last_seen?: string | null
+          properties?: Json | null
+          relationship_type?: string | null
+          source_entity_id?: string | null
+          source_record_id?: string | null
+          source_url?: string | null
+          start_date?: string | null
+          target_entity_id?: string | null
+          year?: number | null
+        }
+        Relationships: []
+      }
+      gs_relationships_deleted_20260923_aec: {
         Row: {
           amount: number | null
           confidence: string | null
@@ -43260,12 +43413,63 @@ export type Database = {
       political_donations: {
         Row: {
           amount: number | null
+          copy_no: number
           created_at: string | null
           donation_date: string | null
           donation_to: string
           donor_abn: string | null
           donor_name: string
           financial_year: string
+          id: string
+          key_hash: string | null
+          properties: Json | null
+          receipt_type: string | null
+          return_type: string | null
+          source_state: string | null
+        }
+        Insert: {
+          amount?: number | null
+          copy_no?: number
+          created_at?: string | null
+          donation_date?: string | null
+          donation_to: string
+          donor_abn?: string | null
+          donor_name: string
+          financial_year: string
+          id?: string
+          key_hash?: string | null
+          properties?: Json | null
+          receipt_type?: string | null
+          return_type?: string | null
+          source_state?: string | null
+        }
+        Update: {
+          amount?: number | null
+          copy_no?: number
+          created_at?: string | null
+          donation_date?: string | null
+          donation_to?: string
+          donor_abn?: string | null
+          donor_name?: string
+          financial_year?: string
+          id?: string
+          key_hash?: string | null
+          properties?: Json | null
+          receipt_type?: string | null
+          return_type?: string | null
+          source_state?: string | null
+        }
+        Relationships: []
+      }
+      political_donations_pre_dedup_20260923: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          donation_date: string | null
+          donation_to: string | null
+          donor_abn: string | null
+          donor_name: string | null
+          financial_year: string | null
           id: string
           properties: Json | null
           receipt_type: string | null
@@ -43276,11 +43480,11 @@ export type Database = {
           amount?: number | null
           created_at?: string | null
           donation_date?: string | null
-          donation_to: string
+          donation_to?: string | null
           donor_abn?: string | null
-          donor_name: string
-          financial_year: string
-          id?: string
+          donor_name?: string | null
+          financial_year?: string | null
+          id: string
           properties?: Json | null
           receipt_type?: string | null
           return_type?: string | null
@@ -43290,10 +43494,10 @@ export type Database = {
           amount?: number | null
           created_at?: string | null
           donation_date?: string | null
-          donation_to?: string
+          donation_to?: string | null
           donor_abn?: string | null
-          donor_name?: string
-          financial_year?: string
+          donor_name?: string | null
+          financial_year?: string | null
           id?: string
           properties?: Json | null
           receipt_type?: string | null
@@ -57471,13 +57675,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "community_programs_profiles_program_id_fkey"
-            columns: ["community_program_id"]
-            isOneToOne: false
-            referencedRelation: "programs_catalog_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "community_programs_profiles_program_id_fkey"
             columns: ["program_id"]
             isOneToOne: false
             referencedRelation: "programs_catalog_v"
@@ -57486,13 +57683,20 @@ export type Database = {
           {
             foreignKeyName: "community_programs_profiles_program_id_fkey"
             columns: ["community_program_id"]
+            isOneToOne: false
+            referencedRelation: "programs_catalog_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_programs_profiles_program_id_fkey"
+            columns: ["program_id"]
             isOneToOne: false
             referencedRelation: "registered_services"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "community_programs_profiles_program_id_fkey"
-            columns: ["program_id"]
+            columns: ["community_program_id"]
             isOneToOne: false
             referencedRelation: "registered_services"
             referencedColumns: ["id"]
