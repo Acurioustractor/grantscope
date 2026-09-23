@@ -37,7 +37,7 @@ const STATUS_COLORS: Record<string, string> = {
   submitted: 'bg-bauhaus-yellow/20 text-yellow-800',
   under_review: 'bg-bauhaus-blue/20 text-bauhaus-blue',
   validated: 'bg-money-light text-green-800',
-  rejected: 'bg-error-light text-bauhaus-red',
+  rejected: 'bg-danger-light text-bauhaus-red',
   published: 'bg-bauhaus-blue/30 text-bauhaus-blue',
 };
 
@@ -264,7 +264,7 @@ export default function OutcomeReviewPage() {
                         <button
                           onClick={() => handleReview(sub.id, 'reject')}
                           disabled={acting === sub.id}
-                          className="px-4 py-2 border-2 border-bauhaus-red text-bauhaus-red text-xs font-black uppercase tracking-widest hover:bg-error-light transition-colors disabled:opacity-50"
+                          className="px-4 py-2 border-2 border-bauhaus-red text-bauhaus-red text-xs font-black uppercase tracking-widest hover:bg-danger-light transition-colors disabled:opacity-50"
                         >
                           Reject
                         </button>

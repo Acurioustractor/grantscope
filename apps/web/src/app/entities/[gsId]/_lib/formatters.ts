@@ -56,8 +56,8 @@ export function entityTypeBadge(type: string): string {
     foundation: 'border-bauhaus-blue bg-link-light text-bauhaus-blue',
     company: 'border-bauhaus-black/30 bg-bauhaus-canvas text-bauhaus-black',
     government_body: 'border-bauhaus-yellow bg-warning-light text-bauhaus-black',
-    indigenous_corp: 'border-bauhaus-red bg-error-light text-bauhaus-red',
-    political_party: 'border-bauhaus-red bg-error-light text-bauhaus-red',
+    indigenous_corp: 'border-bauhaus-red bg-danger-light text-bauhaus-red',
+    political_party: 'border-bauhaus-red bg-danger-light text-bauhaus-red',
     social_enterprise: 'border-money bg-money-light text-money',
   };
   return styles[type] || 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted';

@@ -233,7 +233,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
             {crossSystemSummary.systems.map((sys) => (
               <span key={sys} className={`text-[10px] font-black px-2 py-0.5 uppercase tracking-widest border-2 ${
                 sys === 'Political Donations' || sys === 'Lobbying'
-                  ? 'border-bauhaus-red/30 bg-error-light text-bauhaus-red'
+                  ? 'border-bauhaus-red/30 bg-danger-light text-bauhaus-red'
                   : sys === 'Procurement'
                     ? 'border-bauhaus-black/20 bg-white text-bauhaus-black'
                     : sys === 'ALMA Evidence' || sys === 'Governed Proof'
@@ -249,7 +249,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
 
       {/* Revolving door: two or more influence channels at once (moved from /entity, 2026-09-23) */}
       {revolvingDoor && (
-        <div className="mb-6 border-4 border-bauhaus-red bg-error-light p-4">
+        <div className="mb-6 border-4 border-bauhaus-red bg-danger-light p-4">
           <p className="text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
             Works {revolvingDoor.influence_vectors} influence channels at once
           </p>
@@ -526,7 +526,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
                       {sd.shared_entities.slice(0, 5).map((se, j) => (
                         se.gs_id ? (
                           <Link key={j} href={`/entities/${se.gs_id}`}
-                                className="text-[11px] font-bold px-2 py-0.5 border-2 border-bauhaus-red/20 bg-error-light text-bauhaus-red hover:border-bauhaus-red truncate max-w-[200px]">
+                                className="text-[11px] font-bold px-2 py-0.5 border-2 border-bauhaus-red/20 bg-danger-light text-bauhaus-red hover:border-bauhaus-red truncate max-w-[200px]">
                             {se.name}
                           </Link>
                         ) : (
@@ -1229,7 +1229,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
 
           {/* Donor-Contractor Alert */}
           {stats?.type_breakdown['donation:outbound'] && stats?.type_breakdown['contract:inbound'] && (
-            <div className="bg-error-light border-4 border-bauhaus-red p-4">
+            <div className="bg-danger-light border-4 border-bauhaus-red p-4">
               <h3 className="text-sm font-black text-bauhaus-red mb-2 uppercase tracking-widest">
                 Donor-Contractor
               </h3>

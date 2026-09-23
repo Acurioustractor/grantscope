@@ -266,7 +266,7 @@ export function ProcurementWorkspaceCard({
             </p>
           </div>
           {memberships.length > 0 && (
-            <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 border border-bauhaus-red/20 bg-error-light text-bauhaus-red">
+            <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 border border-bauhaus-red/20 bg-danger-light text-bauhaus-red">
               Saved in {memberships.length} shortlist{memberships.length === 1 ? '' : 's'}
             </span>
           )}

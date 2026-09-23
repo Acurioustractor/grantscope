@@ -384,7 +384,7 @@ export default async function ChildProtectionReportPage() {
                               key={s}
                               className={`text-[9px] font-black px-1.5 py-0.5 border uppercase tracking-widest ${
                                 s === 'Youth Justice'
-                                  ? 'border-bauhaus-red text-bauhaus-red bg-error-light'
+                                  ? 'border-bauhaus-red text-bauhaus-red bg-danger-light'
                                   : s === 'NDIS'
                                     ? 'border-bauhaus-blue text-bauhaus-blue bg-link-light'
                                     : 'border-bauhaus-black text-bauhaus-black'

@@ -299,7 +299,7 @@ export default function OutcomeSubmissionPage() {
         </fieldset>
 
         {error && (
-          <div className="border-4 border-bauhaus-red bg-error-light p-4 text-sm text-bauhaus-red font-bold">
+          <div className="border-4 border-bauhaus-red bg-danger-light p-4 text-sm text-bauhaus-red font-bold">
             {error}
           </div>
         )}

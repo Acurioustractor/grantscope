@@ -104,12 +104,12 @@ export function EntityHeader({
         <div className="flex items-start gap-3 flex-wrap">
           <h1 className="text-2xl sm:text-3xl font-black text-bauhaus-black">{e.canonical_name}</h1>
           {isDonorContractor && (
-            <span className="text-[11px] font-black px-2.5 py-1 border-2 border-bauhaus-red bg-error-light text-bauhaus-red uppercase tracking-widest whitespace-nowrap">
+            <span className="text-[11px] font-black px-2.5 py-1 border-2 border-bauhaus-red bg-danger-light text-bauhaus-red uppercase tracking-widest whitespace-nowrap">
               Donor-Contractor
             </span>
           )}
           {concentrationRisk && (
-            <span className="text-[11px] font-black px-2.5 py-1 border-2 border-bauhaus-red bg-error-light text-bauhaus-red uppercase tracking-widest whitespace-nowrap">
+            <span className="text-[11px] font-black px-2.5 py-1 border-2 border-bauhaus-red bg-danger-light text-bauhaus-red uppercase tracking-widest whitespace-nowrap">
               Concentration Risk
             </span>
           )}

@@ -202,7 +202,7 @@ function programTypeBadge(type: string | null) {
   switch (type) {
     case 'fellowship': return { cls: 'border-bauhaus-blue bg-link-light text-bauhaus-blue', label: 'Fellowship' };
     case 'scholarship': return { cls: 'border-bauhaus-yellow bg-warning-light text-bauhaus-black', label: 'Scholarship' };
-    case 'award': return { cls: 'border-bauhaus-red bg-error-light text-bauhaus-red', label: 'Award' };
+    case 'award': return { cls: 'border-bauhaus-red bg-danger-light text-bauhaus-red', label: 'Award' };
     case 'program': return { cls: 'border-bauhaus-black/30 bg-bauhaus-canvas text-bauhaus-black', label: 'Program' };
     default: return { cls: 'border-money bg-money-light text-money', label: 'Grant' };
   }
