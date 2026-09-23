@@ -169,7 +169,7 @@ async function getData() {
         ROUND(SUM(amount)) as total,
         COUNT(DISTINCT donation_to) as parties,
         COUNT(DISTINCT financial_year) as years_active,
-        STRING_AGG(DISTINCT donation_to, ', ' ORDER BY donation_to) as party_list
+        STRING_AGG(DISTINCT donation_to, ' | ' ORDER BY donation_to) as party_list
       FROM political_donations
       WHERE ${DONATION}
       GROUP BY donor_name, donor_abn
@@ -454,7 +454,7 @@ export default async function PoliticalMoneyReport() {
                     )}
                     {/* Party badges */}
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {donor.party_list && donor.party_list.split(', ').slice(0, 5).map(party => (
+                      {donor.party_list && donor.party_list.split(' | ').slice(0, 5).map(party => (
                         <span
                           key={party}
                           className={`inline-block px-1.5 py-0.5 text-[9px] font-bold text-white rounded ${partyColor(party)}`}
@@ -463,9 +463,9 @@ export default async function PoliticalMoneyReport() {
                           {party.length > 20 ? party.slice(0, 17) + '...' : party}
                         </span>
                       ))}
-                      {donor.party_list && donor.party_list.split(', ').length > 5 && (
+                      {donor.party_list && donor.party_list.split(' | ').length > 5 && (
                         <span className="inline-block px-1.5 py-0.5 text-[9px] font-bold text-bauhaus-muted bg-gray-200 rounded">
-                          +{donor.party_list.split(', ').length - 5} more
+                          +{donor.party_list.split(' | ').length - 5} more
                         </span>
                       )}
                     </div>
