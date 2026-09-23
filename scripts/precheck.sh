@@ -65,12 +65,16 @@ elif [[ $FORCE_BUILD -eq 1 || -n "$BUILD_TRIGGER" ]]; then
   # deletes the manifests it is serving and kills it mid-session — hit for real 2026-08-19,
   # which then read as "the app is down" rather than "precheck did that". Next has no
   # per-invocation dist-dir override, so the honest move is to refuse rather than to guess.
-  if lsof -ti:3013 >/dev/null 2>&1; then
-    echo "✗ a dev server is running on :3013 and shares apps/web/.next with the build."
-    echo "  Building now would kill it. Stop it and re-run, or use --no-build to skip"
-    echo "  (only safe when the diff cannot break a build)."
-    exit 1
-  fi
+  # Dev moved back to :3003 (apps/web/package.json) while this checked only :3013, so on 2026-09-24
+  # the build ran underneath a live dev server. Check both.
+  for port in 3003 3013; do
+    if lsof -ti:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+      echo "✗ a dev server is running on :$port and shares apps/web/.next with the build."
+      echo "  Building now would kill it. Stop it and re-run, or use --no-build to skip"
+      echo "  (only safe when the diff cannot break a build)."
+      exit 1
+    fi
+  done
   ( cd apps/web && npx next build )
   echo "✓ production build"
 fi
