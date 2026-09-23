@@ -7,7 +7,10 @@ import { TH, TH_R, TD, TD_R, THEAD, ROW } from '@/lib/table-styles';
 
 export const revalidate = 3600;
 
-// One disambiguated identity under a (possibly shared) name — from mv_person_identity_influence.
+// One disambiguated identity under a (possibly shared) name — from mv_person_identity_influence_v2.
+// The dollar fields are the ATTRIBUTED columns: each organisation's money split evenly across its
+// directors. v1 gave every director the organisation's whole total, so eight co-directors each
+// "held" the same 7.57bn. Neither version is money the person received; the labels say so.
 interface Identity {
   identity_key: string;
   person_name: string;
@@ -85,9 +88,10 @@ export default async function PersonPage({
   // blocks last, then by cross-system breadth + influence.
   const identities = (await safe(supabase.rpc('exec_sql', {
     query: `SELECT identity_key, person_name, board_count, acco_boards, entity_types,
-              total_procurement, total_contracts, total_justice, total_donations,
-              influence_score, financial_system_count, is_nominee_block
-       FROM mv_person_identity_influence
+              attributed_procurement AS total_procurement, total_contracts,
+              attributed_justice AS total_justice, attributed_donations AS total_donations,
+              influence_score_attributed AS influence_score, financial_system_count, is_nominee_block
+       FROM mv_person_identity_influence_v2
        WHERE person_name_normalised = '${esc(normalised)}'
        ORDER BY is_nominee_block ASC, financial_system_count DESC NULLS LAST, influence_score DESC NULLS LAST`,
   }))) as Identity[] | null;
@@ -285,24 +289,30 @@ export default async function PersonPage({
           </div>
           {Number(selected.total_procurement) > 0 && (
             <div className="bg-white border border-gray-200 shadow-sm p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Procurement $</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Contracts, their share</p>
               <p className="text-2xl font-black mt-1 text-green-700">{money(Number(selected.total_procurement))}</p>
-              <p className="text-xs text-gray-400 mt-1">{Number(selected.total_contracts)} contracts</p>
+              <p className="text-xs text-gray-400 mt-1">{Number(selected.total_contracts)} contracts across their boards</p>
             </div>
           )}
           {Number(selected.total_justice) > 0 && (
             <div className="bg-white border border-gray-200 shadow-sm p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Justice $</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Justice funding, their share</p>
               <p className="text-2xl font-black mt-1 text-green-700">{money(Number(selected.total_justice))}</p>
             </div>
           )}
           {Number(selected.total_donations) > 0 && (
             <div className="bg-white border border-gray-200 shadow-sm p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Political Donations</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Donations, their share</p>
               <p className="text-2xl font-black mt-1 text-bauhaus-red">{money(Number(selected.total_donations))}</p>
             </div>
           )}
         </div>
+        {totalFinancial > 0 && (
+          <p className="text-xs text-bauhaus-muted">
+            &ldquo;Their share&rdquo; is each organisation&rsquo;s public money divided evenly among its
+            directors. It shows the scale of what their boards control, not money this person received.
+          </p>
+        )}
 
         {/* Interlock alert */}
         {!selected.is_nominee_block && selected.board_count > 3 && (
@@ -316,7 +326,7 @@ export default async function PersonPage({
                 <p className="text-xs text-amber-700 mt-1">
                   This person holds positions across {selected.board_count} organisations
                   {communityControlled.length > 0 && ` including ${communityControlled.length} community-controlled`}.
-                  {totalFinancial > 0 && ` Combined financial footprint: ${money(totalFinancial)}.`}
+                  {totalFinancial > 0 && ` Their even share of those organisations' public money: ${money(totalFinancial)}.`}
                 </p>
               </div>
             </div>
@@ -395,7 +405,7 @@ export default async function PersonPage({
             ))}
           </div>
           <p className="text-xs text-gray-400">
-            Sources: mv_person_identity_influence, mv_person_identity_network, mv_person_entity_network, person_roles, gs_entities.
+            Sources: mv_person_identity_influence_v2, mv_person_identity_network, mv_person_entity_network, person_roles, gs_entities.
           </p>
           <p className="mt-2 text-xs flex gap-4">
             <Link href="/person" className="text-gray-400 underline hover:text-bauhaus-red">All People</Link>

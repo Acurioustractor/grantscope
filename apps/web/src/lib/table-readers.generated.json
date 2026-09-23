@@ -1546,12 +1546,10 @@
   "app/api/data/person/route.ts",
   "app/person/[name]/page.tsx"
  ],
- "mv_person_identity_influence": [
-  "app/api/data/person/route.ts",
-  "app/person/[name]/page.tsx"
- ],
  "mv_person_identity_influence_v2": [
-  "app/api/power/holders/route.ts"
+  "app/api/data/person/route.ts",
+  "app/api/power/holders/route.ts",
+  "app/person/[name]/page.tsx"
  ],
  "mv_person_identity_network": [
   "app/api/power/holders/route.ts",

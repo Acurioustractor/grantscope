@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 const limiter = rateLimit();
 
-// The ranked leaderboard reads mv_person_identity_influence (identity grain): trustee/nominee
+// The ranked leaderboard reads mv_person_identity_influence_v2 (identity grain): trustee/nominee
 // megamerges are collapsed into one identity and flagged is_nominee_block, so we exclude them with
 // WHERE NOT is_nominee_block. Disambiguation now covers every name with >10 boards (2026-06-19,
 // scripts/build-person-identities.mjs --min-boards=10), BUT the board-count cap stays: clustering
@@ -67,21 +67,28 @@ export async function GET(request: Request) {
       // across procurement/justice/donations) is the breadth signal; total_money is the sum of the
       // three dollar columns (total_contracts is a COUNT, not $). Identity grain (see header):
       // NOT is_nominee_block drops trustee megamerges, board-count cap backstops un-split mid-size names.
+      // v2, attributed columns: each organisation's money split evenly across its directors. v1
+      // gave every co-director the organisation's whole total (eight people each "held" 7.57bn).
+      // Field names are kept for API consumers; `basis` says what the numbers mean.
       const { data, error } = await supabase.rpc('exec_sql', {
         query: `SELECT identity_key, person_name, person_name_normalised, board_count, entity_types,
-                  total_procurement, total_contracts, total_justice, total_donations,
-                  influence_score AS max_influence_score, financial_system_count, acco_boards,
-                  (coalesce(total_procurement, 0) + coalesce(total_justice, 0) + coalesce(total_donations, 0)) AS total_money
-           FROM mv_person_identity_influence
+                  attributed_procurement AS total_procurement, total_contracts,
+                  attributed_justice AS total_justice, attributed_donations AS total_donations,
+                  influence_score_attributed AS max_influence_score, financial_system_count, acco_boards,
+                  (coalesce(attributed_procurement, 0) + coalesce(attributed_justice, 0) + coalesce(attributed_donations, 0)) AS total_money
+           FROM mv_person_identity_influence_v2
            WHERE NOT is_nominee_block
              AND (financial_system_count > 0 OR board_count > 3)
              AND coalesce(board_count, 0) <= ${MAX_PLAUSIBLE_BOARDS}
            ORDER BY financial_system_count DESC NULLS LAST,
-                    (coalesce(total_procurement, 0) + coalesce(total_justice, 0) + coalesce(total_donations, 0)) DESC NULLS LAST
+                    (coalesce(attributed_procurement, 0) + coalesce(attributed_justice, 0) + coalesce(attributed_donations, 0)) DESC NULLS LAST
            LIMIT ${limit}`,
       });
       if (error) throw error;
-      const response = NextResponse.json({ results: data || [] });
+      const response = NextResponse.json({
+        results: data || [],
+        basis: "Dollar fields are each organisation's total split evenly among its directors; not money the person received.",
+      });
       response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
       return response;
     } catch (error) {
