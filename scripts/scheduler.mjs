@@ -18,6 +18,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { spawnSync } from 'child_process';
 import { existsSync, mkdirSync, appendFileSync } from 'fs';
+import { dirname } from 'path';
 import { getAgent } from './lib/agent-registry.mjs';
 
 const supabase = createClient(
@@ -33,6 +34,16 @@ const ONLY_AGENTS = ONLY_ARG
 const MAX_ARG = process.argv.find(arg => arg.startsWith('--max='));
 const MAX_AGENTS = MAX_ARG ? Math.max(1, Number.parseInt(MAX_ARG.replace('--max=', ''), 10) || 0) : null;
 const LOG_DIR = new URL('../logs', import.meta.url).pathname;
+
+// cron starts this with PATH=/usr/bin:/bin. Resolving the child's binary is not enough: npx is a
+// `#!/usr/bin/env node` script and agents spawn `node`/`npx tsx` themselves, so every one of them
+// died with "env: node: No such file or directory" or "spawn npx ENOENT" from 2026-08-18. Children
+// get this node's own directory, plus the usual install dirs, at the front of PATH.
+const CHILD_ENV = {
+  ...process.env,
+  PATH: [dirname(process.execPath), '/usr/local/bin', '/opt/homebrew/bin', process.env.PATH]
+    .filter(Boolean).join(':'),
+};
 
 function ts() {
   return new Date().toISOString().replace('T', ' ').slice(0, 19);
@@ -135,6 +146,7 @@ async function runAgent(schedule) {
       timeout: resolved.timeoutMs,
       maxBuffer: 50 * 1024 * 1024,
       cwd: process.cwd(),
+      env: CHILD_ENV,
     });
     if (result.error) throw result.error;
     if (result.status !== 0) {

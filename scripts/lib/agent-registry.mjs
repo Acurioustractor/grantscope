@@ -569,7 +569,10 @@ export const AGENTS = {
     dependencies: ['sync-source-frontier', 'poll-foundation-frontier'],
   },
   'scrape-state-grants': {
-    command: ['node', '--env-file=.env', 'scripts/scrape-state-grants.mjs'],
+    // tsx, not node: the grant-engine plugins are .ts with extensionless imports ('./lib/ckan'),
+    // which node's own type stripping cannot resolve. Under node it died in 0.2s every run from
+    // 2026-08-03 to 2026-09-23 with ERR_MODULE_NOT_FOUND.
+    command: ['npx', 'tsx', '--env-file=.env', 'scripts/scrape-state-grants.mjs'],
     displayName: 'Scrape State Grants',
     category: 'discovery',
     defaultPriority: 3,
