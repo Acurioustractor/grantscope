@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Shell } from '@/components/shell/shell';
+import { BrowseScope } from '@/components/shell/browse-scope';
 import { TREND_LABEL, trajectoryLists, type TrajectoryLists, type TrajectoryRow } from '@/lib/charity-trajectory';
 import { shrinkingCouncils, type AllocationRow } from '@/lib/allocation';
 
@@ -49,7 +49,7 @@ export default async function TrajectoriesPage({ searchParams }: { searchParams:
   const href = (s: string) => (s ? `/charities/trajectories?state=${s}` : '/charities/trajectories');
 
   return (
-    <Shell title="Charity trajectories">
+    <BrowseScope>
       <div className="mx-auto max-w-[1180px] px-6 py-6">
         <h1 className="font-display text-[22px] font-extrabold uppercase tracking-tight">Charity trajectories</h1>
         <p className="mt-2 max-w-3xl text-[14px] leading-relaxed" style={{ color: '#333' }}>
@@ -187,7 +187,7 @@ export default async function TrajectoriesPage({ searchParams }: { searchParams:
           </>
         )}
       </div>
-    </Shell>
+    </BrowseScope>
   );
 }
 

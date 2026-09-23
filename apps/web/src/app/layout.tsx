@@ -90,16 +90,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     || pathname.startsWith('/org/a-curious-tractor/')
     || pathname === '/org/curious-tractor'
     || pathname.startsWith('/org/curious-tractor/');
-  // The four catalogue indexes moved to their public URLs and kept the Shell layout, so they
-  // supply their own chrome. EXACT match, not startsWith: /charities/[abn], /charities/claim,
-  // /foundations/minderoo and the rest are public detail pages that still want the public nav.
-  // /allocation and /charities/trajectories render inside the Shell; listed here or the marketing nav
-  // stacks on top of the rail (the site-within-a-site Ben saw on 2026-09-06).
-  const SHELL_INDEX_PATHS = ['/charities', '/charities/trajectories', '/allocation', '/foundations', '/grants', '/social-enterprises'];
-  const isChromeless = SHELL_INDEX_PATHS.includes(pathname)
-    || pathname.startsWith('/allocation/')
-    || pathname.startsWith('/dashboard')
-    || pathname.startsWith('/search')
+  // ONE public frame (decided 2026-09-24). The browse indexes (/charities, /foundations, /grants,
+  // /social-enterprises, /allocation, /charities/trajectories) and /search used to be listed here,
+  // dropping the top nav so they could wrap themselves in the black rail: the nav's "Funding" link
+  // led into what looked like another product. They now render inside this layout's nav and footer,
+  // through <BrowseScope>. Only signed-in work (dashboard, clarity, ops, admin...) stays chromeless.
+  const isChromeless = pathname.startsWith('/dashboard')
     || pathname.startsWith('/clarity')
     || pathname.startsWith('/embed')
     || pathname.startsWith('/share')

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Shell } from '@/components/shell/shell';
+import { BrowseScope } from '@/components/shell/browse-scope';
 import { unstable_cache } from 'next/cache';
 import { getDirectServiceSupabase } from '@/lib/supabase';
 import { retryRpc } from '@/lib/rpc-retry';
@@ -62,7 +62,7 @@ export default async function CharityList({
   }
 
   return (
-    <Shell title="Charities" activeHref="/charities">
+    <BrowseScope>
       <div className="mx-auto max-w-[1180px] px-6 py-6">
         <h1 className="font-display text-[22px] font-extrabold">Charities</h1>
         {/* The bespoke index this replaced was the only route into /charities/insights and the
@@ -107,6 +107,6 @@ export default async function CharityList({
           />
         )}
       </div>
-    </Shell>
+    </BrowseScope>
   );
 }

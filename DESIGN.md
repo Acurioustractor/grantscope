@@ -137,6 +137,25 @@ Bauhaus") against a shadcn-style dashboard reference. A density/warmth variant f
 - Scope class `.shell` on the shell layout wrapper; `bauhaus-*` utilities remap through CSS
   variables inside it, same mechanism as `.ws` and `.clarity-dark`. Marketing/report pages
   outside the shell keep full Bauhaus.
+- **The rail is for signed-in work only (2026-09-24).** Public visitors never see it: every public
+  page, including the browse indexes and `/search`, renders in the one public frame (top nav +
+  footer from the root layout). A public page that still needs the shell's styles for its content
+  wraps it in `<BrowseScope>` (`components/shell/browse-scope.tsx`), which applies `.shell` as a
+  style scope with no rail and no app header.
+
+## One public frame and shared parts (2026-09-24)
+
+- **One frame.** A visitor sees the same top nav and footer on every public page. See the decision
+  log for the research behind it.
+- **One profile page.** `/entities/[gsId]` is the organisation profile; `/entity/[gsId]` redirects
+  to it. Report links go through `entityHref()` (`lib/entity-href.ts`), never to login-only `/org`.
+- **Shared parts** in `components/data/`: `Section`, `StatRow`/`Stat`, `Panel`/`FactList`,
+  `DataTable`, `Callout`, `SourceLine`. Tokens only. New public pages build from these instead of
+  hand-rolling heroes, stat cards and tables.
+- **One money format:** `money()` in `lib/format.ts` ($4.1B, $843.1M, $56K). Local formatters
+  delegate to it.
+- **Every headline figure says what it counts** (a count, a rank or a year span), and every block of
+  figures a journalist might quote carries a `SourceLine`.
 
 ## Decisions Log
 
@@ -153,5 +172,6 @@ Bauhaus") against a shadcn-style dashboard reference. A density/warmth variant f
 | 2026-03-26 | ~~No dark mode~~ **superseded 2026-08-15 for `/clarity` only** | Bauhaus aesthetic requires light canvas for shadow system. Defer until user demand. |
 | 2026-08-15 | Dark theme for `/clarity`, and only `/clarity` | Ben compared the light Bauhaus board against a dark dense prototype side by side and chose dark: *"a way better way to showcase what we have and the best overall view I have seen so far."* The original "no dark mode" rationale still holds where it was aimed — the hard-offset shadow system needs a light canvas — but `/clarity` uses no shadows at all. It is a dense internal instrument, admin-gated, read for long stretches, showing every object we hold at once. The 2026-03-26 decision deferred dark "until user demand"; this is that demand, scoped rather than global. |
 | 2026-08-16 | Softened Shell theme (`.shell`) for dashboard surfaces | Ben reviewed the rebuilt console live and found it "hard to make sense of"; chose "soften Bauhaus toward the demo" from four options after seeing a shadcn dashboard reference. Radius 6/10px, hairline borders, warm-grey canvas — scoped to the shell, identity colours and type unchanged. Zero-radius stays everywhere outside the shell scope. |
+| 2026-09-24 | One public frame; the black rail is signed-in only; `/entities` is the one profile; shared parts in `components/data` | Ben: "the design is no good". A census found a visitor crossing 7 page frames (the nav's "Funding" link dropped into the rail app), 86 hand-built report pages, 51 money formatters and the profile page every search hit lands on built off-system. Compared against OpenSecrets, USAspending, LittleSis and ProPublica's Nonprofit Explorer: all keep one site header for visitors, use a left rail only for search filters, and build profiles from tabs, an identity panel and figures that say what they count. Comparison page: https://claude.ai/artifact/WD6s5KZgsKsZb4LG2YSgDx |
 | 2026-03-26 | Zero border-radius enforced | Global `border-radius: 0 !important` — sharp corners are the identity, not a bug. |
 | 2026-03-26 | Satoshi over system fonts | System fonts (Avenir Next / Helvetica Neue) undermined the Bauhaus commitment. Satoshi's geometric letterforms complete the vision. |

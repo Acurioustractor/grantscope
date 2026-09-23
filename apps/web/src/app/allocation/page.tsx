@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Shell } from '@/components/shell/shell';
+import { BrowseScope } from '@/components/shell/browse-scope';
 import { placeSlug } from '@/lib/atlas/share';
 import { getRemoteCouncils } from '@/lib/services/council-place-report';
 import {
@@ -125,7 +125,7 @@ export default async function AllocationPage({ searchParams }: { searchParams: P
   };
 
   return (
-    <Shell title="Allocation">
+    <BrowseScope>
       <div className="mx-auto max-w-[1600px] px-2 py-6">
         <h1 className="font-display text-[22px] font-extrabold uppercase tracking-tight">Disadvantage versus dollars, by council</h1>
         <p className="mt-2 max-w-3xl text-[14px] leading-relaxed" style={{ color: '#333' }}>
@@ -246,7 +246,7 @@ export default async function AllocationPage({ searchParams }: { searchParams: P
           </>
         )}
       </div>
-    </Shell>
+    </BrowseScope>
   );
 }
 
