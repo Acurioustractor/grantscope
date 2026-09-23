@@ -1,5 +1,6 @@
 import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
+import { entityHref } from '@/lib/entity-href';
 import { headers } from 'next/headers';
 import { getLiveReportSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
@@ -19,7 +20,7 @@ function OrgRef({ gsId, name, isShare, kind = 'org' }: { gsId: string | null | u
     }
     return <span className="font-black">{name}</span>;
   }
-  return <Link href={`/org/${gsId}`} className="hover:underline">{name}</Link>;
+  return <Link href={entityHref({ gsId })} className="hover:underline">{name}</Link>;
 }
 
 const FECCA_ABN = '23684792947';
@@ -621,7 +622,7 @@ function AnchorCard({ a, label, isShare }: { a: AnchorRow | null; label: string;
       {isShare ? (
         <div className="text-xl font-black text-bauhaus-black uppercase tracking-tight block mb-2 leading-tight">{a.canonical_name}</div>
       ) : (
-        <Link href={`/org/${a.gs_id}`} className="text-xl font-black text-bauhaus-black uppercase tracking-tight hover:underline block mb-2 leading-tight">
+        <Link href={entityHref({ gsId: a.gs_id })} className="text-xl font-black text-bauhaus-black uppercase tracking-tight hover:underline block mb-2 leading-tight">
           {a.canonical_name}
         </Link>
       )}

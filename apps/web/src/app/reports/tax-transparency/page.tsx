@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import Link from 'next/link';
+import { entityHref } from '@/lib/entity-href';
 import { ReportCTA } from '../_components/report-cta';
 
 export const dynamic = 'force-dynamic';
@@ -31,9 +32,6 @@ function money(n: number): string {
 function pct(n: number): string { return `${n.toFixed(1)}%`; }
 function fmt(n: number): string { return n.toLocaleString(); }
 
-function slugify(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
 
 function taxRateColor(rate: number): string {
   if (rate < 5) return 'text-red-600 font-black';
@@ -368,7 +366,7 @@ export default async function TaxTransparencyReport() {
                 <tr key={e.abn} className={`${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${taxRateBg(e.effective_tax_rate)}`}>
                   <td className="p-3 font-black text-bauhaus-muted">{i + 1}</td>
                   <td className="p-3">
-                    <Link href={`/org/${slugify(e.entity_name)}`} className="hover:text-bauhaus-red transition-colors">
+                    <Link href={entityHref({ abn: e.abn, name: e.entity_name })} className="hover:text-bauhaus-red transition-colors">
                       <div className="font-bold text-bauhaus-black">{e.entity_name}</div>
                       <div className="text-xs text-bauhaus-muted">
                         {e.industry || 'Unknown'} &middot; {e.report_year}
@@ -458,7 +456,7 @@ export default async function TaxTransparencyReport() {
                     <tr key={e.abn} className="border-b border-white/10">
                       <td className="p-2 font-black text-white/40">{i + 1}</td>
                       <td className="p-2">
-                        <Link href={`/org/${slugify(e.entity_name)}`} className="hover:text-bauhaus-yellow transition-colors">
+                        <Link href={entityHref({ abn: e.abn, name: e.entity_name })} className="hover:text-bauhaus-yellow transition-colors">
                           <div className="font-bold text-white">{e.entity_name}</div>
                           <div className="text-xs text-white/50">{e.industry || 'Unknown'} &middot; {e.report_year}</div>
                         </Link>
@@ -503,7 +501,7 @@ export default async function TaxTransparencyReport() {
                 <tr key={e.abn} className={i % 2 === 0 ? 'bg-white' : 'bg-red-50/30'}>
                   <td className="p-3 font-black text-bauhaus-muted">{i + 1}</td>
                   <td className="p-3">
-                    <Link href={`/org/${slugify(e.entity_name)}`} className="hover:text-bauhaus-red transition-colors">
+                    <Link href={entityHref({ abn: e.abn, name: e.entity_name })} className="hover:text-bauhaus-red transition-colors">
                       <div className="font-bold text-bauhaus-black">{e.entity_name}</div>
                       <div className="text-xs text-bauhaus-muted">{e.report_year}</div>
                     </Link>

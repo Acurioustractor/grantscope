@@ -24,13 +24,25 @@ interface Entity {
   lga_name: string | null;
 }
 
+const ENTITY_COLS = `id, gs_id, canonical_name, abn, entity_type, sector, state, postcode, remoteness, seifa_irsd_decile, is_community_controlled, lga_name`;
+
 async function getEntity(gsId: string): Promise<Entity | null> {
   const supabase = getServiceSupabase();
   const rows = await safe(supabase.rpc('exec_sql', {
-    query: `SELECT id, gs_id, canonical_name, abn, entity_type, sector, state, postcode, remoteness, seifa_irsd_decile, is_community_controlled, lga_name
-       FROM gs_entities WHERE gs_id = '${esc(gsId)}'`,
+    query: `SELECT ${ENTITY_COLS} FROM gs_entities WHERE gs_id = '${esc(gsId)}'`,
   })) as Entity[] | null;
-  return rows?.[0] ?? null;
+  if (rows?.[0]) return rows[0];
+
+  // Report links for rows that carry only an ABN arrive as AU-ABN-<abn> (lib/entity-href.ts).
+  // Most ABN entities have exactly that gs_id; ORIC corporations and merged government bodies do
+  // not, so resolve by the ABN itself rather than 404.
+  const abn = /^AU-ABN-(\d{11})$/.exec(gsId)?.[1];
+  if (!abn) return null;
+  const byAbn = await safe(supabase.rpc('exec_sql', {
+    query: `SELECT ${ENTITY_COLS} FROM gs_entities WHERE abn = '${abn}'
+             ORDER BY source_count DESC NULLS LAST, gs_id LIMIT 1`,
+  })) as Entity[] | null;
+  return byAbn?.[0] ?? null;
 }
 
 interface FundingRow { program_name: string; total: number; records: number; from_fy: string; to_fy: string }

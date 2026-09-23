@@ -5,6 +5,7 @@ import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 import Link from 'next/link';
+import { entityHref } from '@/lib/entity-href';
 import { ReportCTA } from '../_components/report-cta';
 
 export const dynamic = 'force-dynamic';
@@ -30,9 +31,6 @@ import { money, fmt } from '@/lib/format';
 /* --- Formatting helpers ---------------------------------------- */
 
 function pct(n: number): string { return `${n.toFixed(1)}%`; }
-function slugify(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
 
 /**
  * The row shape the page has always wanted, assembled from the two views that actually hold it.
@@ -418,7 +416,7 @@ export default async function InfluenceNetworkReport() {
                   <tr key={e.gs_id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                     <td className="p-3 font-black text-bauhaus-muted">{i + 1}</td>
                     <td className="p-3">
-                      <Link href={`/org/${slugify(e.canonical_name)}`} className="hover:text-bauhaus-red transition-colors">
+                      <Link href={entityHref({ gsId: e.gs_id, abn: e.abn, name: e.canonical_name })} className="hover:text-bauhaus-red transition-colors">
                         <div className="font-bold text-bauhaus-black">{e.canonical_name}</div>
                         <div className="text-xs text-bauhaus-muted">
                           {e.entity_type} &middot; {e.state || '---'}
@@ -496,7 +494,7 @@ export default async function InfluenceNetworkReport() {
                     <tr key={e.gs_id} className="border-b border-white/10">
                       <td className="p-2 font-black text-white/30">{i + 1}</td>
                       <td className="p-2">
-                        <Link href={`/org/${slugify(e.canonical_name)}`} className="hover:text-bauhaus-yellow transition-colors">
+                        <Link href={entityHref({ gsId: e.gs_id, abn: e.abn, name: e.canonical_name })} className="hover:text-bauhaus-yellow transition-colors">
                           <div className="font-bold text-white">{e.canonical_name}</div>
                           <div className="text-xs text-white/50">
                             {e.entity_type} &middot; {e.state || '---'}

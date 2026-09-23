@@ -2,6 +2,7 @@ import { unstable_cache } from 'next/cache';
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import Link from 'next/link';
+import { entityHref } from '@/lib/entity-href';
 import { ReportCTA } from '../_components/report-cta';
 
 export const dynamic = 'force-dynamic';
@@ -38,12 +39,6 @@ function pct(n: number): string {
 }
 function fmt(n: number): string {
   return n.toLocaleString();
-}
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
 }
 
 async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
@@ -391,7 +386,7 @@ export default async function CharityContractsReport() {
                   <td className="p-3 font-black text-bauhaus-muted">{i + 1}</td>
                   <td className="p-3">
                     <Link
-                      href={`/org/${slugify(r.charity_name)}`}
+                      href={entityHref({ abn: r.abn, name: r.charity_name })}
                       className="hover:text-bauhaus-red transition-colors"
                     >
                       <div className="font-bold text-bauhaus-black">{r.charity_name}</div>
@@ -472,7 +467,7 @@ export default async function CharityContractsReport() {
                     <td className="p-3 font-black text-bauhaus-muted">{i + 1}</td>
                     <td className="p-3">
                       <Link
-                        href={`/org/${slugify(r.charity_name)}`}
+                        href={entityHref({ abn: r.abn, name: r.charity_name })}
                         className="hover:text-bauhaus-red transition-colors"
                       >
                         <div className="font-bold text-bauhaus-black">{r.charity_name}</div>

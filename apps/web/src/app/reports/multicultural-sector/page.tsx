@@ -1,5 +1,6 @@
 import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
+import { entityHref } from '@/lib/entity-href';
 import { headers } from 'next/headers';
 import { getLiveReportSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
@@ -274,7 +275,7 @@ export default async function MulticulturalSectorPage() {
                       {isShare ? (
                         <span>{e.canonical_name}</span>
                       ) : (
-                        <Link href={`/org/${e.gs_id}`} className="hover:underline">
+                        <Link href={entityHref({ gsId: e.gs_id })} className="hover:underline">
                           {e.canonical_name}
                         </Link>
                       )}
