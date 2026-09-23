@@ -306,6 +306,12 @@ export const GRAPH_EDGE_DATASETS = [
      JOIN jf_prog_map pm ON pm.canonical_name = jf.program_name
                         AND pm.norm_state    = coalesce(NULLIF(trim(jf.state),''),'NAT')
      WHERE jf.recipient_abn IS NOT NULL AND jf.amount_dollars > 0
+       -- The grant lane only (grantFilterSql in apps/web/src/lib/justice-money.ts). Without it the
+       -- graph carried 29,747 budget-aggregate and contract-value rows as 'grant' edges: $33.7B, so
+       -- justice edges summed to $76.3B against $34.0B of real grants (measured 2026-09-24).
+       AND jf.measure_kind = 'grant' AND jf.is_aggregate IS NOT TRUE
+       AND lower(btrim(jf.recipient_name)) <> ALL (ARRAY['total','totals','grand total','subtotal',
+             'sub-total','various','n/a','na','unknown','tbc','other'])
        -- 231 rows carry ABN 0 / 00000000000, which joins the placeholder nodes ('112 Trenerry
        -- Crescent Pty Ltd' and a namesake) and credited them with $773M. Same guard as donations.
        AND jf.recipient_abn !~ '^[0\\s]*$'`,

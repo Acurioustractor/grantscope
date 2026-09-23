@@ -794,6 +794,17 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: ['build-entity-graph'],
   },
+  'check-lane-reconciliation': {
+    command: ['node', '--env-file=.env', 'scripts/check-lane-reconciliation.mjs'],
+    displayName: 'Check Money Lane Reconciliation',
+    category: 'graph',
+    // Fourth gate: does the MONEY on the edges match the filtered source? Completeness passed while
+    // justice edges carried $33.7B of budget aggregates and AusTender carried $100.6B of contracts
+    // counted twice under an old key (2026-09-24). ~52s.
+    defaultPriority: 4,
+    timeoutMs: 600_000,
+    dependencies: ['build-entity-graph'],
+  },
   'resolve-donor-entities': {
     command: ['node', '--env-file=.env', 'scripts/resolve-donor-entities.mjs'],
     displayName: 'Resolve Donor Entities',
