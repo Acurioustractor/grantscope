@@ -40,7 +40,23 @@ interface GrantResult {
   href: string;
 }
 
-type SearchResult = EntityResult | FoundationResult | GrantResult;
+interface PersonResult {
+  type?: 'person';
+  name: string;
+  boardCount: number;
+  href: string;
+}
+
+type SearchResult = EntityResult | PersonResult | FoundationResult | GrantResult;
+
+interface SearchResults {
+  entities: EntityResult[];
+  people: PersonResult[];
+  foundations: FoundationResult[];
+  grants: GrantResult[];
+}
+
+const EMPTY: SearchResults = { entities: [], people: [], foundations: [], grants: [] };
 
 function formatMoney(amount: number | null): string {
   if (!amount) return '';
@@ -81,7 +97,7 @@ interface GlobalSearchProps {
 
 export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<{ entities: EntityResult[]; foundations: FoundationResult[]; grants: GrantResult[] }>({ entities: [], foundations: [], grants: [] });
+  const [results, setResults] = useState<SearchResults>(EMPTY);
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [searchMode, setSearchMode] = useState<'text' | 'ai'>('text');
@@ -101,6 +117,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
   // Flatten all results for keyboard navigation (views first)
   const allResults: SearchResult[] = [
     ...results.entities,
+    ...results.people,
     ...results.foundations,
     ...results.grants,
   ];
@@ -125,7 +142,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
       setTimeout(() => inputRef.current?.focus(), 50);
     } else {
       setQuery('');
-      setResults({ entities: [], foundations: [], grants: [] });
+      setResults(EMPTY);
       setSelectedIndex(0);
     }
   }, [open]);
@@ -133,7 +150,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
   // Debounced search
   useEffect(() => {
     if (!query || query.length < 2) {
-      setResults({ entities: [], foundations: [], grants: [] });
+      setResults(EMPTY);
       return;
     }
 
@@ -156,6 +173,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         .then(data => {
           setResults({
             entities: Array.isArray(data.entities) ? data.entities : [],
+            people: Array.isArray(data.people) ? data.people : [],
             foundations: Array.isArray(data.foundations) ? data.foundations : [],
             grants: Array.isArray(data.grants) ? data.grants : [],
           });
@@ -219,7 +237,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Search entities, grants, foundations..."
+              placeholder="Search organisations, people, grants..."
               className="flex-1 px-4 py-4 text-lg font-bold text-bauhaus-black placeholder:text-bauhaus-muted placeholder:font-medium outline-none bg-transparent"
             />
             <kbd className="hidden sm:inline-block mr-4 px-2 py-1 text-[10px] font-black text-bauhaus-muted border-2 border-bauhaus-black/20 uppercase tracking-widest">
@@ -284,8 +302,9 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                           <div className="font-bold text-bauhaus-black truncate">{r.name}</div>
                           <div className="text-[11px] text-bauhaus-muted font-medium flex items-center gap-1 flex-wrap">
                             {r.state && <span>{r.state}</span>}
-                            {r.relationships > 0 && <span>{r.state ? '·' : ''} {r.relationships.toLocaleString()} links</span>}
-                            {r.systems.length > 0 && (
+                            {/* /api/global-search returns neither field; unguarded, `r.systems.length` threw. */}
+                            {(r.relationships ?? 0) > 0 && <span>{r.state ? '·' : ''} {r.relationships.toLocaleString()} links</span>}
+                            {(r.systems ?? []).length > 0 && (
                               <>
                                 <span>·</span>
                                 {r.systems.map(s => (
@@ -311,6 +330,41 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                 </div>
               )}
 
+              {/* People */}
+              {results.people.length > 0 && (
+                <div>
+                  <div className="px-4 pt-3 pb-1 border-t-2 border-bauhaus-black/5">
+                    <span className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">
+                      People
+                    </span>
+                  </div>
+                  {results.people.map((r, i) => {
+                    const flatIndex = viewOffset + results.entities.length + i;
+                    return (
+                      <button
+                        key={`${r.name}-${i}`}
+                        onClick={() => navigate(r.href)}
+                        className={`w-full text-left px-4 py-3 flex items-center justify-between transition-colors cursor-pointer ${
+                          selectedIndex === flatIndex ? 'bg-bauhaus-canvas' : 'hover:bg-bauhaus-canvas/50'
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-bauhaus-black truncate">{r.name}</div>
+                          {r.boardCount > 0 && (
+                            <div className="text-[11px] text-bauhaus-muted font-medium">
+                              {r.boardCount} board seat{r.boardCount !== 1 ? 's' : ''}
+                            </div>
+                          )}
+                        </div>
+                        <span className={`ml-3 shrink-0 text-[10px] font-black px-2 py-0.5 border-2 uppercase tracking-widest ${typeBadgeColor('person')}`}>
+                          Person
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* Foundations */}
               {results.foundations.length > 0 && (
                 <div>
@@ -320,7 +374,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                     </span>
                   </div>
                   {results.foundations.map((r, i) => {
-                    const flatIndex = viewOffset + results.entities.length + i;
+                    const flatIndex = viewOffset + results.entities.length + results.people.length + i;
                     return (
                       <button
                         key={r.id}
@@ -359,7 +413,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                     </span>
                   </div>
                   {results.grants.map((r, i) => {
-                    const flatIndex = viewOffset + results.entities.length + results.foundations.length + i;
+                    const flatIndex = viewOffset + results.entities.length + results.people.length + results.foundations.length + i;
                     return (
                       <button
                         key={r.id}
