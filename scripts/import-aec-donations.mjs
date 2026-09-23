@@ -124,6 +124,20 @@ async function importCsv(csvPath, type) {
     }
   }
 
+  // One AEC file can hold the same row more than once: the same donor giving the same amount to the
+  // same party twice in a year, with no date. Number identical rows 1..n as copy_no. The table's
+  // unique key is (key_hash, copy_no), so re-importing a file inserts nothing and real repeats still
+  // land. Until 2026-09-23 the key was (year, donor, recipient, amount, date); the receipts file has
+  // no date, NULLs never conflict, and every run re-inserted the whole file (27 copies).
+  const seen = new Map();
+  for (const row of rows) {
+    const key = [row.financial_year, row.donor_name, row.donation_to, Number(row.amount).toFixed(2),
+      row.donation_date ?? '', row.return_type, row.receipt_type ?? ''].join('\u0001');
+    const n = (seen.get(key) || 0) + 1;
+    seen.set(key, n);
+    row.copy_no = n;
+  }
+
   log(`${rows.length} valid donation records`);
 
   if (DRY_RUN) {
@@ -132,25 +146,25 @@ async function importCsv(csvPath, type) {
     return rows.length;
   }
 
-  // Batch upsert with dedup
-  let inserted = 0;
+  // Batch upsert; rows already present conflict on (key_hash, copy_no) and are skipped.
+  let sent = 0;
   let errors = 0;
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = rows.slice(i, i + BATCH_SIZE);
     const { error } = await supabase.from('political_donations').upsert(batch, {
-      onConflict: 'financial_year,donor_name,donation_to,amount,donation_date',
+      onConflict: 'key_hash,copy_no',
       ignoreDuplicates: true,
     });
     if (error) {
       errors++;
       if (errors <= 3) log(`Error at batch ${i}: ${error.message}`);
     } else {
-      inserted += batch.length;
+      sent += batch.length;
     }
   }
 
-  log(`Inserted ${inserted} ${type} records (${errors} batch errors)`);
-  return inserted;
+  log(`Sent ${sent} ${type} rows; rows already in the table were skipped (${errors} batch errors)`);
+  return sent;
 }
 
 async function crossReferenceABNs() {

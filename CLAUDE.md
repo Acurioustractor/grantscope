@@ -128,7 +128,7 @@ trusting these again — do not let them rot a second time:
 |-------|------|-------------|
 | `abr_registry` | 20.0M | the ABN register — largest object in the DB, undocumented until 2026-08-14 |
 | `gs_relationships` | 3.43M | source_entity_id, target_entity_id, relationship_type, amount, year, dataset |
-| `political_donations` | 2.55M | donor_name, donor_abn, donation_to, amount, financial_year, **receipt_type** |
+| `political_donations` | 189K | donor_name, donor_abn, donation_to, amount, financial_year, **receipt_type**. Was 3.44M: every weekly AEC import re-inserted the undated receipts file (27 copies) until migration 20260923115925. Unique on (key_hash, copy_no). |
 | `asic_companies` | 2.17M | ASIC company register |
 | `entity_xref` | 1.21M | the REAL graph crosswalk (covers 91.9% of gs_entities). Not `entity_identifiers`. |
 | `austender_contracts` | 824K | title, contract_value, buyer_name, supplier_name, supplier_abn, contract_start, contract_end |
@@ -175,8 +175,9 @@ AND lower(trim(recipient_name)) NOT IN
     ('total','totals','grand total','subtotal','sub-total','various','n/a','na','unknown','tbc','other')
                                       -- 125,300 rows, $33.98bn
 
--- 3. political_donations: 'other receipt' is 72% of rows and 85% of dollars and is NOT donations.
-WHERE receipt_type = 'donation received'   -- 506,739 rows, $23.0bn (vs $186.7bn 'other receipt')
+-- 3. political_donations: 'other receipt' (party fundraising income, transfers, levies) is NOT donations.
+WHERE receipt_type = 'donation received'   -- 25,374 rows, $1.15bn (vs $9.39bn 'other receipt'),
+                                           -- after the dedupe. The old "506,739 rows, $23.0bn" counted copies.
 ```
 
 **Filter 2 was missing until 2026-08-16 and the omission is expensive.** Measured:
