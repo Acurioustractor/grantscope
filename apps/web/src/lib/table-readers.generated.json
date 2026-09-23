@@ -1177,6 +1177,9 @@
   "lib/services/place-intelligence.ts",
   "lib/services/report-service.ts"
  ],
+ "gs_entity_aliases": [
+  "app/entities/[gsId]/page.tsx"
+ ],
  "gs_relationships": [
   "app/api/board-report/route.ts",
   "app/api/contacts/analyze/route.ts",

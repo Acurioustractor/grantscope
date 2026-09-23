@@ -291,6 +291,11 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
             <div className="p-4 border-b-2 sm:border-b-0 sm:border-r-2 border-bauhaus-black">
               <p className="text-[11px] font-black uppercase tracking-widest text-bauhaus-muted">Power score</p>
               <p className="mt-1 text-3xl font-black tabular-nums text-bauhaus-black">{Number(power.power_score).toFixed(1)}</p>
+              {Number(power.ranked) > 0 && (
+                <p className="mt-1 text-xs font-bold text-bauhaus-black tabular-nums">
+                  ranks {Number(power.rank).toLocaleString()} of {Number(power.ranked).toLocaleString()}
+                </p>
+              )}
               <p className="mt-1 text-xs text-bauhaus-muted">present in {power.system_count} of 7 systems: contracts, grants, donations, charity, foundation, evidence, tax</p>
             </div>
             <div className="p-4 border-b-2 sm:border-b-0 sm:border-r-2 border-bauhaus-black">

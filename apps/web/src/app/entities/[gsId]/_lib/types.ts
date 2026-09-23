@@ -290,6 +290,20 @@ export interface PowerProfile {
   donation_dollars: number;
   distinct_govt_buyers: number;
   distinct_parties_funded: number;
+  /** 1 + the number of entities with a higher power score. */
+  rank: number;
+  /** Entities in the power index. */
+  ranked: number;
+}
+
+/** What the header's donations figure is made of. */
+export interface DonationsMeta {
+  count: number;
+  recipients: number;
+  /** The recipients query is LIMIT 20; at 20 the true number may be higher. */
+  recipientsCapped: boolean;
+  fromYear: string | null;
+  toYear: string | null;
 }
 
 export interface RevolvingDoor {

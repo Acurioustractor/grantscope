@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import type { Entity, MvEntityStats, CharityEnrichment, SocialEnterpriseEnrichment } from '../_lib/types';
-import { entityTypeLabel, entityTypeBadge, confidenceBadge, formatMoney } from '../_lib/formatters';
+import type { Entity, MvEntityStats, CharityEnrichment, SocialEnterpriseEnrichment, DonationsMeta } from '../_lib/types';
+import { entityTypeLabel, entityTypeBadge, confidenceBadge, formatMoney, datasetLabel } from '../_lib/formatters';
 import { DueDiligenceButton } from './due-diligence-button';
 import { WatchButton } from './watch-button';
 
@@ -46,9 +46,17 @@ interface EntityHeaderProps {
   returnLabel: string;
   /** Donations made, from the page's own filtered query. Keeps the header and the donations section on one number. */
   donationsTotal?: number;
+  /** What donationsTotal is made of: count, recipients, year span. */
+  donationsMeta?: DonationsMeta | null;
+  /** Other names the organisation is recorded under (gs_entity_aliases). */
+  aliases?: string[];
 }
 
-export function EntityHeader({ entity: e, stats, donationsTotal, charity, socialEnterprise, returnHref, returnLabel }: EntityHeaderProps) {
+const ALIASES_SHOWN = 4;
+
+export function EntityHeader({
+  entity: e, stats, donationsTotal, donationsMeta, aliases = [], charity, socialEnterprise, returnHref, returnLabel,
+}: EntityHeaderProps) {
   const badge = confidenceBadge(e.confidence);
   const isDonorContractor =
     stats?.type_breakdown['donation:outbound'] && stats?.type_breakdown['contract:inbound'];
@@ -72,6 +80,19 @@ export function EntityHeader({ entity: e, stats, donationsTotal, charity, social
     ? donationsTotal
     : donationBreakdown ? donationBreakdown.amount : 0;
   const contractTotal = contractBreakdown ? contractBreakdown.amount : 0;
+
+  // Each headline says what it is made of, as OpenSecrets and USAspending do ("from 104 transactions").
+  const years = Object.keys(stats?.year_distribution ?? {}).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  const relationshipSpan = years.length >= 2 ? `${years[0]}–${years[years.length - 1]}` : years.length === 1 ? String(years[0]) : null;
+  const sourceNames = (e.source_datasets ?? []).map(datasetLabel);
+  const donationsLine = donationTotal > 0 && donationsMeta
+    ? `${donationsMeta.count.toLocaleString()} ${donationsMeta.count === 1 ? 'donation' : 'donations'} to ${donationsMeta.recipients}${donationsMeta.recipientsCapped ? '+' : ''} ${donationsMeta.recipients === 1 ? 'recipient' : 'recipients'}${donationsMeta.fromYear ? `, ${donationsMeta.fromYear === donationsMeta.toYear ? donationsMeta.fromYear : `${donationsMeta.fromYear}–${donationsMeta.toYear}`}` : ''}`
+    : donationTotal === 0 && e.latest_revenue && e.financial_year
+      ? `latest reported, ${e.financial_year}`
+      : null;
+  const contractLine = contractTotal > 0 && contractBreakdown
+    ? `from ${contractBreakdown.count.toLocaleString()} ${contractBreakdown.count === 1 ? 'contract' : 'contracts'}`
+    : null;
 
   return (
     <>
@@ -122,6 +143,18 @@ export function EntityHeader({ entity: e, stats, donationsTotal, charity, social
             <span className="text-xs font-bold text-bauhaus-muted">{e.state}</span>
           )}
         </div>
+        {aliases.length > 0 && (
+          <p className="mt-2 text-sm text-bauhaus-muted">
+            <span className="font-black uppercase tracking-widest text-[11px] text-bauhaus-black">Also recorded as</span>{' '}
+            {aliases.slice(0, ALIASES_SHOWN).join(' · ')}
+            {aliases.length > ALIASES_SHOWN && (
+              <details className="inline">
+                <summary className="inline cursor-pointer font-bold text-bauhaus-blue"> +{aliases.length - ALIASES_SHOWN} more</summary>
+                <span> · {aliases.slice(ALIASES_SHOWN).join(' · ')}</span>
+              </details>
+            )}
+          </p>
+        )}
       </div>
 
       {/* Stats Grid */}
@@ -134,10 +167,16 @@ export function EntityHeader({ entity: e, stats, donationsTotal, charity, social
               <Sparkline data={stats.year_distribution} />
             </div>
           )}
+          {relationshipSpan && <div className="mt-1 text-xs text-bauhaus-muted">links in the graph, {relationshipSpan}</div>}
         </div>
         <div className="p-4 border-b-2 sm:border-b-0 sm:border-r-2 border-bauhaus-black/10">
           <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Data Sources</div>
           <div className="text-2xl font-black text-bauhaus-black">{e.source_count}</div>
+          {sourceNames.length > 0 && (
+            <div className="mt-1 text-xs text-bauhaus-muted">
+              {sourceNames.slice(0, 3).join(', ')}{sourceNames.length > 3 ? ` +${sourceNames.length - 3}` : ''}
+            </div>
+          )}
         </div>
         <div className="p-4 border-r-2 border-bauhaus-black/10">
           <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">
@@ -146,6 +185,7 @@ export function EntityHeader({ entity: e, stats, donationsTotal, charity, social
           <div className="text-2xl font-black text-bauhaus-black">
             {donationTotal > 0 ? formatMoney(donationTotal) : formatMoney(e.latest_revenue)}
           </div>
+          {donationsLine && <div className="mt-1 text-xs text-bauhaus-muted">{donationsLine}</div>}
         </div>
         <div className="p-4">
           <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">
@@ -158,6 +198,7 @@ export function EntityHeader({ entity: e, stats, donationsTotal, charity, social
                 ? formatMoney(totalOutbound)
                 : formatMoney(e.latest_tax_payable)}
           </div>
+          {contractLine && <div className="mt-1 text-xs text-bauhaus-muted">{contractLine}</div>}
         </div>
       </div>
 

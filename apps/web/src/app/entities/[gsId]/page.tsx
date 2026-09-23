@@ -367,6 +367,24 @@ export default async function EntityDossierPage({
     politicalDonations = (donData || []) as DonationRow[];
     totalDonations = politicalDonations.reduce((s, d) => s + (d.total || 0), 0);
   }
+  // What the header's donations figure counts. Financial years arrive as both '2008-2009' and
+  // '2018-19'; reduce each to a calendar start and end year so the span reads "2008–2019".
+  const fyStart = (fy: string) => fy.slice(0, 4);
+  const fyEnd = (fy: string) => {
+    const m = /^(\d{4})-(\d{2}|\d{4})$/.exec(fy);
+    if (!m) return fy.slice(0, 4);
+    return m[2].length === 2 ? `${m[1].slice(0, 2)}${m[2]}` : m[2];
+  };
+  const donationYears = politicalDonations.flatMap((d) => d.years ?? []).filter(Boolean).sort();
+  const donationsMeta = politicalDonations.length > 0
+    ? {
+        count: politicalDonations.reduce((s, d) => s + (d.count || 0), 0),
+        recipients: politicalDonations.length,
+        recipientsCapped: politicalDonations.length >= 20,
+        fromYear: donationYears.length ? fyStart(donationYears[0]) : null,
+        toYear: donationYears.length ? fyEnd(donationYears[donationYears.length - 1]) : null,
+      }
+    : null;
 
   // Lobbying targets
   interface LobbyTarget { target_name: string; target_gs_id: string | null }
@@ -407,11 +425,14 @@ export default async function EntityDossierPage({
   // Power profile, revolving door and tax transparency: the sections only /entity used to show.
   // exec_sql because /reports/who-runs-australia reads mv_revolving_door through PostgREST and gets
   // nothing back (cause not found, 2026-09-23); the SQL path is the one /entity used and it works.
-  const [powerRows, revolvingRows, taxRows] = await Promise.all([
+  const [powerRows, revolvingRows, taxRows, aliasRows] = await Promise.all([
+    // rank/ranked give the score context the reference sites show ("173 of 40,455").
     supabase.rpc('exec_sql', {
-      query: `SELECT power_score, system_count, procurement_dollars, recorded_grants_dollars, donation_dollars,
-                     distinct_govt_buyers, distinct_parties_funded
-                FROM mv_entity_power_index WHERE id = '${e.id}' LIMIT 1`,
+      query: `SELECT p.power_score, p.system_count, p.procurement_dollars, p.recorded_grants_dollars, p.donation_dollars,
+                     p.distinct_govt_buyers, p.distinct_parties_funded,
+                     (SELECT count(*) FROM mv_entity_power_index q WHERE q.power_score > p.power_score) + 1 AS rank,
+                     (SELECT count(*) FROM mv_entity_power_index) AS ranked
+                FROM mv_entity_power_index p WHERE p.id = '${e.id}' LIMIT 1`,
     }),
     supabase.rpc('exec_sql', {
       query: `SELECT lobbies, donates, contracts, receives_funding, influence_vectors,
@@ -425,10 +446,22 @@ export default async function EntityDossierPage({
                    ORDER BY report_year DESC LIMIT 5`,
         })
       : Promise.resolve({ data: [] }),
+    supabase.from('gs_entity_aliases').select('alias_value, is_primary').eq('entity_id', e.id).limit(50),
   ]);
   const power = ((powerRows.data || []) as PowerProfile[])[0] ?? null;
   const revolvingDoor = ((revolvingRows.data || []) as RevolvingDoor[])[0] ?? null;
   const taxYears = (taxRows.data || []) as TaxYear[];
+
+  // Other names this organisation is recorded under (USAspending shows "Also known by 8 other names").
+  const seenNames = new Set([e.canonical_name.trim().toUpperCase()]);
+  const aliases: string[] = [];
+  for (const row of ((aliasRows.data || []) as Array<{ alias_value: string | null; is_primary: boolean | null }>)
+    .sort((a, b) => Number(!!b.is_primary) - Number(!!a.is_primary))) {
+    const name = row.alias_value?.trim();
+    if (!name || seenNames.has(name.toUpperCase())) continue;
+    seenNames.add(name.toUpperCase());
+    aliases.push(name);
+  }
 
   // Shared directors — people who sit on this entity's board AND other boards
   interface SharedDirectorRow { person_name: string; person_gs_id: string | null; shared_entities: Array<{ name: string; gs_id: string | null }> }
@@ -514,6 +547,8 @@ export default async function EntityDossierPage({
         entity={e}
         stats={mvStats}
         donationsTotal={e.abn ? totalDonations : undefined}
+        donationsMeta={donationsMeta}
+        aliases={aliases}
         charity={charity}
         socialEnterprise={socialEnterprise}
         returnHref={returnHref}
