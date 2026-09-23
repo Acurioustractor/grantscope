@@ -240,7 +240,7 @@ export default async function HomePage() {
         </div>
         <div className="grid gap-0 md:grid-cols-4">
           {[
-            ['Consulting Class', '$9.1B in government contracts to 7 firms. $10.5M in donations. 863:1 ROI on political giving. The Donate → Advise → Implement pattern.'],
+            ['Consulting Class', 'Government contracts to the Big 4 and the big consultancies, set against what those firms give to parties. The Donate → Advise → Implement pattern.'],
             ['Indigenous Proxy', '57% of &ldquo;Indigenous funding&rdquo; flows to non-Indigenous organisations. Where the money actually lands vs. where it&rsquo;s promised.'],
             ['Revolving Door', `Entities with two or more influence vectors: lobbying, donations, contracts, funding. ${fmt(stats.revolvingDoorCount)} orgs mapped, scored by concentration.`],
             ['Board Interlocks', 'People sitting on multiple boards across funders, recipients, and contractors. Who&rsquo;s adjudicating whose funding.'],

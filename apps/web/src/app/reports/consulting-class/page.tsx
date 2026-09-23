@@ -1,7 +1,14 @@
 import Link from 'next/link';
 import { getServiceSupabase } from '@/lib/report-supabase';
+import { donationFilterSql } from '@/lib/justice-money';
 
 export const revalidate = 3600;
+
+// Donations only. Unfiltered, these firms' "donations" were 16.0m over 1,943 rows, mostly party
+// fundraising receipts; counting only receipts declared as donations it is 0.8m over 68 rows
+// (measured 2026-09-23, after the political_donations dedupe).
+const DONATION = donationFilterSql();
+const DONATION_PD = donationFilterSql('pd');
 
 const FIRMS = [
   'KPMG', 'Deloitte', 'PricewaterhouseCoopers', 'PwC',
@@ -68,7 +75,7 @@ async function getData() {
               ) c ON c.supplier_abn = ge.abn
               LEFT JOIN (
                 SELECT donor_abn, SUM(amount)::bigint as donated, COUNT(*) as donation_count
-                FROM political_donations GROUP BY donor_abn
+                FROM political_donations WHERE ${DONATION} GROUP BY donor_abn
               ) d ON d.donor_abn = ge.abn
               WHERE ge.canonical_name ILIKE ANY(ARRAY[${FIRM_PATTERN}])
                 AND ge.entity_type = 'company'
@@ -97,6 +104,7 @@ async function getData() {
               JOIN gs_entities ge ON ge.abn = pd.donor_abn
               WHERE ge.canonical_name ILIKE ANY(ARRAY[${FIRM_PATTERN}])
                 AND ge.entity_type = 'company'
+                AND ${DONATION_PD}
               GROUP BY pd.donation_to
               HAVING SUM(pd.amount) > 50000
               ORDER BY total DESC

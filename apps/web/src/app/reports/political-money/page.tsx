@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
+import { donationFilterSql } from '@/lib/justice-money';
 import Link from 'next/link';
+import { entityHref } from '@/lib/entity-href';
 import { ReportCTA } from '../_components/report-cta';
 
 // Public, service-role, heavy fan-out and no per-request inputs. Cached hourly so
@@ -10,17 +12,17 @@ export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: 'Political Money | CivicGraph Investigation',
-  description: 'Who funds Australian politics — and what do they get in return? 312K donation records cross-referenced against about 797K government contracts.',
+  description: 'Who funds Australian politics — and what do they get in return? Federal donation disclosures cross-referenced against government contracts.',
   openGraph: {
     title: 'Political Money',
-    description: 'Who funds Australian politics — and what do they get in return? $21.9B in tracked political donations cross-referenced against $853B in government contracts.',
+    description: 'Who funds Australian politics — and what do they get in return? Federal donation disclosures cross-referenced against government contracts.',
     type: 'article',
     siteName: 'CivicGraph',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Political Money',
-    description: '312K donation records. About 797K government contracts. The donor-to-contractor pipeline.',
+    description: 'Federal donation disclosures against government contracts. The donor-to-contractor pipeline.',
   },
 };
 
@@ -69,6 +71,8 @@ interface Summary {
   totalRecords: number;
   uniqueDonors: number;
   totalAmount: number;
+  /** Party and third-party income that is not a donation: fundraising, transfers, levies, public funding. */
+  otherReceipts: number;
   donorsWithAbn: number;
   minYear: string;
   maxYear: string;
@@ -112,6 +116,11 @@ function isPartyOrCandidate(name: string): boolean {
 
 /* ─── Data fetching ──────────────────────────────────────── */
 
+// Every figure on this page counts only what parties declared as donations. Until 2026-09-23 the
+// queries summed every receipt (fundraising income, transfers, levies, public funding), which put
+// the AEC itself and a steel joint venture at the top of "donors" and the headline at ~10x.
+const DONATION = donationFilterSql();
+
 async function getData() {
   const supabase = getServiceSupabase();
 
@@ -131,8 +140,11 @@ async function getData() {
         ROUND(SUM(amount)) as total_amount,
         COUNT(DISTINCT donor_abn) FILTER (WHERE donor_abn IS NOT NULL) as donors_with_abn,
         MIN(financial_year) as min_year,
-        MAX(financial_year) as max_year
-      FROM political_donations`,
+        MAX(financial_year) as max_year,
+        (SELECT ROUND(SUM(amount)) FROM political_donations
+          WHERE return_type <> 'donor' AND receipt_type IS DISTINCT FROM 'donation received') as other_receipts
+      FROM political_donations
+      WHERE ${DONATION}`,
     }),
 
     // 2. Party/recipient breakdown — top 20
@@ -143,7 +155,7 @@ async function getData() {
         COUNT(DISTINCT donor_name) as donors,
         ROUND(AVG(amount)) as avg_donation
       FROM political_donations
-      WHERE donation_to IS NOT NULL
+      WHERE donation_to IS NOT NULL AND ${DONATION}
       GROUP BY donation_to
       ORDER BY total DESC
       LIMIT 20`,
@@ -159,8 +171,9 @@ async function getData() {
         COUNT(DISTINCT financial_year) as years_active,
         STRING_AGG(DISTINCT donation_to, ', ' ORDER BY donation_to) as party_list
       FROM political_donations
+      WHERE ${DONATION}
       GROUP BY donor_name, donor_abn
-      ORDER BY total DESC
+      ORDER BY total DESC NULLS LAST
       LIMIT 50`,
     }),
 
@@ -171,6 +184,7 @@ async function getData() {
         ROUND(SUM(amount)) as total,
         COUNT(DISTINCT donor_name) as donors
       FROM political_donations
+      WHERE ${DONATION}
       GROUP BY financial_year
       ORDER BY financial_year`,
     }),
@@ -250,6 +264,7 @@ async function getData() {
     totalRecords: Number(raw.total_records) || 0,
     uniqueDonors: Number(raw.unique_donors) || 0,
     totalAmount: Number(raw.total_amount) || 0,
+    otherReceipts: Number(raw.other_receipts) || 0,
     donorsWithAbn: Number(raw.donors_with_abn) || 0,
     minYear: raw.min_year || '',
     maxYear: raw.max_year || '',
@@ -263,12 +278,6 @@ async function getData() {
   const otherRecipients = parties.filter(p => !isPartyOrCandidate(p.donation_to));
 
   return { summary, parties, partyFunding, otherRecipients, topDonors, byYear, payToPlay };
-}
-
-/* ─── Slug helper ────────────────────────────────────────── */
-
-function nameToSlug(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
 /* ─── Page ───────────────────────────────────────────────── */
@@ -314,6 +323,9 @@ export default async function PoliticalMoneyReport() {
             <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">Donations Tracked</div>
             <div className="text-3xl sm:text-4xl font-black">{money(s.totalAmount)}</div>
             <div className="text-white/50 text-xs font-bold mt-2">{fmt(s.totalRecords)} records</div>
+            <div className="text-white/50 text-xs font-bold mt-1">
+              Not counted: {money(s.otherReceipts)} of other party income
+            </div>
           </div>
           <div className="border-4 border-l-0 max-md:border-l-4 border-bauhaus-black p-6 bg-bauhaus-red text-white">
             <div className="text-xs font-black text-red-200 uppercase tracking-widest mb-2">Unique Donors</div>
@@ -345,8 +357,9 @@ export default async function PoliticalMoneyReport() {
           Party Funding
         </h2>
         <p className="text-sm text-bauhaus-muted mb-6 max-w-2xl">
-          Where the money goes. Total political donations by recipient party or associated entity,
-          ranked by total amount received. Includes direct party donations and affiliated organisation flows.
+          Where the money goes. Donations by recipient party or associated entity, ranked by total
+          received. Counts only receipts declared as donations; fundraising income, transfers between
+          party branches and levies are left out.
         </p>
 
         {/* Party bars */}
@@ -425,7 +438,7 @@ export default async function PoliticalMoneyReport() {
                   <td className="p-3 font-black text-bauhaus-muted">{i + 1}</td>
                   <td className="p-3">
                     {donor.contract_entity ? (
-                      <Link href={`/org/${nameToSlug(donor.donor_name)}`} className="hover:text-bauhaus-red transition-colors">
+                      <Link href={entityHref({ abn: donor.donor_abn, name: donor.donor_name })} className="hover:text-bauhaus-red transition-colors">
                         <div className="font-bold text-bauhaus-black">{donor.donor_name}</div>
                         {donor.donor_abn && (
                           <div className="text-xs text-bauhaus-muted">ABN: {donor.donor_abn}</div>
@@ -522,7 +535,7 @@ export default async function PoliticalMoneyReport() {
                   <tr key={e.gs_id} className="border-b border-white/10">
                     <td className="p-2 font-black text-white/30">{i + 1}</td>
                     <td className="p-2">
-                      <Link href={`/org/${nameToSlug(e.canonical_name)}`} className="hover:text-bauhaus-yellow transition-colors">
+                      <Link href={entityHref({ gsId: e.gs_id, abn: e.abn, name: e.canonical_name })} className="hover:text-bauhaus-yellow transition-colors">
                         <div className="font-bold text-white">{e.canonical_name}</div>
                         <div className="text-xs text-white/50">
                           {e.entity_type} &middot; {e.state || '---'}
@@ -651,23 +664,24 @@ export default async function PoliticalMoneyReport() {
               <strong>Cross-referencing:</strong> Donor-contractor identification uses the
               CivicGraph entity resolution system. Entities are matched across the political
               donations and AusTender datasets using ABN as the primary key. The &ldquo;Pay to
-              Play&rdquo; section uses the pre-computed <code>mv_revolving_door</code> materialized
-              view which scores entities across multiple influence vectors.
+              Play&rdquo; section uses the pre-computed <code>mv_entity_power_index</code> materialized
+              view, which records which systems each entity appears in.
             </p>
             <p>
-              <strong>What counts as a &ldquo;donation&rdquo;:</strong> AEC disclosure data includes
-              donations (gifts), other receipts, debts, and some operational transfers between
-              party branches and associated entities (e.g., union affiliation fees). This means
-              totals include intra-party flows that may inflate headline numbers. The
-              &ldquo;donation_to&rdquo; field reflects the receiving entity as recorded in the
+              <strong>What counts as a &ldquo;donation&rdquo;:</strong> AEC returns record donations
+              (gifts) alongside other receipts: fundraising income, transfers between party branches
+              and associated entities, levies, subscriptions and public funding. Every figure on this
+              page counts only receipts declared as donations. The other {money(s.otherReceipts)} is
+              left out, because adding it would count a party paying itself. Donors also lodge their
+              own returns for the same gifts; those are not added either, so no gift is counted twice.
+              The &ldquo;donation_to&rdquo; field reflects the receiving entity as recorded in the
               AEC return.
             </p>
             <p>
               <strong>Caveats:</strong> Below-threshold donations are not disclosed. Donations can
               be split across multiple entities to stay under thresholds. Associated entity
               flows (unions, clubs, holding companies) may be counted separately from their parent
-              party. Some large &ldquo;donations&rdquo; are in fact public election funding
-              disbursements from the AEC itself. The ratio of contracts-to-donations should not
+              party. The ratio of contracts-to-donations should not
               be interpreted as a direct return on investment &mdash; correlation does not
               establish causation.
             </p>

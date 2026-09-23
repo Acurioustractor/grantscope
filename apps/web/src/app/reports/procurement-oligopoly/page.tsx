@@ -1,7 +1,12 @@
 import Link from 'next/link';
 import { getServiceSupabase } from '@/lib/report-supabase';
+import { donationFilterSql } from '@/lib/justice-money';
 
 export const revalidate = 3600;
+
+// Donations only. Unfiltered, the top-100 suppliers' "donations" were 64.1m; counting only receipts
+// declared as donations it is 2.1m (measured 2026-09-23, after the political_donations dedupe).
+const DONATION = donationFilterSql('pd');
 
 function money(n: number | null | undefined): string {
   if (n == null) return '--';
@@ -124,8 +129,8 @@ async function getData() {
   const donationRes = abnList
     ? await db.rpc('exec_sql', {
         query: `SELECT donor_abn, SUM(amount)::bigint as donated, COUNT(*)::int as donation_count
-                FROM political_donations
-                WHERE donor_abn IN (${abnList})
+                FROM political_donations pd
+                WHERE donor_abn IN (${abnList}) AND ${DONATION}
                 GROUP BY donor_abn`,
       })
     : { data: [], error: null };
@@ -225,7 +230,7 @@ async function getData() {
                    COUNT(DISTINCT t.supplier_abn)::int as top100_donors,
                    SUM(pd.amount)::bigint as total_donated
             FROM top100abns t
-            JOIN political_donations pd ON pd.donor_abn = t.supplier_abn
+            JOIN political_donations pd ON pd.donor_abn = t.supplier_abn AND ${DONATION}
             GROUP BY pd.donation_to
             HAVING SUM(pd.amount) > 50000
             ORDER BY total_donated DESC
@@ -244,9 +249,9 @@ async function getData() {
             )
             SELECT
               (SELECT COUNT(DISTINCT t.supplier_abn) FROM top100abns t
-               INNER JOIN political_donations pd ON pd.donor_abn = t.supplier_abn)::int as donors,
+               INNER JOIN political_donations pd ON pd.donor_abn = t.supplier_abn AND ${DONATION})::int as donors,
               (SELECT SUM(pd.amount)::bigint FROM top100abns t
-               INNER JOIN political_donations pd ON pd.donor_abn = t.supplier_abn) as donated,
+               INNER JOIN political_donations pd ON pd.donor_abn = t.supplier_abn AND ${DONATION}) as donated,
               (SELECT COUNT(DISTINCT t.supplier_abn) FROM top100abns t
                INNER JOIN (SELECT DISTINCT ge.abn FROM gs_relationships r
                            JOIN gs_entities ge ON ge.id = r.source_entity_id
