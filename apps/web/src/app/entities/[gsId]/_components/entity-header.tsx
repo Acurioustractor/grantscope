@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Entity, MvEntityStats, CharityEnrichment, SocialEnterpriseEnrichment, DonationsMeta } from '../_lib/types';
 import { entityTypeLabel, entityTypeBadge, confidenceBadge, formatMoney, datasetLabel } from '../_lib/formatters';
+import { StatRow, Stat } from '@/components/data';
 import { DueDiligenceButton } from './due-diligence-button';
 import { WatchButton } from './watch-button';
 
@@ -157,49 +158,43 @@ export function EntityHeader({
         )}
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 mb-8 border-4 border-bauhaus-black">
-        <div className="p-4 border-r-2 border-b-2 sm:border-b-0 border-bauhaus-black/10">
-          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Relationships</div>
-          <div className="text-2xl font-black text-bauhaus-black">{totalRelationships.toLocaleString()}</div>
-          {stats?.year_distribution && Object.keys(stats.year_distribution).length >= 2 && (
-            <div className="mt-1 text-bauhaus-blue">
-              <Sparkline data={stats.year_distribution} />
-            </div>
-          )}
-          {relationshipSpan && <div className="mt-1 text-xs text-bauhaus-muted">links in the graph, {relationshipSpan}</div>}
-        </div>
-        <div className="p-4 border-b-2 sm:border-b-0 sm:border-r-2 border-bauhaus-black/10">
-          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Data Sources</div>
-          <div className="text-2xl font-black text-bauhaus-black">{e.source_count}</div>
-          {sourceNames.length > 0 && (
-            <div className="mt-1 text-xs text-bauhaus-muted">
-              {sourceNames.slice(0, 3).join(', ')}{sourceNames.length > 3 ? ` +${sourceNames.length - 3}` : ''}
-            </div>
-          )}
-        </div>
-        <div className="p-4 border-r-2 border-bauhaus-black/10">
-          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">
-            {donationTotal > 0 ? 'Political Donations' : 'Revenue'}
-          </div>
-          <div className="text-2xl font-black text-bauhaus-black">
-            {donationTotal > 0 ? formatMoney(donationTotal) : formatMoney(e.latest_revenue)}
-          </div>
-          {donationsLine && <div className="mt-1 text-xs text-bauhaus-muted">{donationsLine}</div>}
-        </div>
-        <div className="p-4">
-          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">
-            {contractTotal > 0 ? 'Contract Value' : totalOutbound > 0 ? 'Total Outbound' : 'Tax Payable'}
-          </div>
-          <div className="text-2xl font-black text-bauhaus-black">
-            {contractTotal > 0
+      {/* Headline figures, each saying what it counts */}
+      <div className="mb-8">
+        <StatRow cols={4}>
+          <Stat
+            label="Relationships"
+            value={totalRelationships.toLocaleString()}
+            sub={relationshipSpan ? `links in the graph, ${relationshipSpan}` : undefined}
+          >
+            {stats?.year_distribution && Object.keys(stats.year_distribution).length >= 2 && (
+              <div className="mt-1 text-bauhaus-blue">
+                <Sparkline data={stats.year_distribution} />
+              </div>
+            )}
+          </Stat>
+          <Stat
+            label="Data Sources"
+            value={e.source_count}
+            sub={sourceNames.length > 0
+              ? `${sourceNames.slice(0, 3).join(', ')}${sourceNames.length > 3 ? ` +${sourceNames.length - 3}` : ''}`
+              : undefined}
+          />
+          <Stat
+            label={donationTotal > 0 ? 'Political Donations' : 'Revenue'}
+            value={donationTotal > 0 ? formatMoney(donationTotal) : formatMoney(e.latest_revenue)}
+            tone={donationTotal > 0 ? 'red' : 'ink'}
+            sub={donationsLine ?? undefined}
+          />
+          <Stat
+            label={contractTotal > 0 ? 'Contract Value' : totalOutbound > 0 ? 'Total Outbound' : 'Tax Payable'}
+            value={contractTotal > 0
               ? formatMoney(contractTotal)
               : totalOutbound > 0
                 ? formatMoney(totalOutbound)
                 : formatMoney(e.latest_tax_payable)}
-          </div>
-          {contractLine && <div className="mt-1 text-xs text-bauhaus-muted">{contractLine}</div>}
-        </div>
+            sub={contractLine ?? undefined}
+          />
+        </StatRow>
       </div>
 
       {/* Due Diligence + Data freshness */}

@@ -1,9 +1,8 @@
+import { money } from '@/lib/format';
+
+/** The site's one money format; on a profile, zero also reads as "\u2014" (nothing recorded). */
 export function formatMoney(amount: number | null): string {
-  if (!amount) return '\u2014';
-  if (amount >= 1_000_000_000) return `$${(amount / 1_000_000_000).toFixed(1)}B`;
-  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
-  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`;
-  return `$${amount.toLocaleString()}`;
+  return amount ? money(amount) : '\u2014';
 }
 
 export function formatPercent(value: number | null | undefined): string {
