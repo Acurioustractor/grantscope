@@ -110,9 +110,10 @@ export const GRANT_FILTER_SQL = grantFilterSql();
 /**
  * `political_donations.receipt_type` filter.
  *
- * 'other receipt' is 72% of rows and 85% of dollars and is NOT donations — it is party
- * fundraising income, transfers and levies. Summing the table unfiltered reports $240.8bn of
- * political donations in Australia. The real figure is $25.3bn (measured 2026-08-20).
+ * 'other receipt' is NOT donations — it is party fundraising income, transfers and levies.
+ * After the 2026-09-23 dedupe (migration 20260923115925) the table holds $11.9bn of receipts of
+ * every kind and $1.15bn of 'donation received'. The earlier "$240.8bn unfiltered, $25.3bn real"
+ * were both counts of the ~27 copies the weekly import had inserted.
  */
 export function donationFilterSql(alias?: string): string {
   const p = alias ? `${alias}.` : '';
