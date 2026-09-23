@@ -38,6 +38,11 @@ import { resolveSubscriptionTier } from '@/lib/subscription';
 import { isAdminEmail } from '@/lib/admin';
 import type { User } from '@supabase/supabase-js';
 import { cookies, headers } from 'next/headers';
+// Vercel Web Analytics (cookieless page views). Inert until Web Analytics is switched on for the
+// project in the Vercel dashboard. Added 2026-09-24: there was no way to tell whether visitors use
+// CivicGraph as a tool (search, profiles) or read it as a publication (one report from a link),
+// and the design decisions turn on that.
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
   title: "CivicGraph — Australia's Accountability Atlas",
@@ -125,6 +130,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <body className={`font-sans antialiased bg-transparent ${qlFontVars}`}>
           <BrandFontLinks />
           {children}
+          <Analytics />
         </body>
       </html>
     );
@@ -287,6 +293,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <DeferredChatDrawer delayMs={isFastPublicPath ? 2500 : 1000} />
         )}
         </ShortlistProvider>
+        <Analytics />
       </body>
     </html>
   );
