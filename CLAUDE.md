@@ -28,7 +28,8 @@ check names the ones that were not. Generated types: `supabase/types/database.ty
 2. **Database change?** Write `supabase/migrations/<version>_<name>.sql`, then `/db-apply` (Ben's verb). Nothing else
    touches the schema. `node --env-file=.env scripts/check-migration-parity.mjs` says whether the folder and the
    database agree. The data itself is legible at **`/ops/schema`** (owner, consumers, size, public-key exposure).
-3. **Land with `/ship-merge`.** It runs the gate (`scripts/precheck.sh`), pushes, opens the PR, classifies:
+3. **Land with `/one-pr`: one PR per sitting.** Every fix of a sitting is a commit on one branch; at the end it
+   runs the gate (`scripts/precheck.sh`) once, pushes, opens ONE PR and watches CI in the background, classifying:
    SAFE paths (`scripts/`, `supabase/`, `docs/`, `thoughts/`, `.github/`, `.claude/`, `lib/`, `api/`, `ops/`,
    `admin/`, tests) merge themselves on green; anything a visitor can render waits for Ben's preview and the word "merge".
 4. **Merged = deployed.** Vercel builds `main`; `/config-truth` when something is set but inert.
@@ -303,7 +304,7 @@ SELECT remoteness, COUNT(*) FROM gs_entities WHERE is_community_controlled = tru
 2. **Work:** Build features, fix bugs, run agents
 3. **Before shipping a money surface:** `/money-audit` — figures are the product
 4. **Before flipping a flag that changes what many pages read:** `/surface-sweep` — 200 is not working
-5. **Ship:** Run `/ship-merge` — do NOT hand-roll push/PR/merge (see Landing Policy below)
+5. **Ship:** Run `/one-pr` — do NOT hand-roll push/PR/merge (see Landing Policy below)
 6. **Close:** Run `/close` to verify, commit, and update handoff
 
 **`/config-truth` when a feature is configured but inert.** `/preflight` checks env vars are
@@ -365,8 +366,9 @@ and a "may I push?" round-trip at each step. Worse, `/ship-merge` — which auto
 existed the entire time and went uninvoked, and would only have half-worked because its adapters
 were written for another repo. Both are fixed. The rule now:
 
-**Never hand-roll the landing.** Use `/ship-merge`. If it fails, fix the adapter rather than doing
-it by hand — every manual landing is the tax being paid again.
+**Never hand-roll the landing.** Use `/one-pr` (one PR per sitting, CI watched in the background; it drives the
+adapters below). If it fails, fix the adapter rather than doing it by hand — every manual landing is the tax being
+paid again. Added 2026-09-24 after four fixes landed one PR at a time and the waiting outweighed the work.
 
 ### What runs without asking
 
