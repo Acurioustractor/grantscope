@@ -51,10 +51,12 @@ export function CommunityEvidence({ gsId, isPremium }: { gsId: string; isPremium
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // The route needs the research module, so a visitor gets 401 and a free account 403. Their
+    // error body has no count, and rendering it put "Community Evidence ()" on public profiles.
     fetch(`/api/entities/${gsId}/stories`)
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        setData(d);
+        setData(d && typeof d.count === 'number' ? d : null);
         setLoading(false);
       })
       .catch(() => setLoading(false));
