@@ -43,6 +43,9 @@ export type BuyerPipelineRow = {
   nextMove: string;
   nextActionDue: string | null;
   notes: string | null;
+  /** A GHL "GOODS - Demand" row: a community that needs beds, not an organisation that buys them.
+   *  sync-goods-ghl maps both pipelines to relationship_type='buyer'; 100 of 131 rows were places. */
+  isCommunity: boolean;
 };
 
 /** Procurement-track summary header — count, $ received, $ open asks. */
@@ -102,6 +105,7 @@ function toPipelineRow(r: GoodsRelationship): BuyerPipelineRow {
     nextMove: nextBestAction(r),
     nextActionDue: r.next_action_due ?? null,
     notes: r.notes ?? null,
+    isCommunity: false,
   };
 }
 
@@ -144,6 +148,9 @@ const emptySummary: BuyerPipelineSummary = {
  * Honest failure: returns { rows: [], summary: empty, fetchError } so the page
  * renders a "live data unavailable" strip instead of fabricated zeros.
  */
+/** GHL "GOODS - Demand": communities with a need, synced into goods_relationships as 'buyer'. */
+const DEMAND_PIPELINE_ID = 'UQsrmuqzxMSdCTklxEcG';
+
 export async function getGoodsBuyerPipeline(): Promise<GoodsBuyerPipeline> {
   try {
     const supabase = getServiceSupabase();
@@ -159,8 +166,24 @@ export async function getGoodsBuyerPipeline(): Promise<GoodsBuyerPipeline> {
       return { rows: [], summary: emptySummary, fetchError: error.message };
     }
 
-    const rows = ((data ?? []) as Record<string, unknown>[]).map(coerceRow).map(toPipelineRow);
-    return { rows, summary: summarise(rows), fetchError: null };
+    const raw = (data ?? []) as Record<string, unknown>[];
+    const oppIds = raw.map((r) => r.ghl_opportunity_id).filter((v): v is string => typeof v === 'string');
+    const demand = new Set<string>();
+    if (oppIds.length) {
+      const { data: opps, error: oppErr } = await supabase
+        .from('ghl_opportunities')
+        .select('ghl_id')
+        .eq('ghl_pipeline_id', DEMAND_PIPELINE_ID)
+        .in('ghl_id', oppIds);
+      if (oppErr) throw new Error(`demand pipeline lookup: ${oppErr.message}`);
+      for (const o of opps ?? []) demand.add(o.ghl_id as string);
+    }
+    const rows = raw.map(coerceRow).map(toPipelineRow).map((r) => ({
+      ...r,
+      isCommunity: r.ghlOpportunityId != null && demand.has(r.ghlOpportunityId),
+    }));
+    // Counts and dollars are buyers only; communities are listed, never summed as buyers.
+    return { rows, summary: summarise(rows.filter((r) => !r.isCommunity)), fetchError: null };
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Unexpected buyer-pipeline load error.';
     console.error('[goods-buyer-pipeline] unexpected:', e);

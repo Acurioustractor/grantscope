@@ -312,7 +312,8 @@ async function getDeskRecords(slug: string): Promise<DeskRecord[]> {
     });
   }
   for (const b of buyers?.rows ?? []) {
-    if (!b.isOpen) continue;
+    // Demand-register rows are communities that need beds, not buyers; they buried the six projects.
+    if (!b.isOpen || b.isCommunity) continue;
     pool.push({
       id: `b-${b.id}`, kind: 'buyer', ref: b.id, projectCode: 'ACT-GD',
       decision: decisions.get(decisionKey('buyer', b.id, 'ACT-GD')),
