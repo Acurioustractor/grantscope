@@ -353,19 +353,30 @@ export default async function EntityDossierPage({
   }
 
   // Political donations (grouped by party/recipient)
-  interface DonationRow { donation_to: string; total: number; count: number; years: string[] }
+  // The list shows the top 20 recipients; the all_* columns are window totals over EVERY recipient,
+  // computed before the LIMIT. The headline used to sum the 20 rows, so a donor with 30 recipients
+  // showed less than they gave (2026-09-24 review of #509).
+  interface DonationRow {
+    donation_to: string; total: number; count: number; years: string[];
+    all_total: number; all_count: number; all_recipients: number; first_fy: string; last_fy: string;
+  }
   let politicalDonations: DonationRow[] = [];
   let totalDonations = 0;
   if (e.abn) {
     const { data: donData } = await supabase.rpc('exec_sql', {
       query: `SELECT donation_to, SUM(amount)::bigint as total, COUNT(*)::int as count,
-                     array_agg(DISTINCT financial_year ORDER BY financial_year) as years
+                     array_agg(DISTINCT financial_year ORDER BY financial_year) as years,
+                     (SUM(SUM(amount)) OVER ())::bigint AS all_total,
+                     (SUM(COUNT(*)) OVER ())::int AS all_count,
+                     (COUNT(*) OVER ())::int AS all_recipients,
+                     MIN(MIN(financial_year)) OVER () AS first_fy,
+                     MAX(MAX(financial_year)) OVER () AS last_fy
               FROM political_donations WHERE donor_abn = '${e.abn}'
                 AND receipt_type = 'donation received'
               GROUP BY donation_to ORDER BY total DESC LIMIT 20`,
     });
     politicalDonations = (donData || []) as DonationRow[];
-    totalDonations = politicalDonations.reduce((s, d) => s + (d.total || 0), 0);
+    totalDonations = Number(politicalDonations[0]?.all_total) || 0;
   }
   // What the header's donations figure counts. Financial years arrive as both '2008-2009' and
   // '2018-19'; reduce each to a calendar start and end year so the span reads "2008–2019".
@@ -375,14 +386,14 @@ export default async function EntityDossierPage({
     if (!m) return fy.slice(0, 4);
     return m[2].length === 2 ? `${m[1].slice(0, 2)}${m[2]}` : m[2];
   };
-  const donationYears = politicalDonations.flatMap((d) => d.years ?? []).filter(Boolean).sort();
-  const donationsMeta = politicalDonations.length > 0
+  const donationAll = politicalDonations[0];
+  const donationsMeta = donationAll
     ? {
-        count: politicalDonations.reduce((s, d) => s + (d.count || 0), 0),
-        recipients: politicalDonations.length,
-        recipientsCapped: politicalDonations.length >= 20,
-        fromYear: donationYears.length ? fyStart(donationYears[0]) : null,
-        toYear: donationYears.length ? fyEnd(donationYears[donationYears.length - 1]) : null,
+        count: Number(donationAll.all_count) || 0,
+        recipients: Number(donationAll.all_recipients) || 0,
+        recipientsCapped: false,
+        fromYear: donationAll.first_fy ? fyStart(donationAll.first_fy) : null,
+        toYear: donationAll.last_fy ? fyEnd(donationAll.last_fy) : null,
       }
     : null;
 
