@@ -2,93 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { VIEW_REGISTRY } from '@/lib/view-registry';
-
-interface EntityResult {
-  type: 'entity';
-  id: string;
-  name: string;
-  entityType: string;
-  abn: string | null;
-  state: string | null;
-  sourceCount: number;
-  revenue: number | null;
-  relationships: number;
-  systems: string[];
-  href: string;
-}
-
-interface FoundationResult {
-  type: 'foundation';
-  id: string;
-  name: string;
-  foundationType: string | null;
-  abn: string | null;
-  totalGiving: number | null;
-  focus: string[] | null;
-  href: string;
-}
-
-interface GrantResult {
-  type: 'grant';
-  id: string;
-  name: string;
-  amountMin: number | null;
-  amountMax: number | null;
-  closesAt: string | null;
-  programType: string | null;
-  source: string | null;
-  href: string;
-}
-
-interface PersonResult {
-  type?: 'person';
-  name: string;
-  boardCount: number;
-  href: string;
-}
-
-type SearchResult = EntityResult | PersonResult | FoundationResult | GrantResult;
-
-interface SearchResults {
-  entities: EntityResult[];
-  people: PersonResult[];
-  foundations: FoundationResult[];
-  grants: GrantResult[];
-}
-
-const EMPTY: SearchResults = { entities: [], people: [], foundations: [], grants: [] };
-
-function formatMoney(amount: number | null): string {
-  if (!amount) return '';
-  if (amount >= 1_000_000_000) return `$${(amount / 1_000_000_000).toFixed(1)}B`;
-  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
-  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`;
-  return `$${amount.toLocaleString()}`;
-}
-
-function entityTypeLabel(type: string): string {
-  const labels: Record<string, string> = {
-    charity: 'Charity',
-    foundation: 'Foundation',
-    company: 'Company',
-    government_body: 'Govt',
-    indigenous_corp: 'Indigenous Corp',
-    political_party: 'Political Party',
-    social_enterprise: 'Social Enterprise',
-    trust: 'Trust',
-    person: 'Person',
-  };
-  return labels[type] || type;
-}
-
-function typeBadgeColor(type: string): string {
-  const colors: Record<string, string> = {
-    entity: 'border-bauhaus-black/30 bg-bauhaus-canvas text-bauhaus-black',
-    foundation: 'border-bauhaus-blue bg-link-light text-bauhaus-blue',
-    grant: 'border-money bg-money-light text-money',
-  };
-  return colors[type] || 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted';
-}
+import { EMPTY_RESULTS, SearchResultList, flatResults, toSearchResults, type SearchResults } from './search-results';
 
 interface GlobalSearchProps {
   open: boolean;
@@ -97,7 +11,7 @@ interface GlobalSearchProps {
 
 export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResults>(EMPTY);
+  const [results, setResults] = useState<SearchResults>(EMPTY_RESULTS);
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [searchMode, setSearchMode] = useState<'text' | 'ai'>('text');
@@ -115,12 +29,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
   const viewOffset = viewMatches.length;
 
   // Flatten all results for keyboard navigation (views first)
-  const allResults: SearchResult[] = [
-    ...results.entities,
-    ...results.people,
-    ...results.foundations,
-    ...results.grants,
-  ];
+  const allResults = flatResults(results);
   const navHrefs: string[] = [...viewMatches.map((v) => v.href), ...allResults.map((r) => r.href)];
 
   // Escape to close
@@ -142,7 +51,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
       setTimeout(() => inputRef.current?.focus(), 50);
     } else {
       setQuery('');
-      setResults(EMPTY);
+      setResults(EMPTY_RESULTS);
       setSelectedIndex(0);
     }
   }, [open]);
@@ -150,7 +59,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
   // Debounced search
   useEffect(() => {
     if (!query || query.length < 2) {
-      setResults(EMPTY);
+      setResults(EMPTY_RESULTS);
       return;
     }
 
@@ -171,12 +80,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
       fetch(endpoint, { signal: controller.signal })
         .then(res => res.json())
         .then(data => {
-          setResults({
-            entities: Array.isArray(data.entities) ? data.entities : [],
-            people: Array.isArray(data.people) ? data.people : [],
-            foundations: Array.isArray(data.foundations) ? data.foundations : [],
-            grants: Array.isArray(data.grants) ? data.grants : [],
-          });
+          setResults(toSearchResults(data));
           setSelectedIndex(0);
           setLoading(false);
         })
@@ -280,173 +184,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                 </div>
               )}
 
-              {/* Entities */}
-              {results.entities.length > 0 && (
-                <div>
-                  <div className="px-4 pt-3 pb-1">
-                    <span className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">
-                      Entities
-                    </span>
-                  </div>
-                  {results.entities.map((r, i) => {
-                    const flatIndex = viewOffset + i;
-                    return (
-                      <button
-                        key={r.id}
-                        onClick={() => navigate(r.href)}
-                        className={`w-full text-left px-4 py-3 flex items-center justify-between transition-colors cursor-pointer ${
-                          selectedIndex === flatIndex ? 'bg-bauhaus-canvas' : 'hover:bg-bauhaus-canvas/50'
-                        }`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-bauhaus-black truncate">{r.name}</div>
-                          <div className="text-[11px] text-bauhaus-muted font-medium flex items-center gap-1 flex-wrap">
-                            {r.state && <span>{r.state}</span>}
-                            {/* /api/global-search returns neither field; unguarded, `r.systems.length` threw. */}
-                            {(r.relationships ?? 0) > 0 && <span>{r.state ? '·' : ''} {r.relationships.toLocaleString()} links</span>}
-                            {(r.systems ?? []).length > 0 && (
-                              <>
-                                <span>·</span>
-                                {r.systems.map(s => (
-                                  <span key={s} className={`text-[9px] font-black px-1 py-0 uppercase tracking-wider ${
-                                    s === 'donations' ? 'text-bauhaus-red' : s === 'procurement' ? 'text-bauhaus-black' : 'text-bauhaus-blue'
-                                  }`}>{s}</span>
-                                ))}
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 ml-3 shrink-0">
-                          {r.revenue ? (
-                            <span className="text-xs font-black text-bauhaus-black">{formatMoney(r.revenue)}</span>
-                          ) : null}
-                          <span className={`text-[10px] font-black px-2 py-0.5 border-2 uppercase tracking-widest ${typeBadgeColor('entity')}`}>
-                            {entityTypeLabel(r.entityType)}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* People */}
-              {results.people.length > 0 && (
-                <div>
-                  <div className="px-4 pt-3 pb-1 border-t-2 border-bauhaus-black/5">
-                    <span className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">
-                      People
-                    </span>
-                  </div>
-                  {results.people.map((r, i) => {
-                    const flatIndex = viewOffset + results.entities.length + i;
-                    return (
-                      <button
-                        key={`${r.name}-${i}`}
-                        onClick={() => navigate(r.href)}
-                        className={`w-full text-left px-4 py-3 flex items-center justify-between transition-colors cursor-pointer ${
-                          selectedIndex === flatIndex ? 'bg-bauhaus-canvas' : 'hover:bg-bauhaus-canvas/50'
-                        }`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-bauhaus-black truncate">{r.name}</div>
-                          {r.boardCount > 0 && (
-                            <div className="text-[11px] text-bauhaus-muted font-medium">
-                              {r.boardCount} board seat{r.boardCount !== 1 ? 's' : ''}
-                            </div>
-                          )}
-                        </div>
-                        <span className={`ml-3 shrink-0 text-[10px] font-black px-2 py-0.5 border-2 uppercase tracking-widest ${typeBadgeColor('person')}`}>
-                          Person
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Foundations */}
-              {results.foundations.length > 0 && (
-                <div>
-                  <div className="px-4 pt-3 pb-1 border-t-2 border-bauhaus-black/5">
-                    <span className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">
-                      Foundations
-                    </span>
-                  </div>
-                  {results.foundations.map((r, i) => {
-                    const flatIndex = viewOffset + results.entities.length + results.people.length + i;
-                    return (
-                      <button
-                        key={r.id}
-                        onClick={() => navigate(r.href)}
-                        className={`w-full text-left px-4 py-3 flex items-center justify-between transition-colors cursor-pointer ${
-                          selectedIndex === flatIndex ? 'bg-bauhaus-canvas' : 'hover:bg-bauhaus-canvas/50'
-                        }`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-bauhaus-black truncate">{r.name}</div>
-                          <div className="text-[11px] text-bauhaus-muted font-medium">
-                            {r.abn && <span>ABN {r.abn} &middot; </span>}
-                            {r.focus?.slice(0, 2).join(', ')}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 ml-3 shrink-0">
-                          {r.totalGiving ? (
-                            <span className="text-xs font-black text-bauhaus-black">{formatMoney(r.totalGiving)}/yr</span>
-                          ) : null}
-                          <span className={`text-[10px] font-black px-2 py-0.5 border-2 uppercase tracking-widest ${typeBadgeColor('foundation')}`}>
-                            Foundation
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Grants */}
-              {results.grants.length > 0 && (
-                <div>
-                  <div className="px-4 pt-3 pb-1 border-t-2 border-bauhaus-black/5">
-                    <span className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">
-                      Grants
-                    </span>
-                  </div>
-                  {results.grants.map((r, i) => {
-                    const flatIndex = viewOffset + results.entities.length + results.people.length + results.foundations.length + i;
-                    return (
-                      <button
-                        key={r.id}
-                        onClick={() => navigate(r.href)}
-                        className={`w-full text-left px-4 py-3 flex items-center justify-between transition-colors cursor-pointer ${
-                          selectedIndex === flatIndex ? 'bg-bauhaus-canvas' : 'hover:bg-bauhaus-canvas/50'
-                        }`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-bauhaus-black truncate">{r.name}</div>
-                          <div className="text-[11px] text-bauhaus-muted font-medium">
-                            {r.programType && <span>{r.programType} &middot; </span>}
-                            {r.source && <span>{r.source} &middot; </span>}
-                            {r.closesAt && <span>Closes {r.closesAt}</span>}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 ml-3 shrink-0">
-                          {(r.amountMin || r.amountMax) && (
-                            <span className="text-xs font-black text-bauhaus-black">
-                              {r.amountMin && r.amountMax
-                                ? `${formatMoney(r.amountMin)}-${formatMoney(r.amountMax)}`
-                                : formatMoney(r.amountMax || r.amountMin)}
-                            </span>
-                          )}
-                          <span className={`text-[10px] font-black px-2 py-0.5 border-2 uppercase tracking-widest ${typeBadgeColor('grant')}`}>
-                            Grant
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              <SearchResultList results={results} selectedIndex={selectedIndex} onSelect={navigate} offset={viewOffset} />
             </div>
           )}
 
