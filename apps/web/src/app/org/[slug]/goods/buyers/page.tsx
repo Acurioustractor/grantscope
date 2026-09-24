@@ -286,6 +286,12 @@ export default async function GoodsBuyersPage({
           >
             No next step {noNextRows.length > 0 && <span className={noNext ? 'text-bauhaus-yellow' : 'text-bauhaus-red'}>{noNextRows.length}</span>}
           </Link>
+          <Link
+            href={`/org/${slug}/goods/buyers/demand`}
+            className="border-2 border-bauhaus-black/30 bg-white px-2.5 py-1 text-[11px] font-black uppercase tracking-widest text-bauhaus-black hover:border-bauhaus-black"
+          >
+            Who buys beds →
+          </Link>
           {rottingCount > 0 && (
             <span className="border-2 border-bauhaus-red bg-red-50 px-2.5 py-1 text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
               {rottingCount} going quiet

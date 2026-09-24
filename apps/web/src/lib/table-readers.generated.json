@@ -1182,6 +1182,7 @@
   "lib/services/due-diligence-service.ts",
   "lib/services/entity-service.ts",
   "lib/services/goods-community-detail.ts",
+  "lib/services/goods-demand-map.ts",
   "lib/services/org-dashboard-service.ts",
   "lib/services/place-intelligence.ts",
   "lib/services/report-service.ts"
@@ -1515,7 +1516,8 @@
   "app/api/entities/[gsId]/money/route.ts",
   "app/api/entities/[gsId]/route.ts",
   "app/entities/[gsId]/page.tsx",
-  "lib/services/due-diligence-service.ts"
+  "lib/services/due-diligence-service.ts",
+  "lib/services/goods-demand-map.ts"
  ],
  "mv_indigenous_funding_by_disadvantage": [
   "app/reports/funding-equity/page.tsx"
