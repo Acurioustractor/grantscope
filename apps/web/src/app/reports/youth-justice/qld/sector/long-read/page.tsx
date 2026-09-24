@@ -49,7 +49,7 @@ type LatestRow = {
  child_longest_days: number; child_watchhouse_count: number;
  adult_first_nations: number; adult_over_7_days: number; adult_longest_days: number;
 };
-type SpendRow = { recipient_name: string; total: number };
+type SpendRow = { recipient_name: string; total: number; first_year?: string; last_year?: string };
 type AccoRow = { org_type: string; total_funding: number; funding_share_pct: number; orgs: number };
 type FoundationRow = { name: string; total_giving_annual: number; thematic_focus: string };
 type CrossSectorRow = { recipient_name: string; sectors: number; total: number };
@@ -185,6 +185,7 @@ async function getNumbers() {
  const detention = (spend ?? []).find(s => /detention/i.test(s.recipient_name))?.total || 0;
  const community = (spend ?? []).find(s => /community/i.test(s.recipient_name))?.total || 0;
  const groupConferencing = (spend ?? []).find(s => /group conferencing/i.test(s.recipient_name))?.total || 0;
+ const spendYears = spend?.[0]?.first_year ? `${spend[0].first_year} to ${spend[0].last_year}` : null;
  const acco = (accoGap ?? []).find(a => a.org_type === 'Community Controlled') || null;
  const accoOther = (accoGap ?? []).find(a => a.org_type !== 'Community Controlled') || null;
  const yt = yearTrend ?? [];
@@ -238,7 +239,7 @@ async function getNumbers() {
  : null;
 
  return {
- l, detention, community, groupConferencing,
+ l, detention, community, groupConferencing, spendYears,
  acco, accoOther,
  foundations: foundations ?? [],
  crossSector: crossSector ?? [],
@@ -379,7 +380,7 @@ export default async function QldYjLongRead() {
 
  <Finding n={3} title={`${money(r.detention)} detention vs ${money(r.community)} community: ratio is the story`} severity="crit">
  <p>
- The Productivity Commission&apos;s Report on Government Services records <span className="font-black">{money(r.detention)}</span> on detention-based services and <span className="font-black">{money(r.community)}</span> on community-based services across the years CivicGraph indexes. Ratio: <span className="font-black text-bauhaus-red">{detentionRatio}:1 detention to community</span>. Group-conferencing, the most evidence-backed early intervention in the budget, gets <span className="font-black">{money(r.groupConferencing)}</span>, ~{totalSpend > 0 ? ((r.groupConferencing/totalSpend)*100).toFixed(1) : '—'}% of the three-line Youth Justice total. <SourceLink href="#src-qld-budget">[2]</SourceLink>
+ The Productivity Commission&apos;s Report on Government Services records <span className="font-black">{money(r.detention)}</span> on detention-based services and <span className="font-black">{money(r.community)}</span> on community-based services, {r.spendYears ?? 'across the years it covers'}. Ratio: <span className="font-black text-bauhaus-red">{detentionRatio}:1 detention to community</span>. Group conferencing, the most evidence-backed of the three lines, gets <span className="font-black">{money(r.groupConferencing)}</span>, ~{totalSpend > 0 ? ((r.groupConferencing/totalSpend)*100).toFixed(1) : '—'}% of the three-line Youth Justice total. <SourceLink href="#src-rogs">[3]</SourceLink>
  </p>
  </Finding>
 
@@ -604,7 +605,7 @@ export default async function QldYjLongRead() {
  )}
 
  <p>
- The ratio matters because detention is structurally more expensive per child than every alternative. Custodial beds are infrastructure: staffed 24/7, carrying capital, security, and overhead costs, ROGS publishes per-jurisdiction recurrent expenditure per young person in detention, and the figure is consistently a multi-fold premium over the per-young-person cost of community-based supervision. The community line covers diversion, family-led decision-making, school re-engagement, mental-health and AOD support, employment pathways, the program work the evidence consistently identifies as effective. Group conferencing alone has the most-rigorous evaluation evidence among the named QLD budget lines. <SourceLink href="#src-qld-budget">[2]</SourceLink> <SourceLink href="#src-rogs">[3]</SourceLink>
+ The ratio matters because detention is structurally more expensive per child than every alternative. Custodial beds are infrastructure: staffed 24/7, carrying capital, security, and overhead costs, ROGS publishes per-jurisdiction recurrent expenditure per young person in detention, and the figure is consistently a multi-fold premium over the per-young-person cost of community-based supervision. The community line covers diversion, family-led decision-making, school re-engagement, mental-health and AOD support, employment pathways, the program work the evidence consistently identifies as effective. Group conferencing alone has the most-rigorous evaluation evidence among the three ROGS supervision lines. <SourceLink href="#src-rogs">[3]</SourceLink>
  </p>
 
  <h3 className="text-lg font-black uppercase tracking-tight text-bauhaus-black mt-8 mb-3">Where the community {money(r.community)} actually goes</h3>
@@ -638,7 +639,7 @@ export default async function QldYjLongRead() {
  Federal AusTender contracts to youth-justice-relevant suppliers in CivicGraph&apos;s dataset total <span className="font-black">{money(r.contracts.reduce((s, c) => s + c.total, 0))}</span> across <span className="font-black">{r.contracts.reduce((s, c) => s + c.contracts, 0)}</span> contracts. Federal procurement reaches the same supplier pool that holds state grants, Mission Australia, UnitingCare, Anglicare, Lifeline, alongside infrastructure suppliers (detention build, case-management software). <SourceLink href="#src-austender">[7]</SourceLink>
  </p>
 
- <PullQuote attribution="CivicGraph analysis · QLD State Budget Youth Justice line items">
+ <PullQuote attribution="CivicGraph analysis · ROGS youth justice recurrent expenditure">
  {detentionRatio}:1 detention to community. Group conferencing, the most evidence-backed line, sits at ~{totalSpend > 0 ? ((r.groupConferencing/totalSpend)*100).toFixed(1) : '—'}% of the three-line total.
  </PullQuote>
  </ReportSection>

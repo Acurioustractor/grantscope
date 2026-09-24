@@ -83,7 +83,7 @@ function classifyStatement(s: { headline: string }): 'punitive' | 'preventive' |
  return 'mixed';
 }
 
-type SpendRow = { recipient_name: string; total: number };
+type SpendRow = { recipient_name: string; total: number; first_year?: string; last_year?: string };
 type RecipientRow = { recipient_name: string; total: number; grants: number };
 type CrossSectorRow = { recipient_name: string; sectors: number; total: number };
 type AlmaRow = { name: string; type: string; evidence_level: string | null };
@@ -108,9 +108,10 @@ async function getStateReport(stateCode: string) {
  const detention = (spend ?? []).find(s => /detention/i.test(s.recipient_name))?.total || 0;
  const community = (spend ?? []).find(s => /community/i.test(s.recipient_name))?.total || 0;
  const groupConferencing = (spend ?? []).find(s => /group conferencing/i.test(s.recipient_name))?.total || 0;
+ const spendYears = spend?.[0]?.first_year ? `${spend[0].first_year} to ${spend[0].last_year}` : null;
 
  return {
- detention, community, groupConferencing,
+ detention, community, groupConferencing, spendYears,
  recipients: recipients ?? [],
  crossSector: crossSector ?? [],
  alma: alma ?? [],
@@ -177,7 +178,7 @@ export default async function StateYjSectorPage({ params }: { params: Promise<{ 
  <section className="mb-12">
  <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">{meta.label} youth-justice spend, detention vs community</h2>
  <p className="text-bauhaus-muted font-medium max-w-3xl mb-4">
- Government recurrent expenditure, 2015-16 to 2024-25, from the Productivity Commission Report on Government Services (ROGS). Ratio: <span className="font-black text-bauhaus-red">{ratio}:1 detention to community</span>.
+ Government recurrent expenditure, {r.spendYears ?? 'all years held'}, from the Productivity Commission Report on Government Services (ROGS). Ratio: <span className="font-black text-bauhaus-red">{ratio}:1 detention to community</span>.
  </p>
  <div className="border-4 border-bauhaus-black p-6 bg-white">
  <StackedBar

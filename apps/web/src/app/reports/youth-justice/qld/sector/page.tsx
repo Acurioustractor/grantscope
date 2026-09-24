@@ -1880,7 +1880,7 @@ export default async function QldYjSectorPage() {
  <section className="mb-8 border-l-4 border-bauhaus-yellow pl-4 max-w-3xl text-xs">
  <div className="font-black uppercase tracking-widest text-bauhaus-black mb-1">Reading two budget windows together</div>
  <p className="text-bauhaus-muted font-medium leading-snug">
- Volume 3 cites two spend figures intentionally. <span className="font-black text-bauhaus-black">Cumulative dataset spend</span> ({money(r.detention)} detention / {money(r.community)} community) covers every QLD justice line item in <code className="font-mono">justice_funding</code> across the indexed window (2008-26). <span className="font-black text-bauhaus-black">Current-year recurrent</span> ({r.detSpendLatest ? `$${(Number(r.detSpendLatest.metric_value)/1000).toFixed(0)}M detention (${r.detSpendLatest.period})` : 'ROGS detention'}) is the latest single year from ROGS Section 17. Same direction of travel; different denominators. The {r.community > 0 ? (r.detention / r.community).toFixed(2) : '—'}:1 ratio above is from the cumulative window.
+ Volume 3 cites two spend figures intentionally. <span className="font-black text-bauhaus-black">Cumulative dataset spend</span> ({money(r.detention)} detention / {money(r.community)} community) is ROGS government recurrent expenditure summed over {r.spendYears ?? 'the ROGS years'}. <span className="font-black text-bauhaus-black">Current-year recurrent</span> ({r.detSpendLatest ? `$${(Number(r.detSpendLatest.metric_value)/1000).toFixed(0)}M detention (${r.detSpendLatest.period})` : 'ROGS detention'}) is the latest single year from ROGS Section 17. Same direction of travel; different denominators. The {r.community > 0 ? (r.detention / r.community).toFixed(2) : '—'}:1 ratio above is from the cumulative window.
  </p>
  </section>
 
@@ -1889,7 +1889,7 @@ export default async function QldYjSectorPage() {
  <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§8</div>
  <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Detention vs community, the structural ratio</h3>
  <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
- From the QLD state-budget Youth Justice expenditure lines, queried live from <code className="font-mono text-xs">justice_funding</code>. <span className="font-black text-bauhaus-red">{money(r.detention)} detention</span> vs <span className="font-black text-bauhaus-blue">{money(r.community)} community-based</span> vs <span className="font-black">{money(r.groupConferencing)} group conferencing</span>. Ratio: {r.community > 0 ? (r.detention / r.community).toFixed(2) : '—'}:1 detention to community.
+ Government recurrent expenditure from the Productivity Commission&apos;s Report on Government Services (ROGS), {r.spendYears ?? 'all years held'}, queried live from <code className="font-mono text-xs">justice_funding</code>. <span className="font-black text-bauhaus-red">{money(r.detention)} detention</span> vs <span className="font-black text-bauhaus-blue">{money(r.community)} community-based</span> vs <span className="font-black">{money(r.groupConferencing)} group conferencing</span>. Ratio: {r.community > 0 ? (r.detention / r.community).toFixed(2) : '—'}:1 detention to community.
  </p>
  <div className="border-4 border-bauhaus-black p-6 bg-white mb-6">
  <StackedBar
@@ -3613,7 +3613,7 @@ export default async function QldYjSectorPage() {
 
  <section className="text-center mb-8">
  <div className="text-xs font-mono text-bauhaus-muted">
- Watchhouse: refreshed twice daily from QPS · Funding: QLD state-budget &amp; Justice department disclosures · ACCO gap: <code>mv_yj_report_acco_gap</code> · ALMA: civil-society register · LGA: <code>lga_cross_system_stats</code> · NDIS: <code>v_ndis_youth_justice_overlay</code> · CTG: <code>v_ctg_youth_justice_progress</code> · Last loaded {new Date().toISOString().slice(0, 10)}
+ Watchhouse: refreshed twice daily from QPS · Spend: ROGS recurrent expenditure · Funding: QLD state-budget &amp; Justice department disclosures · ACCO gap: <code>mv_yj_report_acco_gap</code> · ALMA: civil-society register · LGA: <code>lga_cross_system_stats</code> · NDIS: <code>v_ndis_youth_justice_overlay</code> · CTG: <code>v_ctg_youth_justice_progress</code> · Last loaded {new Date().toISOString().slice(0, 10)}
  </div>
  </section>
  </div>
