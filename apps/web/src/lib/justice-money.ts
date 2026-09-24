@@ -121,6 +121,19 @@ export function donationFilterSql(alias?: string): string {
 }
 
 /**
+ * What a party or third-party return declares that is NOT a donation: fundraising income, transfers
+ * between branches, public funding, subscriptions. For saying what a donations figure leaves out.
+ *
+ * Donor returns are left out because they carry no receipt type: they are the giver's side of a
+ * disclosure, not money a recipient declared. Measured 2026-09-24: 98,911 rows, $9.80bn, beside
+ * $1.15bn of donations; the donor returns excluded are 64,722 rows, $0.97bn.
+ */
+export function otherReceiptsFilterSql(alias?: string): string {
+  const p = alias ? `${alias}.` : '';
+  return `${p}return_type <> 'donor' AND ${p}receipt_type IS DISTINCT FROM 'donation received'`;
+}
+
+/**
  * A state's youth-justice RECURRENT spend by supervision lane, from the Productivity Commission's
  * Report on Government Services. EXPENDITURE lane by design: no grant filter, these rows are what the
  * state spent running the system, not money paid to organisations.
