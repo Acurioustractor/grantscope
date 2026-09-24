@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyPurchase, communityRole, groupPurchases } from './goods-demand-map';
+import { classifyPurchase, communityRole, groupPurchases, placeNearby } from './goods-demand-map';
 
 // Every case below is a real contract title seen while vetting on 2026-09-24.
 describe('classifyPurchase', () => {
@@ -57,5 +57,20 @@ describe('groupPurchases', () => {
     expect(g.household[0].total).toBe(100);
     expect(g.household[0].purchases).toHaveLength(1);
     expect(g.custodial.map((c) => c.buyer)).toEqual(['Corrective Services']);
+  });
+});
+
+describe('placeNearby', () => {
+  it('matches on exact postcode first, then exact LGA code, never by name', () => {
+    const orgs = [
+      { id: 'a', postcode: '0860', lgaCode: '71000' },
+      { id: 'b', postcode: '0862', lgaCode: '71000' },
+      { id: 'c', postcode: '0870', lgaCode: '70200' },
+    ];
+    expect(placeNearby({ postcode: '0860', lgaCode: '71000' }, orgs)).toEqual([
+      { id: 'a', how: 'postcode' },
+      { id: 'b', how: 'lga' },
+    ]);
+    expect(placeNearby({ postcode: null, lgaCode: null }, orgs)).toEqual([]);
   });
 });

@@ -61,6 +61,7 @@ export default async function GoodsDemandPage({
   if (!profile) notFound();
 
   const map = await getGoodsDemandMap();
+  const byId = new Map(map.community.map((c) => [c.id, c]));
   const roles = [...new Set(map.community.map((c) => c.role))] as CommunityRole[];
   const community = map.community.filter((c) => (!state || c.state === state) && (!role || c.role === role));
   const q = (next: { state?: string; role?: string }) => {
@@ -98,6 +99,39 @@ export default async function GoodsDemandPage({
       </div>
 
       <div className="mx-auto max-w-[1760px] space-y-8 px-4 py-6">
+        <section>
+          <h2 className="mb-1 text-lg font-black uppercase tracking-widest">Where Goods already is: {map.places.length} communities</h2>
+          <p className="mb-3 text-[12px] text-bauhaus-muted">
+            Community buyers in the same postcode, or failing that the same local government area. Nearby, not belonging.
+            A proposed link is a same-name community record that has not been confirmed yet.
+          </p>
+          <div className="overflow-x-auto border-4 border-bauhaus-black bg-white">
+            <table className="w-full text-[12px]">
+              <thead className="border-b-2 border-bauhaus-black text-left text-[11px] font-black uppercase tracking-widest">
+                <tr><th className="px-3 py-2">Community</th><th className="px-3 py-2">Link</th><th className="px-3 py-2">Buyers nearby</th></tr>
+              </thead>
+              <tbody>
+                {map.places.map((p) => {
+                  const near = p.nearby.map((n) => byId.get(n.id)).filter((c): c is NonNullable<typeof c> => !!c);
+                  return (
+                    <tr key={p.slug} className="border-b border-bauhaus-black/10 align-top">
+                      <td className="px-3 py-2 font-bold">
+                        {p.communityId ? <Link href={`/org/${slug}/goods/community/${p.communityId}`} className="hover:underline">{p.name}</Link> : p.name}
+                      </td>
+                      <td className="px-3 py-2">{p.status === 'confirmed' ? 'Confirmed' : p.status === 'proposed' ? 'Proposed' : 'Not linked'}</td>
+                      <td className="px-3 py-2">
+                        {near.length === 0
+                          ? (p.communityId ? 'None found by postcode or LGA' : '–')
+                          : near.slice(0, 6).map((c) => `${c.name} (${c.role})`).join(' · ') + (near.length > 6 ? ` · and ${near.length - 6} more` : '')}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <section>
           <h2 className="mb-1 text-lg font-black uppercase tracking-widest">Bought before: {map.household.length} government buyers</h2>
           <p className="mb-3 text-[12px] text-bauhaus-muted">

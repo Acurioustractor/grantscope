@@ -882,6 +882,7 @@
   "lib/services/goods-atlas-points.ts",
   "lib/services/goods-communities-hub.ts",
   "lib/services/goods-community-detail.ts",
+  "lib/services/goods-demand-map.ts",
   "lib/services/goods-funnel.ts",
   "lib/services/goods-living-data-adapter.ts",
   "lib/services/goods-proof.ts"
