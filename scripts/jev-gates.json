@@ -1,5 +1,5 @@
 {
-  "_about": "Which Jev tasks may apply their confident answers without a human. A task is ON only after Ben judged a random sample of 20 answers and at least 18 were right, and only for the model that was measured: when Jev reports a different model, the task falls back to review-only until it is re-measured. Same rule as el-dam/scripts/media/jev-gates.json.",
+  "_about": "Which Jev tasks may apply their confident answers without a human. A task is ON only after Ben judged a random sample of 20 answers and at least 18 were right, and only for the model that was measured: when Jev reports a different model, the task falls back to review-only until it is re-measured. Same rule as el-dam/scripts/media/jev-gates.json. Since 2026-09-25 the same holds for EVERY model alma-classify uses, not only Jev: a model not measured here is review-only (scripts/lib/classify-gate.mjs).",
   "alma-classify": {
     "on": true,
     "model": "jev-1.13.0",
