@@ -1549,7 +1549,6 @@
   "app/person/[name]/page.tsx"
  ],
  "mv_person_influence": [
-  "app/api/data/person/route.ts",
   "app/reports/multicultural-sector/fecca-eccv/page.tsx",
   "app/reports/multicultural-sector/page.tsx",
   "app/reports/youth-justice/qld/sector/long-read/page.tsx",
