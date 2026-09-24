@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
+import { execSqlAll } from '@/lib/exec-sql-all';
 import { ReportCTA } from '../_components/report-cta';
 
 // Public, service-role, heavy fan-out and no per-request inputs. Cached hourly so
@@ -151,24 +152,15 @@ async function getData() {
     return all;
   }, [] as AisRecord[]);
 
-  // Query 2: Entity data with is_community_controlled and state (paginated)
+  // Query 2: community-controlled flag and state, for the 2023 AIS charities only. This used to page
+  // through every gs_entities row with an ABN (~325K rows, 1,000 per request), most of the page's 70s.
   const entityData = await safe(async () => {
-    const all: EntityRecord[] = [];
-    const PAGE = 1000;
-    let offset = 0;
-    while (true) {
-      const { data, error } = await db
-        .from('gs_entities')
-        .select('abn, is_community_controlled, state')
-        .not('abn', 'is', null)
-        .range(offset, offset + PAGE - 1);
-      if (error) throw new Error(error.message);
-      if (!data || data.length === 0) break;
-      all.push(...(data as EntityRecord[]));
-      if (data.length < PAGE) break;
-      offset += PAGE;
-    }
-    return all;
+    // One row per ABN: some ABNs have several entity rows, and the last one read used to win.
+    return execSqlAll<EntityRecord>(db, `SELECT e.abn, bool_or(e.is_community_controlled) AS is_community_controlled,
+                     max(e.state) AS state
+                FROM gs_entities e
+               WHERE e.abn IN (SELECT abn FROM acnc_ais WHERE ais_year = 2023 AND total_revenue > 0)
+               GROUP BY e.abn`);
   }, [] as EntityRecord[]);
 
   // Build lookup maps
@@ -179,28 +171,21 @@ async function getData() {
 
   // Query 3: Power index via exec_sql (pre-aggregated)
   const powerData = await safe(async () => {
-    const { data, error } = await db.rpc('exec_sql', {
-      sql: `SELECT e.abn, p.power_score, p.system_count, p.total_dollars
+    // `query`, not `sql`: lib/supabase.ts rejects any other key as not read-only, and safe() hid
+    // that, so the power and procurement sections rendered $0 from launch until 2026-09-24.
+    return execSqlAll<PowerRecord>(db, `SELECT p.abn, p.power_score, p.system_count, p.total_dollar_flow AS total_dollars
             FROM mv_entity_power_index p
-            JOIN gs_entities e ON e.id = p.entity_id
-            WHERE e.abn IS NOT NULL AND p.system_count >= 2
-            LIMIT 2000`,
-    });
-    if (error) throw new Error(error.message);
-    return (data || []) as PowerRecord[];
+            WHERE p.system_count >= 2
+              AND p.abn IN (SELECT abn FROM acnc_ais WHERE ais_year = 2023 AND total_revenue > 0)`);
   }, [] as PowerRecord[]);
 
   // Query 4: Contract aggregates via exec_sql
   const contractData = await safe(async () => {
-    const { data, error } = await db.rpc('exec_sql', {
-      sql: `SELECT supplier_abn, SUM(contract_value) as total_contracts, COUNT(*) as contract_count
+    return execSqlAll<ContractAgg>(db, `SELECT supplier_abn, SUM(contract_value) as total_contracts, COUNT(*) as contract_count
             FROM austender_contracts
-            WHERE supplier_abn IS NOT NULL
+            WHERE supplier_abn IN (SELECT abn FROM acnc_ais WHERE ais_year = 2023 AND total_revenue > 0)
             GROUP BY supplier_abn
-            HAVING SUM(contract_value) > 100000`,
-    });
-    if (error) throw new Error(error.message);
-    return (data || []) as ContractAgg[];
+            HAVING SUM(contract_value) > 100000`);
   }, [] as ContractAgg[]);
 
   // Build power and contract maps
