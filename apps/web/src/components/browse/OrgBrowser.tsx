@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { money as formatMoney } from '@/lib/format';
 import Link from 'next/link';
 import { SortHeader } from './browse-ui';
 
@@ -37,11 +38,10 @@ export interface BrowserConfig {
   moneyCaveat: string;
 }
 
+/** A dash for no figure; the number itself in the one site format (lib/format money()). */
 function money(n: number | null): string {
   if (!n || n <= 0) return '—';
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}bn`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}m`;
-  return `$${Math.round(n / 1e3)}k`;
+  return formatMoney(n);
 }
 
 

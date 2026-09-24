@@ -3,6 +3,7 @@ import { BrowseScope } from '@/components/shell/browse-scope';
 import { unstable_cache } from 'next/cache';
 import { getDirectServiceSupabase } from '@/lib/supabase';
 import { retryRpc } from '@/lib/rpc-retry';
+import { money } from '@/lib/format';
 import GrantBrowser, { type RecipientRow } from '@/components/browse/GrantBrowser';
 
 export const dynamic = 'force-dynamic';
@@ -92,7 +93,7 @@ export default async function GrantsBrowsePage({
           : '—',
     }));
     if (s) {
-      statsLine = `${s.kept_rows.toLocaleString('en-AU')} grants worth $${(s.kept_dollars / 1e9).toFixed(1)}bn after the filters · ${s.excluded_rows.toLocaleString('en-AU')} rows excluded (budget aggregates, spreadsheet totals, non-organisation names)`;
+      statsLine = `${s.kept_rows.toLocaleString('en-AU')} grants worth ${money(s.kept_dollars)} after the filters · ${s.excluded_rows.toLocaleString('en-AU')} rows excluded (budget aggregates, spreadsheet totals, non-organisation names)`;
 
       // F1 + F2 (UX audit pass 2). Both numbers come from the RPC so they cannot rot into stale
       // prose. The skew is the single most misleading thing on this screen: a reader comparing
@@ -104,18 +105,18 @@ export default async function GrantsBrowsePage({
         const vic = s.states.find((x) => x.state === 'VIC');
         coverageLine =
           `Coverage is uneven, and this is about our sources rather than about the states: ` +
-          `${topRowPct}% of these rows are ${top.state} ($${(top.dollars / 1e9).toFixed(1)}bn of ` +
-          `$${(s.kept_dollars / 1e9).toFixed(1)}bn)` +
-          (vic ? `, while Victoria shows $${(vic.dollars / 1e6).toFixed(0)}m` : '') +
+          `${topRowPct}% of these rows are ${top.state} (${money(top.dollars)} of ` +
+          `${money(s.kept_dollars)})` +
+          (vic ? `, while Victoria shows ${money(vic.dollars)}` : '') +
           `. Do not read this screen as a comparison between states.`;
       }
       if (s.untagged_dollars > 0 && s.kept_dollars > 0) {
         const untaggedPct = Math.round((s.untagged_dollars / s.kept_dollars) * 100);
         topicLine =
-          `${untaggedPct}% of this money ($${(s.untagged_dollars / 1e9).toFixed(1)}bn across ` +
+          `${untaggedPct}% of this money (${money(s.untagged_dollars)} across ` +
           `${s.untagged_rows.toLocaleString('en-AU')} grants) carries no topic tag. The list is ` +
           `everything in the source registers, which includes programs that are not justice ` +
-          `funding — the largest single recipient is a state rail operator. Use the topic chips ` +
+          `funding: the largest single recipient is a state rail operator. Use the topic chips ` +
           `to narrow to tagged money.`;
       }
     }
