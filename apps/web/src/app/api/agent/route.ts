@@ -316,7 +316,7 @@ export async function GET() {
         example: { action: 'entity', abn: '48123123124' },
       },
       power_index: {
-        description: 'Top entities ranked by cross-system power score (7 systems: procurement, justice, donations, charity, foundation, evidence, tax)',
+        description: 'Top entities ranked by cross-system power score (8 systems: procurement, justice, donations, charity, foundation, evidence, tax, NDIS)',
         params: { limit: 'number 1-50', state: 'AU state', min_systems: 'number 1-7' },
         example: { action: 'power_index', limit: 10, min_systems: 3 },
       },

@@ -292,7 +292,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
             <Stat
               label="Power score"
               value={Number(power.power_score).toFixed(1)}
-              sub={`present in ${power.system_count} of 7 systems: contracts, grants, donations, charity, foundation, evidence, tax`}
+              sub={`present in ${power.system_count} of 8 systems: contracts, grants, donations, charity, foundation, evidence, tax, NDIS`}
             >
               {Number(power.ranked) > 0 && (
                 <p className="mt-1 text-xs font-bold tabular-nums text-bauhaus-black">
@@ -948,7 +948,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
                 <dd className={`text-xs font-black uppercase tracking-widest ${
                   e.confidence === 'exact' ? 'text-money' :
                   e.confidence === 'high' ? 'text-bauhaus-blue' :
-                  e.confidence === 'inferred' ? 'text-bauhaus-red' : 'text-bauhaus-muted'
+                  e.confidence === 'inferred' ? 'text-bauhaus-red/70' : 'text-bauhaus-muted'
                 }`}>
                   {e.confidence || 'exact'}
                 </dd>
@@ -1053,7 +1053,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
                     <dt className="text-xs font-bold text-bauhaus-muted">Remoteness</dt>
                     <dd className={`text-sm font-black ${
                       placeGeo.remoteness_2021.includes('Very Remote') ? 'text-bauhaus-red' :
-                      placeGeo.remoteness_2021.includes('Remote') ? 'text-bauhaus-red' :
+                      placeGeo.remoteness_2021.includes('Remote') ? 'text-bauhaus-red/70' :
                       placeGeo.remoteness_2021.includes('Outer') ? 'text-bauhaus-yellow' :
                       'text-bauhaus-black'
                     }`}>{placeGeo.remoteness_2021}</dd>
@@ -1064,7 +1064,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
                     <dt className="text-xs font-bold text-bauhaus-muted">SEIFA Disadvantage</dt>
                     <dd className={`text-sm font-black ${
                       seifa.decile_national <= 2 ? 'text-bauhaus-red' :
-                      seifa.decile_national <= 4 ? 'text-bauhaus-red' :
+                      seifa.decile_national <= 4 ? 'text-bauhaus-red/70' :
                       'text-bauhaus-black'
                     }`}>
                       Decile {seifa.decile_national}/10
