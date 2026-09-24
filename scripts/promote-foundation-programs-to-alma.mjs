@@ -39,14 +39,24 @@ function normalise(s) {
     .trim();
 }
 
+// Page through every row. The unpaged select saw only the first 1,000 of ~23,700, so every run
+// re-inserted rounds it already had (22,781 rows in duplicate groups on 2026-09-24). An error
+// must stop the run: an empty index would insert everything again.
 async function loadAlmaIndex() {
-  const { data } = await supabase
-    .from('alma_funding_opportunities')
-    .select('id, name, funder_name');
   const idx = new Map();
-  for (const row of data ?? []) {
-    const k = `${normalise(row.name)}|${normalise(row.funder_name)}`;
-    idx.set(k, row.id);
+  const PAGE_SIZE = 1000;
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('alma_funding_opportunities')
+      .select('id, name, funder_name')
+      .order('id')
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (error) throw new Error(`loadAlmaIndex: ${error.message}`);
+    for (const row of data ?? []) {
+      const k = `${normalise(row.name)}|${normalise(row.funder_name)}`;
+      if (!idx.has(k)) idx.set(k, row.id);
+    }
+    if (!data || data.length < PAGE_SIZE) break;
   }
   return idx;
 }
