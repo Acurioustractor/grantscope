@@ -36,6 +36,7 @@ import { createSupabaseServer, hasSupabaseServerEnv } from '@/lib/supabase-serve
 import { getServiceSupabase } from '@/lib/supabase';
 import { resolveSubscriptionTier } from '@/lib/subscription';
 import { isAdminEmail } from '@/lib/admin';
+import { isChromelessPath, isUnder } from '@/lib/public-frame';
 import type { User } from '@supabase/supabase-js';
 import { cookies, headers } from 'next/headers';
 // Vercel Web Analytics (cookieless page views). Inert until Web Analytics is switched on for the
@@ -69,58 +70,25 @@ const FORCE_PUBLIC_LAYOUT_PREFIXES = [
   '/pricing',
   '/get-a-report',
   '/feedback',
-  '/discover',
+  '/changes',
   '/about',
 ] as const;
 
 function needsLayoutAuth(pathname: string) {
-  return LAYOUT_AUTH_PREFIXES.some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return LAYOUT_AUTH_PREFIXES.some(prefix => isUnder(pathname, prefix));
 }
 
 function forcesPublicLayout(pathname: string) {
-  return FORCE_PUBLIC_LAYOUT_PREFIXES.some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return FORCE_PUBLIC_LAYOUT_PREFIXES.some(prefix => isUnder(pathname, prefix));
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // Iframe-embed routes (/embed/*), share landing pages (/share/*), and the
-  // public marketing/conversion pages (/discover, /feedback, /get-a-report,
-  // /pricing) all render without the dense workspace chrome. They use a
-  // simplified header + footer defined in their own route group layouts so
-  // strangers focus on the conversion path rather than the 30+ deep-app links.
   const hdrs = await headers();
   const pathname = hdrs.get('x-pathname') ?? '';
-  const isActWorkspacePath = pathname === '/org/act'
-    || pathname.startsWith('/org/act/')
-    || pathname === '/org/a-curious-tractor'
-    || pathname.startsWith('/org/a-curious-tractor/')
-    || pathname === '/org/curious-tractor'
-    || pathname.startsWith('/org/curious-tractor/');
-  // ONE public frame (decided 2026-09-24). The browse indexes (/charities, /foundations, /grants,
-  // /social-enterprises, /allocation, /charities/trajectories) and /search used to be listed here,
-  // dropping the top nav so they could wrap themselves in the black rail: the nav's "Funding" link
-  // led into what looked like another product. They now render inside this layout's nav and footer,
-  // through <BrowseScope>. Only signed-in work (dashboard, clarity, ops, admin...) stays chromeless.
-  const isChromeless = pathname.startsWith('/dashboard')
-    || pathname.startsWith('/clarity')
-    || pathname.startsWith('/embed')
-    || pathname.startsWith('/share')
-    || pathname.startsWith('/discover')
-    || pathname.startsWith('/feedback')
-    || pathname.startsWith('/get-a-report')
-    || pathname.startsWith('/pricing')
-    || pathname.startsWith('/changes')
-    || pathname.startsWith('/account')
-    // Phase-2 ruling (2026-08-17): operator tools live in the shell beside /clarity.
-    // Admin audit A2 (2026-08-18): this listed '/ops/health' ALONE, so every other ops screen —
-    // and all of /admin — rendered the public marketing nav, LOGIN and START FREE buttons included,
-    // stacked on top of the shell you were already authenticated into. Ben's call: full-bleed, like
-    // health. The whole group goes chromeless, not one sub-route of it.
-    || pathname.startsWith('/ops')
-    || pathname.startsWith('/admin')
-    || pathname.startsWith('/alerts')
-    || pathname.startsWith('/tracker')
-    || pathname.startsWith('/foundations/tracker')
-    || isActWorkspacePath;
+  // ONE public frame (decided 2026-09-24). Every public page renders inside this layout's nav and
+  // footer; only signed-in work, embeds, partner share pages and ACT's workspace go without. The list
+  // lives in lib/public-frame.ts so public-frame.test.ts reads the same one.
+  const isChromeless = isChromelessPath(pathname);
   const requiresLayoutAuth = needsLayoutAuth(pathname);
   const isFastPublicPath = !requiresLayoutAuth;
 

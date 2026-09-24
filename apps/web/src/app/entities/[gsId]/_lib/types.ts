@@ -320,11 +320,12 @@ export interface RevolvingDoor {
   total_funded: number;
 }
 
+/** One ATO tax transparency year. The ATO leaves taxable income and tax payable blank for some companies. */
 export interface TaxYear {
   report_year: string;
-  total_income: number;
-  taxable_income: number;
-  tax_payable: number;
+  total_income: number | null;
+  taxable_income: number | null;
+  tax_payable: number | null;
   effective_tax_rate: number | null;
 }
 

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
-import { donationFilterSql } from '@/lib/justice-money';
+import { donationFilterSql, otherReceiptsFilterSql } from '@/lib/justice-money';
 import Link from 'next/link';
 import { entityHref } from '@/lib/entity-href';
 import { ReportCTA } from '../_components/report-cta';
@@ -142,7 +142,7 @@ async function getData() {
         MIN(financial_year) as min_year,
         MAX(financial_year) as max_year,
         (SELECT ROUND(SUM(amount)) FROM political_donations
-          WHERE return_type <> 'donor' AND receipt_type IS DISTINCT FROM 'donation received') as other_receipts
+          WHERE ${otherReceiptsFilterSql()}) as other_receipts
       FROM political_donations
       WHERE ${DONATION}`,
     }),

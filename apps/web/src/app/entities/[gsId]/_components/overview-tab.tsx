@@ -42,6 +42,15 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
     workspaceShortlists, workspaceMemberships, workspaceTasks,
   } = workspace;
 
+  // gs_entities.latest_revenue / latest_tax_payable hold the EARLIEST ATO year for most companies
+  // (see entity-header.tsx), so the Financials box reads the newest ATO year when there is one.
+  const newestTax = taxYears[0] ?? null;
+  // A blank ATO tax payable is "not published", so it stays null rather than becoming $0.
+  const revenue = newestTax?.total_income != null ? Number(newestTax.total_income) : e.latest_revenue;
+  const revenueLabel = newestTax?.total_income != null ? `Total income, ${newestTax.report_year}` : e.financial_year ? `Revenue, ${e.financial_year}` : 'Revenue';
+  const taxPayable = newestTax ? (newestTax.tax_payable == null ? null : Number(newestTax.tax_payable)) : e.latest_tax_payable;
+  const taxLabel = newestTax ? `Tax payable, ${newestTax.report_year}` : 'Tax payable';
+
   const leadWorkspaceMembership = (workspaceMemberships[0] as Record<string, unknown>) || null;
   const workspaceOpenTasks = workspaceTasks.filter((task: Record<string, unknown>) => task.status !== 'done');
   const workspaceUrgentTasks = workspaceOpenTasks.filter(
@@ -482,14 +491,16 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
                 rowKey={(t) => t.report_year}
                 columns={[
                   { key: 'year', label: 'Year', cell: (t) => <span className="font-bold text-bauhaus-black">{t.report_year}</span> },
-                  { key: 'income', label: 'Total income', align: 'right', cell: (t) => money(Number(t.total_income)) },
-                  { key: 'taxable', label: 'Taxable income', align: 'right', cell: (t) => money(Number(t.taxable_income)) },
-                  { key: 'payable', label: 'Tax payable', align: 'right', cell: (t) => <span className="font-bold">{money(Number(t.tax_payable))}</span> },
+                  // money(null) is '—': a blank ATO figure is "not published", never $0.
+                  { key: 'income', label: 'Total income', align: 'right', cell: (t) => money(t.total_income == null ? null : Number(t.total_income)) },
+                  { key: 'taxable', label: 'Taxable income', align: 'right', cell: (t) => money(t.taxable_income == null ? null : Number(t.taxable_income)) },
+                  { key: 'payable', label: 'Tax payable', align: 'right', cell: (t) => <span className="font-bold">{money(t.tax_payable == null ? null : Number(t.tax_payable))}</span> },
                   {
                     key: 'rate',
                     label: 'Rate',
                     align: 'right',
-                    cell: (t) => (t.effective_tax_rate != null ? `${Number(t.effective_tax_rate).toFixed(1)}%` : '—'),
+                    // No rate without a published tax figure: the stored 0 read as "paid 0.0%".
+                    cell: (t) => (t.effective_tax_rate != null && t.tax_payable != null ? `${Number(t.effective_tax_rate).toFixed(1)}%` : '—'),
                   },
                 ]}
               />
@@ -909,30 +920,30 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
           ) : null}
 
           {/* Financials */}
-          {(e.latest_revenue || e.latest_assets || e.latest_tax_payable) && (
+          {!!(revenue || e.latest_assets || taxPayable != null) && (
             <div className="bg-white border-4 border-bauhaus-black p-4">
               <h3 className="text-sm font-black text-bauhaus-black mb-3 pb-2 border-b-4 border-bauhaus-black uppercase tracking-widest">
                 Financials
               </h3>
               <dl className="space-y-2">
-                {e.latest_revenue && (
+                {revenue ? (
                   <div className="flex justify-between">
-                    <dt className="text-xs font-bold text-bauhaus-muted">Revenue</dt>
-                    <dd className="text-sm font-black text-bauhaus-black">{formatMoney(e.latest_revenue)}</dd>
+                    <dt className="text-xs font-bold text-bauhaus-muted">{revenueLabel}</dt>
+                    <dd className="text-sm font-black text-bauhaus-black">{formatMoney(revenue)}</dd>
                   </div>
-                )}
+                ) : null}
                 {e.latest_assets && (
                   <div className="flex justify-between">
                     <dt className="text-xs font-bold text-bauhaus-muted">Assets</dt>
                     <dd className="text-sm font-black text-bauhaus-black">{formatMoney(e.latest_assets)}</dd>
                   </div>
                 )}
-                {e.latest_tax_payable && (
+                {taxPayable != null ? (
                   <div className="flex justify-between">
-                    <dt className="text-xs font-bold text-bauhaus-muted">Tax Payable</dt>
-                    <dd className="text-sm font-black text-bauhaus-black">{formatMoney(e.latest_tax_payable)}</dd>
+                    <dt className="text-xs font-bold text-bauhaus-muted">{taxLabel}</dt>
+                    <dd className="text-sm font-black text-bauhaus-black">{money(taxPayable)}</dd>
                   </div>
-                )}
+                ) : null}
               </dl>
             </div>
           )}

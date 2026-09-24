@@ -560,6 +560,7 @@ export default async function EntityDossierPage({
         donationsTotal={e.abn ? totalDonations : undefined}
         donationsMeta={donationsMeta}
         aliases={aliases}
+        latestTax={taxYears[0] ?? null}
         charity={charity}
         socialEnterprise={socialEnterprise}
         returnHref={returnHref}

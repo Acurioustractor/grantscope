@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import type { Entity, MvEntityStats, CharityEnrichment, SocialEnterpriseEnrichment, DonationsMeta } from '../_lib/types';
+import type { Entity, MvEntityStats, CharityEnrichment, SocialEnterpriseEnrichment, DonationsMeta, TaxYear } from '../_lib/types';
 import { entityTypeLabel, entityTypeBadge, confidenceBadge, formatMoney, datasetLabel } from '../_lib/formatters';
 import { StatRow, Stat } from '@/components/data';
+import { money } from '@/lib/format';
 import { DueDiligenceButton } from './due-diligence-button';
 import { WatchButton } from './watch-button';
 
@@ -51,12 +52,14 @@ interface EntityHeaderProps {
   donationsMeta?: DonationsMeta | null;
   /** Other names the organisation is recorded under (gs_entity_aliases). */
   aliases?: string[];
+  /** The newest ATO tax transparency year, when the page loaded any. */
+  latestTax?: TaxYear | null;
 }
 
 const ALIASES_SHOWN = 4;
 
 export function EntityHeader({
-  entity: e, stats, donationsTotal, donationsMeta, aliases = [], charity, socialEnterprise, returnHref, returnLabel,
+  entity: e, stats, donationsTotal, donationsMeta, aliases = [], latestTax = null, charity, socialEnterprise, returnHref, returnLabel,
 }: EntityHeaderProps) {
   const badge = confidenceBadge(e.confidence);
   const isDonorContractor =
@@ -88,11 +91,41 @@ export function EntityHeader({
   const sourceNames = (e.source_datasets ?? []).map(datasetLabel);
   const donationsLine = donationTotal > 0 && donationsMeta
     ? `${donationsMeta.count.toLocaleString()} ${donationsMeta.count === 1 ? 'donation' : 'donations'} to ${donationsMeta.recipients}${donationsMeta.recipientsCapped ? '+' : ''} ${donationsMeta.recipients === 1 ? 'recipient' : 'recipients'}${donationsMeta.fromYear ? `, ${donationsMeta.fromYear === donationsMeta.toYear ? donationsMeta.fromYear : `${donationsMeta.fromYear}–${donationsMeta.toYear}`}` : ''}`
-    : donationTotal === 0 && e.latest_revenue && e.financial_year
-      ? `latest reported, ${e.financial_year}`
-      : null;
+    : null;
   const contractLine = contractTotal > 0 && contractBreakdown
     ? `from ${contractBreakdown.count.toLocaleString()} ${contractBreakdown.count === 1 ? 'contract' : 'contracts'}`
+    : null;
+
+  // A party has no donations of its own, only donations to it. The graph builds those edges only
+  // where the donor resolves to an organisation by ABN, so the figure is a floor and says so.
+  const isRecipient = !isDonor && donationTotal > 0;
+  const receivedLine = isRecipient && donationBreakdown
+    ? `from ${donationBreakdown.count.toLocaleString()} ${donationBreakdown.count === 1 ? 'donation' : 'donations'} by donors matched on ABN`
+    : null;
+
+  // gs_entities.latest_revenue and latest_tax_payable hold the EARLIEST ATO year for most companies
+  // (4,453 of 5,901 with ATO records on 2026-09-24: CBA read $3.1B of tax for 2014-15 beside
+  // $3.4B for 2023-24). The page loads the ATO years itself, so the header reads the newest one.
+  // The ATO leaves tax payable blank for some companies: that is "not published", not $0.
+  const revenue = latestTax?.total_income != null ? Number(latestTax.total_income) : e.latest_revenue;
+  const revenueLine = latestTax?.total_income != null
+    ? `ATO total income, ${latestTax.report_year}`
+    : e.latest_revenue && e.financial_year ? `latest reported, ${e.financial_year}` : null;
+  const taxPayable = latestTax ? (latestTax.tax_payable == null ? null : Number(latestTax.tax_payable)) : e.latest_tax_payable;
+  const taxLine = latestTax
+    ? latestTax.tax_payable == null ? `not published by the ATO for ${latestTax.report_year}` : `ATO tax transparency, ${latestTax.report_year}`
+    : e.latest_tax_payable == null ? 'no ATO tax transparency record' : null;
+
+  // Total Outbound adds every kind of outbound link that carries money, so it names those kinds.
+  // Shared-director links are outbound too but carry no amount; counting them put "1,739 links"
+  // under the Ian Potter Foundation's grant total.
+  const outbound = Object.entries(stats?.type_breakdown ?? {}).filter(([k, v]) => k.endsWith(':outbound') && v.count > 0 && v.amount > 0);
+  const outboundCount = outbound.reduce((n, [, v]) => n + v.count, 0);
+  const outboundLine = outbound.length > 0
+    ? `${outboundCount.toLocaleString()} outbound ${outboundCount === 1 ? 'link' : 'links'}: ${outbound
+        .sort(([, a], [, b]) => b.amount - a.amount)
+        .map(([k]) => k.split(':')[0].replace(/_/g, ' '))
+        .join(', ')}`
     : null;
 
   return (
@@ -180,10 +213,10 @@ export function EntityHeader({
               : undefined}
           />
           <Stat
-            label={donationTotal > 0 ? 'Political Donations' : 'Revenue'}
-            value={donationTotal > 0 ? formatMoney(donationTotal) : formatMoney(e.latest_revenue)}
+            label={isRecipient ? 'Donations Received' : donationTotal > 0 ? 'Political Donations' : 'Revenue'}
+            value={donationTotal > 0 ? formatMoney(donationTotal) : formatMoney(revenue)}
             tone={donationTotal > 0 ? 'red' : 'ink'}
-            sub={donationsLine ?? undefined}
+            sub={(isRecipient ? receivedLine : donationTotal > 0 ? donationsLine : revenueLine) ?? undefined}
           />
           <Stat
             label={contractTotal > 0 ? 'Contract Value' : totalOutbound > 0 ? 'Total Outbound' : 'Tax Payable'}
@@ -191,8 +224,8 @@ export function EntityHeader({
               ? formatMoney(contractTotal)
               : totalOutbound > 0
                 ? formatMoney(totalOutbound)
-                : formatMoney(e.latest_tax_payable)}
-            sub={contractLine ?? undefined}
+                : taxPayable === 0 ? money(0) : formatMoney(taxPayable)}
+            sub={(contractTotal > 0 ? contractLine : totalOutbound > 0 ? outboundLine : taxLine) ?? undefined}
           />
         </StatRow>
       </div>

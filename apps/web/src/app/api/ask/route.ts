@@ -30,16 +30,17 @@ When the question is about funding RECEIVED BY ORGANISATIONS, you MUST filter
 WHERE measure_kind = 'grant'. Summing without it mixes state budgets into organisation totals and
 overstates by roughly an order of magnitude (45x on the youth-justice topic).
 
-## political_donations (~2.55M rows) — AEC political donation disclosures
+## political_donations (~189K rows) — AEC political donation disclosures
 Columns: id, donor_name, donor_abn, donation_to (text — party name), amount (numeric), financial_year (text), receipt_type (text), return_type, donation_date, source_state
-CRITICAL — most rows are NOT donations. receipt_type values:
-  'other receipt' (1,838,739 rows, $186.7bn) — party income that is not a donation
-  'donation received' (506,739 rows, $23.0bn) — actual disclosed donations
-  'public funding' · 'subscription' · 'unspecified' · NULL
+CRITICAL — most rows are NOT donations. receipt_type values (measured 2026-09-24):
+  'other receipt' (92,026 rows, $9.39bn) — party income that is not a donation
+  'donation received' (25,374 rows, $1.15bn) — actual disclosed donations
+  NULL (64,862 rows, $0.99bn) — 64,722 are return_type 'donor', the giver's side of a disclosure
+  'public funding' · 'subscription' · 'unspecified'
 For any question about DONATIONS you MUST filter WHERE receipt_type = 'donation received'.
-Summing all rows overstates donated dollars roughly 8x ('other receipt' is 85.3% of all dollars).
-Note donor_abn is populated on only ~24.8% of rows, so ABN joins silently drop most donations —
-prefer donor_name matching, and say so when reporting coverage.
+Summing all rows overstates donated dollars roughly 10x ('other receipt' is 78.8% of all dollars).
+Note donor_abn is populated on 61.7% of donation rows, so ABN joins silently drop over a third of
+donations — prefer donor_name matching, and say so when reporting coverage.
 
 ## alma_interventions_valid (~1,900 rows) — evidence-based interventions, quarantined rows removed. Always query this, never alma_interventions (Australian Living Map of Alternatives)
 Columns: id, name, type (text: 'Wraparound Support', 'Cultural Connection', 'Prevention', 'Diversion', 'Community-Led', etc.), description, evidence_level, cultural_authority, target_cohort, geography, portfolio_score (numeric), gs_entity_id (uuid), topics (text[])
