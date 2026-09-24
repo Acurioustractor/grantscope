@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
-import { Shell } from '@/components/shell/shell';
+import { BrowseScope } from '@/components/shell/browse-scope';
 
 export default function SearchLayout({ children }: { children: ReactNode }) {
   return (
-    <Shell title="Search" activeHref="/search">
+    <BrowseScope>
       {children}
-    </Shell>
+    </BrowseScope>
   );
 }

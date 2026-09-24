@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Shell } from '@/components/shell/shell';
+import { BrowseScope } from '@/components/shell/browse-scope';
 import { getDirectServiceSupabase } from '@/lib/supabase';
 import FoundationsBrowser, { type BrowseRow } from '@/components/browse/FoundationsBrowser';
 
@@ -47,7 +47,7 @@ export default async function FoundationsList({
   }
 
   return (
-    <Shell title="Foundations" activeHref="/foundations">
+    <BrowseScope>
       <div className="mx-auto max-w-[1180px] px-6 py-6">
         <h1 className="font-display text-[22px] font-extrabold">Foundations</h1>
         <p className="mt-1 max-w-[90ch] text-[13.5px]" style={{ color: 'var(--shell-muted)' }}>
@@ -63,6 +63,6 @@ export default async function FoundationsList({
           <FoundationsBrowser rows={rows} q={q} type={type} sort={sort} dir={dir} state={state} total={total} />
         )}
       </div>
-    </Shell>
+    </BrowseScope>
   );
 }

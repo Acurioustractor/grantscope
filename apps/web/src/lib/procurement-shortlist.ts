@@ -14,7 +14,7 @@ export function decisionTagLabel(value: string | null | undefined) {
 export function decisionTagBadgeClass(value: string | null | undefined) {
   switch (value) {
     case 'priority':
-      return 'border-bauhaus-red bg-error-light text-bauhaus-red';
+      return 'border-bauhaus-red bg-danger-light text-bauhaus-red';
     case 'reviewing':
       return 'border-bauhaus-blue bg-link-light text-bauhaus-blue';
     case 'engage':

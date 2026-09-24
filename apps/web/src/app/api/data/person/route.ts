@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 const limiter = rateLimit();
 
-// The ranked leaderboard reads mv_person_identity_influence (identity grain): trustee/nominee
+// The ranked leaderboard reads mv_person_identity_influence_v2 (identity grain): trustee/nominee
 // megamerges are collapsed into one identity and flagged is_nominee_block, so we exclude them with
 // WHERE NOT is_nominee_block. Disambiguation now covers every name with >10 boards (2026-06-19,
 // scripts/build-person-identities.mjs --min-boards=10), BUT the board-count cap stays: clustering
@@ -17,6 +17,19 @@ const limiter = rateLimit();
 // board_count 12-18 that would dominate the leaderboard top if exposed. Dropping the cap needs the
 // nominee detection tuned to flag those first. See docs/leverage-map.md "DATA-QUALITY GATE".
 const MAX_PLAUSIBLE_BOARDS = 10;
+
+// Every mode reads mv_person_identity_influence_v2's attributed columns: each organisation's money
+// split evenly across its directors. v1 gave every co-director the organisation's whole total (eight
+// people each "held" 7.57bn). Field names are kept for API consumers; `basis` says what they mean.
+const V2_TOTAL_MONEY =
+  '(coalesce(attributed_procurement, 0) + coalesce(attributed_justice, 0) + coalesce(attributed_donations, 0))';
+const V2_PERSON_COLUMNS = `identity_key, person_name, person_name_normalised, board_count, entity_types,
+                  attributed_procurement AS total_procurement, total_contracts,
+                  attributed_justice AS total_justice, attributed_donations AS total_donations,
+                  influence_score_attributed AS max_influence_score, financial_system_count, acco_boards,
+                  ${V2_TOTAL_MONEY} AS total_money`;
+const V2_BASIS =
+  "Dollar fields are each organisation's total split evenly among its directors; not money the person received.";
 
 const schema = z.object({
   q: z.string().max(200).optional(),
@@ -38,20 +51,21 @@ export async function GET(request: Request) {
 
   const supabase = getServiceSupabase();
 
-  // Search mode: return top people matching query
+  // Search mode: return top people matching query. Same view, columns and basis as the leaderboard
+  // below, so typing a name never switches the table from "their share" to whole-organisation
+  // totals (it did until 2026-09-24, and "Total $" went blank because v1 has no total_money).
   if (q && q.length >= 2) {
     try {
       const { data, error } = await supabase.rpc('exec_sql', {
-        query: `SELECT person_name, person_name_normalised, board_count, entity_types, data_sources,
-                  total_procurement, total_contracts, total_justice, total_donations,
-                  max_influence_score, financial_system_count
-           FROM mv_person_influence
+        query: `SELECT ${V2_PERSON_COLUMNS}
+           FROM mv_person_identity_influence_v2
            WHERE person_name_normalised LIKE '%${esc(q.toUpperCase())}%'
-           ORDER BY max_influence_score DESC NULLS LAST
+             AND NOT is_nominee_block
+           ORDER BY financial_system_count DESC NULLS LAST, ${V2_TOTAL_MONEY} DESC NULLS LAST
            LIMIT ${limit}`,
       });
       if (error) throw error;
-      const response = NextResponse.json({ results: data || [] });
+      const response = NextResponse.json({ results: data || [], basis: V2_BASIS });
       response.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=300');
       return response;
     } catch (error) {
@@ -68,20 +82,19 @@ export async function GET(request: Request) {
       // three dollar columns (total_contracts is a COUNT, not $). Identity grain (see header):
       // NOT is_nominee_block drops trustee megamerges, board-count cap backstops un-split mid-size names.
       const { data, error } = await supabase.rpc('exec_sql', {
-        query: `SELECT identity_key, person_name, person_name_normalised, board_count, entity_types,
-                  total_procurement, total_contracts, total_justice, total_donations,
-                  influence_score AS max_influence_score, financial_system_count, acco_boards,
-                  (coalesce(total_procurement, 0) + coalesce(total_justice, 0) + coalesce(total_donations, 0)) AS total_money
-           FROM mv_person_identity_influence
+        query: `SELECT ${V2_PERSON_COLUMNS}
+           FROM mv_person_identity_influence_v2
            WHERE NOT is_nominee_block
              AND (financial_system_count > 0 OR board_count > 3)
              AND coalesce(board_count, 0) <= ${MAX_PLAUSIBLE_BOARDS}
-           ORDER BY financial_system_count DESC NULLS LAST,
-                    (coalesce(total_procurement, 0) + coalesce(total_justice, 0) + coalesce(total_donations, 0)) DESC NULLS LAST
+           ORDER BY financial_system_count DESC NULLS LAST, ${V2_TOTAL_MONEY} DESC NULLS LAST
            LIMIT ${limit}`,
       });
       if (error) throw error;
-      const response = NextResponse.json({ results: data || [] });
+      const response = NextResponse.json({
+        results: data || [],
+        basis: V2_BASIS,
+      });
       response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
       return response;
     } catch (error) {
@@ -94,9 +107,14 @@ export async function GET(request: Request) {
   try {
     const normalised = esc(name.toUpperCase());
 
-    // Get influence summary
+    // Influence summary, v2 like the list: a name can hold several identities, and the summary is
+    // the widest-reaching one. The positions below carry each organisation's own totals.
     const { data: influence, error: infErr } = await supabase.rpc('exec_sql', {
-      query: `SELECT * FROM mv_person_influence WHERE person_name_normalised = '${normalised}'`,
+      query: `SELECT ${V2_PERSON_COLUMNS}
+         FROM mv_person_identity_influence_v2
+         WHERE person_name_normalised = '${normalised}' AND NOT is_nominee_block
+         ORDER BY financial_system_count DESC NULLS LAST, ${V2_TOTAL_MONEY} DESC NULLS LAST
+         LIMIT 1`,
     });
     if (infErr) throw infErr;
 
@@ -119,6 +137,7 @@ export async function GET(request: Request) {
 
     const response = NextResponse.json({
       influence: (influence as unknown[])?.[0] ?? null,
+      basis: V2_BASIS,
       positions: positions || [],
     });
     response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');

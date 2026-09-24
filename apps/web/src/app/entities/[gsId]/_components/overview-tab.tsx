@@ -3,6 +3,8 @@ import { CommunityEvidence } from '../impact-stories';
 import { ProcurementWorkspaceCard } from '../procurement-workspace-card';
 import { decisionTagBadgeClass, decisionTagLabel } from '@/lib/procurement-shortlist';
 import { Section } from './section';
+import { StatRow, Stat, Panel, FactList, DataTable, Callout, SourceLine } from '@/components/data';
+import { money } from '@/lib/format';
 import { formatMoney, formatPercent, entityTypeLabel, entityTypeBadge, relTypeLabel, datasetLabel } from '../_lib/formatters';
 import type {
   Entity, MvEntityStats, EntityEnrichment, WorkspaceContext,
@@ -32,6 +34,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
     justiceFunding, totalJusticeFunding,
     politicalDonations, totalDonations, lobbyingTargets,
     topContracts, sharedDirectors, crossSystemSummary,
+    power, revolvingDoor, taxYears,
   } = enrichment;
 
   const {
@@ -83,7 +86,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
                     <span className="text-xs text-bauhaus-muted font-mono">ABN {r.company_abn}</span>
                   )}
                 </div>
-                <span className="text-xs font-black uppercase tracking-wider bg-gray-100 px-2 py-1">
+                <span className="text-xs font-black uppercase tracking-wider bg-bauhaus-canvas px-2 py-1">
                   {roleLabel(r.role_type, r.properties)}
                 </span>
               </div>
@@ -232,7 +235,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
             {crossSystemSummary.systems.map((sys) => (
               <span key={sys} className={`text-[10px] font-black px-2 py-0.5 uppercase tracking-widest border-2 ${
                 sys === 'Political Donations' || sys === 'Lobbying'
-                  ? 'border-bauhaus-red/30 bg-error-light text-bauhaus-red'
+                  ? 'border-bauhaus-red/30 bg-danger-light text-bauhaus-red'
                   : sys === 'Procurement'
                     ? 'border-bauhaus-black/20 bg-white text-bauhaus-black'
                     : sys === 'ALMA Evidence' || sys === 'Governed Proof'
@@ -244,6 +247,72 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
             ))}
           </div>
         </div>
+      )}
+
+      {/* Revolving door: two or more influence channels at once (moved from /entity, 2026-09-23) */}
+      {revolvingDoor && (
+        <div className="mb-6">
+        <Callout tone="alert" title={`Works ${revolvingDoor.influence_vectors} influence channels at once`}>
+          <div className="flex flex-wrap gap-2">
+            {revolvingDoor.lobbies && (
+              <span className="border-2 border-bauhaus-black bg-white px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-bauhaus-black">
+                Lobbies government
+              </span>
+            )}
+            {revolvingDoor.donates && (
+              <span
+                className="border-2 border-bauhaus-red bg-white px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-bauhaus-red"
+                title={(revolvingDoor.parties_funded ?? []).join(', ')}
+              >
+                Political donor
+                {(revolvingDoor.parties_funded?.length ?? 0) > 0 &&
+                  ` · ${revolvingDoor.parties_funded!.length} ${revolvingDoor.parties_funded!.length === 1 ? 'party' : 'parties'}`}
+              </span>
+            )}
+            {revolvingDoor.contracts && (
+              <span className="border-2 border-bauhaus-blue bg-white px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-bauhaus-blue">
+                Government contractor · {revolvingDoor.distinct_buyers} {revolvingDoor.distinct_buyers === 1 ? 'buyer' : 'buyers'}
+              </span>
+            )}
+            {revolvingDoor.receives_funding && (
+              <span className="border-2 border-money bg-white px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-money">
+                Receives government funding
+              </span>
+            )}
+          </div>
+        </Callout>
+        </div>
+      )}
+
+      {/* Power profile: score, reach and counts. Dollar figures stay in the sections below, where
+          each one is filtered, so the page never shows two different numbers for the same money. */}
+      {power && Number(power.system_count) > 0 && (
+        <Section title="Power Profile">
+          <StatRow cols={3}>
+            <Stat
+              label="Power score"
+              value={Number(power.power_score).toFixed(1)}
+              sub={`present in ${power.system_count} of 8 systems: contracts, grants, donations, charity, foundation, evidence, tax, NDIS`}
+            >
+              {Number(power.ranked) > 0 && (
+                <p className="mt-1 text-xs font-bold tabular-nums text-bauhaus-black">
+                  ranks {Number(power.rank).toLocaleString()} of {Number(power.ranked).toLocaleString()}
+                </p>
+              )}
+            </Stat>
+            <Stat
+              label="Government buyers"
+              value={Number(power.distinct_govt_buyers) || 0}
+              sub="agencies it holds contracts with"
+            />
+            <Stat
+              label="Parties funded"
+              value={Number(power.distinct_parties_funded) || 0}
+              tone="red"
+              sub="received its donations"
+            />
+          </StatRow>
+        </Section>
       )}
 
       {/* Two column layout */}
@@ -275,7 +344,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
                     .sort((a, b) => b[1].total - a[1].total)
                     .slice(0, 10)
                     .map(([program, info]) => (
-                      <div key={program} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-b-0">
+                      <div key={program} className="flex items-center justify-between py-2 border-b border-bauhaus-black/20 last:border-b-0">
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-bold text-bauhaus-black truncate">{program}</div>
                           <div className="text-xs text-bauhaus-muted">
@@ -303,16 +372,16 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
             <Section title={`Reported Outcomes (${outcomeSubmissions.length})`}>
               <div className="space-y-4">
                 {outcomeSubmissions.map((os) => (
-                  <div key={os.id} className="border-2 border-gray-200 p-3">
+                  <div key={os.id} className="border-2 border-bauhaus-black/20 p-3">
                     <div className="flex items-center justify-between mb-2">
                       <div>
                         <span className="text-sm font-bold text-bauhaus-black">{os.program_name}</span>
                         <span className="text-xs text-bauhaus-muted ml-2">{os.reporting_period}</span>
                       </div>
                       <span className={`text-[10px] font-black px-2 py-0.5 uppercase tracking-widest ${
-                        os.status === 'validated' ? 'bg-money-light text-green-800' :
+                        os.status === 'validated' ? 'bg-money-light text-money' :
                         os.status === 'submitted' ? 'bg-bauhaus-yellow/20 text-yellow-800' :
-                        'bg-gray-100 text-gray-600'
+                        'bg-bauhaus-canvas text-bauhaus-muted'
                       }`}>
                         {os.status}
                       </span>
@@ -322,7 +391,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
                     )}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                       {(Array.isArray(os.outcomes) ? os.outcomes : []).slice(0, 6).map((m, j) => (
-                        <div key={j} className="bg-gray-50 px-2 py-1.5 text-xs">
+                        <div key={j} className="bg-bauhaus-canvas px-2 py-1.5 text-xs">
                           <div className="font-mono font-bold">
                             {m.value != null ? m.value.toLocaleString() : '—'}{' '}
                             <span className="text-bauhaus-muted">{m.unit}</span>
@@ -342,7 +411,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
             <Section title={`Political Donations (${formatMoney(totalDonations)})`}>
               <div className="space-y-0">
                 {politicalDonations.slice(0, 10).map((d) => (
-                  <div key={d.donation_to} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-b-0">
+                  <div key={d.donation_to} className="flex items-center justify-between py-2 border-b border-bauhaus-black/20 last:border-b-0">
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-bold text-bauhaus-black truncate">{d.donation_to}</div>
                       <div className="text-xs text-bauhaus-muted">
@@ -364,7 +433,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
             <Section title={`Lobbying Connections (${lobbyingTargets.length})`}>
               <div className="space-y-0">
                 {lobbyingTargets.map((l, i) => (
-                  <div key={i} className="flex items-center gap-2 py-2 border-b border-gray-200 last:border-b-0">
+                  <div key={i} className="flex items-center gap-2 py-2 border-b border-bauhaus-black/20 last:border-b-0">
                     <span className="w-1.5 h-1.5 bg-bauhaus-red shrink-0" />
                     {l.target_gs_id ? (
                       <Link href={`/entities/${l.target_gs_id}`} className="text-sm font-bold text-bauhaus-black hover:text-bauhaus-red truncate">
@@ -384,7 +453,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
             <Section title={`Top Contracts (${topContracts.length > 4 ? 'top 5' : topContracts.length})`}>
               <div className="space-y-0">
                 {topContracts.map((c, i) => (
-                  <div key={i} className="py-2 border-b border-gray-200 last:border-b-0">
+                  <div key={i} className="py-2 border-b border-bauhaus-black/20 last:border-b-0">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-bold text-bauhaus-black line-clamp-1">{c.title || 'Untitled Contract'}</div>
@@ -404,12 +473,36 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
             </Section>
           )}
 
+          {/* ATO corporate tax transparency (moved from /entity, 2026-09-23) */}
+          {taxYears.length > 0 && (
+            <Section title="Tax Paid (ATO transparency)">
+              <DataTable
+                caption="Tax paid by year"
+                rows={taxYears}
+                rowKey={(t) => t.report_year}
+                columns={[
+                  { key: 'year', label: 'Year', cell: (t) => <span className="font-bold text-bauhaus-black">{t.report_year}</span> },
+                  { key: 'income', label: 'Total income', align: 'right', cell: (t) => money(Number(t.total_income)) },
+                  { key: 'taxable', label: 'Taxable income', align: 'right', cell: (t) => money(Number(t.taxable_income)) },
+                  { key: 'payable', label: 'Tax payable', align: 'right', cell: (t) => <span className="font-bold">{money(Number(t.tax_payable))}</span> },
+                  {
+                    key: 'rate',
+                    label: 'Rate',
+                    align: 'right',
+                    cell: (t) => (t.effective_tax_rate != null ? `${Number(t.effective_tax_rate).toFixed(1)}%` : '—'),
+                  },
+                ]}
+              />
+              <SourceLine sources="ATO corporate tax transparency report, latest five years published" />
+            </Section>
+          )}
+
           {/* Shared Directors / Board Interlocks */}
           {sharedDirectors.length > 0 && (
             <Section title={`Board Interlocks (${sharedDirectors.length} shared directors)`}>
               <div className="space-y-3">
                 {sharedDirectors.map((sd, i) => (
-                  <div key={i} className="py-2 border-b border-gray-200 last:border-b-0">
+                  <div key={i} className="py-2 border-b border-bauhaus-black/20 last:border-b-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="w-1.5 h-1.5 bg-bauhaus-red shrink-0" />
                       {sd.person_gs_id ? (
@@ -427,11 +520,11 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
                       {sd.shared_entities.slice(0, 5).map((se, j) => (
                         se.gs_id ? (
                           <Link key={j} href={`/entities/${se.gs_id}`}
-                                className="text-[11px] font-bold px-2 py-0.5 border-2 border-bauhaus-red/20 bg-error-light text-bauhaus-red hover:border-bauhaus-red truncate max-w-[200px]">
+                                className="text-[11px] font-bold px-2 py-0.5 border-2 border-bauhaus-red/20 bg-danger-light text-bauhaus-red hover:border-bauhaus-red truncate max-w-[200px]">
                             {se.name}
                           </Link>
                         ) : (
-                          <span key={j} className="text-[11px] font-bold px-2 py-0.5 border-2 border-gray-200 text-bauhaus-muted truncate max-w-[200px]">
+                          <span key={j} className="text-[11px] font-bold px-2 py-0.5 border-2 border-bauhaus-black/20 text-bauhaus-muted truncate max-w-[200px]">
                             {se.name}
                           </span>
                         )
@@ -647,53 +740,30 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Identity */}
-          <div className="bg-white border-4 border-bauhaus-black p-4">
-            <h3 className="text-sm font-black text-bauhaus-black mb-3 pb-2 border-b-4 border-bauhaus-black uppercase tracking-widest">
-              Identity
-            </h3>
-            <dl className="space-y-2">
-              <div>
-                <dt className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">GS ID</dt>
-                <dd className="text-sm font-mono font-bold text-bauhaus-black">{e.gs_id}</dd>
-              </div>
-              {e.abn && (
-                <div>
-                  <dt className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">ABN</dt>
-                  <dd className="text-sm font-bold text-bauhaus-black">{e.abn}</dd>
-                </div>
-              )}
-              {e.acn && (
-                <div>
-                  <dt className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">ACN</dt>
-                  <dd className="text-sm font-bold text-bauhaus-black">{e.acn}</dd>
-                </div>
-              )}
-              {e.sector && (
-                <div>
-                  <dt className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">Sector</dt>
-                  <dd className="text-sm font-bold text-bauhaus-black">{e.sector}</dd>
-                </div>
-              )}
-              {e.website && (
-                <div>
-                  <dt className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">Website</dt>
-                  <dd>
-                    <a href={e.website.startsWith('http') ? e.website : `https://${e.website}`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="text-sm font-bold text-bauhaus-blue hover:underline truncate block">
+          <Panel title="Identity">
+            <FactList
+              facts={[
+                { label: 'GS ID', value: e.gs_id, mono: true },
+                { label: 'ABN', value: e.abn, mono: true },
+                { label: 'ACN', value: e.acn, mono: true },
+                { label: 'Sector', value: e.sector },
+                {
+                  label: 'Website',
+                  value: e.website ? (
+                    <a
+                      href={e.website.startsWith('http') ? e.website : `https://${e.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block truncate text-bauhaus-blue hover:underline"
+                    >
                       {e.website.replace(/^https?:\/\//, '')}
                     </a>
-                  </dd>
-                </div>
-              )}
-              {e.financial_year && (
-                <div>
-                  <dt className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">Financial Year</dt>
-                  <dd className="text-sm font-bold text-bauhaus-black">{e.financial_year}</dd>
-                </div>
-              )}
-            </dl>
-          </div>
+                  ) : null,
+                },
+                { label: 'Financial Year', value: e.financial_year },
+              ]}
+            />
+          </Panel>
 
           {/* Procurement Workspace Card */}
           {workspaceOrgName && (
@@ -876,9 +946,9 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
               <div className="flex justify-between">
                 <dt className="text-xs font-bold text-bauhaus-muted">Match Confidence</dt>
                 <dd className={`text-xs font-black uppercase tracking-widest ${
-                  e.confidence === 'exact' ? 'text-green-700' :
+                  e.confidence === 'exact' ? 'text-money' :
                   e.confidence === 'high' ? 'text-bauhaus-blue' :
-                  e.confidence === 'inferred' ? 'text-orange-600' : 'text-bauhaus-muted'
+                  e.confidence === 'inferred' ? 'text-bauhaus-red/70' : 'text-bauhaus-muted'
                 }`}>
                   {e.confidence || 'exact'}
                 </dd>
@@ -983,7 +1053,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
                     <dt className="text-xs font-bold text-bauhaus-muted">Remoteness</dt>
                     <dd className={`text-sm font-black ${
                       placeGeo.remoteness_2021.includes('Very Remote') ? 'text-bauhaus-red' :
-                      placeGeo.remoteness_2021.includes('Remote') ? 'text-orange-600' :
+                      placeGeo.remoteness_2021.includes('Remote') ? 'text-bauhaus-red/70' :
                       placeGeo.remoteness_2021.includes('Outer') ? 'text-bauhaus-yellow' :
                       'text-bauhaus-black'
                     }`}>{placeGeo.remoteness_2021}</dd>
@@ -994,7 +1064,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
                     <dt className="text-xs font-bold text-bauhaus-muted">SEIFA Disadvantage</dt>
                     <dd className={`text-sm font-black ${
                       seifa.decile_national <= 2 ? 'text-bauhaus-red' :
-                      seifa.decile_national <= 4 ? 'text-orange-600' :
+                      seifa.decile_national <= 4 ? 'text-bauhaus-red/70' :
                       'text-bauhaus-black'
                     }`}>
                       Decile {seifa.decile_national}/10
@@ -1130,7 +1200,7 @@ export function OverviewTab({ entity: e, stats, enrichment, workspace }: Overvie
 
           {/* Donor-Contractor Alert */}
           {stats?.type_breakdown['donation:outbound'] && stats?.type_breakdown['contract:inbound'] && (
-            <div className="bg-error-light border-4 border-bauhaus-red p-4">
+            <div className="bg-danger-light border-4 border-bauhaus-red p-4">
               <h3 className="text-sm font-black text-bauhaus-red mb-2 uppercase tracking-widest">
                 Donor-Contractor
               </h3>

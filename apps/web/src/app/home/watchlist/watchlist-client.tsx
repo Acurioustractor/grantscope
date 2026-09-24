@@ -484,7 +484,7 @@ export function WatchlistClient({
             <div className="space-y-2">
               {feedDiscoveries.map(d => {
                 const severityStyles: Record<string, string> = {
-                  critical: 'border-l-4 border-l-bauhaus-red bg-error-light',
+                  critical: 'border-l-4 border-l-bauhaus-red bg-danger-light',
                   significant: 'border-l-4 border-l-orange-500 bg-orange-50',
                   notable: 'border-l-4 border-l-bauhaus-blue bg-link-light',
                   info: 'border-l-4 border-l-gray-300',

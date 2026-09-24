@@ -161,7 +161,7 @@ export async function GET(request: Request) {
       findings.push({
         type: 'power_concentration',
         severity: Number(power.system_count) >= 5 ? 'critical' : 'notable',
-        title: `High power concentration: ${power.system_count} of 7 systems`,
+        title: `High power concentration: ${power.system_count} of 8 systems`,
         detail: `Power score: ${Number(power.power_score).toFixed(1)}, total dollar flow: $${(Number(power.total_dollar_flow) / 1e6).toFixed(1)}M`,
       });
     }

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Shell } from '@/components/shell/shell';
+import { BrowseScope } from '@/components/shell/browse-scope';
 import { placeSlug } from '@/lib/atlas/share';
 import { getRemoteCouncils } from '@/lib/services/council-place-report';
 import { allocationForCode, stateNeighbours, type AllocationRow } from '@/lib/allocation';
@@ -45,7 +45,7 @@ export default async function CouncilAllocationPage({ params }: { params: Promis
   const sureTone = sure == null ? '#777' : sure >= 80 ? '#059669' : sure >= 40 ? '#B8860B' : '#D02020';
 
   return (
-    <Shell title={row.lga_name}>
+    <BrowseScope>
       <div className="mx-auto max-w-[1180px] px-6 py-6">
         <p className="font-mono text-[11px] uppercase tracking-widest" style={{ color: '#777' }}>
           <Link href="/allocation" className="hover:underline">Allocation</Link> · <Link href={`/allocation?state=${row.state}`} className="hover:underline">{row.state}</Link> · {row.remoteness ?? 'remoteness unknown'} · LGA {row.lga_code}
@@ -167,7 +167,7 @@ export default async function CouncilAllocationPage({ params }: { params: Promis
           </ul>
         </section>
       </div>
-    </Shell>
+    </BrowseScope>
   );
 }
 

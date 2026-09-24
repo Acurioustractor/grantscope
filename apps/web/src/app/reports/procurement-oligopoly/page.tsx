@@ -1,7 +1,12 @@
 import Link from 'next/link';
 import { getServiceSupabase } from '@/lib/report-supabase';
+import { donationFilterSql } from '@/lib/justice-money';
 
 export const revalidate = 3600;
+
+// Donations only. Unfiltered, the top-100 suppliers' "donations" were 64.1m; counting only receipts
+// declared as donations it is 2.1m (measured 2026-09-23, after the political_donations dedupe).
+const DONATION = donationFilterSql('pd');
 
 function money(n: number | null | undefined): string {
   if (n == null) return '--';
@@ -124,8 +129,8 @@ async function getData() {
   const donationRes = abnList
     ? await db.rpc('exec_sql', {
         query: `SELECT donor_abn, SUM(amount)::bigint as donated, COUNT(*)::int as donation_count
-                FROM political_donations
-                WHERE donor_abn IN (${abnList})
+                FROM political_donations pd
+                WHERE donor_abn IN (${abnList}) AND ${DONATION}
                 GROUP BY donor_abn`,
       })
     : { data: [], error: null };
@@ -225,7 +230,7 @@ async function getData() {
                    COUNT(DISTINCT t.supplier_abn)::int as top100_donors,
                    SUM(pd.amount)::bigint as total_donated
             FROM top100abns t
-            JOIN political_donations pd ON pd.donor_abn = t.supplier_abn
+            JOIN political_donations pd ON pd.donor_abn = t.supplier_abn AND ${DONATION}
             GROUP BY pd.donation_to
             HAVING SUM(pd.amount) > 50000
             ORDER BY total_donated DESC
@@ -244,9 +249,9 @@ async function getData() {
             )
             SELECT
               (SELECT COUNT(DISTINCT t.supplier_abn) FROM top100abns t
-               INNER JOIN political_donations pd ON pd.donor_abn = t.supplier_abn)::int as donors,
+               INNER JOIN political_donations pd ON pd.donor_abn = t.supplier_abn AND ${DONATION})::int as donors,
               (SELECT SUM(pd.amount)::bigint FROM top100abns t
-               INNER JOIN political_donations pd ON pd.donor_abn = t.supplier_abn) as donated,
+               INNER JOIN political_donations pd ON pd.donor_abn = t.supplier_abn AND ${DONATION}) as donated,
               (SELECT COUNT(DISTINCT t.supplier_abn) FROM top100abns t
                INNER JOIN (SELECT DISTINCT ge.abn FROM gs_relationships r
                            JOIN gs_entities ge ON ge.id = r.source_entity_id
@@ -316,7 +321,7 @@ export default async function ProcurementOligopolyPage() {
         <p className="text-lg text-bauhaus-muted leading-relaxed max-w-3xl">
           {c.unique_suppliers.toLocaleString()} suppliers compete for federal procurement.{' '}
           <strong className="text-bauhaus-red">100 of them</strong> ({pct(100, c.unique_suppliers)} of all suppliers)
-          capture <strong className="text-bauhaus-black">{money(c.top100_total)}</strong> &mdash;{' '}
+          capture <strong className="text-bauhaus-black">{money(c.top100_total)}</strong>,{' '}
           <strong className="text-bauhaus-red">{c.top100_pct.toFixed(0)}%</strong> of all spending.
           The rest share what&apos;s left.
         </p>
@@ -467,7 +472,7 @@ export default async function ProcurementOligopolyPage() {
           {buyers[0] && (
             <>
               <strong className="text-bauhaus-black">{buyers[0].buyer_name}</strong> alone accounts for{' '}
-              <strong className="text-bauhaus-black">{money(buyers[0].total)}</strong> &mdash;{' '}
+              <strong className="text-bauhaus-black">{money(buyers[0].total)}</strong>,{' '}
               {pct(buyers[0].total, c.total_value)} of all federal procurement.
             </>
           )}
@@ -659,7 +664,7 @@ export default async function ProcurementOligopolyPage() {
           Explore the Top Suppliers
         </h2>
         <p className="text-sm text-bauhaus-muted mb-4">
-          Click any supplier to see their full CivicGraph profile &mdash; every contract, every donation,
+          Click any supplier to see their full CivicGraph profile: every contract, every donation,
           every board member, every lobbying connection.
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -712,17 +717,17 @@ export default async function ProcurementOligopolyPage() {
         <div className="bg-bauhaus-canvas p-4">
           <h3 className="text-sm font-black text-bauhaus-black uppercase tracking-widest mb-2">Methodology &amp; Data Sources</h3>
           <ul className="text-xs text-bauhaus-muted space-y-1">
-            <li><strong>AusTender</strong> &mdash; {c.total_contracts.toLocaleString()} federal procurement contracts, all available years</li>
-            <li><strong>AEC</strong> &mdash; Australian Electoral Commission political donation disclosures</li>
-            <li><strong>Australian Government Register of Lobbyists</strong> &mdash; registered lobbying relationships</li>
-            <li><strong>ABR</strong> &mdash; Australian Business Register for entity matching</li>
+            <li><strong>AusTender</strong>: {c.total_contracts.toLocaleString()} federal procurement contracts, all available years</li>
+            <li><strong>AEC</strong>: Australian Electoral Commission political donation disclosures</li>
+            <li><strong>Australian Government Register of Lobbyists</strong>: registered lobbying relationships</li>
+            <li><strong>ABR</strong>: Australian Business Register for entity matching</li>
           </ul>
           <p className="text-[10px] text-bauhaus-muted mt-3">
             Concentration is calculated by ranking all unique suppliers (by ABN) by total contract value.
             &ldquo;Top 100&rdquo; refers to the 100 ABNs with the highest cumulative contract value across all years.
             Cross-system matching performed by CivicGraph via ABN linkage.
             Some entities operate under multiple ABNs; each ABN is counted separately.
-            This is a living investigation &mdash; data updates as new contracts are published.
+            This is a living investigation: data updates as new contracts are published.
           </p>
         </div>
       </section>

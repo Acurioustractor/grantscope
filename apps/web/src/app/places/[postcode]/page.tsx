@@ -463,7 +463,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
           </span>
           {geo.remoteness_2021 && (
             <span className={`text-[11px] font-black px-2.5 py-1 border-2 uppercase tracking-widest ${
-              geo.remoteness_2021.includes('Very Remote') ? 'border-bauhaus-red bg-error-light text-bauhaus-red' :
+              geo.remoteness_2021.includes('Very Remote') ? 'border-bauhaus-red bg-danger-light text-bauhaus-red' :
               geo.remoteness_2021.includes('Remote') ? 'border-orange-500 bg-orange-50 text-orange-700' :
               'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-black'
             }`}>
@@ -472,7 +472,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
           )}
           {seifa && (
             <span className={`text-[11px] font-black px-2.5 py-1 border-2 uppercase tracking-widest ${
-              seifa.decile_national <= 2 ? 'border-bauhaus-red bg-error-light text-bauhaus-red' :
+              seifa.decile_national <= 2 ? 'border-bauhaus-red bg-danger-light text-bauhaus-red' :
               seifa.decile_national <= 4 ? 'border-orange-500 bg-orange-50 text-orange-700' :
               'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-black'
             }`}>
@@ -497,7 +497,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
               placeBrief.alignment.score >= 75 ? 'border-money bg-money-light text-money' :
               placeBrief.alignment.score >= 50 ? 'border-bauhaus-blue bg-link-light text-bauhaus-blue' :
               placeBrief.alignment.score >= 25 ? 'border-orange-500 bg-orange-50 text-orange-700' :
-              'border-bauhaus-red bg-error-light text-bauhaus-red'
+              'border-bauhaus-red bg-danger-light text-bauhaus-red'
             }`}>
               Alignment {placeBrief.alignment.score}/100
             </span>
@@ -782,7 +782,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
                     <span className={`text-[10px] font-black px-2 py-0.5 uppercase tracking-widest ${
                       intervention.linked
                         ? 'border border-money/30 bg-money-light text-money'
-                        : 'border border-bauhaus-red/30 bg-error-light text-bauhaus-red'
+                        : 'border border-bauhaus-red/30 bg-danger-light text-bauhaus-red'
                     }`}>
                       {intervention.linked ? 'Funded' : 'Unfunded'}
                     </span>
@@ -1119,7 +1119,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
                 </div>
                 {/* Indigenous proportion */}
                 {indigenousProportion != null && (
-                  <div className={`mb-4 p-3 border-2 flex items-center justify-between ${indigenousProportion >= 20 ? 'border-bauhaus-red bg-error-light' : 'border-bauhaus-black/20 bg-bauhaus-canvas'}`}>
+                  <div className={`mb-4 p-3 border-2 flex items-center justify-between ${indigenousProportion >= 20 ? 'border-bauhaus-red bg-danger-light' : 'border-bauhaus-black/20 bg-bauhaus-canvas'}`}>
                     <div className="text-xs font-black uppercase tracking-widest text-bauhaus-black">Indigenous Recipients</div>
                     <div className={`text-lg font-black ${indigenousProportion >= 20 ? 'text-bauhaus-red' : 'text-bauhaus-black'}`}>
                       {indigenousProportion}%
@@ -1230,7 +1230,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
         <div className="space-y-6">
           {/* SEIFA Context */}
           {seifa && (
-            <div className={`border-4 p-4 ${seifa.decile_national <= 3 ? 'border-bauhaus-red bg-error-light' : 'border-bauhaus-black bg-white'}`}>
+            <div className={`border-4 p-4 ${seifa.decile_national <= 3 ? 'border-bauhaus-red bg-danger-light' : 'border-bauhaus-black bg-white'}`}>
               <h3 className="text-sm font-black mb-3 pb-2 border-b-4 uppercase tracking-widest"
                 style={{ borderColor: seifa.decile_national <= 3 ? '#dc2626' : '#000' }}>
                 Disadvantage Index
@@ -1268,7 +1268,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ po
 
           {/* Community-Controlled Gap Alert */}
           {communityControlledCount === 0 && entityList.length > 5 && (
-            <div className="bg-error-light border-4 border-bauhaus-red p-4">
+            <div className="bg-danger-light border-4 border-bauhaus-red p-4">
               <h3 className="text-sm font-black text-bauhaus-red mb-2 uppercase tracking-widest">
                 Gap Alert
               </h3>

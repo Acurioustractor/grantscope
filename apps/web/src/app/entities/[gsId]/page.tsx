@@ -14,21 +14,44 @@ import { EvidenceTab } from './_components/evidence-tab';
 import { getShortlistIdFromPath, hasDisabilitySignal, districtLabel, validNdisDistrict } from './_lib/formatters';
 import { formatMoney } from './_lib/formatters';
 import { EmpathyLedgerStories } from '@/components/empathy-ledger-stories';
+import { applyGrantFilters, isRealRecipient } from '@/lib/justice-money';
 import type {
   Entity, MvEntityStats, AcncYear,
   FoundationEnrichment, FoundationProgram, CharityEnrichment,
   SocialEnterpriseEnrichment, NdisSupplyRow, NdisConcentrationRow,
   AlmaIntervention, PlaceGeo, SeifaData, GovernedProofBundle,
   EntityEnrichment, WorkspaceContext, PersonRole,
+  PowerProfile, RevolvingDoor, TaxYear,
 } from './_lib/types';
 
 export const revalidate = 300; // ISR: 5 min
 
-export async function generateMetadata({ params }: { params: Promise<{ gsId: string }> }): Promise<Metadata> {
-  const { gsId } = await params;
+/**
+ * The entity for a gs_id. Report links for rows that carry only an ABN arrive as AU-ABN-<abn>
+ * (lib/entity-href.ts); most ABN entities have exactly that gs_id, but ORIC corporations and merged
+ * government bodies do not, so fall back to the ABN itself rather than 404.
+ */
+async function resolveEntity(gsId: string) {
   const supabase = getServiceSupabase();
-  const { data: entity } = await supabase.from('gs_entities').select('canonical_name, entity_type').eq('gs_id', gsId).single();
+  const { data } = await supabase.from('gs_entities').select('*').eq('gs_id', gsId).maybeSingle();
+  if (data) return data as Entity;
+  const abn = /^AU-ABN-(\d{11})$/.exec(gsId)?.[1];
+  if (!abn) return null;
+  const { data: byAbn } = await supabase
+    .from('gs_entities')
+    .select('*')
+    .eq('abn', abn)
+    .order('source_count', { ascending: false, nullsFirst: false })
+    .limit(1);
+  return ((byAbn || [])[0] as Entity | undefined) ?? null;
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ gsId: string }> }): Promise<Metadata> {
+  const { gsId: rawGsId } = await params;
+  const supabase = getServiceSupabase();
+  const entity = await resolveEntity(decodeURIComponent(rawGsId));
   if (!entity) return { title: 'Entity Not Found | CivicGraph' };
+  const gsId = entity.gs_id;
 
   const { data: stats } = await supabase.from('mv_gs_entity_stats').select('total_relationships, total_outbound_amount, total_inbound_amount').eq('gs_id', gsId).single();
 
@@ -53,7 +76,7 @@ export default async function EntityDossierPage({
   params: Promise<{ gsId: string }>;
   searchParams: Promise<{ from?: string | string[]; tab?: string }>;
 }) {
-  const { gsId } = await params;
+  const { gsId: rawGsId } = await params;
   const resolvedSearchParams = await searchParams;
   const supabase = getServiceSupabase();
 
@@ -70,14 +93,9 @@ export default async function EntityDossierPage({
   const preferredShortlistId = getShortlistIdFromPath(returnHref);
 
   // Fetch entity
-  const { data: entity } = await supabase
-    .from('gs_entities')
-    .select('*')
-    .eq('gs_id', gsId)
-    .single();
-
+  const entity = await resolveEntity(decodeURIComponent(rawGsId));
   if (!entity) notFound();
-  const e = entity as Entity;
+  const e = entity;
 
   // Fetch MV stats + enrichment data in parallel
   const [
@@ -284,12 +302,15 @@ export default async function EntityDossierPage({
 
   // Justice funding (for overview tab — only server-side for initial render)
   let justiceFunding: Array<{ id: string; recipient_name: string; recipient_abn: string | null; program_name: string; amount_dollars: number | null; sector: string | null; source: string; financial_year: string | null; location: string | null; project_description: string | null }> = [];
+  // Grant lane only: without measure_kind and is_aggregate, whole-of-state budgets and spreadsheet
+  // TOTAL rows were summed into "Government Funding" (CLAUDE.md, the three mandatory filters).
+  const JF_COLS = 'id, recipient_name, recipient_abn, program_name, amount_dollars, sector, source, financial_year, location, project_description';
   if (e.abn) {
-    const { data } = await supabase.from('justice_funding').select('id, recipient_name, recipient_abn, program_name, amount_dollars, sector, source, financial_year, location, project_description').eq('recipient_abn', e.abn).order('amount_dollars', { ascending: false, nullsFirst: false });
-    justiceFunding = data || [];
+    const { data } = await applyGrantFilters(supabase.from('justice_funding').select(JF_COLS).eq('recipient_abn', e.abn)).order('amount_dollars', { ascending: false, nullsFirst: false });
+    justiceFunding = (data || []).filter((r) => isRealRecipient(r.recipient_name));
   } else {
-    const { data } = await supabase.from('justice_funding').select('id, recipient_name, recipient_abn, program_name, amount_dollars, sector, source, financial_year, location, project_description').ilike('recipient_name', `%${e.canonical_name.replace(/[%_]/g, '')}%`).order('amount_dollars', { ascending: false, nullsFirst: false }).limit(50);
-    justiceFunding = data || [];
+    const { data } = await applyGrantFilters(supabase.from('justice_funding').select(JF_COLS).ilike('recipient_name', `%${e.canonical_name.replace(/[%_]/g, '')}%`)).order('amount_dollars', { ascending: false, nullsFirst: false }).limit(50);
+    justiceFunding = (data || []).filter((r) => isRealRecipient(r.recipient_name));
   }
   const totalJusticeFunding = justiceFunding.reduce((sum, r) => sum + (r.amount_dollars || 0), 0);
 
@@ -332,20 +353,49 @@ export default async function EntityDossierPage({
   }
 
   // Political donations (grouped by party/recipient)
-  interface DonationRow { donation_to: string; total: number; count: number; years: string[] }
+  // The list shows the top 20 recipients; the all_* columns are window totals over EVERY recipient,
+  // computed before the LIMIT. The headline used to sum the 20 rows, so a donor with 30 recipients
+  // showed less than they gave (2026-09-24 review of #509).
+  interface DonationRow {
+    donation_to: string; total: number; count: number; years: string[];
+    all_total: number; all_count: number; all_recipients: number; first_fy: string; last_fy: string;
+  }
   let politicalDonations: DonationRow[] = [];
   let totalDonations = 0;
   if (e.abn) {
     const { data: donData } = await supabase.rpc('exec_sql', {
       query: `SELECT donation_to, SUM(amount)::bigint as total, COUNT(*)::int as count,
-                     array_agg(DISTINCT financial_year ORDER BY financial_year) as years
+                     array_agg(DISTINCT financial_year ORDER BY financial_year) as years,
+                     (SUM(SUM(amount)) OVER ())::bigint AS all_total,
+                     (SUM(COUNT(*)) OVER ())::int AS all_count,
+                     (COUNT(*) OVER ())::int AS all_recipients,
+                     MIN(MIN(financial_year)) OVER () AS first_fy,
+                     MAX(MAX(financial_year)) OVER () AS last_fy
               FROM political_donations WHERE donor_abn = '${e.abn}'
                 AND receipt_type = 'donation received'
               GROUP BY donation_to ORDER BY total DESC LIMIT 20`,
     });
     politicalDonations = (donData || []) as DonationRow[];
-    totalDonations = politicalDonations.reduce((s, d) => s + (d.total || 0), 0);
+    totalDonations = Number(politicalDonations[0]?.all_total) || 0;
   }
+  // What the header's donations figure counts. Financial years arrive as both '2008-2009' and
+  // '2018-19'; reduce each to a calendar start and end year so the span reads "2008–2019".
+  const fyStart = (fy: string) => fy.slice(0, 4);
+  const fyEnd = (fy: string) => {
+    const m = /^(\d{4})-(\d{2}|\d{4})$/.exec(fy);
+    if (!m) return fy.slice(0, 4);
+    return m[2].length === 2 ? `${m[1].slice(0, 2)}${m[2]}` : m[2];
+  };
+  const donationAll = politicalDonations[0];
+  const donationsMeta = donationAll
+    ? {
+        count: Number(donationAll.all_count) || 0,
+        recipients: Number(donationAll.all_recipients) || 0,
+        recipientsCapped: false,
+        fromYear: donationAll.first_fy ? fyStart(donationAll.first_fy) : null,
+        toYear: donationAll.last_fy ? fyEnd(donationAll.last_fy) : null,
+      }
+    : null;
 
   // Lobbying targets
   interface LobbyTarget { target_name: string; target_gs_id: string | null }
@@ -381,6 +431,47 @@ export default async function EntityDossierPage({
       .order('contract_value', { ascending: false })
       .limit(5);
     topContracts = (contractData || []) as TopContractRow[];
+  }
+
+  // Power profile, revolving door and tax transparency: the sections only /entity used to show.
+  // exec_sql because /reports/who-runs-australia reads mv_revolving_door through PostgREST and gets
+  // nothing back (cause not found, 2026-09-23); the SQL path is the one /entity used and it works.
+  const [powerRows, revolvingRows, taxRows, aliasRows] = await Promise.all([
+    // rank/ranked give the score context the reference sites show ("173 of 40,455").
+    supabase.rpc('exec_sql', {
+      query: `SELECT p.power_score, p.system_count, p.procurement_dollars, p.recorded_grants_dollars, p.donation_dollars,
+                     p.distinct_govt_buyers, p.distinct_parties_funded,
+                     (SELECT count(*) FROM mv_entity_power_index q WHERE q.power_score > p.power_score) + 1 AS rank,
+                     (SELECT count(*) FROM mv_entity_power_index) AS ranked
+                FROM mv_entity_power_index p WHERE p.id = '${e.id}' LIMIT 1`,
+    }),
+    supabase.rpc('exec_sql', {
+      query: `SELECT lobbies, donates, contracts, receives_funding, influence_vectors,
+                     total_donated, parties_funded, total_contracts, distinct_buyers, total_funded
+                FROM mv_revolving_door WHERE id = '${e.id}' AND influence_vectors >= 2 LIMIT 1`,
+    }),
+    e.abn
+      ? supabase.rpc('exec_sql', {
+          query: `SELECT report_year, total_income::bigint, taxable_income::bigint, tax_payable::bigint, effective_tax_rate
+                    FROM ato_tax_transparency WHERE abn = '${e.abn}'
+                   ORDER BY report_year DESC LIMIT 5`,
+        })
+      : Promise.resolve({ data: [] }),
+    supabase.from('gs_entity_aliases').select('alias_value, is_primary').eq('entity_id', e.id).limit(50),
+  ]);
+  const power = ((powerRows.data || []) as PowerProfile[])[0] ?? null;
+  const revolvingDoor = ((revolvingRows.data || []) as RevolvingDoor[])[0] ?? null;
+  const taxYears = (taxRows.data || []) as TaxYear[];
+
+  // Other names this organisation is recorded under (USAspending shows "Also known by 8 other names").
+  const seenNames = new Set([e.canonical_name.trim().toUpperCase()]);
+  const aliases: string[] = [];
+  for (const row of ((aliasRows.data || []) as Array<{ alias_value: string | null; is_primary: boolean | null }>)
+    .sort((a, b) => Number(!!b.is_primary) - Number(!!a.is_primary))) {
+    const name = row.alias_value?.trim();
+    if (!name || seenNames.has(name.toUpperCase())) continue;
+    seenNames.add(name.toUpperCase());
+    aliases.push(name);
   }
 
   // Shared directors — people who sit on this entity's board AND other boards
@@ -451,6 +542,9 @@ export default async function EntityDossierPage({
     topContracts,
     sharedDirectors,
     crossSystemSummary,
+    power,
+    revolvingDoor,
+    taxYears,
   };
 
   const workspace: WorkspaceContext = {
@@ -463,6 +557,9 @@ export default async function EntityDossierPage({
       <EntityHeader
         entity={e}
         stats={mvStats}
+        donationsTotal={e.abn ? totalDonations : undefined}
+        donationsMeta={donationsMeta}
+        aliases={aliases}
         charity={charity}
         socialEnterprise={socialEnterprise}
         returnHref={returnHref}

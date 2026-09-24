@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Shell } from '@/components/shell/shell';
+import { BrowseScope } from '@/components/shell/browse-scope';
 import { unstable_cache } from 'next/cache';
 import { getDirectServiceSupabase } from '@/lib/supabase';
 import { retryRpc } from '@/lib/rpc-retry';
@@ -62,7 +62,7 @@ export default async function SEList({
   }
 
   return (
-    <Shell title="Social enterprises" activeHref="/social-enterprises">
+    <BrowseScope>
       <div className="mx-auto max-w-[1180px] px-6 py-6">
         <h1 className="font-display text-[22px] font-extrabold">Social enterprises</h1>
         {why ? (
@@ -89,6 +89,6 @@ export default async function SEList({
           />
         )}
       </div>
-    </Shell>
+    </BrowseScope>
   );
 }

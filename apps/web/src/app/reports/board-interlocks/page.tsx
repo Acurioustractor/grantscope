@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 import Link from 'next/link';
+import { entityHref } from '@/lib/entity-href';
 import { ReportCTA } from '../_components/report-cta';
 
 export const dynamic = 'force-dynamic';
@@ -33,12 +34,6 @@ import { money, fmt } from '@/lib/format';
 function pct(n: number, d: number): string {
   if (d === 0) return '0%';
   return `${((n / d) * 100).toFixed(1)}%`;
-}
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
 }
 
 /* ── types ── */
@@ -433,7 +428,7 @@ export default async function BoardInterlocksReport() {
                             <span key={c.abn}>
                               {ci > 0 && ', '}
                               <Link
-                                href={`/org/${slugify(c.name)}`}
+                                href={entityHref({ abn: c.abn, name: c.name })}
                                 className="hover:text-bauhaus-red underline decoration-dotted"
                               >
                                 {c.name}
@@ -537,7 +532,7 @@ export default async function BoardInterlocksReport() {
                           <span key={c.abn}>
                             {ci > 0 && ', '}
                             <Link
-                              href={`/org/${slugify(c.name)}`}
+                              href={entityHref({ abn: c.abn, name: c.name })}
                               className="hover:text-bauhaus-red underline decoration-dotted"
                             >
                               {c.name}
@@ -662,7 +657,7 @@ export default async function BoardInterlocksReport() {
                           <span key={c.abn}>
                             {ci > 0 && ', '}
                             <Link
-                              href={`/org/${slugify(c.name)}`}
+                              href={entityHref({ abn: c.abn, name: c.name })}
                               className="hover:text-bauhaus-red underline decoration-dotted"
                             >
                               {c.name}

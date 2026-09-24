@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 import Link from 'next/link';
+import { entityHref } from '@/lib/entity-href';
 import { ReportCTA } from '../_components/report-cta';
 
 export const dynamic = 'force-dynamic';
@@ -80,12 +81,6 @@ interface Stats {
   boardDonors: number;
 }
 
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-}
 
 async function getData() {
   const supabase = getServiceSupabase();
@@ -248,7 +243,7 @@ export default async function WhoRunsAustraliaReport() {
                   <tr key={e.gs_id} className={i % 2 === 0 ? 'bg-white' : 'bg-red-50/30'}>
                     <td className="p-3 font-black text-bauhaus-muted">{i + 1}</td>
                     <td className="p-3">
-                      <Link href={`/org/${slugify(e.canonical_name)}`} className="hover:text-bauhaus-red transition-colors">
+                      <Link href={entityHref({ gsId: e.gs_id, abn: e.abn, name: e.canonical_name })} className="hover:text-bauhaus-red transition-colors">
                         <div className="font-bold text-bauhaus-black">{e.canonical_name}</div>
                         <div className="text-xs text-bauhaus-muted">
                           {e.entity_type} &middot; {e.state || '\u2014'}

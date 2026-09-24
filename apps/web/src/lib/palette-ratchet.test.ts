@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 // Plain .mjs helper, shared with `node scripts/palette-scan.mjs --write` so the test and the
 // re-baseline command can never disagree about what counts as a raw palette class.
-import { scan } from '../../scripts/palette-scan.mjs';
+import { scan, scanShadows } from '../../scripts/palette-scan.mjs';
 
 /**
  * A RATCHET, not a ban.
@@ -63,5 +63,30 @@ describe('raw Tailwind colours do not increase', () => {
     // Not an assertion about the number — only that it never silently grows. The two tests above
     // do the enforcing; this one exists so the figure is printed on every run.
     expect(total).toBeLessThanOrEqual(baselineTotal);
+  });
+});
+
+/**
+ * Same ratchet for soft drop shadows on PUBLIC files (2026-09-24). DESIGN.md allows only hard
+ * offsets outside the signed-in shell; the old /entity profile alone carried 23 soft shadows and
+ * the census found them on every kind of public page. Re-baseline with the same command.
+ */
+const SHADOW_BASELINE = JSON.parse(
+  readFileSync(join(SRC, 'lib/shadow-baseline.json'), 'utf8'),
+) as Record<string, number>;
+
+describe('soft shadows on public pages do not increase', () => {
+  const current = scanShadows(SRC) as Record<string, number>;
+
+  it('no public file gains soft shadows, and no new public file has any', () => {
+    const worse = Object.entries(current)
+      .filter(([file, n]) => n > (SHADOW_BASELINE[file] ?? 0))
+      .map(([file, n]) => `${file}: ${SHADOW_BASELINE[file] ?? 0} → ${n}`);
+    expect(
+      worse,
+      'These public files gained soft shadows (shadow-sm/md/lg...). Public pages use a 4px black\n' +
+        'frame, or a hard offset shadow-[8px_8px_0_0_...]; see components/data and DESIGN.md.\n\n' +
+        worse.join('\n'),
+    ).toEqual([]);
   });
 });

@@ -29,7 +29,11 @@ export async function GET(req: NextRequest) {
   const base = parseSearchQuery({ q: sp.get('q'), state: sp.get('state'), limit: String(LANE_CAP) });
   if (!base) return NextResponse.json({ entities: [], foundations: [], grants: [], people: [], places: [] });
 
-  const wanted = fullScope ? (Object.keys(LANES) as (keyof typeof LANES)[]) : (['entities', 'grants'] as const);
+  // The typeahead (default scope) runs entities, people and grants. People were full-scope only, so
+  // typing a director's or donor's name into the header or home box found nothing.
+  const wanted = fullScope
+    ? (Object.keys(LANES) as (keyof typeof LANES)[])
+    : (['entities', 'people', 'grants'] as const);
   let results: SearchHit[][];
   try {
     results = await Promise.all(wanted.map((lane) => searchIndex({ ...base, kinds: LANES[lane] })));
@@ -47,7 +51,9 @@ export async function GET(req: NextRequest) {
     state: h.state,
     sourceCount: h.source_count ?? 0,
     revenue: h.money_in,
-    href: h.href ?? `/entity/${encodeURIComponent(h.id)}`,
+    // mv_search_index still stores /entity/<gs_id>; that page now redirects to /entities, the one
+    // profile page, so link there directly and skip the hop.
+    href: (h.href ?? `/entities/${encodeURIComponent(h.id)}`).replace(/^\/entity\//, '/entities/'),
   }));
   const grants = lane('grants').map((h) => ({
     id: h.id,
@@ -59,7 +65,14 @@ export async function GET(req: NextRequest) {
     source: h.meta,
     href: h.href ?? `/grants/${h.id}`,
   }));
-  if (!fullScope) return NextResponse.json({ entities, grants });
+  const people = lane('people').map((h) => ({
+    name: h.name,
+    boardCount: h.source_count ?? 0,
+    href: h.href ?? `/person/${encodeURIComponent(h.name)}`,
+  }));
+  // Same shape in both scopes: the home box spread `foundations` from this response and threw
+  // "searchResults.foundations is not iterable" on the first keystroke that returned anything.
+  if (!fullScope) return NextResponse.json({ entities, foundations: [], grants, people, places: [] });
 
   const foundations = lane('foundations').map((h) => ({
     id: h.id,
@@ -68,11 +81,6 @@ export async function GET(req: NextRequest) {
     totalGiving: h.money_out,
     focus: h.sector ? h.sector.split(', ').filter(Boolean) : null,
     href: h.href ?? `/foundations/${h.id}`,
-  }));
-  const people = lane('people').map((h) => ({
-    name: h.name,
-    boardCount: h.source_count ?? 0,
-    href: h.href ?? `/person/${encodeURIComponent(h.name)}`,
   }));
   const places = lane('places').map((h) => ({
     postcode: h.postcode ?? '',

@@ -40,7 +40,32 @@ interface GrantResult {
   href: string;
 }
 
-type SearchResult = EntityResult | FoundationResult | GrantResult;
+interface PersonResult {
+  name: string;
+  boardCount: number;
+  href: string;
+}
+
+type SearchResult = EntityResult | PersonResult | FoundationResult | GrantResult;
+
+interface SearchResults {
+  entities: EntityResult[];
+  people: PersonResult[];
+  foundations: FoundationResult[];
+  grants: GrantResult[];
+}
+
+// Every lane defaults to []: the route's lanes vary by scope, and spreading a missing one threw
+// "searchResults.foundations is not iterable" on the first result (2026-09-23).
+function toResults(data: Partial<Record<keyof SearchResults, unknown>>): SearchResults {
+  const list = <T,>(v: unknown) => (Array.isArray(v) ? (v as T[]) : []);
+  return {
+    entities: list<EntityResult>(data.entities),
+    people: list<PersonResult>(data.people),
+    foundations: list<FoundationResult>(data.foundations),
+    grants: list<GrantResult>(data.grants),
+  };
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AskResultData = { question: string; generated_sql: string; results: Record<string, any>[]; count: number; explanation: string };
@@ -110,7 +135,7 @@ export function UnifiedSearch() {
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState<'search' | 'ask'>('search');
   const [loading, setLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState<{ entities: EntityResult[]; foundations: FoundationResult[]; grants: GrantResult[] } | null>(null);
+  const [searchResults, setSearchResults] = useState<SearchResults | null>(null);
   const [askResult, setAskResult] = useState<AskResultData | null>(null);
   const [error, setError] = useState('');
   const [showSql, setShowSql] = useState(false);
@@ -143,7 +168,7 @@ export function UnifiedSearch() {
       fetch(`/api/global-search?q=${encodeURIComponent(query)}`, { signal: controller.signal })
         .then(res => res.json())
         .then(data => {
-          setSearchResults(data);
+          setSearchResults(toResults(data));
           setSelectedIndex(0);
           setLoading(false);
         })
@@ -201,7 +226,7 @@ export function UnifiedSearch() {
     }
 
     const allResults: SearchResult[] = searchResults
-      ? [...searchResults.entities, ...searchResults.foundations, ...searchResults.grants]
+      ? [...searchResults.entities, ...searchResults.people, ...searchResults.foundations, ...searchResults.grants]
       : [];
 
     if (e.key === 'ArrowDown') {
@@ -234,7 +259,7 @@ export function UnifiedSearch() {
   }, [handleAskSubmit]);
 
   const allResults: SearchResult[] = searchResults
-    ? [...searchResults.entities, ...searchResults.foundations, ...searchResults.grants]
+    ? [...searchResults.entities, ...searchResults.people, ...searchResults.foundations, ...searchResults.grants]
     : [];
   const hasSearchResults = allResults.length > 0;
   const hasAskResults = askResult?.results && askResult.results.length > 0;
@@ -254,7 +279,7 @@ export function UnifiedSearch() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search entities or ask a question..."
+            placeholder="Search organisations, people, or ask a question..."
             className="flex-1 px-4 py-4 text-base font-bold text-bauhaus-black placeholder:text-bauhaus-muted placeholder:font-medium outline-none bg-transparent"
             disabled={loading && mode === 'ask'}
           />
@@ -353,6 +378,39 @@ export function UnifiedSearch() {
             </div>
           )}
 
+          {/* People */}
+          {searchResults!.people.length > 0 && (
+            <div>
+              <div className="px-4 pt-3 pb-1 border-t-2 border-bauhaus-black/5">
+                <span className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">People</span>
+              </div>
+              {searchResults!.people.map((r, i) => {
+                const flatIndex = searchResults!.entities.length + i;
+                return (
+                  <button
+                    key={`${r.name}-${i}`}
+                    onClick={() => router.push(r.href)}
+                    className={`w-full text-left px-4 py-3 flex items-center justify-between transition-colors cursor-pointer ${
+                      selectedIndex === flatIndex ? 'bg-bauhaus-canvas' : 'hover:bg-bauhaus-canvas/50'
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-bauhaus-black truncate">{r.name}</div>
+                      {r.boardCount > 0 && (
+                        <div className="text-[11px] text-bauhaus-muted font-medium">
+                          {r.boardCount} board seat{r.boardCount !== 1 ? 's' : ''}
+                        </div>
+                      )}
+                    </div>
+                    <span className={`ml-3 shrink-0 text-[10px] font-black px-2 py-0.5 border-2 uppercase tracking-widest ${typeBadgeColor('person')}`}>
+                      Person
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* Foundations */}
           {searchResults!.foundations.length > 0 && (
             <div>
@@ -360,7 +418,7 @@ export function UnifiedSearch() {
                 <span className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">Foundations</span>
               </div>
               {searchResults!.foundations.map((r, i) => {
-                const flatIndex = searchResults!.entities.length + i;
+                const flatIndex = searchResults!.entities.length + searchResults!.people.length + i;
                 return (
                   <button
                     key={r.id}
@@ -395,7 +453,7 @@ export function UnifiedSearch() {
                 <span className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest">Grants</span>
               </div>
               {searchResults!.grants.map((r, i) => {
-                const flatIndex = searchResults!.entities.length + searchResults!.foundations.length + i;
+                const flatIndex = searchResults!.entities.length + searchResults!.people.length + searchResults!.foundations.length + i;
                 return (
                   <button
                     key={r.id}

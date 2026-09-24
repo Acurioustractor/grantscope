@@ -1,9 +1,8 @@
+import { money } from '@/lib/format';
+
+/** The site's one money format; on a profile, zero also reads as "\u2014" (nothing recorded). */
 export function formatMoney(amount: number | null): string {
-  if (!amount) return '\u2014';
-  if (amount >= 1_000_000_000) return `$${(amount / 1_000_000_000).toFixed(1)}B`;
-  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
-  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`;
-  return `$${amount.toLocaleString()}`;
+  return amount ? money(amount) : '\u2014';
 }
 
 export function formatPercent(value: number | null | undefined): string {
@@ -56,8 +55,8 @@ export function entityTypeBadge(type: string): string {
     foundation: 'border-bauhaus-blue bg-link-light text-bauhaus-blue',
     company: 'border-bauhaus-black/30 bg-bauhaus-canvas text-bauhaus-black',
     government_body: 'border-bauhaus-yellow bg-warning-light text-bauhaus-black',
-    indigenous_corp: 'border-bauhaus-red bg-error-light text-bauhaus-red',
-    political_party: 'border-bauhaus-red bg-error-light text-bauhaus-red',
+    indigenous_corp: 'border-bauhaus-red bg-danger-light text-bauhaus-red',
+    political_party: 'border-bauhaus-red bg-danger-light text-bauhaus-red',
     social_enterprise: 'border-money bg-money-light text-money',
   };
   return styles[type] || 'border-bauhaus-black/20 bg-bauhaus-canvas text-bauhaus-muted';

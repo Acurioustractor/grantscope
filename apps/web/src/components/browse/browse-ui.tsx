@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { money as siteMoney } from '@/lib/format';
 
 /**
  * Shared scaffolding for every kind browser: the money formatter, the drawer label, the
@@ -9,14 +10,15 @@ import Link from 'next/link';
  * found all four browsers redefining these verbatim — columns stay per-kind, chrome is shared.
  */
 
+/**
+ * The site's one money format ($4.1B, $843.1M, $56K), so a browse table and a profile print the
+ * same figure the same way (this printed "$4.1bn" while every report printed "$4.1B"). Zero or
+ * nothing reads as "—" in a table row. UX audit pass 2, F8: below $1K show the actual dollars,
+ * rounded, never "$0k".
+ */
 export function money(n: number | null | undefined): string {
   if (!n || n <= 0) return '—';
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}bn`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}m`;
-  // UX audit pass 2, F8: rounding to thousands rendered anything under $500 as "$0k", which reads
-  // as "no money" when it is in fact a small amount. Below $1k, show the actual dollars.
-  if (n >= 1e3) return `$${Math.round(n / 1e3)}k`;
-  return `$${Math.round(n).toLocaleString('en-AU')}`;
+  return siteMoney(n >= 1e3 ? n : Math.round(n));
 }
 
 export function L({ children }: { children: React.ReactNode }) {

@@ -26,13 +26,14 @@ export default function PersonSearchPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
+  const [basis, setBasis] = useState('');
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>(null);
 
   // Load top people on mount
   useEffect(() => {
     fetch('/api/data/person?limit=100')
       .then(r => r.json())
-      .then(data => { setPeople(data.results || []); setLoading(false); })
+      .then(data => { setPeople(data.results || []); setBasis(data.basis || ''); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
@@ -52,7 +53,7 @@ export default function PersonSearchPage() {
     searchTimeout.current = setTimeout(() => {
       fetch(`/api/data/person?q=${encodeURIComponent(q)}&limit=100`)
         .then(r => r.json())
-        .then(data => { setPeople(data.results || []); setSearching(false); })
+        .then(data => { setPeople(data.results || []); setBasis(data.basis || ''); setSearching(false); })
         .catch(() => setSearching(false));
     }, 300);
   }, []);
@@ -77,7 +78,8 @@ export default function PersonSearchPage() {
           <h1 className="text-3xl font-black uppercase tracking-wider">Who Runs Australia?</h1>
           <p className="text-gray-400 text-sm mt-1 max-w-2xl">
             People who sit on multiple boards, control procurement dollars, receive justice funding, or make political donations.
-            Ranked by how many funding systems they span, then total dollars across all connected entities.
+            Ranked by how many funding systems they span, then by their share of the money through the
+            organisations they sit on.
           </p>
         </div>
       </div>
@@ -97,6 +99,8 @@ export default function PersonSearchPage() {
           )}
         </div>
 
+        {basis && <p className="mb-2 text-xs font-bold text-bauhaus-muted">{basis}</p>}
+
         {/* Results */}
         <div className="bg-white border-2 border-bauhaus-black shadow-sm overflow-hidden">
           {loading ? (
@@ -111,18 +115,18 @@ export default function PersonSearchPage() {
                   <th className="text-left py-3 pl-4 pr-2 font-black uppercase tracking-widest text-[10px] text-gray-400 w-10">#</th>
                   <th className="text-left py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">Name</th>
                   <th className="text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">Board Seats</th>
-                  <th className="text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">Orgs</th>
+                  <th className="text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">ACCO Boards</th>
                   <th className="text-left py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">Entity Types</th>
-                  <th className="text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">Procurement $</th>
-                  <th className="text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">Justice $</th>
-                  <th className="text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">Donations $</th>
-                  <th className="text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">Total $</th>
+                  <th className="text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">Procurement Share</th>
+                  <th className="text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">Justice Share</th>
+                  <th className="text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">Donations Share</th>
+                  <th className="text-right py-3 pr-4 font-black uppercase tracking-widest text-[10px] text-gray-400">Total Share</th>
                 </tr>
               </thead>
               <tbody>
                 {people.map((p, i) => (
                   <tr
-                    key={p.person_name_normalised}
+                    key={p.identity_key || p.person_name_normalised}
                     className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}
                   >
                     <td className="py-3 pl-4 pr-2 text-xs text-gray-400 font-mono">{i + 1}</td>

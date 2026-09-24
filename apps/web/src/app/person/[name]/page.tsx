@@ -3,11 +3,15 @@ import { notFound } from 'next/navigation';
 import { getServiceSupabase } from '@/lib/supabase';
 import { safe, esc } from '@/lib/sql';
 import { money } from '@/lib/format';
-import { TH, TH_R, TD, TD_R, THEAD, ROW } from '@/lib/table-styles';
+import { entityHref } from '@/lib/entity-href';
+import { Section, StatRow, Stat, DataTable, Callout, SourceLine } from '@/components/data';
 
 export const revalidate = 3600;
 
-// One disambiguated identity under a (possibly shared) name — from mv_person_identity_influence.
+// One disambiguated identity under a (possibly shared) name — from mv_person_identity_influence_v2.
+// The dollar fields are the ATTRIBUTED columns: each organisation's money split evenly across its
+// directors. v1 gave every director the organisation's whole total, so eight co-directors each
+// "held" the same 7.57bn. Neither version is money the person received; the labels say so.
 interface Identity {
   identity_key: string;
   person_name: string;
@@ -58,6 +62,8 @@ interface Position {
 const entMoney = (e: IdentityEntity) =>
   Number(e.justice_dollars || 0) + Number(e.procurement_dollars || 0) + Number(e.donation_dollars || 0);
 
+const CHIP = 'inline-block border-2 px-2 py-0.5 text-[11px] font-black uppercase tracking-widest';
+
 export async function generateMetadata({ params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
   const decoded = decodeURIComponent(name).replace(/-/g, ' ');
@@ -85,9 +91,10 @@ export default async function PersonPage({
   // blocks last, then by cross-system breadth + influence.
   const identities = (await safe(supabase.rpc('exec_sql', {
     query: `SELECT identity_key, person_name, board_count, acco_boards, entity_types,
-              total_procurement, total_contracts, total_justice, total_donations,
-              influence_score, financial_system_count, is_nominee_block
-       FROM mv_person_identity_influence
+              attributed_procurement AS total_procurement, total_contracts,
+              attributed_justice AS total_justice, attributed_donations AS total_donations,
+              influence_score_attributed AS influence_score, financial_system_count, is_nominee_block
+       FROM mv_person_identity_influence_v2
        WHERE person_name_normalised = '${esc(normalised)}'
        ORDER BY is_nominee_block ASC, financial_system_count DESC NULLS LAST, influence_score DESC NULLS LAST`,
   }))) as Identity[] | null;
@@ -114,65 +121,63 @@ export default async function PersonPage({
     }
 
     return (
-      <main className="min-h-screen bg-gray-50 text-bauhaus-black">
-        <div className="border-b-4 border-bauhaus-black bg-bauhaus-black text-white">
-          <div className="mx-auto max-w-5xl px-4 py-8">
-            <p className="text-sm font-bold uppercase tracking-widest text-bauhaus-red">CivicGraph Person Disambiguation</p>
-            <h1 className="text-3xl font-black uppercase tracking-wider mt-2">{displayName}</h1>
-            <p className="text-gray-300 text-sm mt-2 max-w-2xl">
-              This name maps to <strong>{ids.length}</strong> distinct identities in the record. Board memberships
-              were split by a co-director graph; trustee/nominee blocks (one firm&apos;s officers listed across many
-              administered charities) are flagged and kept out of individual rankings. Pick an identity to view.
-            </p>
-          </div>
-        </div>
+      <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
+        <div className="mx-auto max-w-5xl px-4 py-8">
+          <p className="text-[11px] font-black uppercase tracking-widest text-bauhaus-red">
+            {ids.length} people share this name
+          </p>
+          <h1 className="mt-2 text-2xl sm:text-3xl font-black text-bauhaus-black">{displayName}</h1>
+          <p className="mt-2 max-w-2xl text-sm text-bauhaus-muted">
+            Board records under this name split into {ids.length} separate people, grouped by who they sit on
+            boards with. Trustee and nominee blocks (one firm&apos;s officers listed across many charities it
+            administers) are marked and kept out of individual rankings. Choose a person to see their profile.
+          </p>
 
-        <div className="mx-auto max-w-5xl px-4 py-8 space-y-4">
-          {ids.map((iden) => {
-            const ents = (entByIdentity.get(iden.identity_key) ?? []).sort((a, b) => entMoney(b) - entMoney(a));
-            const topOrgs = ents.slice(0, 3);
-            const totalMoney =
-              Number(iden.total_procurement || 0) + Number(iden.total_justice || 0) + Number(iden.total_donations || 0);
-            return (
-              <Link
-                key={iden.identity_key}
-                href={`/person/${encodeURIComponent(name)}?id=${encodeURIComponent(iden.identity_key)}`}
-                className={`block border-2 p-5 transition-colors ${
-                  iden.is_nominee_block
-                    ? 'border-gray-300 bg-gray-100 hover:bg-gray-200'
-                    : 'border-bauhaus-black bg-white hover:bg-blue-50/40'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-black uppercase tracking-wide">{displayName}</span>
-                      {iden.is_nominee_block ? (
-                        <span className="text-[9px] px-1.5 py-0.5 bg-gray-400 text-white rounded-sm font-bold uppercase tracking-wider">
-                          Trustee / nominee block
-                        </span>
-                      ) : iden.financial_system_count > 0 ? (
-                        <span className="text-[9px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-sm font-bold">
-                          {iden.financial_system_count} fin. sys
-                        </span>
-                      ) : null}
+          <div className="mt-6 space-y-3">
+            {ids.map((iden) => {
+              const ents = (entByIdentity.get(iden.identity_key) ?? []).sort((a, b) => entMoney(b) - entMoney(a));
+              const topOrgs = ents.slice(0, 3);
+              const totalMoney =
+                Number(iden.total_procurement || 0) + Number(iden.total_justice || 0) + Number(iden.total_donations || 0);
+              return (
+                <Link
+                  key={iden.identity_key}
+                  href={`/person/${encodeURIComponent(name)}?id=${encodeURIComponent(iden.identity_key)}`}
+                  className={`block border-4 p-4 transition-colors ${
+                    iden.is_nominee_block
+                      ? 'border-bauhaus-muted bg-bauhaus-canvas hover:bg-white'
+                      : 'border-bauhaus-black bg-white hover:bg-link-light'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-black text-bauhaus-black">{displayName}</span>
+                        {iden.is_nominee_block ? (
+                          <span className={`${CHIP} border-bauhaus-muted text-bauhaus-muted`}>Trustee or nominee block</span>
+                        ) : iden.financial_system_count > 0 ? (
+                          <span className={`${CHIP} border-bauhaus-black text-bauhaus-black`}>
+                            {iden.financial_system_count} of 3 money systems
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 truncate text-sm text-bauhaus-muted">
+                        {topOrgs.map((o) => o.entity_name).join(' · ') || 'No linked organisations'}
+                        {ents.length > 3 && <span> +{ents.length - 3} more</span>}
+                      </p>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1 truncate">
-                      {topOrgs.map((o) => o.entity_name).join(' · ') || 'No linked organisations'}
-                      {ents.length > 3 && <span className="text-gray-400"> +{ents.length - 3} more</span>}
-                    </p>
+                    <div className="shrink-0 text-right">
+                      <p className="font-mono text-lg font-black leading-none tabular-nums">{iden.board_count}</p>
+                      <p className="mt-0.5 text-[11px] font-black uppercase tracking-widest text-bauhaus-muted">boards</p>
+                      {totalMoney > 0 && (
+                        <p className="mt-1 font-mono text-xs tabular-nums text-money">{money(totalMoney)} their share</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-mono font-black text-lg leading-none">{iden.board_count}</p>
-                    <p className="text-[9px] uppercase tracking-widest text-gray-400 mt-0.5">boards</p>
-                    {totalMoney > 0 && (
-                      <p className="font-mono text-xs text-green-700 mt-1">{money(totalMoney)}</p>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </main>
     );
@@ -202,206 +207,153 @@ export default async function PersonPage({
   const entityTypes = new Set((selected.entity_types ?? []).filter(Boolean));
   const dataSources = [...new Set(positionList.map((p) => p.source).filter(Boolean))];
 
+  // Headline figures. The money ones are "their share": each board's money divided evenly among
+  // its directors (v2 attributed columns), never money this person received.
+  const stats = [
+    <Stat
+      key="influence"
+      label="Influence score"
+      value={Number(selected.influence_score).toFixed(0)}
+      sub={`in ${selected.financial_system_count} of 3 money systems: contracts, justice funding, donations`}
+    />,
+    <Stat
+      key="boards"
+      label="Board seats"
+      value={selected.board_count}
+      sub={selected.acco_boards > 0 ? `${selected.acco_boards} community-controlled` : undefined}
+    />,
+  ];
+  if (Number(selected.total_procurement) > 0) {
+    stats.push(
+      <Stat
+        key="contracts"
+        label="Contracts, their share"
+        value={money(Number(selected.total_procurement))}
+        tone="money"
+        sub={`${Number(selected.total_contracts).toLocaleString()} ${Number(selected.total_contracts) === 1 ? 'contract' : 'contracts'} across their boards`}
+      />,
+    );
+  }
+  if (Number(selected.total_justice) > 0) {
+    stats.push(
+      <Stat key="justice" label="Justice funding, their share" value={money(Number(selected.total_justice))} tone="money" />,
+    );
+  }
+  if (Number(selected.total_donations) > 0) {
+    stats.push(
+      <Stat key="donations" label="Donations, their share" value={money(Number(selected.total_donations))} tone="red" />,
+    );
+  }
+  const cols = Math.min(5, Math.max(2, stats.length)) as 2 | 3 | 4 | 5;
+
+  const orgMoney = (n: number, tone?: 'red') =>
+    Number(n) > 0 ? <span className={tone === 'red' ? 'text-bauhaus-red' : undefined}>{money(Number(n))}</span> : '—';
+
   return (
-    <main className="min-h-screen bg-gray-50 text-bauhaus-black">
-      {/* Header */}
-      <div className="border-b-4 border-bauhaus-black bg-bauhaus-black text-white">
-        <div className="mx-auto max-w-7xl px-4 py-8">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-bold uppercase tracking-widest text-bauhaus-red">CivicGraph Person Profile</p>
-            <div className="flex gap-2">
-              <Link href="/entity" className="text-xs text-gray-400 hover:text-white transition-colors border border-gray-600 px-3 py-1">
-                Entity Search
-              </Link>
-              <Link href="/entity/top" className="text-xs text-gray-400 hover:text-white transition-colors border border-gray-600 px-3 py-1">
-                Power Index
-              </Link>
-            </div>
-          </div>
-          {/* Disambiguation breadcrumb — only when the name has siblings */}
+    <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
+      <div className="mx-auto max-w-5xl px-4 py-8">
+        <div className="flex flex-wrap items-center gap-4">
+          <Link href="/search" className="text-xs font-black uppercase tracking-widest text-bauhaus-muted hover:text-bauhaus-black">
+            &larr; Search
+          </Link>
           {ids.length > 1 && (
-            <Link
-              href={`/person/${encodeURIComponent(name)}`}
-              className="inline-block mb-2 text-[11px] text-gray-400 hover:text-white underline"
-            >
-              &larr; 1 of {ids.length} identities under &ldquo;{displayName}&rdquo; — view all
+            <Link href={`/person/${encodeURIComponent(name)}`} className="text-xs font-bold text-bauhaus-blue hover:underline">
+              1 of {ids.length} people named &ldquo;{displayName}&rdquo;: see all
             </Link>
           )}
-          <h1 className="text-3xl font-black uppercase tracking-wider">{selected.person_name}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-gray-300">
-            <span className="text-[10px] px-2 py-0.5 bg-white/10 border border-white/20 rounded-sm font-bold uppercase tracking-wider">
-              Person
-            </span>
-            {selected.board_count > 0 && (
-              <span className="text-gray-400">{selected.board_count} board seats</span>
-            )}
-            {selected.financial_system_count > 0 && (
-              <span className="text-gray-400">{selected.financial_system_count} financial systems</span>
-            )}
-          </div>
-          {/* Entity type badges */}
-          {entityTypes.size > 0 && (
-            <div className="mt-3 flex gap-1.5">
-              {[...entityTypes].map((t) => (
-                <span key={t} className="text-[9px] px-2 py-1 bg-white/5 border border-white/20 text-gray-400 font-bold uppercase tracking-wider rounded-sm">
-                  {t}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
-      </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-8 space-y-8">
-        {/* Nominee-block notice */}
+        <div className="mt-4 mb-6">
+          <h1 className="text-2xl sm:text-3xl font-black text-bauhaus-black">{selected.person_name}</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className={`${CHIP} border-bauhaus-black text-bauhaus-black`}>Person</span>
+            {[...entityTypes].map((t) => (
+              <span key={t} className={`${CHIP} border-bauhaus-black/30 text-bauhaus-muted`}>{t}</span>
+            ))}
+          </div>
+        </div>
+
         {selected.is_nominee_block && (
-          <section className="bg-gray-100 border-2 border-gray-400 p-5">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl shrink-0">&#9888;</span>
-              <div>
-                <h2 className="text-sm font-black uppercase tracking-widest text-gray-700">
-                  Trustee / Nominee Block — Not an Individual
-                </h2>
-                <p className="text-xs text-gray-600 mt-1">
-                  This cluster of {selected.board_count} board seats is a trustee firm&apos;s officers listed as
-                  responsible persons across many administered charities, not a single person. It is excluded from
-                  individual influence rankings.
-                </p>
-              </div>
-            </div>
-          </section>
+          <div className="mb-6">
+            <Callout tone="caution" title="Trustee or nominee block, not one person">
+              These {selected.board_count} board seats belong to a trustee firm&apos;s officers, listed as responsible
+              persons across many charities it administers. They are kept out of individual influence rankings.
+            </Callout>
+          </div>
         )}
 
-        {/* Stats row */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="bg-white border-2 border-bauhaus-black shadow-sm p-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Influence Score</p>
-            <p className="text-3xl font-black mt-1">{Number(selected.influence_score).toFixed(0)}</p>
-          </div>
-          <div className="bg-white border border-gray-200 shadow-sm p-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Board Seats</p>
-            <p className="text-2xl font-black mt-1">{selected.board_count}</p>
-            {selected.acco_boards > 0 && <p className="text-xs text-gray-400 mt-1">{selected.acco_boards} community-controlled</p>}
-          </div>
-          {Number(selected.total_procurement) > 0 && (
-            <div className="bg-white border border-gray-200 shadow-sm p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Procurement $</p>
-              <p className="text-2xl font-black mt-1 text-green-700">{money(Number(selected.total_procurement))}</p>
-              <p className="text-xs text-gray-400 mt-1">{Number(selected.total_contracts)} contracts</p>
-            </div>
-          )}
-          {Number(selected.total_justice) > 0 && (
-            <div className="bg-white border border-gray-200 shadow-sm p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Justice $</p>
-              <p className="text-2xl font-black mt-1 text-green-700">{money(Number(selected.total_justice))}</p>
-            </div>
-          )}
-          {Number(selected.total_donations) > 0 && (
-            <div className="bg-white border border-gray-200 shadow-sm p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Political Donations</p>
-              <p className="text-2xl font-black mt-1 text-bauhaus-red">{money(Number(selected.total_donations))}</p>
-            </div>
-          )}
-        </div>
+        <StatRow cols={cols}>{stats}</StatRow>
+        {totalFinancial > 0 && (
+          <p className="mt-2 mb-6 text-xs text-bauhaus-muted">
+            &ldquo;Their share&rdquo; is each organisation&rsquo;s public money divided evenly among its
+            directors. It shows the scale of what their boards control, not money this person received.
+          </p>
+        )}
 
-        {/* Interlock alert */}
         {!selected.is_nominee_block && selected.board_count > 3 && (
-          <section className="bg-amber-50 border-2 border-amber-400 p-5">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl shrink-0">&#9888;</span>
-              <div>
-                <h2 className="text-sm font-black uppercase tracking-widest text-amber-800">
-                  Board Interlock — {selected.board_count} Seats
-                </h2>
-                <p className="text-xs text-amber-700 mt-1">
-                  This person holds positions across {selected.board_count} organisations
-                  {communityControlled.length > 0 && ` including ${communityControlled.length} community-controlled`}.
-                  {totalFinancial > 0 && ` Combined financial footprint: ${money(totalFinancial)}.`}
-                </p>
-              </div>
-            </div>
-          </section>
+          <div className="mt-6 mb-8">
+            <Callout tone="alert" title={`Board interlock: ${selected.board_count} seats`}>
+              Holds positions across {selected.board_count} organisations
+              {communityControlled.length > 0 && `, including ${communityControlled.length} community-controlled`}.
+              {totalFinancial > 0 && ` Their even share of those organisations' public money: ${money(totalFinancial)}.`}
+            </Callout>
+          </div>
         )}
 
-        {/* Positions table */}
         {positionList.length > 0 && (
-          <section>
-            <h2 className="text-lg font-black uppercase tracking-widest text-bauhaus-black mb-3">
-              Board Positions
-              <span className="text-xs font-normal text-gray-400 ml-2 normal-case tracking-normal">
-                {positionList.length} positions
-              </span>
-            </h2>
-            <div className="bg-white border border-gray-200 rounded-sm shadow-sm overflow-hidden">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className={THEAD}>
-                    <th className={`${TH} pl-4`}>Organisation</th>
-                    <th className={TH}>Type</th>
-                    <th className={TH}>Role</th>
-                    <th className={TH_R}>Procurement $</th>
-                    <th className={TH_R}>Justice $</th>
-                    <th className={TH_R}>Donations $</th>
-                    <th className={TH_R}>Influence</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {positionList.map((p, i) => (
-                    <tr key={`${p.entity_name}-${i}`} className={ROW(i)}>
-                      <td className={`${TD} pl-4`}>
-                        <Link href={`/entity/${encodeURIComponent(p.gs_id)}`} className="font-medium text-bauhaus-blue hover:underline">
+          <div className="mt-8">
+            <Section title={`Board positions (${positionList.length})`}>
+              <DataTable
+                caption="Board positions"
+                rows={positionList}
+                rowKey={(p, i) => `${p.gs_id}-${i}`}
+                columns={[
+                  {
+                    key: 'org',
+                    label: 'Organisation',
+                    cell: (p) => (
+                      <>
+                        <Link
+                          href={entityHref({ gsId: p.gs_id, abn: p.entity_abn, name: p.entity_name })}
+                          className="font-bold text-bauhaus-blue hover:underline"
+                        >
                           {p.entity_name}
                         </Link>
                         {p.is_community_controlled && (
-                          <span className="ml-1.5 text-[9px] px-1.5 py-0.5 bg-bauhaus-red/10 text-bauhaus-red rounded-sm font-bold">CC</span>
+                          <span className={`${CHIP} ml-2 border-bauhaus-red text-bauhaus-red`} title="Community-controlled">CC</span>
                         )}
-                      </td>
-                      <td className={TD}>
-                        <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-sm border border-gray-200">
-                          {p.entity_type}
-                        </span>
-                      </td>
-                      <td className={`${TD} text-xs text-gray-500`}>{p.role_type}</td>
-                      <td className={`${TD_R} font-mono`}>
-                        {Number(p.procurement_dollars) > 0 ? money(Number(p.procurement_dollars)) : '—'}
-                      </td>
-                      <td className={`${TD_R} font-mono`}>
-                        {Number(p.justice_dollars) > 0 ? money(Number(p.justice_dollars)) : '—'}
-                      </td>
-                      <td className={`${TD_R} font-mono`}>
-                        {Number(p.donation_dollars) > 0 ? (
-                          <span className="text-bauhaus-red">{money(Number(p.donation_dollars))}</span>
-                        ) : '—'}
-                      </td>
-                      <td className={`${TD_R} font-mono font-bold`}>
-                        {Number(p.influence_score).toFixed(0)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+                      </>
+                    ),
+                  },
+                  { key: 'type', label: 'Type', cell: (p) => <span className="text-xs uppercase tracking-wider text-bauhaus-muted">{p.entity_type}</span> },
+                  { key: 'role', label: 'Role', cell: (p) => <span className="text-xs text-bauhaus-muted">{(p.role_type ?? '').replace(/_/g, ' ')}</span> },
+                  { key: 'contracts', label: 'Org contracts', align: 'right', cell: (p) => orgMoney(p.procurement_dollars) },
+                  { key: 'justice', label: 'Org justice funding', align: 'right', cell: (p) => orgMoney(p.justice_dollars) },
+                  { key: 'donations', label: 'Org donations', align: 'right', cell: (p) => orgMoney(p.donation_dollars, 'red') },
+                  { key: 'influence', label: 'Influence', align: 'right', cell: (p) => <span className="font-bold">{Number(p.influence_score).toFixed(0)}</span> },
+                ]}
+              />
+              <p className="mt-2 text-xs text-bauhaus-muted">
+                The money columns are each organisation&rsquo;s own totals, not this person&rsquo;s.
+              </p>
+            </Section>
+          </div>
         )}
 
-        {/* Data Sources */}
-        <footer className="border-t-2 border-bauhaus-black pt-6 pb-8">
-          <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3">Data Sources</h3>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {dataSources.map((s: string) => (
-              <span key={s} className="text-[10px] px-2 py-1 bg-green-100 text-green-700 border border-green-200 font-bold uppercase tracking-wider rounded-sm">
-                {s}
-              </span>
-            ))}
-          </div>
-          <p className="text-xs text-gray-400">
-            Sources: mv_person_identity_influence, mv_person_identity_network, mv_person_entity_network, person_roles, gs_entities.
-          </p>
-          <p className="mt-2 text-xs flex gap-4">
-            <Link href="/person" className="text-gray-400 underline hover:text-bauhaus-red">All People</Link>
-            <Link href="/entity" className="text-gray-400 underline hover:text-bauhaus-red">Entity Search</Link>
-            <Link href="/entity/top" className="text-gray-400 underline hover:text-bauhaus-red">Power Index</Link>
-            <Link href="/graph" className="text-gray-400 underline hover:text-bauhaus-red">Graph</Link>
+        <footer className="mt-8 border-t-4 border-bauhaus-black pt-4 pb-8">
+          <SourceLine
+            sources={[
+              ...dataSources,
+              'mv_person_identity_influence_v2',
+              'mv_person_identity_network',
+              'mv_person_entity_network',
+            ]}
+          />
+          <p className="mt-3 flex flex-wrap gap-4 text-xs font-bold">
+            <Link href="/person" className="text-bauhaus-blue hover:underline">All people</Link>
+            <Link href="/search" className="text-bauhaus-blue hover:underline">Search</Link>
+            <Link href="/entity/top" className="text-bauhaus-blue hover:underline">Power index</Link>
+            <Link href="/graph" className="text-bauhaus-blue hover:underline">Graph</Link>
           </p>
         </footer>
       </div>

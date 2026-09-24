@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import type { Entity, MvEntityStats, CharityEnrichment, SocialEnterpriseEnrichment } from '../_lib/types';
-import { entityTypeLabel, entityTypeBadge, confidenceBadge, formatMoney } from '../_lib/formatters';
+import type { Entity, MvEntityStats, CharityEnrichment, SocialEnterpriseEnrichment, DonationsMeta } from '../_lib/types';
+import { entityTypeLabel, entityTypeBadge, confidenceBadge, formatMoney, datasetLabel } from '../_lib/formatters';
+import { StatRow, Stat } from '@/components/data';
 import { DueDiligenceButton } from './due-diligence-button';
 import { WatchButton } from './watch-button';
 
@@ -44,9 +45,19 @@ interface EntityHeaderProps {
   socialEnterprise: SocialEnterpriseEnrichment | undefined;
   returnHref: string;
   returnLabel: string;
+  /** Donations made, from the page's own filtered query. Keeps the header and the donations section on one number. */
+  donationsTotal?: number;
+  /** What donationsTotal is made of: count, recipients, year span. */
+  donationsMeta?: DonationsMeta | null;
+  /** Other names the organisation is recorded under (gs_entity_aliases). */
+  aliases?: string[];
 }
 
-export function EntityHeader({ entity: e, stats, charity, socialEnterprise, returnHref, returnLabel }: EntityHeaderProps) {
+const ALIASES_SHOWN = 4;
+
+export function EntityHeader({
+  entity: e, stats, donationsTotal, donationsMeta, aliases = [], charity, socialEnterprise, returnHref, returnLabel,
+}: EntityHeaderProps) {
   const badge = confidenceBadge(e.confidence);
   const isDonorContractor =
     stats?.type_breakdown['donation:outbound'] && stats?.type_breakdown['contract:inbound'];
@@ -62,8 +73,27 @@ export function EntityHeader({ entity: e, stats, charity, socialEnterprise, retu
     stats?.type_breakdown['donation:outbound'] || stats?.type_breakdown['donation:inbound'];
   const contractBreakdown =
     stats?.type_breakdown['contract:outbound'] || stats?.type_breakdown['contract:inbound'];
-  const donationTotal = donationBreakdown ? donationBreakdown.amount : 0;
+  // A donor's header used the graph's donation edges while the section used political_donations
+  // filtered to 'donation received'; on 2026-09-23 Qantas read $600K above and $24K below. For a
+  // donor, use the section's figure. A party (inbound only) keeps the graph's received total.
+  const isDonor = !!stats?.type_breakdown['donation:outbound'] || (donationsTotal ?? 0) > 0;
+  const donationTotal = donationsTotal !== undefined && isDonor
+    ? donationsTotal
+    : donationBreakdown ? donationBreakdown.amount : 0;
   const contractTotal = contractBreakdown ? contractBreakdown.amount : 0;
+
+  // Each headline says what it is made of, as OpenSecrets and USAspending do ("from 104 transactions").
+  const years = Object.keys(stats?.year_distribution ?? {}).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  const relationshipSpan = years.length >= 2 ? `${years[0]}–${years[years.length - 1]}` : years.length === 1 ? String(years[0]) : null;
+  const sourceNames = (e.source_datasets ?? []).map(datasetLabel);
+  const donationsLine = donationTotal > 0 && donationsMeta
+    ? `${donationsMeta.count.toLocaleString()} ${donationsMeta.count === 1 ? 'donation' : 'donations'} to ${donationsMeta.recipients}${donationsMeta.recipientsCapped ? '+' : ''} ${donationsMeta.recipients === 1 ? 'recipient' : 'recipients'}${donationsMeta.fromYear ? `, ${donationsMeta.fromYear === donationsMeta.toYear ? donationsMeta.fromYear : `${donationsMeta.fromYear}–${donationsMeta.toYear}`}` : ''}`
+    : donationTotal === 0 && e.latest_revenue && e.financial_year
+      ? `latest reported, ${e.financial_year}`
+      : null;
+  const contractLine = contractTotal > 0 && contractBreakdown
+    ? `from ${contractBreakdown.count.toLocaleString()} ${contractBreakdown.count === 1 ? 'contract' : 'contracts'}`
+    : null;
 
   return (
     <>
@@ -75,12 +105,12 @@ export function EntityHeader({ entity: e, stats, charity, socialEnterprise, retu
         <div className="flex items-start gap-3 flex-wrap">
           <h1 className="text-2xl sm:text-3xl font-black text-bauhaus-black">{e.canonical_name}</h1>
           {isDonorContractor && (
-            <span className="text-[11px] font-black px-2.5 py-1 border-2 border-bauhaus-red bg-error-light text-bauhaus-red uppercase tracking-widest whitespace-nowrap">
+            <span className="text-[11px] font-black px-2.5 py-1 border-2 border-bauhaus-red bg-danger-light text-bauhaus-red uppercase tracking-widest whitespace-nowrap">
               Donor-Contractor
             </span>
           )}
           {concentrationRisk && (
-            <span className="text-[11px] font-black px-2.5 py-1 border-2 border-bauhaus-red bg-error-light text-bauhaus-red uppercase tracking-widest whitespace-nowrap">
+            <span className="text-[11px] font-black px-2.5 py-1 border-2 border-bauhaus-red bg-danger-light text-bauhaus-red uppercase tracking-widest whitespace-nowrap">
               Concentration Risk
             </span>
           )}
@@ -114,43 +144,57 @@ export function EntityHeader({ entity: e, stats, charity, socialEnterprise, retu
             <span className="text-xs font-bold text-bauhaus-muted">{e.state}</span>
           )}
         </div>
+        {aliases.length > 0 && (
+          <p className="mt-2 text-sm text-bauhaus-muted">
+            <span className="font-black uppercase tracking-widest text-[11px] text-bauhaus-black">Also recorded as</span>{' '}
+            {aliases.slice(0, ALIASES_SHOWN).join(' · ')}
+            {aliases.length > ALIASES_SHOWN && (
+              <details className="inline">
+                <summary className="inline cursor-pointer font-bold text-bauhaus-blue"> +{aliases.length - ALIASES_SHOWN} more</summary>
+                <span> · {aliases.slice(ALIASES_SHOWN).join(' · ')}</span>
+              </details>
+            )}
+          </p>
+        )}
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 mb-8 border-4 border-bauhaus-black">
-        <div className="p-4 border-r-2 border-b-2 sm:border-b-0 border-bauhaus-black/10">
-          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Relationships</div>
-          <div className="text-2xl font-black text-bauhaus-black">{totalRelationships.toLocaleString()}</div>
-          {stats?.year_distribution && Object.keys(stats.year_distribution).length >= 2 && (
-            <div className="mt-1 text-bauhaus-blue">
-              <Sparkline data={stats.year_distribution} />
-            </div>
-          )}
-        </div>
-        <div className="p-4 border-b-2 sm:border-b-0 sm:border-r-2 border-bauhaus-black/10">
-          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">Data Sources</div>
-          <div className="text-2xl font-black text-bauhaus-black">{e.source_count}</div>
-        </div>
-        <div className="p-4 border-r-2 border-bauhaus-black/10">
-          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">
-            {donationTotal > 0 ? 'Political Donations' : 'Revenue'}
-          </div>
-          <div className="text-2xl font-black text-bauhaus-black">
-            {donationTotal > 0 ? formatMoney(donationTotal) : formatMoney(e.latest_revenue)}
-          </div>
-        </div>
-        <div className="p-4">
-          <div className="text-[10px] font-black text-bauhaus-muted uppercase tracking-widest mb-1">
-            {contractTotal > 0 ? 'Contract Value' : totalOutbound > 0 ? 'Total Outbound' : 'Tax Payable'}
-          </div>
-          <div className="text-2xl font-black text-bauhaus-black">
-            {contractTotal > 0
+      {/* Headline figures, each saying what it counts */}
+      <div className="mb-8">
+        <StatRow cols={4}>
+          <Stat
+            label="Relationships"
+            value={totalRelationships.toLocaleString()}
+            sub={relationshipSpan ? `links in the graph, ${relationshipSpan}` : undefined}
+          >
+            {stats?.year_distribution && Object.keys(stats.year_distribution).length >= 2 && (
+              <div className="mt-1 text-bauhaus-blue">
+                <Sparkline data={stats.year_distribution} />
+              </div>
+            )}
+          </Stat>
+          <Stat
+            label="Data Sources"
+            value={e.source_count}
+            sub={sourceNames.length > 0
+              ? `${sourceNames.slice(0, 3).join(', ')}${sourceNames.length > 3 ? ` +${sourceNames.length - 3}` : ''}`
+              : undefined}
+          />
+          <Stat
+            label={donationTotal > 0 ? 'Political Donations' : 'Revenue'}
+            value={donationTotal > 0 ? formatMoney(donationTotal) : formatMoney(e.latest_revenue)}
+            tone={donationTotal > 0 ? 'red' : 'ink'}
+            sub={donationsLine ?? undefined}
+          />
+          <Stat
+            label={contractTotal > 0 ? 'Contract Value' : totalOutbound > 0 ? 'Total Outbound' : 'Tax Payable'}
+            value={contractTotal > 0
               ? formatMoney(contractTotal)
               : totalOutbound > 0
                 ? formatMoney(totalOutbound)
                 : formatMoney(e.latest_tax_payable)}
-          </div>
-        </div>
+            sub={contractLine ?? undefined}
+          />
+        </StatRow>
       </div>
 
       {/* Due Diligence + Data freshness */}

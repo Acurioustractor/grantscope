@@ -38,6 +38,11 @@ import { resolveSubscriptionTier } from '@/lib/subscription';
 import { isAdminEmail } from '@/lib/admin';
 import type { User } from '@supabase/supabase-js';
 import { cookies, headers } from 'next/headers';
+// Vercel Web Analytics (cookieless page views). Inert until Web Analytics is switched on for the
+// project in the Vercel dashboard. Added 2026-09-24: there was no way to tell whether visitors use
+// CivicGraph as a tool (search, profiles) or read it as a publication (one report from a link),
+// and the design decisions turn on that.
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
   title: "CivicGraph — Australia's Accountability Atlas",
@@ -90,16 +95,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     || pathname.startsWith('/org/a-curious-tractor/')
     || pathname === '/org/curious-tractor'
     || pathname.startsWith('/org/curious-tractor/');
-  // The four catalogue indexes moved to their public URLs and kept the Shell layout, so they
-  // supply their own chrome. EXACT match, not startsWith: /charities/[abn], /charities/claim,
-  // /foundations/minderoo and the rest are public detail pages that still want the public nav.
-  // /allocation and /charities/trajectories render inside the Shell; listed here or the marketing nav
-  // stacks on top of the rail (the site-within-a-site Ben saw on 2026-09-06).
-  const SHELL_INDEX_PATHS = ['/charities', '/charities/trajectories', '/allocation', '/foundations', '/grants', '/social-enterprises'];
-  const isChromeless = SHELL_INDEX_PATHS.includes(pathname)
-    || pathname.startsWith('/allocation/')
-    || pathname.startsWith('/dashboard')
-    || pathname.startsWith('/search')
+  // ONE public frame (decided 2026-09-24). The browse indexes (/charities, /foundations, /grants,
+  // /social-enterprises, /allocation, /charities/trajectories) and /search used to be listed here,
+  // dropping the top nav so they could wrap themselves in the black rail: the nav's "Funding" link
+  // led into what looked like another product. They now render inside this layout's nav and footer,
+  // through <BrowseScope>. Only signed-in work (dashboard, clarity, ops, admin...) stays chromeless.
+  const isChromeless = pathname.startsWith('/dashboard')
     || pathname.startsWith('/clarity')
     || pathname.startsWith('/embed')
     || pathname.startsWith('/share')
@@ -129,6 +130,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <body className={`font-sans antialiased bg-transparent ${qlFontVars}`}>
           <BrandFontLinks />
           {children}
+          <Analytics />
         </body>
       </html>
     );
@@ -291,6 +293,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <DeferredChatDrawer delayMs={isFastPublicPath ? 2500 : 1000} />
         )}
         </ShortlistProvider>
+        <Analytics />
       </body>
     </html>
   );

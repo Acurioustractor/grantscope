@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { money as formatMoney } from '@/lib/format';
 import { SortHeader } from './browse-ui';
 import Link from 'next/link';
 
@@ -42,11 +43,7 @@ const TYPES: [string, string][] = [
 function money(n: number | null): string {
   if (n == null) return '—';
   if (n === 0) return '$0';
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}bn`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}m`;
-  // See browse-ui.tsx: "$0k" for a real amount under $500 is worse than the extra digits.
-  if (n >= 1e3) return `$${Math.round(n / 1e3)}k`;
-  return `$${Math.round(n).toLocaleString('en-AU')}`;
+  return formatMoney(n);
 }
 
 interface DrawerData {
@@ -221,7 +218,7 @@ export default function FoundationsBrowser({
       </div>
       <p className="mt-2 font-mono text-[11px]" style={{ color: 'var(--shell-muted)' }}>
         {rows.length} shown of {total.toLocaleString('en-AU')} · &ldquo;Granted&rdquo; and
-        &ldquo;Assets&rdquo; are the latest ACNC return; &ldquo;Giving&rdquo; is the grants and donations made in that return for most rows (the guessed $25k/$100k/$500k figures were replaced on 7 Sep 2026), and a scraped figure that can mix grantmaking with program spend for the 955 that carry one · the type beside each name is the organisation&rsquo;s own kind, and
+        &ldquo;Assets&rdquo; are the latest ACNC return; &ldquo;Giving&rdquo; is the grants and donations made in that return for most rows (the guessed $25K/$100K/$500K figures were replaced on 7 Sep 2026), and a scraped figure that can mix grantmaking with program spend for the 955 that carry one · the type beside each name is the organisation&rsquo;s own kind, and
         this list deliberately includes givers that are not foundations (universities, service
         delivery, peak bodies) · Grantees and Board are sparse by nature: they need a matched grant
         record or a matched director, which exist for only a handful of funders so far
