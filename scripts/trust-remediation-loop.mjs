@@ -45,34 +45,33 @@ function log(msg) {
   console.log(`[trust-remediation-loop] ${msg}`);
 }
 
+// The before/after snapshot scans all ~2M gs_relationships rows. It went through exec_sql until
+// 2026-09-24, which cancels anything past ~8s, so the loop died here before doing any work: 35 of
+// its 40 runs in the week to 2026-09-24. Over psql the same scans take ~22s.
+function psqlRows(query) {
+  const out = runPsql(`SELECT coalesce(json_agg(q), '[]'::json) FROM (${query}) q`, { read: true });
+  return JSON.parse(out.trim() || '[]');
+}
+
 async function selectOne(query) {
-  return withRetry(async () => {
-    const { data, error } = await supabase.rpc('exec_sql', { query });
-    if (error) throw new Error(error.message);
-    return data?.[0] ?? {};
-  }, 'selectOne');
+  return withRetry(async () => psqlRows(query)[0] ?? {}, 'selectOne');
 }
 
 async function datasetMissingCounts(limit = 20) {
-  return withRetry(async () => {
-    const { data, error } = await supabase.rpc('exec_sql', {
-      query: `
+  return withRetry(async () => psqlRows(`
         SELECT dataset, COUNT(*)::bigint AS missing
         FROM gs_relationships
         WHERE source_url IS NULL OR btrim(source_url) = ''
         GROUP BY dataset
         ORDER BY missing DESC
         LIMIT ${limit}
-      `,
-    });
-    if (error) throw new Error(error.message);
-    return data ?? [];
-  }, 'datasetMissingCounts');
+      `), 'datasetMissingCounts');
 }
 
-function runPsql(query) {
-  if (DRY_RUN) return '';
-  if (!DB_PASSWORD) throw new Error('DATABASE_PASSWORD is required for update queries');
+/** Reads run in a dry run too; writes do not. */
+function runPsql(query, { read = false } = {}) {
+  if (DRY_RUN && !read) return '';
+  if (!DB_PASSWORD) throw new Error('DATABASE_PASSWORD is required for psql queries');
 
   const args = [
     '-h', 'aws-0-ap-southeast-2.pooler.supabase.com',
@@ -80,6 +79,7 @@ function runPsql(query) {
     '-U', 'postgres.tednluwflfhxyucgwigh',
     '-d', 'postgres',
     '-v', 'ON_ERROR_STOP=1',
+    ...(read ? ['-At'] : []),
     '-c', query,
   ];
 
@@ -200,6 +200,9 @@ async function runProvenanceBackfill() {
     ['person_roles_crossmatch', 'https://www.acnc.gov.au/charity/charities'],
     ['foundation_charity_match', 'https://www.acnc.gov.au/charity/charities'],
     ['abr_corporate_groups', 'https://abr.business.gov.au/'],
+    // 189,587 of the 192,963 edges with no source_url on 2026-09-24 were GrantConnect awards, and
+    // this list had no entry for them. A per-award link needs the award's UUID, which is not stored.
+    ['grantconnect_awards', 'https://www.grants.gov.au/'],
   ];
 
   // Prefer exact per-record URLs where source_record_id can be resolved.
