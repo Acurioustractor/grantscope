@@ -128,7 +128,10 @@ async function getData(): Promise<{
       SELECT supplier_abn, SUM(contract_value)::text as total_contracts,
              COUNT(*)::text as contract_count
       FROM austender_contracts
-      WHERE supplier_abn IS NOT NULL AND contract_value > 0
+      WHERE contract_value > 0
+        -- Only the ABNs this page can join: the unfiltered GROUP BY over 824K contracts was re-run
+        -- for every 1,000-row page and hit the statement timeout (500 on 2026-09-24).
+        AND supplier_abn IN (SELECT abn FROM ato_tax_transparency WHERE effective_tax_rate IS NOT NULL)
       GROUP BY supplier_abn
       HAVING SUM(contract_value) > 100000
     `, 50000),

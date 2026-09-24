@@ -290,11 +290,20 @@ function computeReport(
 
 /** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
  *  its query. The report's underlying data changes nightly at most. */
-const getDataCached = unstable_cache(getData, ['reports-board-interlocks'], { revalidate: 3600 });
+// Cache the computed report, not the raw rows: 340K person_roles rows came to 78MB, over Next's
+// 2MB cache limit, so nothing was ever cached and every visit re-read them all (~58s, 2026-09-24).
+async function getReport() {
+  const { personRoles, aisRecords, accoAbns } = await getData();
+  return {
+    ...computeReport(personRoles, aisRecords, accoAbns),
+    charityCount: new Set(personRoles.map(pr => pr.company_abn)).size,
+    roleRecordCount: personRoles.length,
+  };
+}
+const getReportCached = unstable_cache(getReport, ['reports-board-interlocks-v2'], { revalidate: 3600 });
 
 export default async function BoardInterlocksReport() {
-  const { personRoles, aisRecords, accoAbns } = await getDataCached();
-  const r = computeReport(personRoles, aisRecords, accoAbns);
+  const r = await getReportCached();
 
   return (
     <div>
@@ -314,7 +323,7 @@ export default async function BoardInterlocksReport() {
         </h1>
         <p className="text-bauhaus-muted text-base sm:text-lg max-w-3xl leading-relaxed font-medium">
           {fmt(r.totalPeople)} people hold {fmt(r.totalBoardSeats)} board seats across{' '}
-          {fmt(new Set(personRoles.map(pr => pr.company_abn)).size)} charities.{' '}
+          {fmt(r.charityCount)} charities.{' '}
           {fmt(r.multiBoardPeople)} of them serve on multiple boards, collectively controlling{' '}
           {money(r.totalRevenueControlled)} in revenue. A small network of people controls
           billions in charity spending.
@@ -702,7 +711,7 @@ export default async function BoardInterlocksReport() {
           <div className="text-sm text-bauhaus-muted leading-relaxed space-y-3 max-w-3xl">
             <p>
               <strong>Board interlocks:</strong> Identified from the CivicGraph{' '}
-              <code>person_roles</code> table ({fmt(personRoles.length)} records), which
+              <code>person_roles</code> table ({fmt(r.roleRecordCount)} records), which
               aggregates responsible person data from ACNC and ASIC filings. A person is
               flagged as &ldquo;multi-board&rdquo; when they appear as a responsible person
               on 2 or more registered charities (matched by normalised name).
