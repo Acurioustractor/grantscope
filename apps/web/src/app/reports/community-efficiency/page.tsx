@@ -160,7 +160,8 @@ async function getData() {
                      max(e.state) AS state
                 FROM gs_entities e
                WHERE e.abn IN (SELECT abn FROM acnc_ais WHERE ais_year = 2023 AND total_revenue > 0)
-               GROUP BY e.abn`);
+               GROUP BY e.abn
+               ORDER BY e.abn`);
   }, [] as EntityRecord[]);
 
   // Build lookup maps
@@ -176,7 +177,8 @@ async function getData() {
     return execSqlAll<PowerRecord>(db, `SELECT p.abn, p.power_score, p.system_count, p.total_dollar_flow AS total_dollars
             FROM mv_entity_power_index p
             WHERE p.system_count >= 2
-              AND p.abn IN (SELECT abn FROM acnc_ais WHERE ais_year = 2023 AND total_revenue > 0)`);
+              AND p.abn IN (SELECT abn FROM acnc_ais WHERE ais_year = 2023 AND total_revenue > 0)
+            ORDER BY p.id`);
   }, [] as PowerRecord[]);
 
   // Query 4: Contract aggregates via exec_sql
@@ -185,7 +187,8 @@ async function getData() {
             FROM austender_contracts
             WHERE supplier_abn IN (SELECT abn FROM acnc_ais WHERE ais_year = 2023 AND total_revenue > 0)
             GROUP BY supplier_abn
-            HAVING SUM(contract_value) > 100000`);
+            HAVING SUM(contract_value) > 100000
+            ORDER BY supplier_abn`);
   }, [] as ContractAgg[]);
 
   // Build power and contract maps
