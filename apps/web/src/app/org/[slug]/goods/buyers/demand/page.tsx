@@ -79,7 +79,7 @@ export default async function GoodsDemandPage({
     <main className="min-h-screen bg-bauhaus-canvas text-bauhaus-black">
       <div className="border-b-4 border-bauhaus-black bg-bauhaus-black text-white">
         <div className="mx-auto max-w-[1760px] px-4 py-8">
-          <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-400">
+          <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-white/60">
             <Link href={`/org/${slug}/goods`} className="hover:text-white">Goods</Link>
             <span>/</span>
             <Link href={`/org/${slug}/goods/buyers`} className="hover:text-white">Buyers</Link>
@@ -87,7 +87,7 @@ export default async function GoodsDemandPage({
             <span className="text-white">Who buys beds</span>
           </nav>
           <h1 className="text-4xl font-black uppercase tracking-widest">Who buys beds</h1>
-          <p className="mt-2 max-w-3xl text-sm text-gray-300">
+          <p className="mt-2 max-w-3xl text-sm text-white/80">
             Organisations that have bought beds, mattresses or whitegoods for people to live with, and community
             organisations shaped like the ones already buying from Goods.
           </p>
