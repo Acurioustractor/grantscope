@@ -188,7 +188,7 @@ export const reportSections: NavSection[] = [
     items: [
       { label: 'Funding Equity', href: '/reports/funding-equity', status: 'current' },
       { label: 'Funding Deserts', href: '/reports/funding-deserts', status: 'review' },
-      { label: 'Access Gap', href: '/reports/access-gap', status: 'reference' },
+      { label: 'Access Gap', href: '/reports/access-gap', status: 'review' },
       { label: 'Money Flow', href: '/reports/money-flow', status: 'reference' },
       { label: 'Desert Overhead', href: '/reports/desert-overhead', status: 'review' },
       { label: 'Community Efficiency', href: '/reports/community-efficiency', status: 'review' },

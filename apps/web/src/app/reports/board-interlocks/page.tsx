@@ -1,7 +1,6 @@
 import { unstable_cache } from 'next/cache';
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
-import { safe } from '@/lib/services/utils';
 import Link from 'next/link';
 import { entityHref } from '@/lib/entity-href';
 import { ReportCTA } from '../_components/report-cta';
@@ -61,71 +60,52 @@ interface CommunityControlled {
 
 /* ── data loading ── */
 
+/** Every row of a PostgREST read, 1,000 at a time by id: each page asks for the rows after the
+ *  last id seen, so no row is skipped or repeated and no page re-walks the ones before it (offset
+ *  paging over 340K person_roles took 112s cold). A failed page throws: the old loop stopped
+ *  early on a null and the partial count was cached for an hour behind the headline. */
+const PAGE = 1000;
+async function readAll<T extends { id: string }>(
+  label: string,
+  page: (after: string | null) => PromiseLike<{ data: unknown; error: { message: string } | null }>,
+): Promise<T[]> {
+  const all: T[] = [];
+  for (let after: string | null = null; ;) {
+    const { data, error } = await page(after);
+    if (error) throw new Error(`${label}: ${error.message}`);
+    const rows = (data ?? []) as T[];
+    all.push(...rows);
+    if (rows.length < PAGE) return all;
+    after = rows[rows.length - 1].id;
+  }
+}
+
 async function getData() {
   const db = getServiceSupabase();
 
-  // Query 1: All person_roles (paginated)
-  const personRoles: PersonRole[] = [];
-  {
-    const PAGE = 1000;
-    let offset = 0;
-    while (true) {
-      const data = await safe(
-        db
-          .from('person_roles')
-          .select('person_name, person_name_normalised, role_type, company_abn, company_name')
-          .range(offset, offset + PAGE - 1), 'reports/board-interlocks',
-      );
-      const rows = (data ?? []) as PersonRole[];
-      if (rows.length === 0) break;
-      personRoles.push(...rows);
-      if (rows.length < PAGE) break;
-      offset += PAGE;
-    }
-  }
-
-  // Query 2: ACNC AIS for 2023 (paginated)
-  const aisRecords: AisRecord[] = [];
-  {
-    const PAGE = 1000;
-    let offset = 0;
-    while (true) {
-      const data = await safe(
-        db
-          .from('acnc_ais')
-          .select('abn, charity_name, total_revenue, total_expenses, total_paid_key_management, charity_size')
-          .eq('ais_year', 2023)
-          .range(offset, offset + PAGE - 1), 'reports/board-interlocks',
-      );
-      const rows = (data ?? []) as AisRecord[];
-      if (rows.length === 0) break;
-      aisRecords.push(...rows);
-      if (rows.length < PAGE) break;
-      offset += PAGE;
-    }
-  }
-
-  // Query 3: Community-controlled ABNs from gs_entities
-  const accoAbns: CommunityControlled[] = [];
-  {
-    const PAGE = 1000;
-    let offset = 0;
-    while (true) {
-      const data = await safe(
-        db
-          .from('gs_entities')
-          .select('abn')
-          .eq('is_community_controlled', true)
-          .not('abn', 'is', null)
-          .range(offset, offset + PAGE - 1), 'reports/board-interlocks',
-      );
-      const rows = (data ?? []) as CommunityControlled[];
-      if (rows.length === 0) break;
-      accoAbns.push(...rows);
-      if (rows.length < PAGE) break;
-      offset += PAGE;
-    }
-  }
+  const [personRoles, aisRecords, accoAbns] = await Promise.all([
+    readAll<PersonRole & { id: string }>('person_roles', (after) => {
+      let q = db.from('person_roles')
+        .select('id, person_name, person_name_normalised, role_type, company_abn, company_name');
+      if (after) q = q.gt('id', after);
+      return q.order('id').limit(PAGE);
+    }),
+    readAll<AisRecord & { id: string }>('acnc_ais', (after) => {
+      let q = db.from('acnc_ais')
+        .select('id, abn, charity_name, total_revenue, total_expenses, total_paid_key_management, charity_size')
+        .eq('ais_year', 2023);
+      if (after) q = q.gt('id', after);
+      return q.order('id').limit(PAGE);
+    }),
+    readAll<CommunityControlled & { id: string }>('gs_entities', (after) => {
+      let q = db.from('gs_entities')
+        .select('id, abn')
+        .eq('is_community_controlled', true)
+        .not('abn', 'is', null);
+      if (after) q = q.gt('id', after);
+      return q.order('id').limit(PAGE);
+    }),
+  ]);
 
   return { personRoles, aisRecords, accoAbns };
 }
@@ -290,11 +270,34 @@ function computeReport(
 
 /** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
  *  its query. The report's underlying data changes nightly at most. */
-const getDataCached = unstable_cache(getData, ['reports-board-interlocks'], { revalidate: 3600 });
+// Cache the computed report, not the raw rows: 340K person_roles rows came to 78MB, over Next's
+// 2MB cache limit, so nothing was ever cached and every visit re-read them all (~58s, 2026-09-24).
+async function getReport() {
+  const { personRoles, aisRecords, accoAbns } = await getData();
+  return {
+    ...computeReport(personRoles, aisRecords, accoAbns),
+    charityCount: new Set(personRoles.map(pr => pr.company_abn)).size,
+    roleRecordCount: personRoles.length,
+  };
+}
+const getReportCached = unstable_cache(getReport, ['reports-board-interlocks-v2'], { revalidate: 3600 });
 
 export default async function BoardInterlocksReport() {
-  const { personRoles, aisRecords, accoAbns } = await getDataCached();
-  const r = computeReport(personRoles, aisRecords, accoAbns);
+  let r: Awaited<ReturnType<typeof getReport>>;
+  try {
+    r = await getReportCached();
+  } catch (err) {
+    // Not cached: the next request tries again.
+    console.error('[report-service] reports/board-interlocks failed:', err);
+    return (
+      <div className="border-4 border-bauhaus-black bg-white p-6 max-w-2xl">
+        <div className="text-xs font-black text-bauhaus-red uppercase tracking-widest mb-3">Not loaded</div>
+        <p className="text-sm text-bauhaus-black leading-relaxed">
+          The board records behind this report could not be read just now. Try again in a minute.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -314,7 +317,7 @@ export default async function BoardInterlocksReport() {
         </h1>
         <p className="text-bauhaus-muted text-base sm:text-lg max-w-3xl leading-relaxed font-medium">
           {fmt(r.totalPeople)} people hold {fmt(r.totalBoardSeats)} board seats across{' '}
-          {fmt(new Set(personRoles.map(pr => pr.company_abn)).size)} charities.{' '}
+          {fmt(r.charityCount)} charities.{' '}
           {fmt(r.multiBoardPeople)} of them serve on multiple boards, collectively controlling{' '}
           {money(r.totalRevenueControlled)} in revenue. A small network of people controls
           billions in charity spending.
@@ -702,7 +705,7 @@ export default async function BoardInterlocksReport() {
           <div className="text-sm text-bauhaus-muted leading-relaxed space-y-3 max-w-3xl">
             <p>
               <strong>Board interlocks:</strong> Identified from the CivicGraph{' '}
-              <code>person_roles</code> table ({fmt(personRoles.length)} records), which
+              <code>person_roles</code> table ({fmt(r.roleRecordCount)} records), which
               aggregates responsible person data from ACNC and ASIC filings. A person is
               flagged as &ldquo;multi-board&rdquo; when they appear as a responsible person
               on 2 or more registered charities (matched by normalised name).

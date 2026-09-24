@@ -605,11 +605,11 @@ export default function ReportsPage() {
 
           <a href="/reports/access-gap" className="group block">
             <div className="bg-white border-4 border-bauhaus-black p-6 transition-all group-hover:-translate-y-1 bauhaus-shadow-sm group-hover:bg-bauhaus-yellow">
-              <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest group-hover:text-bauhaus-black">Live<ReportStatusTag href="/reports/access-gap" /></div>
+              <div className="text-xs font-black text-bauhaus-yellow mb-2 uppercase tracking-widest group-hover:text-bauhaus-black"><ReportStatusTag href="/reports/access-gap" /></div>
               <h3 className="text-xl font-black text-bauhaus-black mb-2">The Access Gap</h3>
               <p className="text-sm text-bauhaus-muted leading-relaxed group-hover:text-bauhaus-black/70">
-                Small orgs spend 40% on admin. Large orgs spend 15%.
-                The structural barriers to community funding.
+                Do small organisations lose more of their revenue to admin than large ones?
+                Not measured yet: the register holds no revenue figures.
               </p>
             </div>
           </a>

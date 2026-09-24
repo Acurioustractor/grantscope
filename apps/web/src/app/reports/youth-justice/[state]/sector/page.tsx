@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import { getLiveReportSupabase } from '@/lib/report-supabase';
+import { rogsYjSpendSql } from '@/lib/justice-money';
 import { safe } from '@/lib/services/utils';
 
 export const dynamic = 'force-dynamic';
@@ -82,7 +83,7 @@ function classifyStatement(s: { headline: string }): 'punitive' | 'preventive' |
  return 'mixed';
 }
 
-type SpendRow = { recipient_name: string; total: number };
+type SpendRow = { recipient_name: string; total: number; first_year?: string; last_year?: string };
 type RecipientRow = { recipient_name: string; total: number; grants: number };
 type CrossSectorRow = { recipient_name: string; sectors: number; total: number };
 type AlmaRow = { name: string; type: string; evidence_level: string | null };
@@ -93,7 +94,7 @@ type StateBill = { bill_name: string; sponsor: string | null; sponsor_party: str
 async function getStateReport(stateCode: string) {
  const supabase = getLiveReportSupabase();
  const [spend, recipients, crossSector, alma, hansard, statements, contracts, almaQldCount, bills] = await Promise.all([
- safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, SUM(amount_dollars)::bigint AS total FROM public.justice_funding WHERE state = '${stateCode}' AND recipient_name LIKE 'Youth Justice -%' GROUP BY 1` }), 'reports/youth-justice/[state]/sector') as Promise<SpendRow[] | null>,
+ safe(supabase.rpc('exec_sql', { query: rogsYjSpendSql(stateCode) }), 'reports/youth-justice/[state]/sector') as Promise<SpendRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, SUM(amount_dollars)::bigint AS total, COUNT(*)::int AS grants FROM public.justice_funding WHERE state = '${stateCode}' AND topics @> ARRAY['youth-justice'] AND amount_dollars > 0 AND recipient_name IS NOT NULL AND length(recipient_name) > 3 AND recipient_name !~ '^[0-9]+$' AND recipient_name NOT ILIKE '%Total%' AND recipient_name NOT ILIKE '%Department of%' AND recipient_name NOT ILIKE 'Youth Justice -%' AND recipient_name NOT ILIKE '%State of %' AND recipient_name NOT ILIKE '(blank)' GROUP BY 1 ORDER BY total DESC NULLS LAST LIMIT 15` }), 'reports/youth-justice/[state]/sector') as Promise<RecipientRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, COUNT(DISTINCT topic)::int AS sectors, SUM(amount_dollars)::bigint AS total FROM (SELECT recipient_name, unnest(topics) AS topic, amount_dollars FROM public.justice_funding WHERE state = '${stateCode}' AND amount_dollars > 0 AND recipient_name IS NOT NULL AND length(recipient_name) > 3 AND recipient_name !~ '^[0-9]+$' AND recipient_name NOT ILIKE '%Total%' AND recipient_name NOT ILIKE '%Department of%') t WHERE topic IN ('youth-justice','child-protection','disability','ndis','family-services','indigenous','mental-health','homelessness','aod','family-violence') GROUP BY 1 HAVING COUNT(DISTINCT topic) >= 3 ORDER BY total DESC NULLS LAST LIMIT 10` }), 'reports/youth-justice/[state]/sector') as Promise<CrossSectorRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT name, type, evidence_level FROM public.alma_interventions_valid WHERE ('${stateCode}' = ANY(geography) OR EXISTS (SELECT 1 FROM unnest(geography) g WHERE g ILIKE '%${stateCode}%')) AND (topics @> ARRAY['youth-justice'] OR type ILIKE '%diversion%' OR type ILIKE '%justice%' OR type ILIKE '%wraparound%' OR type ILIKE '%community-led%') ORDER BY (CASE WHEN evidence_level ILIKE '%proven%' THEN 0 WHEN evidence_level ILIKE '%effective%' THEN 1 WHEN evidence_level ILIKE '%promising%' THEN 2 ELSE 3 END), name LIMIT 12` }), 'reports/youth-justice/[state]/sector') as Promise<AlmaRow[] | null>,
@@ -107,9 +108,10 @@ async function getStateReport(stateCode: string) {
  const detention = (spend ?? []).find(s => /detention/i.test(s.recipient_name))?.total || 0;
  const community = (spend ?? []).find(s => /community/i.test(s.recipient_name))?.total || 0;
  const groupConferencing = (spend ?? []).find(s => /group conferencing/i.test(s.recipient_name))?.total || 0;
+ const spendYears = spend?.[0]?.first_year ? `${spend[0].first_year} to ${spend[0].last_year}` : null;
 
  return {
- detention, community, groupConferencing,
+ detention, community, groupConferencing, spendYears,
  recipients: recipients ?? [],
  crossSector: crossSector ?? [],
  alma: alma ?? [],
@@ -176,7 +178,7 @@ export default async function StateYjSectorPage({ params }: { params: Promise<{ 
  <section className="mb-12">
  <h2 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">{meta.label} youth-justice spend, detention vs community</h2>
  <p className="text-bauhaus-muted font-medium max-w-3xl mb-4">
- From state-budget Youth Justice line items in <code className="font-mono text-xs">justice_funding</code>. Ratio: <span className="font-black text-bauhaus-red">{ratio}:1 detention to community</span>.
+ Government recurrent expenditure, {r.spendYears ?? 'all years held'}, from the Productivity Commission Report on Government Services (ROGS). Ratio: <span className="font-black text-bauhaus-red">{ratio}:1 detention to community</span>.
  </p>
  <div className="border-4 border-bauhaus-black p-6 bg-white">
  <StackedBar

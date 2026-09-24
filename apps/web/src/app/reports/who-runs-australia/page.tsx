@@ -125,6 +125,14 @@ async function getData() {
     }), 'reports/who-runs-australia'),
   ]);
 
+  // A failed read must throw, not return empty: unstable_cache stores whatever comes back, and an
+  // empty result stored here was served as an empty table for up to an hour (2026-09-24 sweep).
+  // A throw is not cached, so the next request tries again.
+  if (revolvingDoorResult === null || boardInterlocksResult === null || statsResult === null
+      || politicalCrossoverResult === null) {
+    throw new Error('who-runs-australia: a read failed');
+  }
+
   const revolvingDoor = (revolvingDoorResult || []) as RevolvingDoorEntity[];
   const boardInterlocks = (boardInterlocksResult || []) as BoardInterlock[];
   const politicalCrossover = (politicalCrossoverResult || []) as PoliticalCrossover[];
@@ -163,7 +171,17 @@ function VectorBadges({ entity }: { entity: RevolvingDoorEntity }) {
 const getDataCached = unstable_cache(getData, ['reports-who-runs-australia'], { revalidate: 3600 });
 
 export default async function WhoRunsAustraliaReport() {
-  const d = await getDataCached();
+  const d = await getDataCached().catch(() => null);
+  if (!d) {
+    return (
+      <div className="border-4 border-bauhaus-black bg-bauhaus-canvas p-6 max-w-2xl">
+        <div className="text-xs font-black text-bauhaus-red uppercase tracking-widest mb-2">Who Runs Australia?</div>
+        <p className="font-medium text-bauhaus-black">
+          The figures for this report could not be read just now. Reload the page in a minute.
+        </p>
+      </div>
+    );
+  }
   const s = d.stats;
 
   return (

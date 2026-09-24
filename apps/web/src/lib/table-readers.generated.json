@@ -385,11 +385,11 @@
  "boards": [
   "app/api/power/holders/route.ts"
  ],
+ "c": [
+  "app/reports/desert-overhead/page.tsx"
+ ],
  "candidate_rows": [
   "app/foundations/backlog/page.tsx"
- ],
- "capture_lga": [
-  "app/api/data/map/route.ts"
  ],
  "capture_state": [
   "app/api/data/map/route.ts"
@@ -565,6 +565,9 @@
   "lib/services/report-service.ts"
  ],
  "council_pc": [
+  "app/api/data/map/route.ts"
+ ],
+ "councils": [
   "app/api/data/map/route.ts"
  ],
  "crime_stats_lga": [
@@ -766,6 +769,9 @@
   "lib/services/goods-foundation-targets.ts",
   "lib/services/report-service.ts"
  ],
+ "funded": [
+  "app/reports/convergence/page.tsx"
+ ],
  "funder_allowlist": [
   "app/reports/grant-frontier/page.tsx"
  ],
@@ -780,7 +786,6 @@
   "app/home/page.tsx",
   "app/ops/grant-recommendations/page.tsx",
   "app/ops/grant-recommendations/triage/page.tsx",
-  "app/reports/grant-frontier/page.tsx",
   "lib/services/act-atlas-context.ts",
   "lib/services/act-funder-intelligence.ts",
   "lib/services/act-opportunity-context.ts",
@@ -1330,6 +1335,12 @@
  "matched": [
   "lib/philanthropy-admin.ts"
  ],
+ "med": [
+  "app/reports/desert-overhead/page.tsx"
+ ],
+ "modal": [
+  "app/reports/desert-overhead/page.tsx"
+ ],
  "modal_remoteness": [
   "app/api/data/map/route.ts"
  ],
@@ -1712,6 +1723,9 @@
   "app/org/page.tsx",
   "lib/org-profile.ts"
  ],
+ "org_money": [
+  "app/reports/convergence/page.tsx"
+ ],
  "org_pipeline": [
   "app/api/foundations/[foundationId]/pipeline-context/route.ts",
   "app/api/org/[orgProfileId]/pipeline/export/route.ts",
@@ -1991,6 +2005,7 @@
   "app/api/procurement/tender-pack/route.ts",
   "app/entities/[gsId]/page.tsx",
   "app/places/[postcode]/page.tsx",
+  "app/reports/desert-overhead/page.tsx",
   "app/reports/funding-equity/page.tsx",
   "app/reports/power-map/page.tsx",
   "lib/services/council-place-report.ts",
@@ -2289,6 +2304,9 @@
  ],
  "tracker_site_snapshots": [
   "app/reports/youth-justice/trackers/page.tsx"
+ ],
+ "type_orgs": [
+  "app/reports/convergence/page.tsx"
  ],
  "unplaced": [
   "app/api/data/map/route.ts"

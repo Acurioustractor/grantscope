@@ -2,6 +2,7 @@ import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { getLiveReportSupabase } from '@/lib/report-supabase';
+import { rogsYjSpendSql } from '@/lib/justice-money';
 import { safe } from '@/lib/services/utils';
 import { DetailDrawer, DrawerSection, DrawerKeyValue } from '@/components/reports/DetailDrawer';
 import { summarizeMinisterialStatement, summarizeHansardSpeech, summarizeCoronerFinding } from '@/lib/civicgraph-summary';
@@ -684,7 +685,7 @@ type DssRow = { state: string; payment_type: string; recipient_count: number };
 type NdisOverlayRow = { state: string; total_participants: number; youth_participants: number; psychosocial_participants: number; intellectual_disability_participants: number; autism_participants: number };
 type UnfundedRow = { name: string; type: string; evidence_level: string | null; geography: string };
 type DirectorRow = { person_name: string; board_count: number; total_procurement: number; total_justice: number };
-type SpendRow = { recipient_name: string; total: number };
+type SpendRow = { recipient_name: string; total: number; first_year?: string; last_year?: string };
 type MinStatement = { published_at: string; minister_name: string | null; portfolio: string | null; headline: string; source_url: string; topics: string[] | null; body_text: string | null };
 type HansardRow = { sitting_date: string; speaker_name: string | null; speaker_party: string | null; subject: string | null; snippet: string; source_url: string | null; body_text: string | null };
 type HansardPartyCount = { speaker_party: string | null; speeches: number };
@@ -726,7 +727,7 @@ async function getReport() {
  safe(supabase.rpc('exec_sql', { query: `SELECT count(*)::int AS c FROM public.justice_funding WHERE state = 'QLD' AND amount_dollars > 0 AND (topics @> ARRAY['mental-health'] OR topics @> ARRAY['aod'])` }), 'reports/youth-justice/qld/sector') as Promise<Array<{ c: number }> | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT person_name, board_count::int, total_procurement::bigint, total_justice::bigint FROM public.mv_person_influence WHERE board_count >= 5 AND total_justice > 0 AND (entity_types::text ILIKE '%charity%' OR entity_types::text ILIKE '%indigenous%') ORDER BY total_justice DESC NULLS LAST LIMIT 12` }), 'reports/youth-justice/qld/sector') as Promise<DirectorRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT count(*)::int AS donations, SUM(amount)::bigint AS total FROM public.political_donations pd WHERE pd.donor_abn IN (SELECT recipient_abn FROM public.justice_funding WHERE state = 'QLD' AND topics @> ARRAY['youth-justice'] AND recipient_abn IS NOT NULL)` }), 'reports/youth-justice/qld/sector') as Promise<Array<{ donations: number; total: number }> | null>,
- safe(supabase.rpc('exec_sql', { query: `SELECT recipient_name, SUM(amount_dollars)::bigint AS total FROM public.justice_funding WHERE state = 'QLD' AND recipient_name LIKE 'Youth Justice -%' GROUP BY 1` }), 'reports/youth-justice/qld/sector') as Promise<SpendRow[] | null>,
+ safe(supabase.rpc('exec_sql', { query: rogsYjSpendSql('QLD') }), 'reports/youth-justice/qld/sector') as Promise<SpendRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT published_at::text, minister_name, portfolio, headline, source_url, topics, body_text FROM public.civic_ministerial_statements WHERE jurisdiction = 'QLD' AND (topics @> ARRAY['youth-justice'] OR headline ~* '(youth|detention|watch.?house|adult crime|bail|young offender)') AND published_at > NOW() - INTERVAL '24 months' ORDER BY published_at DESC LIMIT 12` }), 'reports/youth-justice/qld/sector') as Promise<MinStatement[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT sitting_date::text, speaker_name, speaker_party, subject, substring(body_text, 1, 280) AS snippet, source_url, substring(body_text, 1, 4000) AS body_text FROM public.civic_hansard WHERE jurisdiction = 'QLD' AND length(body_text) > 100 AND speaker_name IS NOT NULL AND speaker_name != 'Deputy Speaker' AND speaker_name != 'Speaker' AND speaker_name NOT ILIKE '%Hansard%' AND (body_text ~* '(youth justice|adult crime, adult time|adult time|youth detention|watchhouse|breach of bail|making queensland safer|young offender)') ORDER BY sitting_date DESC NULLS LAST LIMIT 10` }), 'reports/youth-justice/qld/sector') as Promise<HansardRow[] | null>,
  safe(supabase.rpc('exec_sql', { query: `SELECT speaker_party, COUNT(*)::int AS speeches FROM public.civic_hansard WHERE jurisdiction = 'QLD' AND length(body_text) > 100 AND speaker_party IS NOT NULL AND (body_text ~* '(youth justice|adult crime, adult time|adult time|youth detention|watchhouse|breach of bail|making queensland safer|young offender)') AND sitting_date > NOW() - INTERVAL '12 months' GROUP BY 1 ORDER BY 2 DESC` }), 'reports/youth-justice/qld/sector') as Promise<HansardPartyCount[] | null>,
@@ -745,6 +746,7 @@ async function getReport() {
  const detention = (spend ?? []).find(s => /detention/i.test(s.recipient_name))?.total || 0;
  const community = (spend ?? []).find(s => /community/i.test(s.recipient_name))?.total || 0;
  const groupConferencing = (spend ?? []).find(s => /group conferencing/i.test(s.recipient_name))?.total || 0;
+ const spendYears = spend?.[0]?.first_year ? `${spend[0].first_year} to ${spend[0].last_year}` : null;
 
  // ── Outcome math for cold-arrival TLDR
  const om = outcomeMetrics ?? [];
@@ -814,7 +816,7 @@ async function getReport() {
  mhFundingCount: mhFundingCount?.[0]?.c ?? 0,
  directors: directors ?? [],
  politicalDonations: politicalDonations?.[0] || null,
- detention, community, groupConferencing,
+ detention, community, groupConferencing, spendYears,
  ministerialStatements: ministerialStatements ?? [],
  hansardRows: hansardRows ?? [],
  hansardPartyCounts: hansardPartyCounts ?? [],
@@ -1199,7 +1201,7 @@ export default async function QldYjSectorPage() {
 
  <div className="border-t border-white/20 pt-4 mb-4">
  <p className="text-[11px] sm:text-xs text-white/85 leading-snug font-medium">
- <span className="font-black uppercase tracking-widest text-bauhaus-yellow">Two budget windows:</span> Cumulative dataset {money(r.detention)} detention vs {money(r.community)} community (2008–2026, <code className="font-mono">justice_funding</code>). Current-year ROGS recurrent: {r.detSpendLatest ? <>${(Number(r.detSpendLatest.metric_value)/1000).toFixed(0)}M detention ({r.detSpendLatest.period})</> : 'pending'}. Same direction of travel; different denominators. Full explainer in §8.
+ <span className="font-black uppercase tracking-widest text-bauhaus-yellow">Two budget windows:</span> Cumulative dataset {money(r.detention)} detention vs {money(r.community)} community ({r.spendYears ?? 'ROGS recurrent'}, <code className="font-mono">justice_funding</code>). Current-year ROGS recurrent: {r.detSpendLatest ? <>${(Number(r.detSpendLatest.metric_value)/1000).toFixed(0)}M detention ({r.detSpendLatest.period})</> : 'pending'}. Same direction of travel; different denominators. Full explainer in §8.
  </p>
  </div>
  <div className="flex flex-wrap items-center gap-2 text-[10px] sm:text-xs font-black uppercase tracking-widest">
@@ -1878,7 +1880,7 @@ export default async function QldYjSectorPage() {
  <section className="mb-8 border-l-4 border-bauhaus-yellow pl-4 max-w-3xl text-xs">
  <div className="font-black uppercase tracking-widest text-bauhaus-black mb-1">Reading two budget windows together</div>
  <p className="text-bauhaus-muted font-medium leading-snug">
- Volume 3 cites two spend figures intentionally. <span className="font-black text-bauhaus-black">Cumulative dataset spend</span> ({money(r.detention)} detention / {money(r.community)} community) covers every QLD justice line item in <code className="font-mono">justice_funding</code> across the indexed window (2008-26). <span className="font-black text-bauhaus-black">Current-year recurrent</span> ({r.detSpendLatest ? `$${(Number(r.detSpendLatest.metric_value)/1000).toFixed(0)}M detention (${r.detSpendLatest.period})` : 'ROGS detention'}) is the latest single year from ROGS Section 17. Same direction of travel; different denominators. The {r.community > 0 ? (r.detention / r.community).toFixed(2) : '—'}:1 ratio above is from the cumulative window.
+ Volume 3 cites two spend figures intentionally. <span className="font-black text-bauhaus-black">Cumulative dataset spend</span> ({money(r.detention)} detention / {money(r.community)} community) is ROGS government recurrent expenditure summed over {r.spendYears ?? 'the ROGS years'}. <span className="font-black text-bauhaus-black">Current-year recurrent</span> ({r.detSpendLatest ? `$${(Number(r.detSpendLatest.metric_value)/1000).toFixed(0)}M detention (${r.detSpendLatest.period})` : 'ROGS detention'}) is the latest single year from ROGS Section 17. Same direction of travel; different denominators. The {r.community > 0 ? (r.detention / r.community).toFixed(2) : '—'}:1 ratio above is from the cumulative window.
  </p>
  </section>
 
@@ -1887,7 +1889,7 @@ export default async function QldYjSectorPage() {
  <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">§8</div>
  <h3 className="text-2xl font-black text-bauhaus-black uppercase tracking-tight mb-2">Detention vs community, the structural ratio</h3>
  <p className="text-bauhaus-muted font-medium max-w-3xl mb-6">
- From the QLD state-budget Youth Justice expenditure lines, queried live from <code className="font-mono text-xs">justice_funding</code>. <span className="font-black text-bauhaus-red">{money(r.detention)} detention</span> vs <span className="font-black text-bauhaus-blue">{money(r.community)} community-based</span> vs <span className="font-black">{money(r.groupConferencing)} group conferencing</span>. Ratio: {r.community > 0 ? (r.detention / r.community).toFixed(2) : '—'}:1 detention to community.
+ Government recurrent expenditure from the Productivity Commission&apos;s Report on Government Services (ROGS), {r.spendYears ?? 'all years held'}, queried live from <code className="font-mono text-xs">justice_funding</code>. <span className="font-black text-bauhaus-red">{money(r.detention)} detention</span> vs <span className="font-black text-bauhaus-blue">{money(r.community)} community-based</span> vs <span className="font-black">{money(r.groupConferencing)} group conferencing</span>. Ratio: {r.community > 0 ? (r.detention / r.community).toFixed(2) : '—'}:1 detention to community.
  </p>
  <div className="border-4 border-bauhaus-black p-6 bg-white mb-6">
  <StackedBar
@@ -3611,7 +3613,7 @@ export default async function QldYjSectorPage() {
 
  <section className="text-center mb-8">
  <div className="text-xs font-mono text-bauhaus-muted">
- Watchhouse: refreshed twice daily from QPS · Funding: QLD state-budget &amp; Justice department disclosures · ACCO gap: <code>mv_yj_report_acco_gap</code> · ALMA: civil-society register · LGA: <code>lga_cross_system_stats</code> · NDIS: <code>v_ndis_youth_justice_overlay</code> · CTG: <code>v_ctg_youth_justice_progress</code> · Last loaded {new Date().toISOString().slice(0, 10)}
+ Watchhouse: refreshed twice daily from QPS · Spend: ROGS recurrent expenditure · Funding: QLD state-budget &amp; Justice department disclosures · ACCO gap: <code>mv_yj_report_acco_gap</code> · ALMA: civil-society register · LGA: <code>lga_cross_system_stats</code> · NDIS: <code>v_ndis_youth_justice_overlay</code> · CTG: <code>v_ctg_youth_justice_progress</code> · Last loaded {new Date().toISOString().slice(0, 10)}
  </div>
  </section>
  </div>

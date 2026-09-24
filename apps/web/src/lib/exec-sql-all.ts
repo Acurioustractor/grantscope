@@ -6,7 +6,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  * charities (of 543) because each query stopped at the cap.
  *
  * Each page re-runs the whole query, so keep the query itself small (filter to the keys the page
- * needs); paging a GROUP BY over a large table is how /reports/tax-transparency timed out.
+ * needs); paging a GROUP BY over a large table is how /reports/tax-transparency timed out. And
+ * ORDER BY a unique key: without one, Postgres may return rows in a different order on each page,
+ * so pages skip or repeat rows.
  */
 export async function execSqlAll<T>(db: SupabaseClient, query: string, maxRows = 50_000): Promise<T[]> {
   const PAGE = 1000;

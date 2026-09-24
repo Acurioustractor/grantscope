@@ -389,11 +389,10 @@ async function getData() {
       (SELECT COUNT(*) FROM act_grant_recommendation_decisions WHERE decision = 'watching')::int AS decisions_watching,
       (SELECT COUNT(*) FROM act_grant_recommendation_decisions WHERE decision = 'passed')::int AS decisions_passed,
       (SELECT COUNT(*) FROM funder_blocklist WHERE active = true)::int AS blocklist_size,
-      (SELECT COUNT(*) FROM funder_allowlist WHERE active = true)::int AS allowlist_size,
-      (SELECT COUNT(*) FROM funder_context_snapshot)::int AS funder_contexts,
-      (SELECT COUNT(*) FROM funder_context_snapshot WHERE relationship_score >= 50)::int AS funder_warm,
-      (SELECT COUNT(*) FROM funder_context_snapshot WHERE relationship_score >= 20 AND relationship_score < 50)::int AS funder_tepid
+      (SELECT COUNT(*) FROM funder_allowlist WHERE active = true)::int AS allowlist_size
   `;
+  // No funder_context_snapshot counts here: that table is ACT's relationship temperature, built
+  // from Xero and contacts, and on the never-public list. This page is public (2026-09-24).
 
   const [grantSummary, grantSources, frontierKinds, frontierQueue, automations, snapshots, failures, foundationSummary, longTailFounders, longTailDiscoveries, pipelineFunnel] = await Promise.all([
     safe<GrantSummaryRow[] | null>(
@@ -465,7 +464,6 @@ async function getData() {
       mv_unique: 0, mv_strong: 0,
       decisions_total: 0, decisions_pursuing: 0, decisions_watching: 0, decisions_passed: 0,
       blocklist_size: 0, allowlist_size: 0,
-      funder_contexts: 0, funder_warm: 0, funder_tepid: 0,
     },
   };
 }
@@ -610,28 +608,6 @@ export default async function GrantFrontierPage() {
               Passes auto-feed the funder blocklist when a funder hits ≥2 with 0 watches.
             </div>
           </Link>
-        </div>
-        {/* Funder context sub-row */}
-        <div className="mt-4 rounded-sm border-2 border-bauhaus-black/20 p-3">
-          <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">Funder context layer (relationship temperature for the recommendations dossier)</div>
-          <div className="mt-2 grid gap-3 md:grid-cols-4">
-            <div>
-              <div className="text-xl font-black tabular-nums text-bauhaus-black">{fmt(pipelineFunnel.funder_contexts)}</div>
-              <div className="text-[10px] text-bauhaus-muted">funders with context snapshot</div>
-            </div>
-            <div>
-              <div className="text-xl font-black tabular-nums text-green-700">{fmt(pipelineFunnel.funder_warm)}</div>
-              <div className="text-[10px] text-bauhaus-muted">WARM (≥50 score · Xero/contacts)</div>
-            </div>
-            <div>
-              <div className="text-xl font-black tabular-nums text-amber-700">{fmt(pipelineFunnel.funder_tepid)}</div>
-              <div className="text-[10px] text-bauhaus-muted">TEPID (20–49 · partial signal)</div>
-            </div>
-            <div>
-              <div className="text-xl font-black tabular-nums text-bauhaus-muted">{fmt(Math.max(0, pipelineFunnel.funder_contexts - pipelineFunnel.funder_warm - pipelineFunnel.funder_tepid))}</div>
-              <div className="text-[10px] text-bauhaus-muted">LIGHT/COLD (build-before-ask)</div>
-            </div>
-          </div>
         </div>
       </section>
 

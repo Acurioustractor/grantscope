@@ -3,6 +3,7 @@ import { getServiceSupabase } from '@/lib/report-supabase';
 import { safe } from '@/lib/services/utils';
 import { money, fmt } from '@/lib/format';
 import { ReportCTA } from '../_components/report-cta';
+import { grantFilterSql } from '@/lib/justice-money';
 
 export const revalidate = 3600;
 
@@ -97,9 +98,10 @@ async function getData() {
          LIMIT 20`,
     }), 'convergence-deserts') as Promise<DesertRow[] | null>,
 
-    // Total justice funding
+    // Total justice grants. The grant lane only: across every lane this summed $82.79B, of which
+    // $33.72B is grants to organisations; the rest is state budgets, aggregates, 'Total' and '(blank)' rows.
     safe(supabase.rpc('exec_sql', {
-      query: `SELECT SUM(amount_dollars)::bigint as total FROM justice_funding`,
+      query: `SELECT SUM(amount_dollars)::bigint as total FROM justice_funding WHERE ${grantFilterSql()}`,
     }), 'total-justice') as Promise<Array<{ total: number }> | null>,
 
     // Total NDIS participants (latest quarter)
@@ -158,19 +160,40 @@ async function getData() {
        GROUP BY is_community_controlled`,
     }), 'contract-split') as Promise<ContractSplit[] | null>,
 
-    // ALMA evidence gap: intervention types with evidence vs funding
+    // ALMA evidence gap: intervention types with evidence vs funding.
+    // Each part is counted at its own grain. The old single join matched every intervention to every
+    // justice_funding row of its organisation, so "interventions" counted funding rows (46,584 where
+    // ALMA holds 1,902), each organisation's money repeated once per intervention ($229.0B), and the
+    // fan-out ran past the 8s statement timeout on a cold cache (2026-09-24).
     safe(supabase.rpc('exec_sql', {
-      query: `SELECT
-         ai.type,
-         COUNT(*)::int as intervention_count,
-         ROUND(AVG(ai.portfolio_score), 3)::float as avg_portfolio_score,
-         COUNT(DISTINCT jf.recipient_abn)::int as funded_count,
-         COALESCE(SUM(jf.amount_dollars), 0)::bigint as total_funded
-       FROM alma_interventions_valid ai
-       LEFT JOIN gs_entities e ON e.id = ai.gs_entity_id
-       LEFT JOIN justice_funding jf ON jf.recipient_abn = e.abn AND jf.recipient_abn IS NOT NULL
-       GROUP BY ai.type
-       ORDER BY intervention_count DESC`,
+      query: `WITH org_money AS MATERIALIZED (
+         SELECT recipient_abn, SUM(amount_dollars) AS dollars
+         FROM justice_funding
+         WHERE recipient_abn IS NOT NULL AND amount_dollars IS NOT NULL
+           AND ${grantFilterSql()}
+         GROUP BY 1
+       ),
+       type_orgs AS (
+         SELECT DISTINCT ai.type, e.abn
+         FROM alma_interventions_valid ai
+         JOIN gs_entities e ON e.id = ai.gs_entity_id
+         WHERE e.abn IS NOT NULL
+       ),
+       funded AS (
+         SELECT o.type, COUNT(*)::int AS funded_count, SUM(m.dollars)::bigint AS total_funded
+         FROM type_orgs o
+         JOIN org_money m ON m.recipient_abn = o.abn
+         GROUP BY o.type
+       )
+       SELECT t.type, t.intervention_count, t.avg_portfolio_score,
+              COALESCE(f.funded_count, 0) AS funded_count,
+              COALESCE(f.total_funded, 0) AS total_funded
+       FROM (SELECT type, COUNT(*)::int AS intervention_count,
+                    ROUND(AVG(portfolio_score), 3)::float AS avg_portfolio_score
+               FROM alma_interventions_valid
+              GROUP BY type) t
+       LEFT JOIN funded f USING (type)
+       ORDER BY t.intervention_count DESC`,
     }), 'alma-gap') as Promise<AlmaFundingGap[] | null>,
 
     // Pipeline costs from ROGS
@@ -273,7 +296,7 @@ export default async function ConvergenceReportPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           <div className="bg-white border-4 border-bauhaus-black p-5 text-center" style={{ boxShadow: '4px 4px 0px 0px #121212' }}>
             <div className="text-2xl sm:text-3xl font-black text-bauhaus-red">{money(data.totalJusticeFunding)}</div>
-            <div className="text-xs text-bauhaus-muted mt-1 font-bold uppercase tracking-wider">Justice Funding Tracked</div>
+            <div className="text-xs text-bauhaus-muted mt-1 font-bold uppercase tracking-wider">Justice Grants Tracked</div>
           </div>
           <div className="bg-white border-4 border-bauhaus-black p-5 text-center" style={{ boxShadow: '4px 4px 0px 0px #121212' }}>
             <div className="text-2xl sm:text-3xl font-black text-bauhaus-blue">{fmt(data.totalNdisParticipants)}</div>
@@ -467,7 +490,7 @@ export default async function ConvergenceReportPage() {
                   <th className="text-right px-3 py-2 font-black uppercase tracking-wider text-xs">Interventions</th>
                   <th className="text-right px-3 py-2 font-black uppercase tracking-wider text-xs">Avg Evidence Score</th>
                   <th className="text-right px-3 py-2 font-black uppercase tracking-wider text-xs">Funded Orgs</th>
-                  <th className="text-right px-3 py-2 font-black uppercase tracking-wider text-xs">Total Funded</th>
+                  <th className="text-right px-3 py-2 font-black uppercase tracking-wider text-xs">Their Justice Grants</th>
                   <th className="text-right px-3 py-2 font-black uppercase tracking-wider text-xs">Gap Signal</th>
                 </tr>
               </thead>
@@ -508,6 +531,8 @@ export default async function ConvergenceReportPage() {
         <p className="text-[10px] text-bauhaus-muted mt-2">
           Source: ALMA intervention database cross-referenced with justice_funding by entity ABN.
           Evidence score is the ALMA portfolio_score (0-1) averaging methodology rigour, cultural authority, and outcome evidence.
+          Their justice grants are everything the delivering organisations received, for any program, from the grant records.
+          An organisation running two types appears in both rows, so the column does not add up to a total.
         </p>
       </section>
 
