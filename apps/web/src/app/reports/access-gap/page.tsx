@@ -101,7 +101,7 @@ async function getReport() {
  *  its query. The report's underlying data changes nightly at most. */
 const getReportCached = unstable_cache(getReport, ['reports-access-gap-v2'], { revalidate: 3600 });
 
-const count = (n: number) => (n === 0 ? 'none' : n.toLocaleString());
+const countOrNone = (n: number) => (n === 0 ? 'none' : n.toLocaleString());
 
 export default async function AccessGapPage() {
   const report = await getReportCached();
@@ -137,8 +137,8 @@ export default async function AccessGapPage() {
           <p className="text-sm text-bauhaus-black leading-relaxed mb-3">
             The answer needs each organisation&apos;s revenue and the funding it receives. The register
             this page reads holds {report.coverage.rows.toLocaleString()} community organisations:{' '}
-            {count(report.coverage.withRevenue)} have a revenue figure and{' '}
-            {count(report.coverage.withFunding)} have a funding figure.
+            {countOrNone(report.coverage.withRevenue)} have a revenue figure and{' '}
+            {countOrNone(report.coverage.withFunding)} have a funding figure.
           </p>
           <p className="text-sm text-bauhaus-muted leading-relaxed">
             Earlier versions of this page said small organisations spend 40% on admin and large ones 15%.

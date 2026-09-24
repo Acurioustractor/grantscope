@@ -99,7 +99,7 @@ async function getData() {
     }), 'convergence-deserts') as Promise<DesertRow[] | null>,
 
     // Total justice grants. The grant lane only: across every lane this summed $82.79B, of which
-    // $33.98B is grants to organisations; the rest is state budgets, aggregates and 'Total' rows.
+    // $33.72B is grants to organisations; the rest is state budgets, aggregates, 'Total' and '(blank)' rows.
     safe(supabase.rpc('exec_sql', {
       query: `SELECT SUM(amount_dollars)::bigint as total FROM justice_funding WHERE ${grantFilterSql()}`,
     }), 'total-justice') as Promise<Array<{ total: number }> | null>,
