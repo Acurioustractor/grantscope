@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
- * score-project-rubric.mjs — the SECOND tagging signal for the five non-Goods
- * ACT projects: a written rubric, scored by JEV, alongside the keyword tiers.
+ * score-project-rubric.mjs — the SECOND tagging signal for the six ACT projects:
+ * a written rubric, scored by JEV, alongside the keyword tiers. Goods joined on
+ * 2026-09-24; its keyword tier is scripts/lib/goods-relevance.mjs, which owns the
+ * ACT-GD tag, so for Goods this script only ever adds the tag.
  *
  * WHY BOTH. The keyword lists in scripts/lib/project-relevance.mjs find grants
  * whose WORDING matches ours. They cannot find a grant that describes the same
@@ -48,6 +50,7 @@ import {
   scoreGrantForProject, applyProjectTags, PROJECT_CODES,
   RUBRIC_FIT_AT, RUBRIC_CONFIDENCE_AT,
 } from './lib/project-relevance.mjs';
+import { goodsRubricQualifies } from './lib/goods-relevance.mjs';
 
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith(`--${k}=`)); return a ? a.split('=')[1] : d; };
 const APPLY = process.argv.includes('--apply');
@@ -73,6 +76,12 @@ const supabase = createClient(
  * `area` is applied in CODE below, never asked of the model.
  */
 const PROJECTS = {
+  // Goods joined 2026-09-24. Its tag (ACT-GD) is owned by score-goods-relevance.mjs, so here the
+  // rubric only ever ADDS it (see the write below); applyGoodsTag counts this verdict on every pass.
+  goods: {
+    what: 'Goods on Country supplies essential household goods — beds, bedding, mattresses, whitegoods, washing machines, furniture — into remote Aboriginal and Torres Strait Islander communities, alongside community stores, remote housing and community infrastructure. It is Aboriginal-community-controlled in its delivery and works on self-determination and Closing the Gap terms.',
+    area: { national: false, states: ['NT', 'QLD', 'WA'] },
+  },
   justicehub: {
     what: 'JusticeHub works on youth justice: justice reinvestment, diversion and diversionary programs, restorative justice, bail support, throughcare, youth mentoring, and reducing youth detention, recidivism and reoffending. It does NOT mean environmental, climate or economic justice.',
     area: { national: true, states: [] },
@@ -149,7 +158,20 @@ function geographyExcluded(project, grant) {
   return !area.states.some(s => geo.includes(s));
 }
 
-async function askJev(grant, attempt = 0) {
+/**
+ * The questions a row still needs. A row read before Goods joined carries the other five verdicts;
+ * it is asked only about Goods, so those verdicts never move (JEV wobbles near the line, and a
+ * re-ask could tag and untag a grant across nights).
+ */
+function questionsFor(grant) {
+  const rel = grant.project_relevance || {};
+  if (RESCORE || !rel.rubric_meta) return QUESTIONS;
+  return Object.fromEntries(Object.keys(PROJECTS)
+    .filter((p) => !rel[p]?.rubric)
+    .map((p) => [`fit_${p}`, QUESTIONS[`fit_${p}`]]));
+}
+
+async function askJev(grant, questions, attempt = 0) {
   // Keep state tight: "context rot" is documented — unrelated detail distracts.
   const state = {
     grant_name: grant.name,
@@ -161,13 +183,13 @@ async function askJev(grant, attempt = 0) {
   const res = await fetch(ENDPOINT, {
     method: 'POST',
     headers: { Authorization: `Bearer ${process.env.JEV_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, state, questions: QUESTIONS }),
+    body: JSON.stringify({ model: MODEL, state, questions }),
     signal: AbortSignal.timeout(60000),
   });
   if (res.status === 429 || res.status === 529) {
     if (attempt >= 4) throw new Error(`${res.status} after retries`);
     await new Promise(r => setTimeout(r, 2 ** attempt * 1000));
-    return askJev(grant, attempt + 1);
+    return askJev(grant, questions, attempt + 1);
   }
   if (!res.ok) throw new Error(`${res.status} ${(await res.text()).slice(0, 200)}`);
   return res.json();
@@ -182,7 +204,7 @@ async function main() {
 
   try {
     let q = supabase.from('grant_opportunities')
-      .select('id, name, provider, description, categories, focus_areas, geography, aligned_projects, project_relevance, source, closes_at, deadline')
+      .select('id, name, provider, description, categories, focus_areas, geography, aligned_projects, project_relevance, goods_relevance_score, goods_relevance_signals, source, closes_at, deadline')
       .order('id')
       .limit(LIMIT);
     if (!ALL_TIME) {
@@ -192,7 +214,8 @@ async function main() {
     // Unscored rows are chosen in SQL, before the limit. Filtering after it (only) meant that once
     // the open pool passed LIMIT, the nightly run fetched LIMIT already-scored rows and never saw
     // the new ones (2026-09-24: 333 open, so close).
-    if (!RESCORE) q = q.is('project_relevance->rubric_meta', null);
+    // A row with no Goods verdict has either never been read, or was read before Goods joined.
+    if (!RESCORE) q = q.is('project_relevance->goods->rubric', null);
     const { data: grants, error } = await q;
     if (error) throw error;
 
@@ -205,10 +228,11 @@ async function main() {
     // and untag itself across nightly runs and churn the desk. Use --rescore only
     // deliberately, e.g. after changing the rubric wording or the threshold, and
     // expect a handful of boundary rows to move.
-    const todo = RESCORE ? grants : grants.filter(g => !g.project_relevance?.rubric_meta);
+    const todo = RESCORE ? grants : grants.filter(g => !g.project_relevance?.goods?.rubric);
     log(`${grants.length} in scope; ${todo.length} to score (${DRY ? 'DRY RUN' : 'APPLY'})`);
 
-    const stats = { ok: 0, failed: 0, tokens: 0, ms: [], added: [], removed: [] };
+    const stats = { ok: 0, failed: 0, tokens: 0, ms: [], added: [], removed: [],
+      goods: { read: 0, fit: 0, alreadyTagged: 0, outsideArea: 0, blocked: 0 } };
     let cursor = 0;
 
     async function worker() {
@@ -216,18 +240,22 @@ async function main() {
         const g = todo[cursor++];
         const t0 = Date.now();
         try {
-          const json = await askJev(g);
+          const questions = questionsFor(g);
+          const json = await askJev(g, questions);
           stats.ms.push(Date.now() - t0);
           stats.tokens += json.usage?.input_tokens || 0;
 
           const at = new Date().toISOString();
           const relevance = { ...(g.project_relevance || {}) };
-          relevance.rubric_meta = {
-            organisation_fundable: json.answers?.fundable_by_an_organisation?.noul ?? null,
-            model: json.model || MODEL,
-            scored_at: at,
-          };
+          if (questions.fundable_by_an_organisation) {
+            relevance.rubric_meta = {
+              organisation_fundable: json.answers?.fundable_by_an_organisation?.noul ?? null,
+              model: json.model || MODEL,
+              scored_at: at,
+            };
+          }
           for (const project of Object.keys(PROJECTS)) {
+            if (!questions[`fit_${project}`]) continue;
             const a = json.answers?.[`fit_${project}`];
             relevance[project] = {
               ...(relevance[project] || {}),
@@ -245,13 +273,38 @@ async function main() {
           for (const project of Object.keys(PROJECT_CODES)) results[project] = scoreGrantForProject(project, g);
           const { tagged, changes, relevance: merged } = applyProjectTags({ ...g, project_relevance: relevance }, results, at);
 
+          // Goods: ADD on the rubric, never remove here. score-goods-relevance.mjs owns removal (it also
+          // weighs the keyword score and leaves manual rows alone) and ORs this verdict via applyGoodsTag,
+          // so its next pass keeps the tag.
+          let goodsSignals = null;
+          const gr = merged.goods?.rubric;
+          if (questions.fit_goods) {
+            stats.goods.read++;
+            if ((gr?.score ?? 0) >= RUBRIC_FIT_AT && (gr?.confidence ?? 0) >= RUBRIC_CONFIDENCE_AT) {
+              stats.goods.fit++;
+              if (tagged.includes('ACT-GD')) stats.goods.alreadyTagged++;
+              else if (gr.geography_excluded) stats.goods.outsideArea++;
+              else if (!goodsRubricQualifies(merged)) stats.goods.blocked++;
+            }
+          }
+          if (goodsRubricQualifies(merged) && !tagged.includes('ACT-GD')) {
+            tagged.push('ACT-GD');
+            if (!tagged.includes('goods')) tagged.push('goods');
+            goodsSignals = {
+              ...(g.goods_relevance_signals || {}),
+              tagged_by: 'rubric',
+              tag_change: { change: 'added', at, previous_score: g.goods_relevance_score ?? null, score: g.goods_relevance_score ?? null, by: 'rubric' },
+            };
+            stats.added.push(`goods(rubric):${g.name?.slice(0, 55)}`);
+          }
+
           for (const [project, c] of Object.entries(changes)) {
             (c.change === 'added' ? stats.added : stats.removed).push(`${project}(${c.by}):${g.name?.slice(0, 55)}`);
           }
 
           if (APPLY) {
             const { error: upErr } = await supabase.from('grant_opportunities')
-              .update({ project_relevance: merged, aligned_projects: tagged, project_relevance_scored_at: at })
+              .update({ project_relevance: merged, aligned_projects: tagged, project_relevance_scored_at: at, ...(goodsSignals ? { goods_relevance_signals: goodsSignals } : {}) })
               .eq('id', g.id);
             if (upErr) throw upErr;
           }
@@ -271,6 +324,8 @@ async function main() {
     if (lat.length) console.log(`latency p50=${lat[Math.floor(lat.length * 0.5)]}ms p95=${lat[Math.floor(lat.length * 0.95)]}ms`);
     console.log(`tokens: ${stats.tokens.toLocaleString()} -> $${(stats.tokens * 42 / 1e9).toFixed(4)}`);
     console.log(`rubric gates: fit>=${RUBRIC_FIT_AT}, confidence>=${RUBRIC_CONFIDENCE_AT}`);
+    const gs = stats.goods;
+    console.log(`goods: ${gs.read} read, ${gs.fit} rated a fit: ${gs.alreadyTagged} already tagged, ${gs.outsideArea} outside NT/QLD/WA, ${gs.blocked} blocked (organisation-fundable or generic programme)`);
     console.log(`\nTags added (${stats.added.length}):`);
     for (const a of stats.added) console.log(`  + ${a}`);
     if (stats.removed.length) {
