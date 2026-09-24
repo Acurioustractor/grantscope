@@ -2,6 +2,7 @@ import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { getLiveReportSupabase } from '@/lib/report-supabase';
+import { rogsYjSpendSql } from '@/lib/justice-money';
 import { safe } from '@/lib/services/utils';
 import {
  ReportSection, ReportToc, Finding, SourceLink, SourcesPanel, PullQuote, StatStrip, ModeToggle, RelatedReads,
@@ -76,10 +77,7 @@ async function getNumbers() {
  FROM public.v_qld_watchhouse_latest LIMIT 1`,
  }), 'reports/youth-justice/qld/sector/long-read') as Promise<LatestRow[] | null>,
  safe(supabase.rpc('exec_sql', {
- query: `SELECT recipient_name, SUM(amount_dollars)::bigint AS total
- FROM public.justice_funding
- WHERE state = 'QLD' AND recipient_name LIKE 'Youth Justice -%'
- GROUP BY 1`,
+ query: rogsYjSpendSql('QLD'),
  }), 'reports/youth-justice/qld/sector/long-read') as Promise<SpendRow[] | null>,
  safe(supabase.rpc('exec_sql', {
  query: `SELECT org_type, total_funding::bigint, funding_share_pct::int, orgs::int
@@ -381,7 +379,7 @@ export default async function QldYjLongRead() {
 
  <Finding n={3} title={`${money(r.detention)} detention vs ${money(r.community)} community: ratio is the story`} severity="crit">
  <p>
- QLD&apos;s state-budget Youth Justice line items disclose <span className="font-black">{money(r.detention)}</span> on detention-based services and <span className="font-black">{money(r.community)}</span> on community-based services across the years CivicGraph indexes. Ratio: <span className="font-black text-bauhaus-red">{detentionRatio}:1 detention to community</span>. Group-conferencing, the most evidence-backed early intervention in the budget, gets <span className="font-black">{money(r.groupConferencing)}</span>, ~{totalSpend > 0 ? ((r.groupConferencing/totalSpend)*100).toFixed(1) : '—'}% of the three-line Youth Justice total. <SourceLink href="#src-qld-budget">[2]</SourceLink>
+ The Productivity Commission&apos;s Report on Government Services records <span className="font-black">{money(r.detention)}</span> on detention-based services and <span className="font-black">{money(r.community)}</span> on community-based services across the years CivicGraph indexes. Ratio: <span className="font-black text-bauhaus-red">{detentionRatio}:1 detention to community</span>. Group-conferencing, the most evidence-backed early intervention in the budget, gets <span className="font-black">{money(r.groupConferencing)}</span>, ~{totalSpend > 0 ? ((r.groupConferencing/totalSpend)*100).toFixed(1) : '—'}% of the three-line Youth Justice total. <SourceLink href="#src-qld-budget">[2]</SourceLink>
  </p>
  </Finding>
 
