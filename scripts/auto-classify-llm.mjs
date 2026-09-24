@@ -28,6 +28,14 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
+import { readFileSync } from 'node:fs';
+
+// Jev answers are applied only while Ben's 18-of-20 check holds for the model that answered.
+// jev-latest can change under us; a new model means review-only until it is measured again.
+const JEV_GATE = JSON.parse(readFileSync(new URL('./jev-gates.json', import.meta.url), 'utf8'))['alma-classify'];
+function jevMayApply(model) {
+  return Boolean(JEV_GATE?.on) && model === JEV_GATE.model;
+}
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const LIMIT_ARG = process.argv.find((a) => a.startsWith('--limit='));
@@ -318,6 +326,7 @@ async function classifyWithOpenAICompatible(rows, rowsText, provider) {
 }
 
 let activeProvider = null;
+let gateWarned = false;
 
 async function classifyBatch(rows) {
   const rowsText = rows.map(formatRowForLLM).join('\n');
@@ -411,7 +420,12 @@ async function run() {
         }
 
         // Determine if we apply or leave for human review
-        const willApply = decision.confidence >= MIN_CONFIDENCE;
+        const gated = activeProvider === 'jev' && !jevMayApply(MODEL);
+        if (gated && !gateWarned) {
+          console.warn(`  Jev answered as ${MODEL}, but jev-gates.json measured ${JEV_GATE?.model ?? 'nothing'}: review-only until Ben re-checks 20.`);
+          gateWarned = true;
+        }
+        const willApply = decision.confidence >= MIN_CONFIDENCE && !gated;
         if (!willApply) lowConfidence++;
 
         if (DRY_RUN) continue;
