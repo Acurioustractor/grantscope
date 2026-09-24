@@ -23,6 +23,7 @@ import { join } from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 import { scoreGrantForGoods, applyGoodsTag, GOODS_TAG_THRESHOLD, GOODS_HIGH_FIT_THRESHOLD } from './lib/goods-relevance.mjs';
+import { loadWrongProjectVerdicts, humanNoFor, enforceHumanVerdicts } from './lib/human-verdicts.mjs';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -173,6 +174,8 @@ async function main() {
   console.log(`  dry-run: ${DRY_RUN}\n`);
 
   const run = !DRY_RUN ? await logStart(supabase, 'score-goods-relevance', 'Score Goods Relevance') : { id: null };
+  // Ben's "not a Goods fit" passes on the desk: that tag stays off (lib/human-verdicts.mjs).
+  const verdicts = await loadWrongProjectVerdicts(supabase);
 
   let totalScored = 0;
   let totalTagged = 0;
@@ -209,6 +212,7 @@ async function main() {
     }
 
     const scored = scorable.map(row => {
+      row.human_no = humanNoFor(verdicts, row.id);
       const result = scoreGrantForGoods(pickColumns(row));
       if (result.score >= GOODS_TAG_THRESHOLD) totalTagged++;
       if (result.score >= GOODS_HIGH_FIT_THRESHOLD) totalHighFit++;
@@ -237,8 +241,11 @@ async function main() {
     if (batch.length < BATCH) break;
   }
 
+  const enforced = await enforceHumanVerdicts(supabase, verdicts, { apply: !DRY_RUN });
+
   console.log('\n=== SUMMARY ===');
   console.log(`Rows processed:  ${totalScored}`);
+  console.log(`Human verdicts:  ${verdicts.size} grants carry a "not a fit" pass; tags removed now: ${enforced.length}${enforced.length ? '  ' + enforced.slice(0, 10).join(' · ') : ''}`);
   console.log(`Manual preserved:${totalSkippedManual} (source LIKE 'manual%' — score untouched)`);
   console.log(`ACT-GD tagged:   ${totalTagged} (score >= ${GOODS_TAG_THRESHOLD})`);
   console.log(`High-fit:        ${totalHighFit} (score >= ${GOODS_HIGH_FIT_THRESHOLD})`);

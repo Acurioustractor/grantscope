@@ -300,16 +300,18 @@ export function applyGoodsTag(row, score, signals, at = new Date().toISOString()
   // Goods verdict. Without the rubric here, this scorer's next pass would strip every tag JEV added.
   const byKeyword = score >= GOODS_TAG_THRESHOLD;
   const byRubric = goodsRubricQualifies(row.project_relevance);
-  if (byKeyword || byRubric) { tagged.add('ACT-GD'); tagged.add('goods'); }
+  // Ben's "not a Goods fit" pass on the desk (lib/human-verdicts.mjs) keeps the tag off whatever the scores say.
+  const byHuman = (row.human_no || []).includes('ACT-GD');
+  if ((byKeyword || byRubric) && !byHuman) { tagged.add('ACT-GD'); tagged.add('goods'); }
   else { tagged.delete('ACT-GD'); tagged.delete('goods'); }
   const isTagged = tagged.has('ACT-GD');
   const change = wasTagged === isTagged ? null : (isTagged ? 'added' : 'removed');
-  const by = byKeyword && byRubric ? 'both' : byKeyword ? 'keyword' : byRubric ? 'rubric' : null;
+  const by = byHuman ? 'human' : byKeyword && byRubric ? 'both' : byKeyword ? 'keyword' : byRubric ? 'rubric' : null;
   const previous = row.goods_relevance_signals?.tag_change;
   const tagChange = change
     ? { change, at, previous_score: row.goods_relevance_score ?? null, score, ...(by ? { by } : {}) }
     : previous ?? undefined;
-  const out = { ...signals, tagged_by: isTagged ? by : null };
+  const out = { ...signals, tagged_by: byHuman ? 'human_no' : isTagged ? by : null };
   return { tagged: Array.from(tagged), change, signals: tagChange ? { ...out, tag_change: tagChange } : out };
 }
 

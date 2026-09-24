@@ -51,6 +51,7 @@ import {
   RUBRIC_FIT_AT, RUBRIC_CONFIDENCE_AT,
 } from './lib/project-relevance.mjs';
 import { goodsRubricQualifies } from './lib/goods-relevance.mjs';
+import { loadWrongProjectVerdicts, humanNoFor, enforceHumanVerdicts } from './lib/human-verdicts.mjs';
 
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith(`--${k}=`)); return a ? a.split('=')[1] : d; };
 const APPLY = process.argv.includes('--apply');
@@ -218,6 +219,9 @@ async function main() {
     if (!RESCORE) q = q.is('project_relevance->goods->rubric', null);
     const { data: grants, error } = await q;
     if (error) throw error;
+    // Ben's "not a fit" passes on the desk: Jev may score those grants, but the rejected tags stay off.
+    const verdicts = await loadWrongProjectVerdicts(supabase);
+    for (const g of grants) g.human_no = humanNoFor(verdicts, g.id);
 
     // Incremental by default: skip rows that already carry a rubric verdict.
     //
@@ -287,7 +291,7 @@ async function main() {
               else if (!goodsRubricQualifies(merged)) stats.goods.blocked++;
             }
           }
-          if (goodsRubricQualifies(merged) && !tagged.includes('ACT-GD')) {
+          if (goodsRubricQualifies(merged) && !tagged.includes('ACT-GD') && !g.human_no.includes('ACT-GD')) {
             tagged.push('ACT-GD');
             if (!tagged.includes('goods')) tagged.push('goods');
             goodsSignals = {
@@ -317,6 +321,7 @@ async function main() {
       }
     }
     await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+    const enforced = await enforceHumanVerdicts(supabase, verdicts, { apply: APPLY });
 
     const lat = stats.ms.sort((a, b) => a - b);
     console.log('\n=== SUMMARY ===');
@@ -324,6 +329,7 @@ async function main() {
     if (lat.length) console.log(`latency p50=${lat[Math.floor(lat.length * 0.5)]}ms p95=${lat[Math.floor(lat.length * 0.95)]}ms`);
     console.log(`tokens: ${stats.tokens.toLocaleString()} -> $${(stats.tokens * 42 / 1e9).toFixed(4)}`);
     console.log(`rubric gates: fit>=${RUBRIC_FIT_AT}, confidence>=${RUBRIC_CONFIDENCE_AT}`);
+    console.log(`human verdicts: ${verdicts.size} grants carry a "not a fit" pass; tags removed now: ${enforced.length}${enforced.length ? '  ' + enforced.slice(0, 10).join(' · ') : ''}`);
     const gs = stats.goods;
     console.log(`goods: ${gs.read} read, ${gs.fit} rated a fit: ${gs.alreadyTagged} already tagged, ${gs.outsideArea} outside NT/QLD/WA, ${gs.blocked} blocked (organisation-fundable or generic programme)`);
     console.log(`\nTags added (${stats.added.length}):`);
