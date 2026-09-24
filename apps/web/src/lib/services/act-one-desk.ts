@@ -6,7 +6,10 @@ import { getFunderScan } from '@/lib/services/goods-funder-scan';
 import { getActRelationshipLedger } from '@/lib/services/act-relationship-ledger';
 import { getOrgDailyActionStates, type ActDailyActionStatus } from '@/lib/services/act-daily-actions';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
-import { getAllProjectsGrantsTriage } from '@/lib/services/act-project-grants-triage';
+import { getAllProjectsGrantsTriage, grantDecisionDue, type TaggedBy } from '@/lib/services/act-project-grants-triage';
+import { getDeskDecisions, decisionKey, type DeskDecision } from '@/lib/services/act-desk-decisions';
+import type { ProjectEligibility } from '@/lib/act-grant-eligibility';
+import { money } from '@/lib/format';
 import { getGoodsBuyerPipeline } from '@/lib/services/goods-buyer-pipeline';
 import { ghlContactUrl } from '@/lib/ghl-links';
 import { actOrgHref } from '@/lib/services/act-org-record';
@@ -48,6 +51,8 @@ export type DeskRecord = {
   workHref: string | null;
   /** True when this row is a decision due (pursue or pass), not yet an Ask. */
   isDecision?: boolean;
+  /** Grant rows: pursued, but no live GHL opportunity holds it yet (the push failed or predates the wiring). */
+  ghlPending?: boolean;
   /** Obligation rows: who the work is owed to. */
   owedTo?: 'funder' | 'community';
   obligationId?: string;
@@ -56,6 +61,28 @@ export type DeskRecord = {
   personId?: string;
   /** Person rows: mirror sync age for the stale badge (data-trust rule). */
   lastSyncedAt?: string | null;
+  /** Grant, funder and buyer rows: the source id the decision record keys on
+   *  (grant_opportunities.id, org_project_foundations.id, goods_relationships.id). */
+  ref?: string;
+  projectCode?: string | null;
+  /** The latest Pursue / Pass / Save for later on this row (opportunity_decisions). */
+  decision?: DeskDecision;
+  /** Grant rows: why it is on the desk and who can apply. */
+  grant?: DeskGrantFacts;
+};
+
+export type DeskGrantFacts = {
+  funder: string | null;
+  keyword: number;
+  jevScore: number | null;
+  jevConfidence: number | null;
+  jevOutsideArea: boolean;
+  taggedBy: TaggedBy;
+  closeDate: string | null;
+  amountMin: number | null;
+  amountMax: number | null;
+  url: string | null;
+  eligibility: ProjectEligibility;
 };
 
 /** The primary Target the Asks serve (CONTEXT.md: Target). */
@@ -90,6 +117,10 @@ function urgency(r: DeskRecord): number {
 export type OneDeskPool = {
   /** Ranked records still needing a move today. */
   active: DeskRecord[];
+  /** Saved for later: off the queue until Ben brings them back. */
+  saved: DeskRecord[];
+  /** Passed: off the queue; a "Wrong project" pass also keeps the tag off in the nightly scorers. */
+  passed: DeskRecord[];
   /** Records marked done/waiting/tomorrow today (same store as the Today queue). */
   handled: Array<{ record: DeskRecord; status: ActDailyActionStatus }>;
   orgProfileId: string | null;
@@ -97,8 +128,8 @@ export type OneDeskPool = {
 };
 
 export async function getOneDesk(slug: string): Promise<OneDeskPool> {
-  const [pool, capital] = await Promise.all([
-    getOneDeskPool(slug),
+  const [records, capital] = await Promise.all([
+    getDeskRecords(slug),
     getGoodsCapitalWorkspace().catch(() => null),
   ]);
   const target: DeskTarget | null = capital ? {
@@ -113,17 +144,50 @@ export async function getOneDesk(slug: string): Promise<OneDeskPool> {
     ? await getOrgDailyActionStates(profile.id).catch(() => ({}))
     : {};
   const active: DeskRecord[] = [];
+  const saved: DeskRecord[] = [];
+  const passed: DeskRecord[] = [];
   const handled: OneDeskPool['handled'] = [];
-  for (const r of pool) {
+  for (const r of records) {
+    if (r.decision?.state === 'passed') { passed.push(r); continue; }
+    if (r.decision?.state === 'saved') { saved.push(r); continue; }
     const status = states[r.id];
     if (status) handled.push({ record: r, status });
     else active.push(r);
   }
-  return { active, handled, orgProfileId: profile?.id ?? null, target };
+  const newestFirst = (a: DeskRecord, b: DeskRecord) => (b.decision?.at ?? '').localeCompare(a.decision?.at ?? '');
+  return { active, saved: saved.sort(newestFirst), passed: passed.sort(newestFirst), handled, orgProfileId: profile?.id ?? null, target };
 }
 
+/** The ranked queue without saved or passed rows (the digest preview reads this). */
 export async function getOneDeskPool(slug: string): Promise<DeskRecord[]> {
+  const records = await getDeskRecords(slug);
+  return records.filter((r) => r.decision?.state !== 'passed' && r.decision?.state !== 'saved');
+}
+
+/** Is there a live decision on the row? An undone decision ('open') counts as none. */
+function decided(d: DeskDecision | undefined): boolean {
+  return Boolean(d && d.state !== 'open');
+}
+
+/** Grant ids with a live decision, and the project codes it was made for. */
+function decidedGrants(decisions: Map<string, DeskDecision>): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  for (const [key, d] of decisions) {
+    if (d.state === 'open') continue;
+    const [kind, ref, code] = key.split('|');
+    if (kind !== 'grant' || !ref || !code) continue;
+    if (!out.has(ref)) out.set(ref, new Set());
+    out.get(ref)!.add(code);
+  }
+  return out;
+}
+
+async function getDeskRecords(slug: string): Promise<DeskRecord[]> {
   const profile = await getOrgProfileBySlug(slug).catch(() => null);
+  // Decisions first: a passed grant may have lost its tag overnight and must still be fetched.
+  const decisions = profile
+    ? await getDeskDecisions(profile.id).catch(() => new Map<string, DeskDecision>())
+    : new Map<string, DeskDecision>();
   const [scan, triage, buyers, ledger, obligations, people] = await Promise.all([
     // Portfolio-wide, not Goods-only (audit 2026-08-07): Goods had 10 high-fit
     // funders and the only surface, while Empathy Ledger had 99 and PICC 84 with
@@ -132,7 +196,7 @@ export async function getOneDeskPool(slug: string): Promise<DeskRecord[]> {
     // Widened 2026-09-14 (step 4 of the ACT grants desk build): this used to be
     // getGoodsGrantsTriage, which only ever ranked on goods_relevance_score — every
     // grant row on the desk read "Goods" regardless of which project it actually fit.
-    getAllProjectsGrantsTriage().catch(() => []),
+    getAllProjectsGrantsTriage(decidedGrants(decisions)).catch(() => []),
     getGoodsBuyerPipeline().catch(() => null),
     profile ? getActRelationshipLedger(slug, profile.id).catch(() => null) : null,
     profile ? getDeskObligations(profile.id).catch(() => []) : [],
@@ -188,7 +252,7 @@ export async function getOneDeskPool(slug: string): Promise<DeskRecord[]> {
       next: item.nextMove || 'Chase payment',
       dueDays: item.oldestOverdueDays > 0 ? -item.oldestOverdueDays : null,
       score: Math.min(99, Math.round(item.outstandingTotal / 1000)),
-      amount: `$${Math.round(item.outstandingTotal / 1000)}K`,
+      amount: money(item.outstandingTotal),
       ghlUrl: null, workHref: actOrgHref(slug, item.organisation),
     });
   }
@@ -198,49 +262,64 @@ export async function getOneDeskPool(slug: string): Promise<DeskRecord[]> {
   for (const r of scan?.rows ?? []) {
     if (!r.stage || ['parked', 'declined'].includes(r.stage)) continue;
     const inGhl = r.ghlWarmth !== 'not_in_ghl';
+    const decision = decisions.get(decisionKey('funder', r.id, r.projectCode));
+    const pursuing = decision?.state === 'pursuing';
     // Grade A only for undecided funders: recorded grants on file. The old gate
     // was fit >= 85, which admitted 286 rows ranked on placeholder giving values
     // and is most of why 1,005 matches sat untouched at "saved".
-    if (!inGhl && r.evidenceGrade !== 'A') continue;
+    if (!inGhl && r.evidenceGrade !== 'A' && !decided(decision)) continue;
     pool.push({
-      id: `f-${r.id}`, kind: 'funder',
-      project: r.projectName ?? 'ACT',
+      id: `f-${r.id}`, kind: 'funder', ref: r.id, projectCode: r.projectCode, decision,
+      // One label per project across kinds: org_projects says "The Farm" where grants say "Farm".
+      project: r.projectCode ? deskProjectLabel(r.projectCode) : (r.projectName ?? 'ACT'),
       name: r.name,
-      signal: inGhl ? r.ghlWarmth : 'recorded grants on file · not yet an Ask',
-      next: inGhl ? (r.nextStep || 'Set a next step') : 'Decide: pursue (mint the Ask in GHL) or pass',
+      signal: inGhl ? r.ghlWarmth : pursuing ? 'pursuing · not yet in GHL' : 'recorded grants on file · not decided',
+      next: inGhl ? (r.nextStep || 'Set a next step') : pursuing ? 'Make the Ask in GHL' : 'Pursue or pass',
       dueDays: null,
-      score: r.fitScore ?? 0, amount: null, ghlUrl: ghlContactUrl(r.ghlContactId),
+      score: r.fitScore ?? 0,
+      // Real giving from the ACNC AIS (grants made in Australia), never the placeholder size band.
+      amount: r.givingAnnual != null ? `${money(r.givingAnnual)} given ${r.givingYear}` : null,
+      ghlUrl: ghlContactUrl(r.ghlContactId),
       workHref: inGhl ? actOrgHref(slug, r.name) : `/org/${slug}/goods/foundations/scan`,
-      isDecision: !inGhl,
+      isDecision: !inGhl && !pursuing,
     });
   }
-  // Grant Rounds: decision-due when closing within 30 days or fit >= 85 for Goods
-  // (its scorer's tuned scale) or >= its own threshold for the other five projects
-  // (project-relevance.mjs's simpler scorer tops out much lower — 30 is its tag
-  // threshold, not a decision-due bar, so lean on the deadline clause for those).
-  // Already-in-GHL rounds are Asks being worked.
+  // Grant Rounds: decision due when closing within 30 days, when the keyword score clears the project's
+  // bar, or when Jev calls it a strong fit (grantDecisionDue). Already-in-GHL rounds are Asks being
+  // worked. A decided round stays in the pool whatever its score, so Saved and Passed can list it.
   for (const g of triage) {
     const inGhl = Boolean(g.ghlOpportunityId);
-    const fitBar = g.project === 'goods' ? 85 : 40;
-    const decisionDue = (g.daysToDeadline != null && g.daysToDeadline <= 30) || g.fitScore >= fitBar;
-    if (!inGhl && !decisionDue) continue;
+    const decision = decisions.get(decisionKey('grant', g.rowId, g.code));
+    const pursuing = decision?.state === 'pursuing';
+    if (!inGhl && !grantDecisionDue(g) && !decided(decision)) continue;
     pool.push({
-      id: `g-${g.id}`, kind: 'grant', project: deskProjectLabel(g.code), name: g.name,
-      signal: inGhl ? 'in GHL' : 'live round · not yet an Ask',
-      next: inGhl ? 'Work the application' : 'Decide: pursue (push to GHL) or pass',
-      dueDays: g.daysToDeadline, score: g.fitScore,
-      amount: g.amountMax ? `$${Math.round(g.amountMax / 1000)}K` : null,
+      id: `g-${g.id}`, kind: 'grant', ref: g.rowId, projectCode: g.code, decision,
+      project: deskProjectLabel(g.code), name: g.name,
+      signal: pursuing ? 'pursuing' : inGhl ? 'in GHL' : 'open round · not decided',
+      next: pursuing ? (inGhl ? 'Work the application in GHL' : 'Send it to GHL') : inGhl ? 'Work the application' : 'Pursue or pass',
+      dueDays: g.daysToDeadline,
+      // Undated rows rank on the stronger of the two signals (Jev 0-3 read onto 0-99).
+      score: Math.max(g.fitScore, g.jevScore != null ? Math.round(g.jevScore * 33) : 0),
+      amount: g.amountMax != null ? money(g.amountMax) : g.amountMin != null ? money(g.amountMin) : null,
       ghlUrl: null, workHref: g.project === 'goods' ? `/org/${slug}/goods/grants` : `/org/${slug}/grants`,
-      isDecision: !inGhl,
+      isDecision: !inGhl && !pursuing,
+      ghlPending: pursuing && !inGhl,
+      grant: {
+        funder: g.provider, keyword: g.fitScore, jevScore: g.jevScore, jevConfidence: g.jevConfidence,
+        jevOutsideArea: g.jevOutsideArea, taggedBy: g.taggedBy, closeDate: g.deadline,
+        amountMin: g.amountMin, amountMax: g.amountMax, url: g.url, eligibility: g.eligibility,
+      },
     });
   }
   for (const b of buyers?.rows ?? []) {
     if (!b.isOpen) continue;
     pool.push({
-      id: `b-${b.id}`, kind: 'buyer', project: 'Goods', name: b.name,
+      id: `b-${b.id}`, kind: 'buyer', ref: b.id, projectCode: 'ACT-GD',
+      decision: decisions.get(decisionKey('buyer', b.id, 'ACT-GD')),
+      project: 'Goods', name: b.name,
       signal: `${b.band} ${b.warmth}`, next: b.nextMove,
       dueDays: days(b.nextActionDue), score: b.warmth,
-      amount: b.askAmount ? `$${Math.round(b.askAmount / 1000)}K` : null,
+      amount: b.askAmount ? money(b.askAmount) : null,
       ghlUrl: ghlContactUrl(b.ghlContactId), workHref: actOrgHref(slug, b.name),
     });
   }

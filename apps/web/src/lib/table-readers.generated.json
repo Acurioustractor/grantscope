@@ -33,7 +33,8 @@
   "app/reports/multicultural-sector/fecca-eccv/long-read/page.tsx",
   "app/reports/multicultural-sector/fecca-eccv/page.tsx",
   "app/reports/multicultural-sector/page.tsx",
-  "lib/services/due-diligence-service.ts"
+  "lib/services/due-diligence-service.ts",
+  "lib/services/goods-funder-scan.ts"
  ],
  "acnc_charities": [
   "app/api/browse/org/route.ts",
@@ -843,6 +844,7 @@
   "app/api/org/[orgProfileId]/people/search/route.ts",
   "lib/goods-readiness-snapshot.ts",
   "lib/opportunity-intelligence.ts",
+  "lib/services/act-desk-ghl.ts",
   "lib/services/act-opportunity-context.ts",
   "lib/services/goods-living-data-adapter.ts"
  ],
@@ -1031,6 +1033,7 @@
   "lib/grant-scout.ts",
   "lib/opportunity-intelligence.ts",
   "lib/services/act-atlas-context.ts",
+  "lib/services/act-desk-ghl.ts",
   "lib/services/act-opportunity-context.ts",
   "lib/services/act-project-grants-triage.ts",
   "lib/services/act-saved-queries.ts",
@@ -1665,10 +1668,12 @@
  ],
  "opportunity_decisions": [
   "app/api/org/[orgProfileId]/daily-actions/route.ts",
+  "app/api/org/[orgProfileId]/desk-decisions/route.ts",
   "app/api/org/[orgProfileId]/funder-intelligence/route.ts",
   "app/api/org/[orgProfileId]/pipeline/route.ts",
   "lib/opportunity-intelligence.ts",
   "lib/services/act-atlas-context.ts",
+  "lib/services/act-desk-decisions.ts",
   "lib/services/act-opportunity-context.ts",
   "lib/services/goods-capital-workspace.ts",
   "lib/services/org-dashboard-service.ts"

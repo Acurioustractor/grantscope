@@ -350,6 +350,9 @@ const DESK_LENSES: ReadonlyArray<readonly [string | null, string]> = [
   // NOT "People" — room 03 owns that word. This lens shows Person rows whose
   // next touch is due; "Follow-ups" says what you do with them.
   ['person', 'Follow-ups'],
+  // Decided rows leave the queue; these two views bring them back (desk page reads kind=saved|passed).
+  ['saved', 'Saved for later'],
+  ['passed', 'Passed'],
 ];
 
 function DeskRailTree({ slug, activeKind, project }: { slug: string; activeKind: string | null; project: string | null }) {

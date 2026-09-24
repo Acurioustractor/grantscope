@@ -274,6 +274,8 @@ export function applyProjectTags(row, results, at = new Date().toISOString()) {
   // keyword rescore never silently drops a rubric-tagged grant. Generic-programme
   // suppression needs the cross-project count, so it is computed once up front.
   const isGenericProgramme = countRubricFits(relevance) >= RUBRIC_GENERIC_PROJECT_COUNT;
+  // Ben's "not a fit" passes on the desk (lib/human-verdicts.mjs): these codes stay off whatever the scores say.
+  const humanNo = new Set(row.human_no || []);
 
   for (const [project, code] of Object.entries(PROJECT_CODES)) {
     const result = results[project];
@@ -283,8 +285,9 @@ export function applyProjectTags(row, results, at = new Date().toISOString()) {
     const existingRubric = relevance[project]?.rubric ?? null;
     const byKeyword = result.score >= PROJECT_TAG_THRESHOLD;
     const byRubric = !isGenericProgramme && rubricQualifies(existingRubric, relevance.rubric_meta);
+    const byHuman = humanNo.has(code);
 
-    if (byKeyword || byRubric) tagged.add(code);
+    if ((byKeyword || byRubric) && !byHuman) tagged.add(code);
     else tagged.delete(code);
 
     const isTagged = tagged.has(code);
@@ -295,7 +298,7 @@ export function applyProjectTags(row, results, at = new Date().toISOString()) {
         change, at, previous_score: previousScore, score: result.score,
         // Which signal moved it. Without this, a rubric-only tag looks like a
         // keyword scorer that has started hallucinating.
-        by: byKeyword && byRubric ? 'both' : byKeyword ? 'keyword' : 'rubric',
+        by: byHuman ? 'human' : byKeyword && byRubric ? 'both' : byKeyword ? 'keyword' : 'rubric',
       };
     }
     // Preserve `rubric`: this assignment replaces the whole per-project object, so
@@ -305,7 +308,7 @@ export function applyProjectTags(row, results, at = new Date().toISOString()) {
       signals: result.signals,
       scored_at: at,
       ...(existingRubric ? { rubric: existingRubric } : {}),
-      tagged_by: isTagged ? (byKeyword && byRubric ? 'both' : byKeyword ? 'keyword' : 'rubric') : null,
+      tagged_by: byHuman ? 'human_no' : isTagged ? (byKeyword && byRubric ? 'both' : byKeyword ? 'keyword' : 'rubric') : null,
     };
   }
 

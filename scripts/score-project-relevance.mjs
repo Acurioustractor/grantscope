@@ -22,6 +22,7 @@ import { join } from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 import { scoreGrantForProject, applyProjectTags, PROJECT_CONFIGS, PROJECT_TAG_THRESHOLD } from './lib/project-relevance.mjs';
+import { loadWrongProjectVerdicts, humanNoFor, enforceHumanVerdicts } from './lib/human-verdicts.mjs';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -137,6 +138,8 @@ async function main() {
   console.log(`  dry-run: ${DRY_RUN}\n`);
 
   const run = !DRY_RUN ? await logStart(supabase, 'score-project-relevance', 'Score Project Relevance') : { id: null };
+  // Ben's "not a fit" passes on the desk: those project tags stay off (lib/human-verdicts.mjs).
+  const verdicts = await loadWrongProjectVerdicts(supabase);
 
   let totalScored = 0;
   const tagged = Object.fromEntries(PROJECTS.map((p) => [p, 0]));
@@ -150,7 +153,7 @@ async function main() {
 
     const scoredAt = new Date().toISOString();
     const scored = batch.map((raw) => {
-      const row = pickColumns(raw);
+      const row = { ...pickColumns(raw), human_no: humanNoFor(verdicts, raw.id) };
       const results = {};
       for (const project of PROJECTS) {
         results[project] = scoreGrantForProject(project, row);
@@ -172,8 +175,11 @@ async function main() {
     if (batch.length < BATCH) break;
   }
 
+  const enforced = await enforceHumanVerdicts(supabase, verdicts, { apply: !DRY_RUN });
+
   console.log('\n=== SUMMARY ===');
   console.log(`Rows processed: ${totalScored}`);
+  console.log(`Human verdicts: ${verdicts.size} grants carry a "not a fit" pass; tags removed now: ${enforced.length}${enforced.length ? '  ' + enforced.slice(0, 10).join(' · ') : ''}`);
   for (const project of PROJECTS) console.log(`  ${project}: ${tagged[project]} tagged (score >= ${PROJECT_TAG_THRESHOLD})`);
   console.log(`Tags added:   ${tagsAdded.length}${tagsAdded.length ? '  ' + tagsAdded.slice(0, 10).join(' · ') : ''}`);
   console.log(`Tags removed: ${tagsRemoved.length}${tagsRemoved.length ? '  ' + tagsRemoved.slice(0, 10).join(' · ') : ''}`);
