@@ -178,8 +178,25 @@ async function verifyUrl(spec) {
     // merge rather than landing a commit no check ever saw.
     await gh(['pr', 'merge', PR, '--squash', '--delete-branch', '--match-head-commit', mergeHead]);
   } catch (err) {
-    console.log(`ship-watch: MERGE REFUSED for PR #${PR} — ${(err.stderr || err.message || '').trim().split('\n')[0]}`);
-    process.exit(1);
+    // gh merges on GitHub first and then tidies the LOCAL checkout. Run from a detached worktree,
+    // that second step fails ("could not determine current branch") after the merge has happened,
+    // and before gh deletes the remote branch. PR #512 (2026-09-24) was reported REFUSED while
+    // GitHub showed it merged. So ask GitHub what happened before believing the exit code.
+    const reason = (err.stderr || err.message || '').trim().split('\n')[0];
+    let pr = {};
+    try {
+      pr = JSON.parse(await gh(['pr', 'view', PR, '--json', 'state,headRefName']));
+    } catch { /* fall through to REFUSED */ }
+    if (pr.state !== 'MERGED') {
+      console.log(`ship-watch: MERGE REFUSED for PR #${PR} — ${reason}`);
+      process.exit(1);
+    }
+    try {
+      await gh(['api', '-X', 'DELETE', `repos/{owner}/{repo}/git/refs/heads/${pr.headRefName}`]);
+    } catch (delErr) {
+      console.log(`ship-watch: merged, but remote branch ${pr.headRefName} was not deleted — ${(delErr.stderr || delErr.message || '').trim().split('\n')[0]}`);
+    }
+    console.log(`ship-watch: merged on GitHub; gh's local step failed (${reason}) and was skipped`);
   }
 
   // Phase 3 — live verification. Vercel builds after merge; give it room before curling.
