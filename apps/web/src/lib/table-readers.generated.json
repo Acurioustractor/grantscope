@@ -1665,10 +1665,12 @@
  ],
  "opportunity_decisions": [
   "app/api/org/[orgProfileId]/daily-actions/route.ts",
+  "app/api/org/[orgProfileId]/desk-decisions/route.ts",
   "app/api/org/[orgProfileId]/funder-intelligence/route.ts",
   "app/api/org/[orgProfileId]/pipeline/route.ts",
   "lib/opportunity-intelligence.ts",
   "lib/services/act-atlas-context.ts",
+  "lib/services/act-desk-decisions.ts",
   "lib/services/act-opportunity-context.ts",
   "lib/services/goods-capital-workspace.ts",
   "lib/services/org-dashboard-service.ts"

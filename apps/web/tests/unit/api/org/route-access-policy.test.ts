@@ -6,6 +6,7 @@ const ROUTES = [
   'contacts/route.ts',
   'contacts/sync-ghl/route.ts',
   'daily-actions/route.ts',
+  'desk-decisions/route.ts',
   'journeys/route.ts',
   'journeys/[journeyId]/route.ts',
   'journeys/chat/route.ts',
