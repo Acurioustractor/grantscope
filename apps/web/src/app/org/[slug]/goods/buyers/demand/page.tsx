@@ -5,6 +5,7 @@ import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsDemandMap, type CommunityRole, type GovBuyer } from '@/lib/services/goods-demand-map';
 import { GoodsSubNav } from '../../_components/goods-sub-nav';
 import { money } from '@/lib/format';
+import { QBE_BUYER_MAP, QBE_REGIONS } from '@/lib/services/goods-qbe-buyer-map';
 
 /**
  * Goods: who buys beds and whitegoods for people in communities.
@@ -52,23 +53,28 @@ export default async function GoodsDemandPage({
   params, searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ state?: string; role?: string }>;
+  searchParams: Promise<{ state?: string; role?: string; region?: string }>;
 }) {
   const { slug } = await params;
   if (!isActSlug(slug)) notFound();
-  const { state, role } = await searchParams;
+  const { state, role, region } = await searchParams;
   const profile = await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
   const map = await getGoodsDemandMap();
+  const qbe = QBE_BUYER_MAP.filter((b) => !region || b.region === region)
+    .slice().sort((a, b) => (a.priority ?? 9) - (b.priority ?? 9));
+  const byId = new Map(map.community.map((c) => [c.id, c]));
   const roles = [...new Set(map.community.map((c) => c.role))] as CommunityRole[];
   const community = map.community.filter((c) => (!state || c.state === state) && (!role || c.role === role));
-  const q = (next: { state?: string; role?: string }) => {
+  const q = (next: { state?: string; role?: string; region?: string }) => {
     const p = new URLSearchParams();
     const s = 'state' in next ? next.state : state;
     const r = 'role' in next ? next.role : role;
+    const g = 'region' in next ? next.region : region;
     if (s) p.set('state', s);
     if (r) p.set('role', r);
+    if (g) p.set('region', g);
     const qs = p.toString();
     return `/org/${slug}/goods/buyers/demand${qs ? `?${qs}` : ''}`;
   };
@@ -98,6 +104,73 @@ export default async function GoodsDemandPage({
       </div>
 
       <div className="mx-auto max-w-[1760px] space-y-8 px-4 py-6">
+        <section>
+          <h2 className="mb-1 text-lg font-black uppercase tracking-widest">Where Goods already is: {map.places.length} communities</h2>
+          <p className="mb-3 text-[12px] text-bauhaus-muted">
+            Community buyers in the same postcode, or failing that the same local government area. Nearby, not belonging.
+            A proposed link is a same-name community record that has not been confirmed yet.
+          </p>
+          <div className="overflow-x-auto border-4 border-bauhaus-black bg-white">
+            <table className="w-full text-[12px]">
+              <thead className="border-b-2 border-bauhaus-black text-left text-[11px] font-black uppercase tracking-widest">
+                <tr><th className="px-3 py-2">Community</th><th className="px-3 py-2">Link</th><th className="px-3 py-2">Buyers nearby</th></tr>
+              </thead>
+              <tbody>
+                {map.places.map((p) => {
+                  const near = p.nearby.map((n) => byId.get(n.id)).filter((c): c is NonNullable<typeof c> => !!c);
+                  return (
+                    <tr key={p.slug} className="border-b border-bauhaus-black/10 align-top">
+                      <td className="px-3 py-2 font-bold">
+                        {p.communityId ? <Link href={`/org/${slug}/goods/community/${p.communityId}`} className="hover:underline">{p.name}</Link> : p.name}
+                      </td>
+                      <td className="px-3 py-2">{p.status === 'confirmed' ? 'Confirmed' : p.status === 'proposed' ? 'Proposed' : 'Not linked'}</td>
+                      <td className="px-3 py-2">
+                        {near.length === 0
+                          ? (p.communityId ? 'None found by postcode or LGA' : '–')
+                          : near.slice(0, 6).map((c) => `${c.name} (${c.role})`).join(' · ') + (near.length > 6 ? ` · and ${near.length - 6} more` : '')}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="mb-1 text-lg font-black uppercase tracking-widest">Named by the QBE team: {qbe.length} organisations</h2>
+          <p className="mb-3 text-[12px] text-bauhaus-muted">
+            The Catalysing Impact volunteers&apos; buyer map (September 2026): the role each organisation could play in the
+            community-enterprise model, who would pay, how it would buy, and the question to ask next. Their judgement,
+            not confirmed purchases; sales quantities are left out until they are reconciled against Xero.
+          </p>
+          <div className="mb-3 flex flex-wrap gap-2">
+            <Link href={q({ region: undefined })} className={chip(!region)}>All regions</Link>
+            {QBE_REGIONS.map((r) => <Link key={r} href={q({ region: r })} className={chip(region === r)}>{r}</Link>)}
+          </div>
+          <div className="overflow-x-auto border-4 border-bauhaus-black bg-white">
+            <table className="w-full text-[12px]">
+              <thead className="border-b-2 border-bauhaus-black text-left text-[11px] font-black uppercase tracking-widest">
+                <tr><th className="px-3 py-2">Organisation</th><th className="px-3 py-2">Could be</th><th className="px-3 py-2">Where it stands</th><th className="px-3 py-2">Who pays · how it buys</th><th className="px-3 py-2">Ask next</th></tr>
+              </thead>
+              <tbody>
+                {qbe.map((b) => (
+                  <tr key={`${b.region}|${b.name}`} className="border-b border-bauhaus-black/10 align-top">
+                    <td className="px-3 py-2">
+                      <div className="font-bold">{b.gsId ? <Link href={`/entity/${b.gsId}`} className="hover:underline">{b.name}</Link> : b.name}</div>
+                      <div className="text-[11px] text-bauhaus-muted">{b.region}{b.match === 'check' ? ' · record link to confirm' : ''}</div>
+                    </td>
+                    <td className="px-3 py-2">{b.modelRoles.join(', ')}</td>
+                    <td className="px-3 py-2">{b.purchaseStatus ?? '–'}</td>
+                    <td className="px-3 py-2">{b.payerRoute ?? '–'}<div className="text-[11px] text-bauhaus-muted">{b.pathway}</div></td>
+                    <td className="px-3 py-2">{b.nextQuestion ?? '–'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <section>
           <h2 className="mb-1 text-lg font-black uppercase tracking-widest">Bought before: {map.household.length} government buyers</h2>
           <p className="mb-3 text-[12px] text-bauhaus-muted">
