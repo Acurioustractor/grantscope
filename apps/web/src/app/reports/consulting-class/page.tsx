@@ -268,7 +268,7 @@ export default async function ConsultingClassPage() {
       {/* Who Buys */}
       <section className="mb-10">
         <h2 className="text-xl font-black uppercase tracking-widest border-b-4 border-bauhaus-black pb-2 mb-6">
-          Who Buys — Top 20 Government Clients
+          Who Buys: Top 20 Government Clients
         </h2>
         <p className="text-sm text-bauhaus-muted mb-4">
           Defence alone accounts for {money(data.buyers[0]?.total)} in consulting contracts. The same firms advise on policy, design programs, and then win the contracts to implement them.
@@ -302,7 +302,7 @@ export default async function ConsultingClassPage() {
           Where the Donations Go
         </h2>
         <p className="text-sm text-bauhaus-muted mb-4">
-          Every major consulting firm donates to both sides. The Business Council of Australia — the peak lobby group for big business — receives more than any political party.
+          Which parties the firms give to. Only receipts recorded as donations are counted, so party fundraising and transfers are left out.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-0">
           {data.donations.map((d, i) => {
@@ -333,7 +333,7 @@ export default async function ConsultingClassPage() {
             Registered Lobbyists
           </h2>
           <p className="text-sm text-bauhaus-muted mb-4">
-            In addition to direct political donations, these firms maintain registered lobbying connections — professional influence infrastructure.
+            In addition to direct political donations, these firms maintain registered lobbying connections: professional influence infrastructure.
           </p>
           <div className="space-y-2">
             {data.lobbying.map((l, i) => (
@@ -380,7 +380,7 @@ export default async function ConsultingClassPage() {
           Explore Each Firm
         </h2>
         <p className="text-sm text-bauhaus-muted mb-4">
-          Click any firm to see their full CivicGraph profile — every contract, every donation, every board member, every lobbying connection.
+          Click any firm to see their full CivicGraph profile: every contract, every donation, every board member, every lobbying connection.
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {data.firms.map((f) => (
@@ -401,10 +401,10 @@ export default async function ConsultingClassPage() {
         <div className="bg-bauhaus-canvas p-4">
           <h3 className="text-sm font-black text-bauhaus-black uppercase tracking-widest mb-2">Data Sources</h3>
           <ul className="text-xs text-bauhaus-muted space-y-1">
-            <li>AusTender — Federal procurement contracts (all years)</li>
-            <li>AEC — Australian Electoral Commission political donation disclosures</li>
+            <li>AusTender: Federal procurement contracts (all years)</li>
+            <li>AEC: Australian Electoral Commission political donation disclosures</li>
             <li>Australian Government Register of Lobbyists</li>
-            <li>ACNC — Australian Charities and Not-for-profits Commission</li>
+            <li>ACNC: Australian Charities and Not-for-profits Commission</li>
           </ul>
           <p className="text-[10px] text-bauhaus-muted mt-3">
             This is a living investigation. All data is sourced from public datasets. Cross-system entity linkage performed by CivicGraph via ABN matching.

@@ -12,10 +12,10 @@ export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: 'Political Money | CivicGraph Investigation',
-  description: 'Who funds Australian politics — and what do they get in return? Federal donation disclosures cross-referenced against government contracts.',
+  description: 'Who funds Australian politics, and what do they get in return? Federal donation disclosures cross-referenced against government contracts.',
   openGraph: {
     title: 'Political Money',
-    description: 'Who funds Australian politics — and what do they get in return? Federal donation disclosures cross-referenced against government contracts.',
+    description: 'Who funds Australian politics, and what do they get in return? Federal donation disclosures cross-referenced against government contracts.',
     type: 'article',
     siteName: 'CivicGraph',
   },
@@ -306,7 +306,7 @@ export default async function PoliticalMoneyReport() {
           Political Money
         </h1>
         <p className="text-bauhaus-muted text-base sm:text-lg max-w-3xl leading-relaxed font-medium">
-          Who funds Australian politics &mdash; and what do they get in return?
+          Who funds Australian politics, and what do they get in return?
           {' '}{fmt(s.totalRecords)} donation records from {s.minYear} to {s.maxYear},
           cross-referenced against about 797K government contracts. {fmt(s.payToPlayCount)} entities
           appear on both sides: donating to parties AND winning government work.
@@ -324,7 +324,7 @@ export default async function PoliticalMoneyReport() {
             <div className="text-3xl sm:text-4xl font-black">{money(s.totalAmount)}</div>
             <div className="text-white/50 text-xs font-bold mt-2">{fmt(s.totalRecords)} records</div>
             <div className="text-white/50 text-xs font-bold mt-1">
-              Not counted: {money(s.otherReceipts)} of other party income
+              Not counted: {money(s.otherReceipts)} of other receipts (party fundraising, transfers, public funding, third-party campaigners)
             </div>
           </div>
           <div className="border-4 border-l-0 max-md:border-l-4 border-bauhaus-black p-6 bg-bauhaus-red text-white">
@@ -418,7 +418,7 @@ export default async function PoliticalMoneyReport() {
         </h2>
         <p className="text-sm text-bauhaus-muted mb-6 max-w-2xl">
           The biggest donors to Australian politics by total disclosed amount.
-          Entities with a government contract match are flagged &mdash; they appear on both sides.
+          Entities with a government contract match are flagged: they appear on both sides.
         </p>
         <div className="border-4 border-bauhaus-black bg-white overflow-x-auto">
           <table className="w-full text-sm">
@@ -496,7 +496,7 @@ export default async function PoliticalMoneyReport() {
           <p className="text-sm text-white/80 mb-8 max-w-2xl leading-relaxed">
             {fmt(s.payToPlayCount)} entities that donate to political parties ALSO hold
             government contracts. They donated a combined {money(s.payToPlayDonationTotal)} and
-            received {money(s.payToPlayContractTotal)} in government contracts &mdash;
+            received {money(s.payToPlayContractTotal)} in government contracts,
             a return of {s.payToPlayDonationTotal > 0 ? `${Math.round(s.payToPlayContractTotal / s.payToPlayDonationTotal)}x` : 'N/A'} their
             political investment.
           </p>
@@ -565,7 +565,7 @@ export default async function PoliticalMoneyReport() {
             <p className="text-xs text-white/40 max-w-xl mx-auto">
               Correlation does not imply causation. Many donor-contractors are large corporations
               for whom political engagement and government contracting are normal operations.
-              This table highlights the overlap &mdash; interpretation requires context.
+              This table highlights the overlap. Interpretation requires context.
             </p>
           </div>
         </div>
@@ -682,12 +682,12 @@ export default async function PoliticalMoneyReport() {
               be split across multiple entities to stay under thresholds. Associated entity
               flows (unions, clubs, holding companies) may be counted separately from their parent
               party. The ratio of contracts-to-donations should not
-              be interpreted as a direct return on investment &mdash; correlation does not
+              be interpreted as a direct return on investment. Correlation does not
               establish causation.
             </p>
             <p>
               <strong>Limitations:</strong> State/territory donation data is not yet included
-              (federal AEC only). Real-time donations are not available &mdash; AEC returns are
+              (federal AEC only). Real-time donations are not available: AEC returns are
               lodged annually with significant delay. Some entities operate under multiple ABNs
               or entity names, which may cause undercounting of aggregated totals.
             </p>
