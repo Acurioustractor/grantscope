@@ -1,6 +1,7 @@
 import { unstable_cache } from 'next/cache';
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
+import { execSqlAll } from '@/lib/exec-sql-all';
 import { ReportCTA } from '../_components/report-cta';
 
 export const dynamic = 'force-dynamic';
@@ -8,11 +9,11 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Funding Deserts & Executive Overhead | CivicGraph Investigation',
   description:
-    'Do disadvantaged areas get served by charities with higher executive overhead? LGA-level funding desert scores cross-referenced with ACNC executive remuneration data.',
+    'Do disadvantaged areas get served by charities with higher executive overhead? Council-level funding deserts cross-referenced with ACNC executive remuneration data.',
   openGraph: {
     title: 'Funding Deserts & Executive Overhead',
     description:
-      'Cross-referencing LGA-level disadvantage with charity executive pay across 1,582 Local Government Areas.',
+      'Cross-referencing council-level disadvantage and funding with charity executive pay.',
     type: 'article',
     siteName: 'CivicGraph',
   },
@@ -49,15 +50,16 @@ async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
 
 /* ---------- types ---------- */
 
-interface DesertRow {
+interface CouncilRow {
   lga_name: string;
-  lga_code: string;
   state: string;
-  desert_score: number;
-  seifa_decile: number;
   remoteness: string;
+  seifa_decile: number;
   total_funding: number;
   entity_count: number;
+  funding_per_org: number | null;
+  median_per_org: number;
+  is_desert: boolean;
 }
 
 interface AisRecord {
@@ -73,16 +75,17 @@ interface AisRecord {
 
 interface EntityLga {
   abn: string;
-  lga_code: string;
+  lga_name: string;
+  state: string;
   is_community_controlled: boolean;
 }
 
 interface EnrichedCharity extends AisRecord {
-  lga_code: string;
+  councilKey: string;
   lga_name: string;
-  desert_score: number;
   seifa_decile: number;
   remoteness: string;
+  isDesert: boolean;
   overheadPct: number;
   isAcco: boolean;
 }
@@ -105,7 +108,8 @@ interface DecileStat {
 interface DesertLgaStat {
   lga_name: string;
   state: string;
-  desert_score: number;
+  seifa_decile: number;
+  funding_per_org: number | null;
   remoteness: string;
   charityCount: number;
   avgOverhead: number;
@@ -120,41 +124,72 @@ interface AccoDesertComparison {
 
 /* ---------- data fetching ---------- */
 
+const councilKey = (lga: string, state: string) => `${lga}|${state}`;
+
+/**
+ * One row per council, flagged as a funding desert under the definition Ben picked on 2026-09-24:
+ * in the most disadvantaged 30% (average SEIFA IRSD decile 3 or lower) AND tracked funding per
+ * indexed organisation at or below the national median (or no indexed organisations at all).
+ *
+ * Replaced `desert_score > 0.5`. The score now runs 16.7 to 190, so that flagged every scored council
+ * (1,218 of 1,218 rows), and it tracks disadvantage (r = -0.86 with the IRSD decile) far more than
+ * money (r = -0.12). mv_funding_deserts also has no lga_code, which the page joined on, so it
+ * showed 0 councils and 0 charities. The view holds one row per council per remoteness class; the
+ * row kept is the council's modal remoteness, the same pick /api/data/map makes.
+ */
+const COUNCILS_SQL = `WITH modal AS (
+    SELECT DISTINCT ON (lga_name, upper(state)) lga_name, upper(state) AS state, remoteness_2021 AS remoteness
+      FROM postcode_geo
+     WHERE lga_name IS NOT NULL AND remoteness_2021 IS NOT NULL
+     GROUP BY lga_name, upper(state), remoteness_2021
+     ORDER BY lga_name, upper(state), count(*) DESC
+  ),
+  c AS (
+    SELECT DISTINCT ON (d.lga_name, upper(d.state))
+           d.lga_name, upper(d.state) AS state, d.avg_irsd_decile, d.total_funding_all_sources,
+           d.indexed_entities, coalesce(m.remoteness, d.remoteness) AS remoteness
+      FROM mv_funding_deserts d
+      LEFT JOIN modal m ON m.lga_name = d.lga_name AND m.state = upper(d.state)
+     WHERE d.desert_score IS NOT NULL
+     ORDER BY d.lga_name, upper(d.state), (d.remoteness = m.remoteness) DESC NULLS LAST, d.desert_score DESC
+  ),
+  med AS (
+    SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY total_funding_all_sources / NULLIF(indexed_entities, 0)) AS per_org
+      FROM c
+  )
+  SELECT c.lga_name, c.state, c.remoteness,
+         c.avg_irsd_decile::float AS seifa_decile,
+         c.total_funding_all_sources::float AS total_funding,
+         c.indexed_entities::int AS entity_count,
+         (c.total_funding_all_sources / NULLIF(c.indexed_entities, 0))::float AS funding_per_org,
+         med.per_org::float AS median_per_org,
+         coalesce(c.avg_irsd_decile <= 3
+           AND (c.indexed_entities = 0 OR c.total_funding_all_sources / NULLIF(c.indexed_entities, 0) <= med.per_org), false) AS is_desert
+    FROM c CROSS JOIN med
+   ORDER BY c.lga_name, c.state`;
+
 async function getData() {
   const db = getServiceSupabase();
 
-  // 1. Fetch mv_funding_deserts (paginated)
-  const deserts = await safe(async () => {
-    const all: DesertRow[] = [];
-    const PAGE = 1000;
-    let offset = 0;
-    while (true) {
-      const { data, error } = await db
-        .from('mv_funding_deserts')
-        .select('lga_name, lga_code, state, desert_score, avg_irsd_decile, remoteness, total_funding_all_sources, indexed_entities')
-        .not('desert_score', 'is', null)
-        .range(offset, offset + PAGE - 1);
-      if (error) throw new Error(error.message);
-      if (!data || data.length === 0) break;
-      all.push(
-        ...data.map((r: Record<string, unknown>) => ({
-          lga_name: String(r.lga_name || ''),
-          lga_code: String(r.lga_code || ''),
-          state: String(r.state || ''),
-          desert_score: Number(r.desert_score) || 0,
-          seifa_decile: Number(r.avg_irsd_decile) || 0,
-          remoteness: String(r.remoteness || ''),
-          total_funding: Number(r.total_funding_all_sources) || 0,
-          entity_count: Number(r.indexed_entities) || 0,
-        })),
-      );
-      if (data.length < PAGE) break;
-      offset += PAGE;
-    }
-    return all;
-  }, [] as DesertRow[]);
+  // 1. One row per scored council, with the desert flag.
+  const councils = await safe(async () => {
+    const rows = await execSqlAll<Record<string, unknown>>(db, COUNCILS_SQL);
+    return rows.map((r): CouncilRow => ({
+      lga_name: String(r.lga_name || ''),
+      state: String(r.state || ''),
+      remoteness: String(r.remoteness || ''),
+      seifa_decile: Number(r.seifa_decile) || 0,
+      total_funding: Number(r.total_funding) || 0,
+      entity_count: Number(r.entity_count) || 0,
+      funding_per_org: r.funding_per_org == null ? null : Number(r.funding_per_org),
+      median_per_org: Number(r.median_per_org) || 0,
+      is_desert: r.is_desert === true,
+    }));
+  }, [] as CouncilRow[]);
 
-  // 2. Fetch acnc_ais for 2023 with exec pay (paginated)
+  // 2. Fetch acnc_ais for 2023 with exec pay (paginated). Ordered, so no page repeats or skips a
+  //    row. Expenses must be positive: a charity with $0 expenses cannot have an overhead share,
+  //    and counting it as 0% pulled every average down.
   const aisData = await safe(async () => {
     const all: AisRecord[] = [];
     const PAGE = 1000;
@@ -165,6 +200,8 @@ async function getData() {
         .select('abn, charity_name, total_paid_key_management, total_expenses, total_revenue, revenue_from_government, staff_fte, charity_size')
         .eq('ais_year', 2023)
         .gt('total_paid_key_management', 0)
+        .gt('total_expenses', 0)
+        .order('abn')
         .range(offset, offset + PAGE - 1);
       if (error) throw new Error(error.message);
       if (!data || data.length === 0) break;
@@ -186,63 +223,53 @@ async function getData() {
     return all;
   }, [] as AisRecord[]);
 
-  // 3. Fetch gs_entities with lga_code and abn via exec_sql
+  // 3. The council each of those charities sits in: only the ABNs the page joins, one row per ABN,
+  //    ordered so execSqlAll's pages are stable.
   const entityLgas = await safe(async () => {
-    const { data, error } = await db.rpc('exec_sql', {
-      query: `SELECT abn, lga_code, is_community_controlled FROM gs_entities WHERE abn IS NOT NULL AND lga_code IS NOT NULL`,
-    });
-    if (error) throw new Error(error.message);
-    return (data as Record<string, unknown>[]).map((r) => ({
+    const data = await execSqlAll<Record<string, unknown>>(db, `SELECT DISTINCT ON (abn) abn, lga_name,
+             upper(state) AS state, coalesce(is_community_controlled, false) AS is_community_controlled
+        FROM gs_entities
+       WHERE lga_name IS NOT NULL
+         AND abn IN (SELECT abn FROM acnc_ais
+                      WHERE ais_year = 2023 AND total_paid_key_management > 0 AND total_expenses > 0)
+       ORDER BY abn, is_community_controlled DESC NULLS LAST`);
+    return data.map((r) => ({
       abn: String(r.abn),
-      lga_code: String(r.lga_code),
-      is_community_controlled: Boolean(r.is_community_controlled),
+      lga_name: String(r.lga_name),
+      state: String(r.state),
+      is_community_controlled: r.is_community_controlled === true,
     }));
   }, [] as EntityLga[]);
 
-  // Build lookup maps
-  const desertByLga = new Map<string, DesertRow>();
-  for (const d of deserts) {
-    if (!desertByLga.has(d.lga_code) || d.desert_score > desertByLga.get(d.lga_code)!.desert_score) {
-      desertByLga.set(d.lga_code, d);
-    }
-  }
+  const councilBy = new Map(councils.map((c) => [councilKey(c.lga_name, c.state), c]));
+  const entityByAbn = new Map(entityLgas.map((e) => [e.abn, e]));
 
-  const entityByAbn = new Map<string, EntityLga>();
-  const accoAbns = new Set<string>();
-  for (const e of entityLgas) {
-    if (!entityByAbn.has(e.abn)) entityByAbn.set(e.abn, e);
-    if (e.is_community_controlled) accoAbns.add(e.abn);
-  }
-
-  // Join charities to LGAs
+  // Join charities to councils, one row per ABN.
   const enriched: EnrichedCharity[] = [];
+  const seen = new Set<string>();
   for (const ais of aisData) {
+    if (seen.has(ais.abn)) continue;
     const entity = entityByAbn.get(ais.abn);
     if (!entity) continue;
-    const desert = desertByLga.get(entity.lga_code);
-    if (!desert) continue;
+    const key = councilKey(entity.lga_name, entity.state);
+    const council = councilBy.get(key);
+    if (!council) continue;
+    seen.add(ais.abn);
     enriched.push({
       ...ais,
-      lga_code: entity.lga_code,
-      lga_name: desert.lga_name,
-      desert_score: desert.desert_score,
-      seifa_decile: desert.seifa_decile,
-      remoteness: desert.remoteness,
-      overheadPct: ais.total_expenses > 0 ? (ais.total_paid_key_management / ais.total_expenses) * 100 : 0,
-      isAcco: accoAbns.has(ais.abn),
+      councilKey: key,
+      lga_name: council.lga_name,
+      seifa_decile: council.seifa_decile,
+      remoteness: council.remoteness,
+      isDesert: council.is_desert,
+      overheadPct: (ais.total_paid_key_management / ais.total_expenses) * 100,
+      isAcco: entity.is_community_controlled,
     });
   }
 
-  // Desert quartiles: Q1 = highest desert (most disadvantaged)
-  const desertScores = enriched.map((c) => c.desert_score).sort((a, b) => a - b);
-  const q25 = desertScores[Math.floor(desertScores.length * 0.25)] || 0;
-  const q50 = desertScores[Math.floor(desertScores.length * 0.5)] || 0;
-  const q75 = desertScores[Math.floor(desertScores.length * 0.75)] || 0;
-
-  const desertCharities = enriched.filter((c) => c.desert_score > q50);
-  const nonDesertCharities = enriched.filter((c) => c.desert_score <= q50);
-
-  const desertLgaCount = deserts.filter((d) => d.desert_score > 0.5).length;
+  const desertCharities = enriched.filter((c) => c.isDesert);
+  const nonDesertCharities = enriched.filter((c) => !c.isDesert);
+  const desertCouncils = councils.filter((c) => c.is_desert);
 
   // Key stats
   const avgOverheadDesert = desertCharities.length > 0
@@ -311,27 +338,28 @@ async function getData() {
       };
     });
 
-  // Section 5: Top desert LGAs with exec data
+  // Section 5: desert councils that have charities reporting exec pay, most disadvantaged first
   const lgaCharities = new Map<string, EnrichedCharity[]>();
-  for (const c of enriched) {
-    if (!lgaCharities.has(c.lga_code)) lgaCharities.set(c.lga_code, []);
-    lgaCharities.get(c.lga_code)!.push(c);
+  for (const c of desertCharities) {
+    if (!lgaCharities.has(c.councilKey)) lgaCharities.set(c.councilKey, []);
+    lgaCharities.get(c.councilKey)!.push(c);
   }
-  const desertLgaStats: DesertLgaStat[] = Array.from(desertByLga.values())
-    .filter((d) => lgaCharities.has(d.lga_code))
+  const desertLgaStats: DesertLgaStat[] = desertCouncils
+    .filter((d) => lgaCharities.has(councilKey(d.lga_name, d.state)))
     .map((d) => {
-      const charities = lgaCharities.get(d.lga_code)!;
+      const charities = lgaCharities.get(councilKey(d.lga_name, d.state))!;
       return {
         lga_name: d.lga_name,
         state: d.state,
-        desert_score: d.desert_score,
+        seifa_decile: d.seifa_decile,
+        funding_per_org: d.funding_per_org,
         remoteness: d.remoteness,
         charityCount: charities.length,
         avgOverhead: charities.reduce((s, c) => s + c.overheadPct, 0) / charities.length,
         totalFunding: d.total_funding,
       };
     })
-    .sort((a, b) => b.desert_score - a.desert_score)
+    .sort((a, b) => a.seifa_decile - b.seifa_decile || (a.funding_per_org ?? 0) - (b.funding_per_org ?? 0))
     .slice(0, 20);
 
   // Section 6: ACCO vs mainstream in deserts
@@ -358,8 +386,11 @@ async function getData() {
   };
 
   return {
-    totalDeserts: desertLgaCount,
+    totalDeserts: desertCouncils.length,
+    totalCouncils: councils.length,
+    medianPerOrg: councils[0]?.median_per_org ?? 0,
     totalEnriched: enriched.length,
+    desertEnriched: desertCharities.length,
     avgOverheadDesert,
     avgOverheadNonDesert,
     avgPayRemote,
@@ -368,7 +399,6 @@ async function getData() {
     byDecile,
     desertLgaStats,
     accoDesertComparison,
-    q50,
   };
 }
 
@@ -402,10 +432,11 @@ const REMOTENESS_BAR_COLORS: Record<string, string> = {
 
 /** Cost + pooler load: this page was force-dynamic with no caching, so every request ran
  *  its query. The report's underlying data changes nightly at most. */
-const getDataCached = unstable_cache(getData, ['reports-desert-overhead'], { revalidate: 3600 });
+const getDataCached = unstable_cache(getData, ['reports-desert-overhead-v4'], { revalidate: 3600 });
 
 export default async function DesertOverheadReport() {
   const d = await getDataCached();
+  const answer = d.avgOverheadDesert > d.avgOverheadNonDesert ? 'yes' : 'no';
 
   const maxOverhead = d.byRemoteness.length > 0
     ? Math.max(...d.byRemoteness.map((r) => r.avgOverhead))
@@ -428,11 +459,18 @@ export default async function DesertOverheadReport() {
           Where Executive Pay Meets Community Need
         </h1>
         <p className="text-bauhaus-muted text-base sm:text-lg max-w-3xl leading-relaxed font-medium">
-          Do the most disadvantaged areas get served by the most expensive charities? We
-          cross-referenced {fmt(d.totalDeserts)} funding desert LGAs with ACNC executive
-          remuneration data for {fmt(d.totalEnriched)} charities operating in scored Local Government
-          Areas &mdash; mapping where executive overhead meets community need.
+          Do the most disadvantaged places get served by the most expensive charities? We matched
+          {fmt(d.totalEnriched)} charities that report executive pay to their council.{' '}
+          {fmt(d.totalDeserts)} of {fmt(d.totalCouncils)} councils count as funding deserts: among the
+          most disadvantaged 30%, with tracked funding per organisation at or below the median.
         </p>
+        {d.desertEnriched > 0 && (
+          <p className="text-bauhaus-black text-base sm:text-lg max-w-3xl leading-relaxed font-bold mt-3">
+            In this data the answer is {answer}. The {fmt(d.desertEnriched)} charities in desert councils
+            spend {pct(d.avgOverheadDesert)} of their spending on executive pay, against{' '}
+            {pct(d.avgOverheadNonDesert)} everywhere else.
+          </p>
+        )}
         <div className="mt-4 text-xs text-bauhaus-muted font-bold">
           Data updated{' '}
           {new Date().toLocaleDateString('en-AU', {
@@ -448,17 +486,17 @@ export default async function DesertOverheadReport() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-0">
           <div className="border-4 border-bauhaus-black p-6 bg-bauhaus-black text-white">
             <div className="text-xs font-black text-bauhaus-yellow uppercase tracking-widest mb-2">
-              Funding Desert LGAs
+              Funding Desert Councils
             </div>
             <div className="text-3xl sm:text-4xl font-black">{fmt(d.totalDeserts)}</div>
-            <div className="text-white/50 text-xs font-bold mt-2">desert score &gt; 0.5</div>
+            <div className="text-white/50 text-xs font-bold mt-2">IRSD decile 1&ndash;3, funding per org at or below median</div>
           </div>
           <div className="border-4 border-l-0 max-md:border-l-4 border-bauhaus-black p-6 bg-bauhaus-red text-white">
             <div className="text-xs font-black text-red-200 uppercase tracking-widest mb-2">
               Charities Matched
             </div>
             <div className="text-3xl sm:text-4xl font-black">{fmt(d.totalEnriched)}</div>
-            <div className="text-white/50 text-xs font-bold mt-2">in desert LGAs with exec data</div>
+            <div className="text-white/50 text-xs font-bold mt-2">{fmt(d.desertEnriched)} of them in desert councils</div>
           </div>
           <div className="border-4 border-l-0 max-md:border-l-4 max-md:border-t-0 border-bauhaus-black p-6 bg-white">
             <div className="text-xs font-black text-bauhaus-muted uppercase tracking-widest mb-2">
@@ -483,8 +521,8 @@ export default async function DesertOverheadReport() {
         </div>
         <div className="border-4 border-t-0 border-bauhaus-black p-4 bg-bauhaus-canvas text-center">
           <p className="text-sm text-bauhaus-muted font-bold">
-            Source: ACNC AIS 2023 &times; CivicGraph Funding Deserts (SEIFA + Remoteness + Funding
-            Flows) &times; CivicGraph Entity Graph.
+            Source: ACNC AIS 2023 &times; ABS SEIFA IRSD 2021 &times; CivicGraph tracked funding and
+            entity graph.
           </p>
         </div>
       </section>
@@ -667,12 +705,12 @@ export default async function DesertOverheadReport() {
       {/* Section 4: Top desert LGAs with highest exec overhead */}
       <section className="mb-12">
         <h2 className="text-xl font-black text-bauhaus-black mb-2 uppercase tracking-widest">
-          Desert LGAs with Highest Exec Overhead
+          Funding Desert Councils
         </h2>
         <p className="text-sm text-bauhaus-muted mb-6 max-w-2xl">
-          The 20 LGAs with the highest desert scores that also have charities reporting executive
-          pay. These are the places where community need is greatest and where the overhead question
-          matters most.
+          Desert councils with at least one charity reporting executive pay, most disadvantaged first
+          (up to 20). Most hold only a few such charities, so one charity can move a council&apos;s
+          average a long way.
         </p>
         <div className="border-4 border-bauhaus-black bg-white overflow-x-auto">
           <table className="w-full text-sm">
@@ -681,9 +719,9 @@ export default async function DesertOverheadReport() {
                 <th className="text-left p-3 font-black uppercase tracking-widest text-xs w-8">
                   #
                 </th>
-                <th className="text-left p-3 font-black uppercase tracking-widest text-xs">LGA</th>
+                <th className="text-left p-3 font-black uppercase tracking-widest text-xs">Council</th>
                 <th className="text-right p-3 font-black uppercase tracking-widest text-xs">
-                  Desert Score
+                  IRSD Decile
                 </th>
                 <th className="text-left p-3 font-black uppercase tracking-widest text-xs hidden sm:table-cell">
                   Remoteness
@@ -695,7 +733,7 @@ export default async function DesertOverheadReport() {
                   Avg Overhead
                 </th>
                 <th className="text-right p-3 font-black uppercase tracking-widest text-xs hidden md:table-cell">
-                  Total Funding
+                  Funding per Org
                 </th>
               </tr>
             </thead>
@@ -711,7 +749,7 @@ export default async function DesertOverheadReport() {
                     <div className="text-xs text-bauhaus-muted">{lga.state || 'Unknown'}</div>
                   </td>
                   <td className="p-3 text-right font-mono font-black text-bauhaus-red">
-                    {lga.desert_score.toFixed(0)}
+                    {lga.seifa_decile.toFixed(1)}
                   </td>
                   <td
                     className={`p-3 text-xs hidden sm:table-cell ${REMOTENESS_COLORS[lga.remoteness] || ''}`}
@@ -721,7 +759,7 @@ export default async function DesertOverheadReport() {
                   <td className="p-3 text-right font-mono">{lga.charityCount}</td>
                   <td className="p-3 text-right font-mono font-bold">{pct(lga.avgOverhead)}</td>
                   <td className="p-3 text-right font-mono whitespace-nowrap hidden md:table-cell">
-                    {lga.totalFunding > 0 ? money(lga.totalFunding) : '$0'}
+                    {lga.funding_per_org == null ? 'no orgs indexed' : money(lga.funding_per_org)}
                   </td>
                 </tr>
               ))}
@@ -736,9 +774,8 @@ export default async function DesertOverheadReport() {
           ACCO Efficiency in Funding Deserts
         </h2>
         <p className="text-sm text-bauhaus-muted mb-6 max-w-2xl">
-          In the LGAs that need it most &mdash; the funding deserts &mdash; how do Aboriginal
-          Community-Controlled Organisations compare to mainstream charities on executive overhead?
-          The story: ACCOs consistently deliver more efficiently where it matters most.
+          In the desert councils, how do Aboriginal Community-Controlled Organisations compare with
+          mainstream charities on executive pay as a share of spending?
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
           {/* ACCO side */}
@@ -748,7 +785,7 @@ export default async function DesertOverheadReport() {
                 ACCO
               </span>
               <span className="text-xs text-bauhaus-muted font-bold">
-                {fmt(d.accoDesertComparison.acco.count)} organisations in desert LGAs
+                {fmt(d.accoDesertComparison.acco.count)} organisations in desert councils
               </span>
             </div>
             <div className="space-y-3">
@@ -787,7 +824,7 @@ export default async function DesertOverheadReport() {
                 Mainstream
               </span>
               <span className="text-xs text-bauhaus-muted font-bold">
-                {fmt(d.accoDesertComparison.mainstream.count)} organisations in desert LGAs
+                {fmt(d.accoDesertComparison.mainstream.count)} organisations in desert councils
               </span>
             </div>
             <div className="space-y-3">
@@ -820,12 +857,16 @@ export default async function DesertOverheadReport() {
             </div>
           </div>
         </div>
-        {d.accoDesertComparison.acco.count > 0 && d.accoDesertComparison.mainstream.count > 0 && (
+        {/* Below 10 ACCOs a gap is one organisation's books, not a comparison. On 2026-09-24 the
+            desert councils held one ACCO reporting executive pay, against 127 mainstream charities. */}
+        {d.accoDesertComparison.mainstream.count > 0 && (
           <div className="border-4 border-t-0 border-bauhaus-black p-4 bg-amber-50/50 text-center">
             <p className="text-sm text-bauhaus-muted font-bold">
-              {d.accoDesertComparison.acco.avgOverhead < d.accoDesertComparison.mainstream.avgOverhead
-                ? `ACCOs operate at ${pct(d.accoDesertComparison.mainstream.avgOverhead - d.accoDesertComparison.acco.avgOverhead)} lower overhead in funding desert LGAs — delivering more per dollar where communities need it most.`
-                : `Mainstream charities operate at ${pct(d.accoDesertComparison.acco.avgOverhead - d.accoDesertComparison.mainstream.avgOverhead)} lower overhead in funding desert LGAs.`}
+              {d.accoDesertComparison.acco.count < 10
+                ? `${d.accoDesertComparison.acco.count === 1 ? 'Only one ACCO' : `Only ${fmt(d.accoDesertComparison.acco.count)} ACCOs`} in the desert councils ${d.accoDesertComparison.acco.count === 1 ? 'reports' : 'report'} executive pay, too few to compare with ${fmt(d.accoDesertComparison.mainstream.count)} mainstream charities.`
+                : d.accoDesertComparison.acco.avgOverhead < d.accoDesertComparison.mainstream.avgOverhead
+                  ? `ACCOs in desert councils spend ${(d.accoDesertComparison.mainstream.avgOverhead - d.accoDesertComparison.acco.avgOverhead).toFixed(1)} percentage points less of their spending on executive pay than mainstream charities there.`
+                  : `Mainstream charities in desert councils spend ${(d.accoDesertComparison.acco.avgOverhead - d.accoDesertComparison.mainstream.avgOverhead).toFixed(1)} percentage points less of their spending on executive pay than ACCOs there.`}
             </p>
           </div>
         )}
@@ -839,12 +880,13 @@ export default async function DesertOverheadReport() {
           </h2>
           <div className="text-sm text-bauhaus-muted leading-relaxed space-y-3 max-w-3xl">
             <p>
-              <strong>Funding desert scores:</strong> Each LGA is scored using CivicGraph&apos;s
-              desert index, which combines SEIFA IRSD disadvantage (ABS 2021 Census), remoteness
-              classification (ARIA+ 2021), entity coverage gaps, and tracked funding flows. Higher
-              scores indicate greater underservice relative to need. LGAs with a desert score above
-              the median ({d.q50.toFixed(1)}) are classified as &ldquo;desert LGAs&rdquo; for this
-              analysis.
+              <strong>Funding deserts:</strong> A council counts as a funding desert when two things
+              hold. It sits in the most disadvantaged 30% by average SEIFA IRSD decile (ABS 2021
+              Census). And the funding CivicGraph tracks into it, divided by the organisations indexed
+              there, is at or below the median across councils ({money(d.medianPerOrg)} per
+              organisation). A council with no indexed organisations counts if it meets the
+              disadvantage test. {fmt(d.totalDeserts)} of {fmt(d.totalCouncils)} councils qualify.
+              Remoteness is the ARIA+ 2021 class covering most of the council&apos;s postcodes.
             </p>
             <p>
               <strong>Executive remuneration:</strong> Sourced from ACNC Annual Information
@@ -869,8 +911,10 @@ export default async function DesertOverheadReport() {
               purposes, self-identification, and governance data.
             </p>
             <p>
-              <strong>Limitations:</strong> Not all charities operating in an LGA are captured
-              &mdash; only those with matching ABNs in both ACNC and CivicGraph datasets. Executive
+              <strong>Limitations:</strong> Not all charities operating in a council are captured,
+              only those with matching ABNs in both ACNC and CivicGraph datasets. Tracked funding is
+              what CivicGraph holds, so a council can read as a desert because its money is missing
+              from the data. Executive
               pay data is self-reported. Charities serving multiple LGAs are attributed to one
               location. The analysis does not account for differences in service complexity, scope,
               or regulatory burden that may justify higher executive compensation.
