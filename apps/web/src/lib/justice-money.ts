@@ -120,6 +120,31 @@ export function donationFilterSql(alias?: string): string {
   return `${p}receipt_type = 'donation received'`;
 }
 
+/**
+ * A state's youth-justice RECURRENT spend by supervision lane, from the Productivity Commission's
+ * Report on Government Services. EXPENDITURE lane by design: no grant filter, these rows are what the
+ * state spent running the system, not money paid to organisations.
+ *
+ * One row per lane, labelled 'Detention-based supervision' / 'Community-based supervision' /
+ * 'Group conferencing', plus the years covered. The sector pages used to select rows named
+ * 'Youth Justice - Detention' etc.; the ROGS dedupe of 2026-08-19 kept the other copy, named by
+ * program instead, and every state's sector headline read "$0 detention vs $0 community" after it.
+ */
+export function rogsYjSpendSql(state: string): string {
+  if (!/^[A-Z]{2,3}$/.test(state)) throw new Error(`rogsYjSpendSql: bad state code ${state}`);
+  return `SELECT lane AS recipient_name, SUM(amount_dollars)::bigint AS total,
+         MIN(financial_year) AS first_year, MAX(financial_year) AS last_year
+    FROM (SELECT amount_dollars, financial_year,
+                 CASE WHEN program_name ILIKE '%(Detention-based supervision)%' THEN 'Detention-based supervision'
+                      WHEN program_name ILIKE '%(Community-based supervision)%' THEN 'Community-based supervision'
+                      WHEN program_name ILIKE '%(Group conferencing)%' THEN 'Group conferencing' END AS lane
+            FROM public.justice_funding
+           WHERE source = 'rogs-yj-expenditure' AND state = '${state}'
+             AND program_name LIKE 'Government real recurrent expenditure%') t
+   WHERE lane IS NOT NULL
+   GROUP BY lane`;
+}
+
 export interface ThemeMoney {
   /** Dollars, after all three filters. A FLOOR, never a total — see coverage below. */
   total: number;

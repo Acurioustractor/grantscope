@@ -119,8 +119,11 @@ async function checkDataset(def) {
   // EXPECTED: distinct edge-keys the current build SELECT would produce. Prelude (if any) runs
   // in the SAME psql session so the SELECT can see its temp tables.
   const pre = def.prelude ? `${def.prelude.trim()}\n` : '';
+  // The closing brackets go on their OWN line: a recipe whose last line ends in a `--` comment
+  // (grantconnect_awards does) otherwise comments them out, and the gate failed with "syntax error
+  // at end of input" every night from 2026-09-06 to 2026-09-23 without checking a single dataset.
   const expected = Number(await psqlScalar(`expected:${def.dataset}`,
-    `${pre}SELECT count(*) FROM (SELECT DISTINCT ${EDGE_KEY_COLS} FROM (${def.selectSql}) _q) _d;`));
+    `${pre}SELECT count(*) FROM (SELECT DISTINCT ${EDGE_KEY_COLS} FROM (${def.selectSql}\n) _q\n) _d;`));
 
   // ACTUAL: edges currently in gs_relationships for this dataset + type.
   // A dataset may emit MORE THAN ONE relationship type. aec_donations splits on receipt_type into

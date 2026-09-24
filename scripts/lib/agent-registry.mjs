@@ -569,7 +569,10 @@ export const AGENTS = {
     dependencies: ['sync-source-frontier', 'poll-foundation-frontier'],
   },
   'scrape-state-grants': {
-    command: ['node', '--env-file=.env', 'scripts/scrape-state-grants.mjs'],
+    // tsx, not node: the grant-engine plugins are .ts with extensionless imports ('./lib/ckan'),
+    // which node's own type stripping cannot resolve. Under node it died in 0.2s every run from
+    // 2026-08-03 to 2026-09-23 with ERR_MODULE_NOT_FOUND.
+    command: ['npx', 'tsx', '--env-file=.env', 'scripts/scrape-state-grants.mjs'],
     displayName: 'Scrape State Grants',
     category: 'discovery',
     defaultPriority: 3,
@@ -788,6 +791,17 @@ export const AGENTS = {
     defaultPriority: 4,
     // Reads mv_gs_entity_stats for degree rather than scanning 3.4M edges — needs that matview
     // fresh to be meaningful, hence the dependency.
+    timeoutMs: 600_000,
+    dependencies: ['build-entity-graph'],
+  },
+  'check-lane-reconciliation': {
+    command: ['node', '--env-file=.env', 'scripts/check-lane-reconciliation.mjs'],
+    displayName: 'Check Money Lane Reconciliation',
+    category: 'graph',
+    // Fourth gate: does the MONEY on the edges match the filtered source? Completeness passed while
+    // justice edges carried $33.7B of budget aggregates and AusTender carried $100.6B of contracts
+    // counted twice under an old key (2026-09-24). ~52s.
+    defaultPriority: 4,
     timeoutMs: 600_000,
     dependencies: ['build-entity-graph'],
   },
