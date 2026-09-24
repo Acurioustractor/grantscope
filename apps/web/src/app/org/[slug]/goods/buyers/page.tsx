@@ -159,11 +159,14 @@ export default async function GoodsBuyersPage({
   const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 
-  const [{ rows, summary, fetchError }, powerMap, fundingMap] = await Promise.all([
+  const [{ rows: allRows, summary, fetchError }, powerMap, fundingMap] = await Promise.all([
     getGoodsBuyerPipeline(),
     getGoodsRelationshipPower(),
     getGoodsRelationshipFunding(),
   ]);
+  // Demand-register rows are communities with a need, not buyers. List them apart, never count them.
+  const rows = allRows.filter((r) => !r.isCommunity);
+  const communityCount = allRows.length - rows.length;
   const openOnly = filter === 'open';
   const noNext = filter === 'no_next';
   const rottingCount = rows.filter(isRotting).length;
@@ -200,6 +203,11 @@ export default async function GoodsBuyersPage({
       </div>
 
       <div className="mx-auto max-w-[1760px] px-4 py-6">
+        {communityCount > 0 && (
+          <p className="mb-4 text-xs text-ql-text2">
+            {communityCount} communities from the GHL Demand register are not counted here: they need beds, they do not buy them.
+          </p>
+        )}
         {fetchError && (
           <div className="mb-4 border-4 border-bauhaus-red bg-bauhaus-red px-4 py-2 text-[12px] font-black uppercase tracking-widest text-white">
             Live data unavailable ({fetchError}). Figures below may be incomplete.

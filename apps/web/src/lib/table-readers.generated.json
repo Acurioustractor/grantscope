@@ -846,6 +846,7 @@
   "lib/opportunity-intelligence.ts",
   "lib/services/act-desk-ghl.ts",
   "lib/services/act-opportunity-context.ts",
+  "lib/services/goods-buyer-pipeline.ts",
   "lib/services/goods-living-data-adapter.ts"
  ],
  "ghl_pipelines": [
