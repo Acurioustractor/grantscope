@@ -1226,6 +1226,18 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: [],
   },
+  'score-project-rubric': {
+    command: ['node', '--env-file=.env', 'scripts/score-project-rubric.mjs', '--apply'],
+    displayName: 'Project rubric scorer (JEV)',
+    category: 'goods',
+    // Jev reads every open grant not yet read against the five non-Goods ACT projects, re-runs the
+    // keyword scorer on the same row, and tags aligned_projects (tagged_by keyword | rubric | both),
+    // which is what the One Desk pool reads. Unscheduled until 2026-09-24: it had run once, by hand,
+    // so grants arriving after 2026-09-21 were never read. Incremental: ~$0.001 a night.
+    defaultPriority: 2,
+    timeoutMs: 600_000,
+    dependencies: [],
+  },
   'seed-goods-source-frontier': {
     command: ['node', '--env-file=.env', 'scripts/seed-goods-source-frontier.mjs'],
     displayName: 'Seed Goods Source Frontier',
