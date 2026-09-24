@@ -183,11 +183,16 @@ async function main() {
   try {
     let q = supabase.from('grant_opportunities')
       .select('id, name, provider, description, categories, focus_areas, geography, aligned_projects, project_relevance, source, closes_at, deadline')
+      .order('id')
       .limit(LIMIT);
     if (!ALL_TIME) {
       const today = new Date().toISOString().slice(0, 10);
       q = q.or(`closes_at.gte.${today},deadline.gte.${today}`);
     }
+    // Unscored rows are chosen in SQL, before the limit. Filtering after it (only) meant that once
+    // the open pool passed LIMIT, the nightly run fetched LIMIT already-scored rows and never saw
+    // the new ones (2026-09-24: 333 open, so close).
+    if (!RESCORE) q = q.is('project_relevance->rubric_meta', null);
     const { data: grants, error } = await q;
     if (error) throw error;
 
