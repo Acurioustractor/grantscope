@@ -56,6 +56,12 @@ const AGENT_ID = 'auto-classify-llm';
  *   anthropic — best quality, needs credit
  */
 const PROVIDERS = {
+  // Jev (typesafe.ai) answers a fixed-choice question per grant: the job it was built for, at about
+  // $0.042 per million input tokens, and off the laptop (gpt-oss:20b held 13 GB while it ran).
+  jev: {
+    model: 'jev-latest',
+    keyEnv: 'JEV_API_KEY',
+  },
   groq: {
     baseUrl: 'https://api.groq.com/openai/v1',
     model: 'openai/gpt-oss-120b',
@@ -83,7 +89,7 @@ const PROVIDERS = {
 };
 
 const PROVIDER_ARG = process.argv.find((a) => a.startsWith('--provider='));
-const FALLBACK_ORDER = ['groq', 'gemini', 'ollama', 'deepseek', 'anthropic'];
+const FALLBACK_ORDER = ['jev', 'groq', 'gemini', 'ollama', 'deepseek', 'anthropic'];
 
 // Sorting a grant into six buckets does not need a large model, and the big ones
 // are the slow ones: gpt-oss:20b sustained ~6s/row locally and the 70B hit Groq's
@@ -209,6 +215,64 @@ async function classifyWithAnthropic(rows, rowsText, model) {
   return { items: parseItems(textBlock.text), usage: response.usage };
 }
 
+// The six labels, worded for Jev's choice question. Same meanings as RUBRIC above.
+const JEV_CHOICES = {
+  open_grant: 'An open application round for organisations: anyone meeting the eligibility can apply now (community grants, council sponsorships, foundation rounds, government program rounds).',
+  invitation_only: 'Closed to public applications: by invitation, nomination or named recipient only.',
+  award: 'Recognition, a prize, or an individual scholarship, fellowship, bursary or residency for a person, not an organisation.',
+  placeholder: 'Test data, a smoke seed, an example.org URL or lorem ipsum: not a real grant.',
+  policy_framework: 'A scheme, dataset, policy document, visa program or panel: not a grant an organisation can apply to.',
+  partnership: 'A formal partnership structure or joint venture, not an open call.',
+};
+
+async function askJevOnce(row, attempt = 0) {
+  const res = await fetch('https://api.typesafe.ai/v1/systemone', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${process.env.JEV_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'jev-latest',
+      state: {
+        grant_name: row.name ?? '',
+        funder: row.funder_name ?? 'unknown',
+        url: row.source_url ?? '',
+        description: String(row.description ?? '').slice(0, 1500),
+        focus_areas: (row.focus_areas ?? []).slice(0, 6),
+      },
+      questions: {
+        kind: { type: 'choice', instructions: 'Classify this Australian funding listing.', criteria: JEV_CHOICES },
+      },
+    }),
+    signal: AbortSignal.timeout(60_000),
+  });
+  if ((res.status === 429 || res.status === 529) && attempt < 4) {
+    await new Promise((r) => setTimeout(r, 2 ** attempt * 1000));
+    return askJevOnce(row, attempt + 1);
+  }
+  if (!res.ok) throw new Error(`${res.status} ${(await res.text()).slice(0, 200)}`);
+  return res.json();
+}
+
+/** One Jev call per grant, four at a time. Reports the model Jev says answered, so a silent
+ *  jev-latest upgrade shows up in auto_classify_model. */
+async function classifyWithJev(rows) {
+  const items = [];
+  let inputTokens = 0;
+  for (let i = 0; i < rows.length; i += 4) {
+    const answers = await Promise.all(rows.slice(i, i + 4).map(async (row) => {
+      const json = await askJevOnce(row);
+      const a = json.answers?.kind;
+      if (!a?.choice || !(a.choice in JEV_CHOICES)) throw new Error(`Jev gave no valid choice for ${row.id}`);
+      inputTokens += json.usage?.input_tokens ?? 0;
+      if (json.model) PROVIDERS.jev.model = json.model;
+      const top = Object.entries(a.probabilities ?? {}).sort((x, y) => y[1] - x[1]).slice(0, 2)
+        .map(([k, v]) => `${k} ${Number(v).toFixed(2)}`).join(', ');
+      return { id: row.id, classification: a.choice, confidence: a.confidence ?? 0, reason: `Jev: ${top || a.choice}` };
+    }));
+    items.push(...answers);
+  }
+  return { items, usage: { input_tokens: inputTokens, output_tokens: 0 } };
+}
+
 /** Groq, Gemini, Ollama and DeepSeek all speak this shape. */
 async function classifyWithOpenAICompatible(rows, rowsText, provider) {
   const headers = { 'Content-Type': 'application/json' };
@@ -266,14 +330,16 @@ async function classifyBatch(rows) {
   for (const name of chain) {
     const provider = PROVIDERS[name];
     try {
-      const result = name === 'anthropic'
-        ? await classifyWithAnthropic(rows, rowsText, provider.model)
-        : await classifyWithOpenAICompatible(rows, rowsText, provider);
+      const result = name === 'jev'
+        ? await classifyWithJev(rows)
+        : name === 'anthropic'
+          ? await classifyWithAnthropic(rows, rowsText, provider.model)
+          : await classifyWithOpenAICompatible(rows, rowsText, provider);
       if (activeProvider !== name) {
         console.log(`  provider: ${name} (${provider.model})`);
         activeProvider = name;
-        MODEL = provider.model;
       }
+      MODEL = provider.model; // Jev reports the concrete model per call; keep the latest
       return result;
     } catch (err) {
       failures.push(`${name}: ${err.message.slice(0, 140)}`);
@@ -407,6 +473,7 @@ async function run() {
       gemini: [0, 0, 0, 0],   // free tier
       groq: [0, 0, 0, 0],     // free tier
       ollama: [0, 0, 0, 0],   // local
+      jev: [0.042, 0, 0, 0],  // typesafe.ai, input only
     };
     const [rIn, rOut, rCw, rCr] = RATES[activeProvider] ?? RATES.anthropic;
     const cost =
