@@ -276,7 +276,10 @@ async function getDeskRecords(slug: string): Promise<DeskRecord[]> {
       signal: inGhl ? r.ghlWarmth : pursuing ? 'pursuing · not yet in GHL' : 'recorded grants on file · not decided',
       next: inGhl ? (r.nextStep || 'Set a next step') : pursuing ? 'Make the Ask in GHL' : 'Pursue or pass',
       dueDays: null,
-      score: r.fitScore ?? 0, amount: null, ghlUrl: ghlContactUrl(r.ghlContactId),
+      score: r.fitScore ?? 0,
+      // Real giving from the ACNC AIS (grants made in Australia), never the placeholder size band.
+      amount: r.givingAnnual != null ? `${money(r.givingAnnual)} given ${r.givingYear}` : null,
+      ghlUrl: ghlContactUrl(r.ghlContactId),
       workHref: inGhl ? actOrgHref(slug, r.name) : `/org/${slug}/goods/foundations/scan`,
       isDecision: !inGhl && !pursuing,
     });

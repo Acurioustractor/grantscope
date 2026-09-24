@@ -19,7 +19,9 @@ export interface FunderScanRow {
   fitScore: number | null;
   fitSummary: string | null;
   nextStep: string | null;
+  /** Grants and donations made in Australia, latest ACNC AIS. Null when the funder files no AIS. */
   givingAnnual: number | null;
+  givingYear: number | null;
   ghlWarmth: GhlWarmth;
   ghlContactId: string | null;
   ghlEmail: string | null;
@@ -64,6 +66,17 @@ export interface FunderScanResult {
 
 const UNWORKED = new Set(['saved', 'parked']);
 
+const GRADE_RANK: Record<string, number> = { A: 0, B: 1, C: 2 };
+
+/** Evidence grade first, then real AIS giving (a funder that gave nothing last year sinks), then fit. */
+export function rankFunders(a: Pick<FunderScanRow, 'evidenceGrade' | 'givingAnnual' | 'fitScore'>, b: typeof a): number {
+  const g = (GRADE_RANK[a.evidenceGrade ?? ''] ?? 3) - (GRADE_RANK[b.evidenceGrade ?? ''] ?? 3);
+  if (g) return g;
+  const m = (b.givingAnnual ?? -1) - (a.givingAnnual ?? -1);
+  if (m) return m;
+  return (b.fitScore ?? -1) - (a.fitScore ?? -1);
+}
+
 /**
  * Funder scan for one ACT project, or the whole portfolio when no slug is given.
  *
@@ -76,24 +89,41 @@ const UNWORKED = new Set(['saved', 'parked']);
  */
 export async function getFunderScan(projectSlug?: string): Promise<FunderScanResult> {
   const db = getServiceSupabase();
-  let query = db
-    .from('org_project_foundations')
-    .select('id, stage, fit_score, fit_summary, next_step, evidence_grade, ghl_contact_id, ghl_contact_email, ghl_tags, ghl_synced_at, foundations(name, total_giving_annual), org_projects!inner(slug, name, code)');
-  if (projectSlug) query = query.eq('org_projects.slug', projectSlug);
-  const { data, error } = await query
-    .order('evidence_grade', { ascending: true, nullsFirst: false })
-    .order('fit_score', { ascending: false, nullsFirst: false })
-    .limit(500);
-  if (error) throw new Error(`funder scan: ${error.message}`);
+  // Every match, not the first 500: the cap hid 1,053 of 1,553 rows from the desk.
+  const raw: Record<string, unknown>[] = [];
+  for (let from = 0; ; from += 1000) {
+    let query = db
+      .from('org_project_foundations')
+      .select('id, stage, fit_score, fit_summary, next_step, evidence_grade, ghl_contact_id, ghl_contact_email, ghl_tags, ghl_synced_at, foundations(name, acnc_abn), org_projects!inner(slug, name, code)');
+    if (projectSlug) query = query.eq('org_projects.slug', projectSlug);
+    const { data, error } = await query.order('id').range(from, from + 999);
+    if (error) throw new Error(`funder scan: ${error.message}`);
+    raw.push(...((data ?? []) as Record<string, unknown>[]));
+    if (!data || data.length < 1000) break;
+  }
 
-  const rows: FunderScanRow[] = (data || []).map((r: Record<string, unknown>) => {
-    const f = r.foundations as { name?: string; total_giving_annual?: number } | null;
+  // Giving = grants and donations made in Australia in the charity's latest Annual Information Statement.
+  // Never foundations.total_giving_annual: 81.5% of it is a size-band guess (25K / 100K / 500K).
+  const abns = [...new Set(raw.map((r) => (r.foundations as { acnc_abn?: string } | null)?.acnc_abn).filter((a): a is string => !!a))];
+  const giving = new Map<string, { amount: number; year: number }>();
+  for (let i = 0; i < abns.length; i += 300) {
+    const { data, error } = await db
+      .from('acnc_ais')
+      .select('abn, ais_year, grants_donations_au')
+      .in('abn', abns.slice(i, i + 300))
+      .not('grants_donations_au', 'is', null);
+    if (error) throw new Error(`funder scan (AIS): ${error.message}`);
+    for (const a of (data ?? []) as { abn: string; ais_year: number; grants_donations_au: number }[]) {
+      const prev = giving.get(a.abn);
+      if (!prev || a.ais_year > prev.year) giving.set(a.abn, { amount: Number(a.grants_donations_au), year: a.ais_year });
+    }
+  }
+
+  const rows: FunderScanRow[] = raw.map((r) => {
+    const f = r.foundations as { name?: string; acnc_abn?: string } | null;
     const p = r.org_projects as { slug?: string; name?: string; code?: string } | null;
     const tags = (r.ghl_tags as string[] | null) || [];
-    // The stored figure is a placeholder on 85% of rows (25,000 / 100,000 /
-    // 500,000). Surface null rather than a number nobody can stand behind.
-    const giving = f?.total_giving_annual ?? null;
-    const PLACEHOLDER_GIVING = new Set([25000, 100000, 500000]);
+    const ais = f?.acnc_abn ? giving.get(f.acnc_abn) : undefined;
     return {
       id: r.id as string,
       name: f?.name ?? '(unknown foundation)',
@@ -105,7 +135,8 @@ export async function getFunderScan(projectSlug?: string): Promise<FunderScanRes
       fitScore: (r.fit_score as number | null) ?? null,
       fitSummary: (r.fit_summary as string | null) ?? null,
       nextStep: (r.next_step as string | null) ?? null,
-      givingAnnual: giving != null && PLACEHOLDER_GIVING.has(giving) ? null : giving,
+      givingAnnual: ais?.amount ?? null,
+      givingYear: ais?.year ?? null,
       ghlWarmth: warmthFromTags(r.ghl_synced_at ? tags : null),
       ghlContactId: (r.ghl_contact_id as string | null) ?? null,
       ghlEmail: (r.ghl_contact_email as string | null) ?? null,
@@ -113,6 +144,7 @@ export async function getFunderScan(projectSlug?: string): Promise<FunderScanRes
       ghlSyncedAt: (r.ghl_synced_at as string | null) ?? null,
     };
   });
+  rows.sort(rankFunders);
 
   const byWarmth = Object.fromEntries(WARMTH_ORDER.map((w) => [w, 0])) as Record<GhlWarmth, number>;
   for (const r of rows) byWarmth[r.ghlWarmth] += 1;
