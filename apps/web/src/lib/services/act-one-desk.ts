@@ -167,9 +167,26 @@ function decided(d: DeskDecision | undefined): boolean {
   return Boolean(d && d.state !== 'open');
 }
 
+/** Grant ids with a live decision, and the project codes it was made for. */
+function decidedGrants(decisions: Map<string, DeskDecision>): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  for (const [key, d] of decisions) {
+    if (d.state === 'open') continue;
+    const [kind, ref, code] = key.split('|');
+    if (kind !== 'grant' || !ref || !code) continue;
+    if (!out.has(ref)) out.set(ref, new Set());
+    out.get(ref)!.add(code);
+  }
+  return out;
+}
+
 async function getDeskRecords(slug: string): Promise<DeskRecord[]> {
   const profile = await getOrgProfileBySlug(slug).catch(() => null);
-  const [scan, triage, buyers, ledger, obligations, people, decisions] = await Promise.all([
+  // Decisions first: a passed grant may have lost its tag overnight and must still be fetched.
+  const decisions = profile
+    ? await getDeskDecisions(profile.id).catch(() => new Map<string, DeskDecision>())
+    : new Map<string, DeskDecision>();
+  const [scan, triage, buyers, ledger, obligations, people] = await Promise.all([
     // Portfolio-wide, not Goods-only (audit 2026-08-07): Goods had 10 high-fit
     // funders and the only surface, while Empathy Ledger had 99 and PICC 84 with
     // none. Passing no slug scans every ACT project.
@@ -177,12 +194,11 @@ async function getDeskRecords(slug: string): Promise<DeskRecord[]> {
     // Widened 2026-09-14 (step 4 of the ACT grants desk build): this used to be
     // getGoodsGrantsTriage, which only ever ranked on goods_relevance_score — every
     // grant row on the desk read "Goods" regardless of which project it actually fit.
-    getAllProjectsGrantsTriage().catch(() => []),
+    getAllProjectsGrantsTriage(decidedGrants(decisions)).catch(() => []),
     getGoodsBuyerPipeline().catch(() => null),
     profile ? getActRelationshipLedger(slug, profile.id).catch(() => null) : null,
     profile ? getDeskObligations(profile.id).catch(() => []) : [],
     profile ? getDeskPeople(profile.id).catch(() => []) : [],
-    profile ? getDeskDecisions(profile.id).catch(() => new Map<string, DeskDecision>()) : new Map<string, DeskDecision>(),
   ]);
   const pool: DeskRecord[] = [];
   // Obligations (ADR 0003, #152): open + (overdue | due ≤ 30d | undated).

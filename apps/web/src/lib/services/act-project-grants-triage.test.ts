@@ -57,3 +57,12 @@ describe('amounts', () => {
     expect(row.amountMax).toBeNull();
   });
 });
+
+describe('decided rows', () => {
+  it('keeps a decided project row after its tag is gone, so a pass can be undone', () => {
+    const untagged = src({ id: 'g9', aligned_projects: [], goods_relevance_score: 73 });
+    expect(buildProjectGrantRows([untagged], TODAY)).toHaveLength(0);
+    const [row] = buildProjectGrantRows([untagged], TODAY, new Map([['g9', new Set(['ACT-GD'])]]));
+    expect(row).toMatchObject({ rowId: 'g9', project: 'goods', fitScore: 73 });
+  });
+});

@@ -87,8 +87,14 @@ function taggedBy(v: string | null | undefined): TaggedBy {
   return null;
 }
 
-/** Pure: one desk row per (grant, tagged project), skipping rounds already closed. */
-export function buildProjectGrantRows(data: TriageSourceRow[], today: Date = new Date()): ProjectGrantRow[] {
+/** Pure: one desk row per (grant, tagged project), skipping rounds already closed. `decided` adds rows for
+ *  projects a decision was recorded on even when the tag has gone: a "not a fit" pass makes the nightly
+ *  scorer drop the tag, and the row must still reach Passed so it can be put back. */
+export function buildProjectGrantRows(
+  data: TriageSourceRow[],
+  today: Date = new Date(),
+  decided: Map<string, Set<string>> = new Map(),
+): ProjectGrantRow[] {
   const todayIso = today.toISOString().slice(0, 10);
   const todayMs = Date.parse(`${todayIso}T00:00:00Z`);
   const rows: ProjectGrantRow[] = [];
@@ -99,7 +105,7 @@ export function buildProjectGrantRows(data: TriageSourceRow[], today: Date = new
     const daysToDeadline = close ? Math.round((Date.parse(`${close}T00:00:00Z`) - todayMs) / 86_400_000) : null;
     const relevance = r.project_relevance ?? {};
     for (const [project, code] of Object.entries(PROJECT_CODES) as [ActProject, string][]) {
-      if (!aligned.includes(code)) continue;
+      if (!aligned.includes(code) && !decided.get(r.id)?.has(code)) continue;
       const entry = relevance[project];
       const rubric = entry?.rubric;
       rows.push({
@@ -154,14 +160,25 @@ export function jevWords(score: number | null): string {
   return 'no connection';
 }
 
-export async function getAllProjectsGrantsTriage(): Promise<ProjectGrantRow[]> {
+const TRIAGE_COLUMNS = 'id, name, provider, deadline, closes_at, amount_min, amount_max, url, status, geography, dgr_required, accepts_pty_ltd, place:metadata->place, ghl_opportunity_id, aligned_projects, goods_relevance_score, goods_relevance_signals, project_relevance';
+
+/** Tagged live rounds, plus any grant with a live decision (grant id -> project codes decided on). */
+export async function getAllProjectsGrantsTriage(decided: Map<string, Set<string>> = new Map()): Promise<ProjectGrantRow[]> {
   const db = getServiceSupabase();
   const { data, error } = await db
     .from('grant_opportunities')
-    .select('id, name, provider, deadline, closes_at, amount_min, amount_max, url, status, geography, dgr_required, accepts_pty_ltd, place:metadata->place, ghl_opportunity_id, aligned_projects, goods_relevance_score, goods_relevance_signals, project_relevance')
+    .select(TRIAGE_COLUMNS)
     .in('status', ['open', 'ongoing', 'upcoming'])
     .overlaps('aligned_projects', Object.values(PROJECT_CODES))
     .limit(3000);
   if (error) throw new Error(`project grants triage: ${error.message}`);
-  return buildProjectGrantRows((data ?? []) as unknown as TriageSourceRow[]);
+  const rows = (data ?? []) as unknown as TriageSourceRow[];
+  const have = new Set(rows.map((r) => r.id));
+  const missing = [...decided.keys()].filter((id) => !have.has(id)).slice(0, 500);
+  if (missing.length) {
+    const { data: extra, error: extraErr } = await db.from('grant_opportunities').select(TRIAGE_COLUMNS).in('id', missing);
+    if (extraErr) throw new Error(`project grants triage (decided): ${extraErr.message}`);
+    rows.push(...((extra ?? []) as unknown as TriageSourceRow[]));
+  }
+  return buildProjectGrantRows(rows, new Date(), decided);
 }
