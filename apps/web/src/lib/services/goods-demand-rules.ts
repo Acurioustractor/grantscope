@@ -18,7 +18,9 @@ const WANTED = /mattress|\bbeds?\b|bedding|bunk ?beds?|whitegoods?|white goods|w
 const NOT_A_BED = new RegExp(
   [
     'hospital', 'patient', '\\bicu\\b', 'birthing', 'bariatric', 'medical', 'clinical', 'examination', 'ward',
-    'palliative', 'aged care', 'mental health beds', 'bed mover', 'bed bay', 'overbed',
+    'palliative', 'aged care', 'neuro', 'psychiatr', 'surgical', 'intensive', 'stryker', '\\bcots\\b', 'women.?s and children',
+    'demolition', 'construct', 'flat ?bed', 'hill-?rom', 'smart ?care', 'centrella', 'electric beds', 'bed lights',
+    'waterhole', 'gorge', 'mental health beds', 'bed mover', 'bed bay', 'overbed',
     'road', 'aerodrome', 'airfield', 'guardrail', 'garden', 'sludge', 'digester', 'reno ?mattress', 'fossil',
     'lake bed', 'stable bedding', 'embedding',
     'dwelling', 'bedroom', 'bedsit', '\\d+ ?x ?\\d+ ?bed', '\\d+ bed (quick|modular|unit|facility)',
@@ -27,7 +29,7 @@ const NOT_A_BED = new RegExp(
   'i',
 );
 
-const CUSTODIAL = /correct|prison|custod|detention|youth justice|secure care|cell mattress|watch ?house|police/i;
+const CUSTODIAL = /correct|prison|custod|detention|youth justice|secure care|cell mattress|watch ?house|police|work camp|\bAMC\b/i;
 
 /** household = beds and whitegoods for people to live with; custodial = prisons, detention, watch houses. */
 export function classifyPurchase(title: string, buyer: string): PurchaseKind | null {

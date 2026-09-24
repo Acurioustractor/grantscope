@@ -16,6 +16,7 @@ describe('classifyPurchase', () => {
     ['Supply and Delivery of 250 Mattresses for Prison Expansion', 'NT Department of the Attorney-General and Justice - Custodial Services'],
     ['Provision of Fire Retardant Mattresses to Queensland Correctional centres', 'Queensland Corrective Services'],
     ['Darwin - Supply and Delivery of 5 x Secure Care Beds & Mattresses for Yirra House', 'NT Territory Families - Youth Justice'],
+    ['Tennant Creek - Barkly Work Camp - Laundry - Supply Delivery, Installation and Commissioning of washing machines', 'NT Department of Logistics and Infrastructure'],
   ])('sets custodial apart: %s', (title, buyer) => {
     expect(classifyPurchase(title, buyer)).toBe('custodial');
   });
@@ -28,6 +29,14 @@ describe('classifyPurchase', () => {
     'Alice Springs Region - Utopia Airstrip -  Install Reno Mattress',
     'Yulara - Construction of Additional Sludge Drying Beds',
     'Darwin - Supply Delivery and Installation of Office Pod and Associated Furniture',
+    'NSW Health SOA BMC819 – BMC819 – Beds, Mattresses & Cots.',
+    '2024_043 Neuropsychiatry Beds',
+    'Supply of Beds for Women’s and Children’s Service',
+    'CNC 5 Axis Combination ATS Machining Centre and Flat Bed',
+    '20-1456 - Hill-Rom Pty Ltd - SmartCareTM Beds Preventative Maintenance Service Agreement',
+    'Electric Beds',
+    'Alice Springs Region - Ormiston Gorge Waterhole -  Extend The Existing Stone bed',
+    'Katherine Region - Bulman - Lot 24 - - Demolition of Existing Structures and Construction of 3 bed',
   ])('drops a non-bed: %s', (title) => {
     expect(classifyPurchase(title, 'Any buyer')).toBeNull();
   });
