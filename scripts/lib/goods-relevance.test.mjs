@@ -164,4 +164,35 @@ test('applyGoodsTag records what a rescore added or removed, and carries it forw
   const added = applyGoodsTag({ aligned_projects: [] }, 70, {}, 't3');
   assert.equal(added.change, 'added');
   assert.deepEqual(added.tagged.sort(), ['ACT-GD', 'goods']);
+  assert.equal(added.signals.tag_change.by, 'keyword');
+  assert.equal(added.signals.tagged_by, 'keyword');
+});
+
+// JEV's Goods verdict (project_relevance.goods.rubric, written by score-project-rubric.mjs) is the second
+// signal. Without it here, this scorer's next pass stripped every tag JEV added (2026-09-24).
+const goodsFit = (score, extra = {}) => ({
+  rubric_meta: { organisation_fundable: 0.9 },
+  goods: { rubric: { score, confidence: 0.8, ...extra } },
+});
+
+test('applyGoodsTag keeps a Goods tag the rubric earned when the keyword score is low', async () => {
+  const { applyGoodsTag } = await import('./goods-relevance.mjs');
+  const kept = applyGoodsTag({ aligned_projects: ['ACT-GD', 'goods'], goods_relevance_score: 10, project_relevance: goodsFit(3) }, 10, {}, 't1');
+  assert.equal(kept.change, null);
+  assert.deepEqual(kept.tagged.sort(), ['ACT-GD', 'goods']);
+  assert.equal(kept.signals.tagged_by, 'rubric');
+
+  const both = applyGoodsTag({ aligned_projects: [], project_relevance: goodsFit(3) }, 70, {}, 't2');
+  assert.equal(both.signals.tag_change.by, 'both');
+});
+
+test('the rubric does not tag Goods below the fit, outside the area, or on a generic programme', async () => {
+  const { applyGoodsTag, goodsRubricQualifies } = await import('./goods-relevance.mjs');
+  assert.equal(goodsRubricQualifies(goodsFit(2)), false);                                   // adjacent, not plausible
+  assert.equal(goodsRubricQualifies(goodsFit(3, { geography_excluded: true })), false);     // outside NT/QLD/WA
+  assert.equal(goodsRubricQualifies({ ...goodsFit(3), rubric_meta: { organisation_fundable: 0.1 } }), false);
+  const generic = { ...goodsFit(3), justicehub: { rubric: { score: 3, confidence: 0.8 } }, harvest: { rubric: { score: 3, confidence: 0.8 } } };
+  assert.equal(goodsRubricQualifies(generic), false);                                       // plausible for 3 of 6
+  const dropped = applyGoodsTag({ aligned_projects: ['ACT-GD', 'goods'], goods_relevance_score: 60, project_relevance: goodsFit(2) }, 20, {}, 't3');
+  assert.equal(dropped.change, 'removed');
 });

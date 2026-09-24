@@ -50,6 +50,8 @@ function pickColumns(row) {
     aligned_projects: row.aligned_projects || [],
     goods_relevance_score: row.goods_relevance_score,
     goods_relevance_signals: row.goods_relevance_signals,
+    // JEV's Goods verdict lives here; applyGoodsTag ORs it with the keyword score.
+    project_relevance: row.project_relevance,
     source: row.source,
     discovery_method: row.discovery_method,
   };
@@ -58,7 +60,7 @@ function pickColumns(row) {
 async function fetchBatch(offset) {
   let q = supabase
     .from('grant_opportunities')
-    .select('id,name,provider,description,geography,amount_max,categories,focus_areas,closes_at,aligned_projects,goods_relevance_score,goods_relevance_signals,goods_relevance_scored_at,updated_at,source,discovery_method')
+    .select('id,name,provider,description,geography,amount_max,categories,focus_areas,closes_at,aligned_projects,goods_relevance_score,goods_relevance_signals,goods_relevance_scored_at,updated_at,source,discovery_method,project_relevance')
     .order('id', { ascending: true })
     .range(offset, offset + BATCH - 1);
 
