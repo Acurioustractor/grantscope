@@ -2,6 +2,7 @@ import { unstable_cache } from 'next/cache';
 import type { Metadata } from 'next';
 import { getServiceSupabase } from '@/lib/report-supabase';
 import { execSqlAll } from '@/lib/exec-sql-all';
+import { money } from '@/lib/format';
 import { ReportCTA } from '../_components/report-cta';
 
 export const dynamic = 'force-dynamic';
@@ -27,12 +28,6 @@ export const metadata: Metadata = {
 
 /* ---------- helpers ---------- */
 
-function money(n: number): string {
-  if (Math.abs(n) >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
-  if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
-  if (Math.abs(n) >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
-  return `$${Math.round(n).toLocaleString()}`;
-}
 function pct(n: number): string {
   return `${n.toFixed(1)}%`;
 }
@@ -40,13 +35,6 @@ function fmt(n: number): string {
   return n.toLocaleString();
 }
 
-async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
-  try {
-    return await fn();
-  } catch {
-    return fallback;
-  }
-}
 
 /* ---------- types ---------- */
 
@@ -172,7 +160,9 @@ async function getData() {
   const db = getServiceSupabase();
 
   // 1. One row per scored council, with the desert flag.
-  const councils = await safe(async () => {
+  // Each read throws on failure, so a failed read is never cached as 0 councils; the page shows
+  // a not-loaded notice and the next request tries again.
+  const councils = await (async () => {
     const rows = await execSqlAll<Record<string, unknown>>(db, COUNCILS_SQL);
     return rows.map((r): CouncilRow => ({
       lga_name: String(r.lga_name || ''),
@@ -185,12 +175,12 @@ async function getData() {
       median_per_org: Number(r.median_per_org) || 0,
       is_desert: r.is_desert === true,
     }));
-  }, [] as CouncilRow[]);
+  })();
 
   // 2. Fetch acnc_ais for 2023 with exec pay (paginated). Ordered, so no page repeats or skips a
   //    row. Expenses must be positive: a charity with $0 expenses cannot have an overhead share,
   //    and counting it as 0% pulled every average down.
-  const aisData = await safe(async () => {
+  const aisData = await (async () => {
     const all: AisRecord[] = [];
     const PAGE = 1000;
     let offset = 0;
@@ -221,11 +211,11 @@ async function getData() {
       offset += PAGE;
     }
     return all;
-  }, [] as AisRecord[]);
+  })();
 
   // 3. The council each of those charities sits in: only the ABNs the page joins, one row per ABN,
   //    ordered so execSqlAll's pages are stable.
-  const entityLgas = await safe(async () => {
+  const entityLgas = await (async () => {
     const data = await execSqlAll<Record<string, unknown>>(db, `SELECT DISTINCT ON (abn) abn, lga_name,
              upper(state) AS state, coalesce(is_community_controlled, false) AS is_community_controlled
         FROM gs_entities
@@ -239,7 +229,7 @@ async function getData() {
       state: String(r.state),
       is_community_controlled: r.is_community_controlled === true,
     }));
-  }, [] as EntityLga[]);
+  })();
 
   const councilBy = new Map(councils.map((c) => [councilKey(c.lga_name, c.state), c]));
   const entityByAbn = new Map(entityLgas.map((e) => [e.abn, e]));
@@ -435,8 +425,27 @@ const REMOTENESS_BAR_COLORS: Record<string, string> = {
 const getDataCached = unstable_cache(getData, ['reports-desert-overhead-v4'], { revalidate: 3600 });
 
 export default async function DesertOverheadReport() {
-  const d = await getDataCached();
-  const answer = d.avgOverheadDesert > d.avgOverheadNonDesert ? 'yes' : 'no';
+  let d: Awaited<ReturnType<typeof getData>>;
+  try {
+    d = await getDataCached();
+  } catch (err) {
+    console.error('[report-service] reports/desert-overhead failed:', err);
+    return (
+      <div className="border-4 border-bauhaus-black bg-white p-6 max-w-2xl">
+        <div className="text-xs font-black text-bauhaus-red uppercase tracking-widest mb-3">Not loaded</div>
+        <p className="text-sm text-bauhaus-black leading-relaxed">
+          The council and charity records behind this report could not be read just now. Try again in a minute.
+        </p>
+      </div>
+    );
+  }
+  // Points of spending, desert minus elsewhere. Under one point either way reads as the same
+  // share: two averages over 128 and 2,824 charities should not flip the answer on a rounding gap.
+  const gap = d.avgOverheadDesert - d.avgOverheadNonDesert;
+  const answer = gap >= 1 ? 'yes' : 'no';
+  const gapWords = Math.abs(gap) < 1
+    ? `about the same share, a gap of ${Math.abs(gap).toFixed(1)} percentage points`
+    : `${Math.abs(gap).toFixed(1)} percentage points ${gap > 0 ? 'more' : 'less'}`;
 
   const maxOverhead = d.byRemoteness.length > 0
     ? Math.max(...d.byRemoteness.map((r) => r.avgOverhead))
@@ -468,7 +477,7 @@ export default async function DesertOverheadReport() {
           <p className="text-bauhaus-black text-base sm:text-lg max-w-3xl leading-relaxed font-bold mt-3">
             In this data the answer is {answer}. The {fmt(d.desertEnriched)} charities in desert councils
             spend {pct(d.avgOverheadDesert)} of their spending on executive pay, against{' '}
-            {pct(d.avgOverheadNonDesert)} everywhere else.
+            {pct(d.avgOverheadNonDesert)} everywhere else: {gapWords}.
           </p>
         )}
         <div className="mt-4 text-xs text-bauhaus-muted font-bold">
