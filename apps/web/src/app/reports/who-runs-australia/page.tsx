@@ -128,8 +128,9 @@ async function getData() {
   // A failed read must throw, not return empty: unstable_cache stores whatever comes back, and an
   // empty result stored here was served as an empty table for up to an hour (2026-09-24 sweep).
   // A throw is not cached, so the next request tries again.
-  if (revolvingDoorResult === null || boardInterlocksResult === null || statsResult === null) {
-    throw new Error('who-runs-australia: a core read failed');
+  if (revolvingDoorResult === null || boardInterlocksResult === null || statsResult === null
+      || politicalCrossoverResult === null) {
+    throw new Error('who-runs-australia: a read failed');
   }
 
   const revolvingDoor = (revolvingDoorResult || []) as RevolvingDoorEntity[];
@@ -176,8 +177,7 @@ export default async function WhoRunsAustraliaReport() {
       <div className="border-4 border-bauhaus-black bg-bauhaus-canvas p-6 max-w-2xl">
         <div className="text-xs font-black text-bauhaus-red uppercase tracking-widest mb-2">Who Runs Australia?</div>
         <p className="font-medium text-bauhaus-black">
-          The figures for this report did not load just now. Nothing is wrong with the data; the database was busy.
-          Reload the page in a minute.
+          The figures for this report could not be read just now. Reload the page in a minute.
         </p>
       </div>
     );
