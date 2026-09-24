@@ -11,6 +11,8 @@ export interface FunderScanRow {
   name: string;
   projectSlug: string | null;
   projectName: string | null;
+  /** org_projects.code, e.g. ACT-GD: the desk's decision record keys on it. */
+  projectCode: string | null;
   /** A = recorded grants on file · B = DGR or verified giving · C = theme overlap only. */
   evidenceGrade: 'A' | 'B' | 'C' | null;
   stage: string | null;
@@ -76,7 +78,7 @@ export async function getFunderScan(projectSlug?: string): Promise<FunderScanRes
   const db = getServiceSupabase();
   let query = db
     .from('org_project_foundations')
-    .select('id, stage, fit_score, fit_summary, next_step, evidence_grade, ghl_contact_id, ghl_contact_email, ghl_tags, ghl_synced_at, foundations(name, total_giving_annual), org_projects!inner(slug, name)');
+    .select('id, stage, fit_score, fit_summary, next_step, evidence_grade, ghl_contact_id, ghl_contact_email, ghl_tags, ghl_synced_at, foundations(name, total_giving_annual), org_projects!inner(slug, name, code)');
   if (projectSlug) query = query.eq('org_projects.slug', projectSlug);
   const { data, error } = await query
     .order('evidence_grade', { ascending: true, nullsFirst: false })
@@ -86,7 +88,7 @@ export async function getFunderScan(projectSlug?: string): Promise<FunderScanRes
 
   const rows: FunderScanRow[] = (data || []).map((r: Record<string, unknown>) => {
     const f = r.foundations as { name?: string; total_giving_annual?: number } | null;
-    const p = r.org_projects as { slug?: string; name?: string } | null;
+    const p = r.org_projects as { slug?: string; name?: string; code?: string } | null;
     const tags = (r.ghl_tags as string[] | null) || [];
     // The stored figure is a placeholder on 85% of rows (25,000 / 100,000 /
     // 500,000). Surface null rather than a number nobody can stand behind.
@@ -97,6 +99,7 @@ export async function getFunderScan(projectSlug?: string): Promise<FunderScanRes
       name: f?.name ?? '(unknown foundation)',
       projectSlug: p?.slug ?? null,
       projectName: p?.name ?? null,
+      projectCode: p?.code ?? null,
       evidenceGrade: (r.evidence_grade as FunderScanRow['evidenceGrade']) ?? null,
       stage: (r.stage as string | null) ?? null,
       fitScore: (r.fit_score as number | null) ?? null,
