@@ -9,6 +9,8 @@
  * Embedding-based re-ranking is a follow-up if needed.
  */
 
+import { rubricQualifies, countRubricFits, RUBRIC_GENERIC_PROJECT_COUNT } from './project-relevance.mjs';
+
 // Words and phrases that signal Goods-shaped funding/buying.
 // Tier 1 = strongest signal — Indigenous identity / direct Goods product fit
 const TIER_1 = [
@@ -294,13 +296,30 @@ export function applyGoodsTag(row, score, signals, at = new Date().toISOString()
   const before = new Set(row.aligned_projects || []);
   const wasTagged = before.has('ACT-GD');
   const tagged = new Set(before);
-  if (score >= GOODS_TAG_THRESHOLD) { tagged.add('ACT-GD'); tagged.add('goods'); }
+  // Two signals, ORed, as for the other five projects (applyProjectTags): the keyword score and JEV's
+  // Goods verdict. Without the rubric here, this scorer's next pass would strip every tag JEV added.
+  const byKeyword = score >= GOODS_TAG_THRESHOLD;
+  const byRubric = goodsRubricQualifies(row.project_relevance);
+  if (byKeyword || byRubric) { tagged.add('ACT-GD'); tagged.add('goods'); }
   else { tagged.delete('ACT-GD'); tagged.delete('goods'); }
   const isTagged = tagged.has('ACT-GD');
   const change = wasTagged === isTagged ? null : (isTagged ? 'added' : 'removed');
+  const by = byKeyword && byRubric ? 'both' : byKeyword ? 'keyword' : byRubric ? 'rubric' : null;
   const previous = row.goods_relevance_signals?.tag_change;
   const tagChange = change
-    ? { change, at, previous_score: row.goods_relevance_score ?? null, score }
+    ? { change, at, previous_score: row.goods_relevance_score ?? null, score, ...(by ? { by } : {}) }
     : previous ?? undefined;
-  return { tagged: Array.from(tagged), change, signals: tagChange ? { ...signals, tag_change: tagChange } : signals };
+  const out = { ...signals, tagged_by: isTagged ? by : null };
+  return { tagged: Array.from(tagged), change, signals: tagChange ? { ...out, tag_change: tagChange } : out };
+}
+
+/**
+ * Does JEV's Goods verdict justify the ACT-GD tag on its own? It is stored by score-project-rubric.mjs
+ * in project_relevance.goods.rubric, beside the other five projects' verdicts, and passes the same gates
+ * (fit, confidence, geography, organisation-fundable). A grant plausible for three or more of the six
+ * projects is a generic community-grants programme and is never tagged on the rubric.
+ */
+export function goodsRubricQualifies(relevance) {
+  if (!rubricQualifies(relevance?.goods?.rubric, relevance?.rubric_meta)) return false;
+  return countRubricFits(relevance) + 1 < RUBRIC_GENERIC_PROJECT_COUNT;
 }
