@@ -51,6 +51,8 @@ export type DeskRecord = {
   workHref: string | null;
   /** True when this row is a decision due (pursue or pass), not yet an Ask. */
   isDecision?: boolean;
+  /** Grant rows: pursued, but no live GHL opportunity holds it yet (the push failed or predates the wiring). */
+  ghlPending?: boolean;
   /** Obligation rows: who the work is owed to. */
   owedTo?: 'funder' | 'community';
   obligationId?: string;
@@ -291,13 +293,14 @@ async function getDeskRecords(slug: string): Promise<DeskRecord[]> {
       id: `g-${g.id}`, kind: 'grant', ref: g.rowId, projectCode: g.code, decision,
       project: deskProjectLabel(g.code), name: g.name,
       signal: pursuing ? 'pursuing' : inGhl ? 'in GHL' : 'open round · not decided',
-      next: pursuing ? (inGhl ? 'Work the application in GHL' : 'Start the application') : inGhl ? 'Work the application' : 'Pursue or pass',
+      next: pursuing ? (inGhl ? 'Work the application in GHL' : 'Send it to GHL') : inGhl ? 'Work the application' : 'Pursue or pass',
       dueDays: g.daysToDeadline,
       // Undated rows rank on the stronger of the two signals (Jev 0-3 read onto 0-99).
       score: Math.max(g.fitScore, g.jevScore != null ? Math.round(g.jevScore * 33) : 0),
       amount: g.amountMax != null ? money(g.amountMax) : g.amountMin != null ? money(g.amountMin) : null,
       ghlUrl: null, workHref: g.project === 'goods' ? `/org/${slug}/goods/grants` : `/org/${slug}/grants`,
       isDecision: !inGhl && !pursuing,
+      ghlPending: pursuing && !inGhl,
       grant: {
         funder: g.provider, keyword: g.fitScore, jevScore: g.jevScore, jevConfidence: g.jevConfidence,
         jevOutsideArea: g.jevOutsideArea, taggedBy: g.taggedBy, closeDate: g.deadline,

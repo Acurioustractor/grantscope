@@ -342,6 +342,7 @@ export default async function OneDeskPage({ params, searchParams }: {
                             projectCode={selected.projectCode ?? null}
                             projectLabel={selected.project}
                             mode={selected.isDecision ? 'decide' : 'worked'}
+                            sendToGhl={selected.ghlPending}
                             judgment={{
                               name: selected.name,
                               project: selected.project,

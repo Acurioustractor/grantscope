@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOrgWriteAccess } from '../../_lib/auth';
+import { pursueGrantInGhl } from '@/lib/services/act-desk-ghl';
 import {
   DESK_DECISION_KINDS, DESK_VERBS, PASS_REASONS, VERB_DECISION,
   type DeskDecisionKind, type DeskVerb, type PassReason,
@@ -72,5 +73,18 @@ export async function POST(request: NextRequest, { params }: Params) {
     .select('id')
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Pursue on a grant puts it in the GHL Grants pipeline. The decision stands even if GHL fails; the
+  // button says so and a second Pursue retries.
+  if (kind === 'grant' && verb === 'pursue') {
+    const ghl = await pursueGrantInGhl(auth.serviceDb, ref);
+    if (ghl.status !== 'failed') {
+      await auth.serviceDb
+        .from('opportunity_decisions')
+        .update({ judgment: { ...judgment(body.judgment), ghl_opportunity_id: ghl.opportunityId } })
+        .eq('id', data.id);
+    }
+    return NextResponse.json({ id: data.id, ghl });
+  }
   return NextResponse.json({ id: data.id });
 }

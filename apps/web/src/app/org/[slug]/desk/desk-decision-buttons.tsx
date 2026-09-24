@@ -8,7 +8,7 @@ type Reason = 'wrong_project' | 'cannot_apply' | 'not_now';
 
 // Pursue / Pass / Save for later on a grant, funder or buyer. Writes one row to opportunity_decisions via
 // /api/org/[id]/desk-decisions, then refreshes so the queue moves on.
-export function DeskDecisionButtons({ orgProfileId, kind, refId, projectCode, projectLabel, mode, judgment }: {
+export function DeskDecisionButtons({ orgProfileId, kind, refId, projectCode, projectLabel, mode, judgment, sendToGhl }: {
   orgProfileId: string;
   kind: 'grant' | 'funder' | 'buyer';
   refId: string;
@@ -18,6 +18,8 @@ export function DeskDecisionButtons({ orgProfileId, kind, refId, projectCode, pr
    *  undo: a saved or passed row. */
   mode: 'decide' | 'worked' | 'undo';
   judgment?: Record<string, string | number | boolean | null>;
+  /** A pursued grant that no live GHL opportunity holds yet: offer the push again. */
+  sendToGhl?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<Verb | null>(null);
@@ -33,8 +35,14 @@ export function DeskDecisionButtons({ orgProfileId, kind, refId, projectCode, pr
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kind, ref: refId, project_code: projectCode, verb, reason, judgment }),
       });
-      if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error || 'Could not save that');
+      const out = (await res.json().catch(() => ({}))) as { error?: string; ghl?: { status: string; detail?: string } };
+      if (!res.ok) throw new Error(out.error || 'Could not save that');
       setChoosing(false);
+      // The pursue is saved either way; say so plainly when GHL did not take it, and leave the row up.
+      if (out.ghl?.status === 'failed') {
+        setError(`Saved as pursuing, but GHL did not take it (${out.ghl.detail ?? 'no reason given'}). Send to GHL retries.`);
+        return;
+      }
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save that');
@@ -86,6 +94,11 @@ export function DeskDecisionButtons({ orgProfileId, kind, refId, projectCode, pr
       {mode === 'decide' && (
         <button type="button" onClick={() => decide('pursue')} disabled={dis} className={`${btn} bg-ql-bar text-ql-inverse hover:bg-ql-ink`}>
           {busy === 'pursue' ? '…' : 'Pursue'}
+        </button>
+      )}
+      {mode === 'worked' && sendToGhl && (
+        <button type="button" onClick={() => decide('pursue')} disabled={dis} className={`${btn} bg-ql-bar text-ql-inverse hover:bg-ql-ink`}>
+          {busy === 'pursue' ? '…' : 'Send to GHL'}
         </button>
       )}
       <button type="button" onClick={() => setChoosing(true)} disabled={dis} className={quiet}>

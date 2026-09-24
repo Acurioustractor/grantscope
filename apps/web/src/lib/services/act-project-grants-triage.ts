@@ -1,5 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { projectEligibility, type ActProject, type ProjectEligibility } from '@/lib/act-grant-eligibility';
+import { liveGhlOpportunityIds } from '@/lib/services/act-desk-ghl';
 
 /** Grant rounds for all six ACT projects, not just Goods. goods-grants-triage.ts stays
  *  Goods-only (it backs the dedicated /goods/grants triage page); this widens the One
@@ -180,5 +181,8 @@ export async function getAllProjectsGrantsTriage(decided: Map<string, Set<string
     if (extraErr) throw new Error(`project grants triage (decided): ${extraErr.message}`);
     rows.push(...((extra ?? []) as unknown as TriageSourceRow[]));
   }
+  // A stamp counts as in GHL only when it resolves to a synced mirror row; most stamps point at deleted opps.
+  const live = await liveGhlOpportunityIds(db, rows.map((r) => r.ghl_opportunity_id).filter((s): s is string => !!s));
+  for (const r of rows) r.ghl_opportunity_id = r.ghl_opportunity_id ? live.get(r.ghl_opportunity_id) ?? null : null;
   return buildProjectGrantRows(rows, new Date(), decided);
 }
