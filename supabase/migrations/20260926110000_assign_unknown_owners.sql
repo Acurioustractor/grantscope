@@ -10,4 +10,9 @@ UPDATE schema_ownership SET owner = 'grantscope', evidence = evidence || ' | own
 UPDATE schema_ownership SET owner = 'act', evidence = evidence || ' | owner: creating repo, Ben 2026-09-26' WHERE owner = 'unknown' AND object IN ('v_monthly_revenue', 'v_newsletter_audience', 'v_newsletter_reprompt_candidates', 'v_pending_receipts', 'v_pending_subscriptions_review', 'v_project_actions', 'v_project_decisions', 'v_project_lifetime_position', 'v_project_questions', 'v_receipt_pipeline_funnel', 'v_recent_agent_errors', 'v_recent_project_knowledge', 'v_team_capacity', 'v_voice_notes_cultural_review', 'v_voice_notes_with_actions');
 UPDATE schema_ownership SET owner = 'justicehub', evidence = evidence || ' | owner: creating repo, Ben 2026-09-26' WHERE owner = 'unknown' AND object IN ('jr_site_support_request_events', 'v_org_grant_health', 'v_org_upcoming_deadlines', 'v_state_ecosystem_summary');
 UPDATE schema_ownership SET owner = 'harvest', evidence = evidence || ' | owner: creating repo, Ben 2026-09-26' WHERE owner = 'unknown' AND object IN ('witta_contributions');
+-- The act-regenerative-studio living wiki (created by its 20241225_living_wiki.sql): the register pass guessed
+-- act or shared from code references; by the same creating-repo rule it is studio. This also clears a false
+-- "ACT-private open to anon" flag on wiki_page_versions, which is public for active pages by design (0 rows).
+UPDATE schema_ownership SET owner = 'studio', evidence = evidence || ' | owner: creating repo (act-regenerative-studio), Ben 2026-09-26'
+WHERE declared_on = '2026-09-26' AND object LIKE 'wiki\_%' AND evidence LIKE '%act-regenerative-studio%';
 COMMIT;
