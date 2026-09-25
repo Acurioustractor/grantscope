@@ -23,6 +23,10 @@ const ALLOWLIST = {
   pmpp_knowledge: 'published knowledge only ("Active PMPP is viewable by everyone")',
   newsletter_subscriptions: 'admin-filtered ("Admins can read newsletter subscriptions"); anon sees no rows',
   ecosystem_sites: 'public by decision (PR #429, 2026-09-06): 18 rows of site names, URLs, Vercel ids and timestamps; no write policy',
+  // Temporary (2026-09-26): the register pass guessed owner act; it was made by act-regenerative-studio's
+  // public living wiki (0 rows, readable only for active pages). 20260926110000 moves the wiki_* rows to
+  // studio, after which this entry goes stale and should be pruned.
+  wiki_page_versions: 'studio living wiki, public for active pages; 0 rows; owner corrected to studio in 20260926110000',
 };
 
 const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
