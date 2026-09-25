@@ -8,7 +8,9 @@
  *
  * Writes back:
  *   - opportunity_type
- *   - verification_status (open_grant → verified, others → placeholder)
+ *   - verification_status (open_grant → verified, others → placeholder), ONLY when the answering
+ *     model has been measured by Ben (scripts/jev-gates.json, scripts/lib/classify-gate.mjs).
+ *     Every other model is review-only since 2026-09-25.
  *   - auto_classify_confidence (0.0-1.0)
  *   - auto_classify_reason (1-line explanation)
  *   - auto_classify_model (claude-haiku-4-5-20251001)
@@ -18,7 +20,7 @@
  *   node --env-file=.env scripts/auto-classify-llm.mjs [--dry-run] [--limit=50] [--min-confidence=0.7]
  *
  * Behavior:
- *   - Rows with confidence >= min-confidence are auto-applied (default 0.7)
+ *   - Rows with confidence >= min-confidence are auto-applied (default 0.7), if the model is measured
  *   - Rows below threshold stay unverified, but confidence/reason are still saved
  *     so the triage UI can show "LLM said X with 0.55 confidence — please review"
  *
@@ -29,13 +31,11 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 import { readFileSync } from 'node:fs';
+import { modelMayApply } from './lib/classify-gate.mjs';
 
-// Jev answers are applied only while Ben's 18-of-20 check holds for the model that answered.
+// Any model's answers are applied only while Ben's 18-of-20 check holds for the model that answered.
 // jev-latest can change under us; a new model means review-only until it is measured again.
 const JEV_GATE = JSON.parse(readFileSync(new URL('./jev-gates.json', import.meta.url), 'utf8'))['alma-classify'];
-function jevMayApply(model) {
-  return Boolean(JEV_GATE?.on) && model === JEV_GATE.model;
-}
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const LIMIT_ARG = process.argv.find((a) => a.startsWith('--limit='));
@@ -420,9 +420,9 @@ async function run() {
         }
 
         // Determine if we apply or leave for human review
-        const gated = activeProvider === 'jev' && !jevMayApply(MODEL);
+        const gated = !modelMayApply(JEV_GATE, MODEL);
         if (gated && !gateWarned) {
-          console.warn(`  Jev answered as ${MODEL}, but jev-gates.json measured ${JEV_GATE?.model ?? 'nothing'}: review-only until Ben re-checks 20.`);
+          console.warn(`  ${MODEL} answered, but jev-gates.json measured ${JEV_GATE?.model ?? 'nothing'}: review-only until Ben checks 20 of its answers.`);
           gateWarned = true;
         }
         const willApply = decision.confidence >= MIN_CONFIDENCE && !gated;
