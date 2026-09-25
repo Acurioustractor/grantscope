@@ -3,7 +3,7 @@
 // and shape get reviewed before any send infrastructure exists. This page is
 // the read channel's mock-up; it never sends anything.
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { isActSlug } from '@/lib/services/fast-local-org';
 import { getOneDeskPool, type DeskRecord } from '@/lib/services/act-one-desk';
 
@@ -32,6 +32,9 @@ function Row({ r, slug }: { r: DeskRecord; slug: string }) {
 
 export default async function DigestPreviewPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  // Folded into the One Desk (2026-09-25): the desk decides on grants, funders and buyers in one place.
+  // Other orgs keep this page.
+  if (isActSlug(slug)) redirect(`/org/${slug}/desk`);
   if (!isActSlug(slug)) notFound();
   const pool = await getOneDeskPool(slug);
 

@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { isActSlug } from '@/lib/services/fast-local-org';
 import { getServiceSupabase } from '@/lib/supabase';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { money, fmt } from '@/lib/format';
@@ -84,6 +85,9 @@ const TEMP_BAR = (t: number) =>
 
 export default async function IntelligencePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  // Folded into the One Desk (2026-09-25): the desk decides on grants, funders and buyers in one place.
+  // Other orgs keep this page.
+  if (isActSlug(slug)) redirect(`/org/${slug}/desk`);
   const profile = await getOrgProfileBySlug(slug);
   if (!profile) notFound();
 

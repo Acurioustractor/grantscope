@@ -94,7 +94,7 @@ export function ActWorkspaceShell({
     // feed held 18 opportunities and the room had nothing in it. The feed now
     // backs ~1,535 across all 11 projects, so the portfolio-wide decision queue
     // is worth a door. Curiosity is raw leads; this is the ranked five.
-    { label: 'Funding', hint: 'Money worth chasing', href: `/org/${slug}/funding`, active: pathname.startsWith(`/org/${slug}/funding`) },
+    // Funding folded into the One Desk (2026-09-25); /funding redirects there.
     { label: 'Grants', hint: 'Every live grant', href: `/org/${slug}/grants`, active: pathname.startsWith(`/org/${slug}/grants`) },
     // Rail otherwise stays cut to the spine (Ben, 2026-08-05): Action, Art,
     // Money, Sources and Research left and have not come back. Art = the Harvest
@@ -332,7 +332,7 @@ function WorkspaceModeLink({ href, label, active, index, hint }: WorkspaceLink &
 // nav. These groups replace the pill rows that lived in the green page header.
 const GOODS_RAIL_SECTIONS: ReadonlyArray<{ label: string; items: ReadonlyArray<readonly [string, string]> }> = [
   { label: 'Work', items: [['today', 'Today'], ['portfolio', 'Portfolio'], ['capital', 'Capital'], ['matters', 'Matters'], ['network', 'Network'], ['applications', 'Applications'], ['learning', 'Learning']] },
-  { label: 'Money in', items: [['foundations', 'Foundations'], ['foundations/scan', 'Funder Scan'], ['grants', 'Grants'], ['money', 'Money']] },
+  { label: 'Money in', items: [['foundations', 'Foundations'], ['foundations/scan', 'Funder Scan'], ['money', 'Money']] },
   { label: 'Delivery', items: [['funnel', 'Delivery map'], ['map', 'On the map'], ['communities', 'Communities'], ['channels', 'Channels'], ['buyers', 'Buyers']] },
   { label: 'Trust', items: [['model', 'Story & model'], ['proof', 'Evidence'], ['governance', 'Governance']] },
 ];
