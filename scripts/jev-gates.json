@@ -6,6 +6,16 @@
     "measured": "20 of 20 right (random sample of 20 distinct unverified alma rows, 14 above the 0.7 apply bar)",
     "sample": "thoughts/shared/drafts/2026-09-25-jev-classify-20-sample.csv",
     "by": "Ben",
-    "at": "2026-09-25"
+    "at": "2026-09-25",
+    "also": [
+      {
+        "model": "gemini-2.5-flash",
+        "measured": "18 of 20 right (random sample of 20 of the 1,109 answers it applied at 0.7 or more; each card quoted the grant's own page)",
+        "wrong": "#4 City of Greater Geraldton events: invitation_only, should be open_grant; #5 CHSP Emergency and Critical Need: open_grant, should be invitation_only",
+        "sample": "https://claude.ai/artifact/3uLbFLLy39y8WReJvNfva5",
+        "by": "Ben",
+        "at": "2026-09-25"
+      }
+    ]
   }
 }

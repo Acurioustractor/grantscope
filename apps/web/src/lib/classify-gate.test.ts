@@ -25,6 +25,20 @@ describe('alma-classify model gate', () => {
     }
   });
 
+  it('applies a second model once it is listed as measured', () => {
+    const both = { ...gate, also: [{ model: 'gemini-2.5-flash', measured: '18 of 20', by: 'Ben' }] };
+    expect(modelMayApply(both, 'gemini-2.5-flash')).toBe(true);
+    expect(modelMayApply(both, 'jev-1.13.0')).toBe(true);
+    expect(modelMayApply(both, 'claude-haiku-4-5-20251001')).toBe(false);
+  });
+
+  it('every model the live gate lets through was measured by Ben on a sample', () => {
+    const g = gates['alma-classify'];
+    for (const m of [g, ...(g.also ?? [])]) {
+      expect(m).toMatchObject({ model: expect.any(String), measured: expect.stringMatching(/of 20/), by: 'Ben' });
+    }
+  });
+
   it('applies nothing while the gate is off or missing', () => {
     expect(modelMayApply({ ...gate, on: false }, 'jev-1.13.0')).toBe(false);
     expect(modelMayApply(undefined, 'jev-1.13.0')).toBe(false);
