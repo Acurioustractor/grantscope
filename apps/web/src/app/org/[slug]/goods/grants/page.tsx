@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { ACT_FAST_PROFILE, isActSlug, shouldUseFastLocalOrg } from '@/lib/services/fast-local-org';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getGoodsGrantsTriage, type TriageGrantRow } from '@/lib/services/goods-grants-triage';
@@ -45,6 +45,9 @@ export default async function GoodsGrantsTriagePage({
   searchParams: Promise<{ geo?: string; fit?: string; scope?: string }>;
 }) {
   const { slug } = await params;
+  // Folded into the One Desk (2026-09-25): the desk decides on grants, funders and buyers in one place.
+  // Other orgs keep this page.
+  if (isActSlug(slug)) redirect(`/org/${slug}/desk?kind=grant&project=Goods`);
   const sp = await searchParams;
   const profile = shouldUseFastLocalOrg() && isActSlug(slug) ? ACT_FAST_PROFILE : await getOrgProfileBySlug(slug);
   if (!profile) notFound();
@@ -85,7 +88,7 @@ export default async function GoodsGrantsTriagePage({
             ongoing or upcoming opportunities cut from a corpus of {summary.corpusTotal.toLocaleString('en-AU')}, sorted
             deadline-first because grants are deadline-driven, not stage-driven. Scored for Goods fit.
           </p>
-          <GoodsSubNav slug={slug} active="grants" />
+          <GoodsSubNav slug={slug} />
         </div>
       </div>
 

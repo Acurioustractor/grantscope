@@ -45,8 +45,8 @@ export default async function CrossProjectsPage({ params }: { params: Promise<{ 
               </p>
             </div>
             <div className="flex gap-2 text-xs font-semibold">
-              <Link href={`/org/${slug}/funding`} className="min-h-11 rounded-lg border border-[#cbd5e1] bg-white px-4 py-3 hover:border-[#2f8f64]">
-                Funding desk
+              <Link href={`/org/${slug}/desk?kind=grant`} className="min-h-11 rounded-lg border border-[#cbd5e1] bg-white px-4 py-3 hover:border-[#2f8f64]">
+                Grant desk
               </Link>
               <Link href={`/org/${slug}/pipeline`} className="min-h-11 rounded-lg bg-[#183426] px-4 py-3 text-white hover:bg-[#2f8f64]">
                 Open pipeline

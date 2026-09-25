@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { isActSlug } from '@/lib/services/fast-local-org';
 import { getProjectFundingPortfolio } from '@/lib/services/project-funding-service';
 import { getLatestFundingWeeklyDigest } from '@/lib/services/funding-weekly-digest';
 import { PursueFundingForm } from './pursue-funding-form';
@@ -13,6 +14,9 @@ function money(value: number | null): string {
 
 export default async function ProjectFundingPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  // Folded into the One Desk (2026-09-25): the desk decides on grants, funders and buyers in one place.
+  // Other orgs keep this page.
+  if (isActSlug(slug)) redirect(`/org/${slug}/desk?kind=grant`);
   const [portfolio, digest] = await Promise.all([getProjectFundingPortfolio(slug), getLatestFundingWeeklyDigest(slug)]);
   if (!portfolio) notFound();
 
