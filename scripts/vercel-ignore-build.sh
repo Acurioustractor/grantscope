@@ -17,11 +17,25 @@
 # that silently did not take.
 set -uo pipefail
 
-# Vercel provides the previous deployment's SHA. Without it we cannot diff, so build.
+# Vercel provides the previous deployment's SHA.
 BASE="${VERCEL_GIT_PREVIOUS_SHA:-}"
 if [[ -z "$BASE" ]]; then
-  echo "no VERCEL_GIT_PREVIOUS_SHA — building"
-  exit 1
+  # Production without it: no diff, so build.
+  if [[ "${VERCEL_ENV:-}" == "production" ]]; then
+    echo "no VERCEL_GIT_PREVIOUS_SHA on production — building"
+    exit 1
+  fi
+  # A branch's FIRST preview never has one, so every migration branch paid a 6-9 minute
+  # preview build nobody opened: 22 previews in the three days to 2026-09-27, most of them db/
+  # branches whose production build this script then skipped. Compare with main instead. If main
+  # cannot be fetched or the histories do not meet in this shallow clone, build, as before.
+  if git fetch --quiet --depth=200 origin main 2>/dev/null \
+    && BASE="$(git merge-base FETCH_HEAD HEAD 2>/dev/null)" && [[ -n "$BASE" ]]; then
+    echo "first preview of ${VERCEL_GIT_COMMIT_REF:-this branch}: comparing with main at ${BASE:0:8}"
+  else
+    echo "no VERCEL_GIT_PREVIOUS_SHA and main not reachable — building"
+    exit 1
+  fi
 fi
 
 if ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
