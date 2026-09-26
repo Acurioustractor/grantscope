@@ -95,7 +95,7 @@ export function ActWorkspaceShell({
     // backs ~1,535 across all 11 projects, so the portfolio-wide decision queue
     // is worth a door. Curiosity is raw leads; this is the ranked five.
     // Funding folded into the One Desk (2026-09-25); /funding redirects there.
-    { label: 'Grants', hint: 'Every live grant', href: `/org/${slug}/grants`, active: pathname.startsWith(`/org/${slug}/grants`) },
+    // Grants folded into the One Desk 2026-09-26; /grants redirects there.
     // Rail otherwise stays cut to the spine (Ben, 2026-08-05): Action, Art,
     // Money, Sources and Research left and have not come back. Art = the Harvest
     // project, which the project list already carries; the rest stay reachable

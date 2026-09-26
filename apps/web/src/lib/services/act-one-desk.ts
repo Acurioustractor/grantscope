@@ -304,7 +304,7 @@ async function getDeskRecords(slug: string): Promise<DeskRecord[]> {
       // Undated rows rank on the stronger of the two signals (Jev 0-3 read onto 0-99).
       score: Math.max(g.fitScore, g.jevScore != null ? Math.round(g.jevScore * 33) : 0),
       amount: g.amountMax != null ? money(g.amountMax) : g.amountMin != null ? money(g.amountMin) : null,
-      ghlUrl: null, workHref: `/org/${slug}/grants`, // /goods/grants folded into the desk 2026-09-25
+      ghlUrl: null, workHref: g.url ?? null, // the round's own page; /grants and /goods/grants now redirect to the desk
       isDecision: !inGhl && !pursuing,
       ghlPending: pursuing && !inGhl && !g.private,
       grant: {
