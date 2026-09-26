@@ -1624,7 +1624,7 @@ export function ActOperatingDesk({
           <SectionTitle
             eyebrow="Action"
             title="Commit the next move"
-            action={<LinkButton href={`/org/${slug}/pipeline`} label="Open board" />}
+            action={<LinkButton href={`/org/${slug}/desk`} label="Open the desk" />}
           />
           <ActActionQueue
             items={activePipeline}
