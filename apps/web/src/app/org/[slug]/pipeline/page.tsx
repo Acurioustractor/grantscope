@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getOrgProfileBySlug } from '@/lib/services/org-dashboard-service';
 import { getOrgPipelineData } from '@/lib/services/org-pipeline-service';
 import { ACT_FAST_PROFILE, isActSlug } from '@/lib/services/fast-local-org';
@@ -20,6 +20,9 @@ export default async function OrgPipelinePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { slug } = await params;
+  // Folded into the One Desk (Ben, 2026-09-26). Its July passes were a bulk archive of dead rounds, so
+  // no decision the desk would show is lost. Other orgs keep this board.
+  if (isActSlug(slug)) redirect(`/org/${slug}/desk?kind=grant`);
   const sp = await searchParams;
   const minScoreParam = typeof sp.min === 'string' ? Number(sp.min) : 60;
   const discoveredMinScore = Number.isFinite(minScoreParam) ? minScoreParam : 60;
