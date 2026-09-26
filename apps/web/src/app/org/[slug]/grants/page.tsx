@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { isAdminEmail } from '@/lib/admin';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import { isActSlug } from '@/lib/services/fast-local-org';
@@ -55,6 +55,9 @@ export default async function ActGrantsDeskPage({
   searchParams: Promise<{ project?: string; show?: string; limit?: string }>;
 }) {
   const { slug } = await params;
+  // Folded into the One Desk (Ben, 2026-09-26) now that private SmartyGrants rounds and who-can-apply show
+  // there. The page is kept: it is the only view of every live round, tagged or not.
+  if (isActSlug(slug)) redirect(`/org/${slug}/desk?kind=grant`);
   const sp = await searchParams;
   const project = isProject(sp.project) ? sp.project : null;
   const showRuledOut = sp.show === 'all';
