@@ -17,11 +17,28 @@
 # that silently did not take.
 set -uo pipefail
 
-# Vercel provides the previous deployment's SHA. Without it we cannot diff, so build.
+# Vercel provides the previous deployment's SHA.
 BASE="${VERCEL_GIT_PREVIOUS_SHA:-}"
 if [[ -z "$BASE" ]]; then
-  echo "no VERCEL_GIT_PREVIOUS_SHA — building"
-  exit 1
+  # Production without it: no diff, so build.
+  if [[ "${VERCEL_ENV:-}" == "production" ]]; then
+    echo "no VERCEL_GIT_PREVIOUS_SHA on production — building"
+    exit 1
+  fi
+  # A branch's FIRST preview never has one, so every migration branch paid a 6-9 minute
+  # preview build nobody opened: 22 previews in the three days to 2026-09-27, most of them db/
+  # branches whose production build this script then skipped.
+  #
+  # Compare with where the branch left main instead. Vercel's build machine cannot fetch main
+  # (tried 2026-09-27: the fetch failed), but its shallow clone holds the branch's recent history,
+  # and every PR lands on main as one squash commit whose subject ends "(#N)". The newest such
+  # commit below HEAD is the branch point. None within reach: build, as before.
+  BASE="$(git log --format='%H %s' -n 30 HEAD~1 2>/dev/null | awk '$NF ~ /^\(#[0-9]+\)$/ { print $1; exit }')"
+  if [[ -z "$BASE" ]]; then
+    echo "no VERCEL_GIT_PREVIOUS_SHA and no merged PR commit in this clone — building"
+    exit 1
+  fi
+  echo "first preview of ${VERCEL_GIT_COMMIT_REF:-this branch}: comparing with $(git log -1 --format='%h %s' "$BASE" | cut -c1-80)"
 fi
 
 if ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
