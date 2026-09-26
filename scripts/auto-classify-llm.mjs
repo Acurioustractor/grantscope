@@ -424,7 +424,8 @@ async function run() {
       try {
         const result = await classifyBatch(batch);
         items = result.items;
-        if (ROUTE_UNSURE && activeProvider === 'jev' && process.env[PROVIDERS[SECOND]?.keyEnv ?? '']) {
+        const jevAnswered = activeProvider === 'jev'; // routing only; the gate below applies to every model
+        if (ROUTE_UNSURE && jevAnswered && process.env[PROVIDERS[SECOND]?.keyEnv ?? '']) {
           items = await secondOpinion(batch, items);
         }
         totalInput += result.usage.input_tokens ?? 0;
