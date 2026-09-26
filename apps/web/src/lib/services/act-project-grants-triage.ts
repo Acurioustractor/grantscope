@@ -56,6 +56,8 @@ export interface ProjectGrantRow {
   url: string | null;
   ghlOpportunityId: string | null;
   eligibility: ProjectEligibility;
+  /** A private SmartyGrants round (act_private_grant_rounds): ACT-only, never shown publicly. */
+  private: boolean;
 }
 
 interface RubricEntry { score?: number; confidence?: number; geography_excluded?: boolean }
@@ -80,6 +82,8 @@ export interface TriageSourceRow {
   goods_relevance_score: number | null;
   goods_relevance_signals: { tagged_by?: string | null } | null;
   project_relevance: Record<string, ProjectRelevanceEntry | undefined> | null;
+  /** Set by the loader for rows from act_private_grant_rounds. */
+  private?: boolean;
 }
 
 function taggedBy(v: string | null | undefined): TaggedBy {
@@ -128,6 +132,7 @@ export function buildProjectGrantRows(
         amountMax: r.amount_max && r.amount_max > 0 ? r.amount_max : null,
         url: r.url ?? null,
         ghlOpportunityId: r.ghl_opportunity_id ?? null,
+        private: Boolean(r.private),
         eligibility: projectEligibility(project, {
           dgr_required: r.dgr_required ?? null,
           accepts_pty_ltd: r.accepts_pty_ltd ?? null,
@@ -163,6 +168,9 @@ export function jevWords(score: number | null): string {
 
 const TRIAGE_COLUMNS = 'id, name, provider, deadline, closes_at, amount_min, amount_max, url, status, geography, dgr_required, accepts_pty_ltd, place:metadata->place, ghl_opportunity_id, aligned_projects, goods_relevance_score, goods_relevance_signals, project_relevance';
 
+const PRIVATE_COLUMNS = 'id, name, provider, deadline, closes_at, amount_min, amount_max, url, status, geography, place:metadata->place, aligned_projects, goods_relevance_score, goods_relevance_signals, project_relevance';
+const asPrivate = (r: TriageSourceRow): TriageSourceRow => ({ ...r, dgr_required: null, accepts_pty_ltd: null, ghl_opportunity_id: null, private: true });
+
 /** Tagged live rounds, plus any grant with a live decision (grant id -> project codes decided on). */
 export async function getAllProjectsGrantsTriage(decided: Map<string, Set<string>> = new Map()): Promise<ProjectGrantRow[]> {
   const db = getServiceSupabase();
@@ -174,12 +182,29 @@ export async function getAllProjectsGrantsTriage(decided: Map<string, Set<string
     .limit(3000);
   if (error) throw new Error(`project grants triage: ${error.message}`);
   const rows = (data ?? []) as unknown as TriageSourceRow[];
+  // Private SmartyGrants rounds, scored by the same nightly scorers since 2026-09-26. The table has no
+  // dgr_required, accepts_pty_ltd or ghl_opportunity_id, so those read as unknown.
+  const { data: priv, error: privErr } = await db
+    .from('act_private_grant_rounds')
+    .select(PRIVATE_COLUMNS)
+    .in('status', ['open', 'ongoing', 'upcoming'])
+    .overlaps('aligned_projects', Object.values(PROJECT_CODES))
+    .limit(3000);
+  // Non-fatal: the public desk must not go down because the private table is behind a migration.
+  if (privErr) console.error(`[act-desk] private rounds skipped: ${privErr.message}`);
+  else rows.push(...((priv ?? []) as unknown as TriageSourceRow[]).map(asPrivate));
   const have = new Set(rows.map((r) => r.id));
   const missing = [...decided.keys()].filter((id) => !have.has(id)).slice(0, 500);
   if (missing.length) {
     const { data: extra, error: extraErr } = await db.from('grant_opportunities').select(TRIAGE_COLUMNS).in('id', missing);
     if (extraErr) throw new Error(`project grants triage (decided): ${extraErr.message}`);
     rows.push(...((extra ?? []) as unknown as TriageSourceRow[]));
+    const stillMissing = missing.filter((id) => !(extra ?? []).some((e) => (e as { id: string }).id === id));
+    if (stillMissing.length) {
+      const { data: extraPriv, error: epErr } = await db.from('act_private_grant_rounds').select(PRIVATE_COLUMNS).in('id', stillMissing);
+      if (epErr) console.error(`[act-desk] decided private rounds skipped: ${epErr.message}`);
+      else rows.push(...((extraPriv ?? []) as unknown as TriageSourceRow[]).map(asPrivate));
+    }
   }
   // A stamp counts as in GHL only when it resolves to a synced mirror row; most stamps point at deleted opps.
   const live = await liveGhlOpportunityIds(db, rows.map((r) => r.ghl_opportunity_id).filter((s): s is string => !!s));

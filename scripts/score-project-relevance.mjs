@@ -23,6 +23,8 @@ import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 import { scoreGrantForProject, applyProjectTags, PROJECT_CONFIGS, PROJECT_TAG_THRESHOLD } from './lib/project-relevance.mjs';
 import { loadWrongProjectVerdicts, humanNoFor, enforceHumanVerdicts } from './lib/human-verdicts.mjs';
+import { scoringTable, columnsFor } from './lib/scoring-table.mjs';
+const TABLE = scoringTable();
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -52,7 +54,7 @@ function pickColumns(row) {
 
 async function fetchBatch(offset) {
   let q = supabase
-    .from('grant_opportunities')
+    .from(TABLE)
     .select('id,name,provider,description,geography,closes_at,source,aligned_projects,project_relevance,project_relevance_scored_at')
     .order('id', { ascending: true })
     .range(offset, offset + BATCH - 1);
@@ -83,7 +85,7 @@ async function applyScoresPsql(scored) {
   ]);
   const valuesClause = rows.map((r) => `(${r[0]}::uuid, ${r[1]}, ${r[2]}::timestamptz, ${r[3]}::text[])`).join(',\n');
   const sql = `
-UPDATE grant_opportunities g SET
+UPDATE ${TABLE} g SET
   project_relevance = v.relevance,
   project_relevance_scored_at = v.scored_at,
   aligned_projects = v.aligned_projects
@@ -111,7 +113,7 @@ async function applyScoresRest(scored) {
     while (i < scored.length) {
       const s = scored[i++];
       const { error } = await supabase
-        .from('grant_opportunities')
+        .from(TABLE)
         .update({ project_relevance: s.relevance, project_relevance_scored_at: s.scoredAt, aligned_projects: s.tagged })
         .eq('id', s.row.id);
       if (error) console.error(`  update ${s.row.id}: ${error.message.slice(0, 80)}`);

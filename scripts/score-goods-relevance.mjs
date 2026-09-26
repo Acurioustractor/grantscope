@@ -24,6 +24,8 @@ import { createClient } from '@supabase/supabase-js';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 import { scoreGrantForGoods, applyGoodsTag, GOODS_TAG_THRESHOLD, GOODS_HIGH_FIT_THRESHOLD } from './lib/goods-relevance.mjs';
 import { loadWrongProjectVerdicts, humanNoFor, enforceHumanVerdicts } from './lib/human-verdicts.mjs';
+import { scoringTable, columnsFor } from './lib/scoring-table.mjs';
+const TABLE = scoringTable();
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -60,8 +62,8 @@ function pickColumns(row) {
 
 async function fetchBatch(offset) {
   let q = supabase
-    .from('grant_opportunities')
-    .select('id,name,provider,description,geography,amount_max,categories,focus_areas,closes_at,aligned_projects,goods_relevance_score,goods_relevance_signals,goods_relevance_scored_at,updated_at,source,discovery_method,project_relevance')
+    .from(TABLE)
+    .select(columnsFor(TABLE, 'id,name,provider,description,geography,amount_max,categories,focus_areas,closes_at,aligned_projects,goods_relevance_score,goods_relevance_signals,goods_relevance_scored_at,updated_at,source,discovery_method,project_relevance'))
     .order('id', { ascending: true })
     .range(offset, offset + BATCH - 1);
 
@@ -103,7 +105,7 @@ async function applyScoresPsql(scored) {
   const valuesClause = rows.map(r => `(${r[0]}::uuid, ${r[1]}::int, ${r[2]}, ${r[3]}::timestamptz, ${r[4]}::text[])`).join(',\n');
 
   const sql = `
-UPDATE grant_opportunities g SET
+UPDATE ${TABLE} g SET
   goods_relevance_score = v.score,
   goods_relevance_signals = v.signals,
   goods_relevance_scored_at = v.scored_at,
@@ -138,7 +140,7 @@ async function applyScoresRest(scored) {
   const workers = Array.from({ length: CONCURRENCY }, async () => {
     while (i < queue.length) {
       const u = queue[i++];
-      const { error } = await supabase.from('grant_opportunities').update({
+      const { error } = await supabase.from(TABLE).update({
         goods_relevance_score: u.score,
         goods_relevance_signals: u.signals,
         goods_relevance_scored_at: nowIso,
@@ -204,7 +206,7 @@ async function main() {
       totalSkippedManual += manualRows.length;
       if (!DRY_RUN) {
         const { error } = await supabase
-          .from('grant_opportunities')
+          .from(TABLE)
           .update({ goods_relevance_scored_at: new Date().toISOString() })
           .in('id', manualRows.map(r => r.id));
         if (error) console.error(`  preserve manual: ${error.message.slice(0, 80)}`);
