@@ -50,7 +50,9 @@ describe('alma-classify model gate', () => {
 
   it('the classifier gates every provider, not only Jev', () => {
     const src = code(readFileSync(join(REPO, 'scripts/auto-classify-llm.mjs'), 'utf8'));
-    expect(src).toMatch(/const gated = !modelMayApply\(JEV_GATE, MODEL\);/);
+    // Gated per answer by the model that gave it (a routed second opinion carries its own model).
+    expect(src).toMatch(/const answeredBy = decision\.model \?\? MODEL;/);
+    expect(src).toMatch(/const gated = !modelMayApply\(JEV_GATE, answeredBy\);/);
     expect(src).not.toMatch(/activeProvider === ['"]jev['"]\s*&&/);
   });
 });
