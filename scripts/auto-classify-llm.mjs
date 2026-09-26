@@ -42,6 +42,13 @@ const LIMIT_ARG = process.argv.find((a) => a.startsWith('--limit='));
 const LIMIT = LIMIT_ARG ? parseInt(LIMIT_ARG.split('=')[1], 10) : 300;
 const CONF_ARG = process.argv.find((a) => a.startsWith('--min-confidence='));
 const MIN_CONFIDENCE = CONF_ARG ? parseFloat(CONF_ARG.split('=')[1]) : 0.7;
+// Jev's unsure answers (below MIN_CONFIDENCE) get a second opinion from Claude instead of waiting in Ben's
+// review queue (Ben, 2026-09-26). Claude's answer is stored under its own model name, so the per-model
+// gate (scripts/lib/classify-gate.mjs) keeps it review-only until Ben has checked 20 of them.
+// --no-route turns it off.
+const ROUTE_UNSURE = !process.argv.includes('--no-route');
+// Which model gives the second opinion: anthropic (default) or gemini (measured 18 of 20 on 2026-09-25).
+const SECOND = (process.argv.find((a) => a.startsWith('--second=')) ?? '--second=anthropic').split('=')[1];
 
 const BATCH_SIZE = 25;
 const AGENT_ID = 'auto-classify-llm';
@@ -96,7 +103,9 @@ const PROVIDERS = {
   },
 };
 
-const PROVIDER_ARG = process.argv.find((a) => a.startsWith('--provider='));
+// --reread-unsure: send the existing review queue (rows Jev answered below MIN_CONFIDENCE) to Claude.
+const REREAD_UNSURE = process.argv.includes('--reread-unsure');
+const PROVIDER_ARG = REREAD_UNSURE ? `--provider=${(process.argv.find((a) => a.startsWith('--second=')) ?? '--second=anthropic').split('=')[1]}` : process.argv.find((a) => a.startsWith('--provider='));
 const FALLBACK_ORDER = ['jev', 'groq', 'gemini', 'ollama', 'deepseek', 'anthropic'];
 
 // Sorting a grant into six buckets does not need a large model, and the big ones
@@ -166,7 +175,7 @@ async function loadUnverified() {
       .from('alma_funding_opportunities')
       .select('id, name, description, funder_name, source_url, focus_areas, keywords, min_grant_amount, max_grant_amount')
       .eq('opportunity_type', 'unverified')
-      .is('auto_classify_confidence', null)
+      .or(REREAD_UNSURE ? `and(auto_classify_model.like.jev-%,auto_classify_confidence.lt.${MIN_CONFIDENCE})` : 'auto_classify_confidence.is.null')
       .order('funder_name', { ascending: true })
       .range(offset, offset + Math.min(PAGE, LIMIT - rows.length) - 1);
     if (error) throw error;
@@ -328,6 +337,28 @@ async function classifyWithOpenAICompatible(rows, rowsText, provider) {
 let activeProvider = null;
 let gateWarned = false;
 
+/** Re-ask Claude about the rows Jev was unsure of; keep Jev's answer where Claude fails. */
+async function secondOpinion(batch, items) {
+  const byId = new Map(items.map((it) => [it.id, it]));
+  const unsure = batch.filter((r) => (byId.get(r.id)?.confidence ?? 0) < MIN_CONFIDENCE);
+  if (!unsure.length) return items;
+  try {
+    const provider = PROVIDERS[SECOND];
+    const model = provider.model;
+    const text = unsure.map(formatRowForLLM).join('\n');
+    const res = SECOND === 'anthropic' ? await classifyWithAnthropic(unsure, text, model) : await classifyWithOpenAICompatible(unsure, text, provider);
+    for (const c of res.items) {
+      const jev = byId.get(c.id);
+      if (!jev) continue;
+      byId.set(c.id, { ...c, model, reason: `${model} after Jev said ${jev.classification} at ${Number(jev.confidence).toFixed(2)}: ${c.reason ?? ''}`.slice(0, 500) });
+    }
+    console.log(`  second opinion: ${res.items.length} of ${unsure.length} unsure rows re-read by ${model}`);
+  } catch (e) {
+    console.warn(`  second opinion failed, keeping Jev's answers: ${e.message.slice(0, 120)}`);
+  }
+  return items.map((it) => byId.get(it.id) ?? it);
+}
+
 async function classifyBatch(rows) {
   const rowsText = rows.map(formatRowForLLM).join('\n');
   // Stick with the first provider that works, so one outage does not cost every
@@ -393,6 +424,9 @@ async function run() {
       try {
         const result = await classifyBatch(batch);
         items = result.items;
+        if (ROUTE_UNSURE && activeProvider === 'jev' && process.env[PROVIDERS[SECOND]?.keyEnv ?? '']) {
+          items = await secondOpinion(batch, items);
+        }
         totalInput += result.usage.input_tokens ?? 0;
         totalOutput += result.usage.output_tokens ?? 0;
         totalCacheRead += result.usage.cache_read_input_tokens ?? 0;
@@ -420,9 +454,10 @@ async function run() {
         }
 
         // Determine if we apply or leave for human review
-        const gated = !modelMayApply(JEV_GATE, MODEL);
+        const answeredBy = decision.model ?? MODEL;
+        const gated = !modelMayApply(JEV_GATE, answeredBy);
         if (gated && !gateWarned) {
-          console.warn(`  ${MODEL} answered, but jev-gates.json measured ${JEV_GATE?.model ?? 'nothing'}: review-only until Ben checks 20 of its answers.`);
+          console.warn(`  ${answeredBy} answered, but jev-gates.json has not measured it: review-only until Ben checks 20 of its answers.`);
           gateWarned = true;
         }
         const willApply = decision.confidence >= MIN_CONFIDENCE && !gated;
@@ -440,7 +475,7 @@ async function run() {
         const updates = {
           auto_classify_confidence: decision.confidence,
           auto_classify_reason: decision.reason,
-          auto_classify_model: MODEL,
+          auto_classify_model: decision.model ?? MODEL,
           auto_classify_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
