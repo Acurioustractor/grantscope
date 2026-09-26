@@ -1226,6 +1226,32 @@ export const AGENTS = {
     timeoutMs: 600_000,
     dependencies: [],
   },
+  // The same three scorers over the private SmartyGrants rounds (act_private_grant_rounds), so tagged
+  // private rounds reach the One Desk. Added 2026-09-26 with migration 20260926160000.
+  'score-private-rounds-goods': {
+    command: ['node', '--env-file=.env', 'scripts/score-goods-relevance.mjs', '--table=act_private_grant_rounds'],
+    displayName: 'Score Goods relevance (private rounds)',
+    category: 'goods',
+    defaultPriority: 2,
+    timeoutMs: 600_000,
+    dependencies: ['sync-act-private-grant-rounds'],
+  },
+  'score-private-rounds-projects': {
+    command: ['node', '--env-file=.env', 'scripts/score-project-relevance.mjs', '--table=act_private_grant_rounds'],
+    displayName: 'Score project relevance (private rounds)',
+    category: 'goods',
+    defaultPriority: 2,
+    timeoutMs: 600_000,
+    dependencies: ['sync-act-private-grant-rounds'],
+  },
+  'score-private-rounds-rubric': {
+    command: ['node', '--env-file=.env', 'scripts/score-project-rubric.mjs', '--apply', '--table=act_private_grant_rounds'],
+    displayName: 'Project rubric scorer, JEV (private rounds)',
+    category: 'goods',
+    defaultPriority: 2,
+    timeoutMs: 600_000,
+    dependencies: ['score-private-rounds-projects'],
+  },
   'score-project-rubric': {
     command: ['node', '--env-file=.env', 'scripts/score-project-rubric.mjs', '--apply'],
     displayName: 'Project rubric scorer (JEV)',

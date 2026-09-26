@@ -59,7 +59,7 @@ export async function pursueGrantInGhl(db: SupabaseClient, grantId: string): Pro
     .eq('id', grantId)
     .maybeSingle();
   if (error) return { status: 'failed', detail: error.message };
-  if (!g) return { status: 'failed', detail: 'That grant is not in grant_opportunities' };
+  if (!g) return pursuePrivateRound(db, grantId);
 
   if (g.ghl_opportunity_id) {
     const live = await liveGhlOpportunityIds(db, [g.ghl_opportunity_id]);
@@ -83,4 +83,22 @@ export async function pursueGrantInGhl(db: SupabaseClient, grantId: string): Pro
   const { error: stampErr } = await db.from('grant_opportunities').update({ ghl_opportunity_id: res.opportunityId }).eq('id', g.id);
   if (stampErr) return { status: 'failed', detail: `In GHL as ${res.opportunityId}, but the stamp did not save: ${stampErr.message}` };
   return { status: 'pushed', opportunityId: res.opportunityId };
+}
+
+/** A private SmartyGrants round: same GHL opp, but the table has nowhere to stamp it, so the id lives only
+ *  on the decision row (the route writes it into judgment). Re-pursuing creates a second opp. */
+async function pursuePrivateRound(db: SupabaseClient, id: string): Promise<GhlPursueResult> {
+  const { data: r, error } = await db
+    .from('act_private_grant_rounds')
+    .select('id, name, provider, deadline, closes_at, url, geography, amount_min, amount_max, goods_relevance_score')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) return { status: 'failed', detail: error.message };
+  if (!r) return { status: 'failed', detail: 'That grant is in neither grant_opportunities nor the private rounds' };
+  const res = await pushGoodsGrantToGHL({
+    grantId: r.id, name: r.name, provider: r.provider ?? null, fitScore: r.goods_relevance_score ?? null,
+    deadline: r.closes_at ?? r.deadline ?? null, url: r.url ?? null, geography: r.geography ?? null,
+    amountMin: r.amount_min ?? null, amountMax: r.amount_max ?? null,
+  });
+  return res.ok ? { status: 'pushed', opportunityId: res.opportunityId } : { status: 'failed', detail: res.status ? `GHL said ${res.status}` : res.reason };
 }

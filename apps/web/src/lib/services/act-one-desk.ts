@@ -292,18 +292,21 @@ async function getDeskRecords(slug: string): Promise<DeskRecord[]> {
     const decision = decisions.get(decisionKey('grant', g.rowId, g.code));
     const pursuing = decision?.state === 'pursuing';
     if (!inGhl && !grantDecisionDue(g) && !decided(decision)) continue;
+    // A private round has nowhere to stamp its GHL id, so a pursued one is taken as sent; offering
+    // "Send to GHL" again would make a second opportunity.
+    const privatePursued = g.private && pursuing;
     pool.push({
       id: `g-${g.id}`, kind: 'grant', ref: g.rowId, projectCode: g.code, decision,
       project: deskProjectLabel(g.code), name: g.name,
-      signal: pursuing ? 'pursuing' : inGhl ? 'in GHL' : 'open round · not decided',
-      next: pursuing ? (inGhl ? 'Work the application in GHL' : 'Send it to GHL') : inGhl ? 'Work the application' : 'Pursue or pass',
+      signal: (g.private ? 'private round · ' : '') + (pursuing ? 'pursuing' : inGhl ? 'in GHL' : 'open round · not decided'),
+      next: pursuing ? (inGhl || privatePursued ? 'Work the application in GHL' : 'Send it to GHL') : inGhl ? 'Work the application' : 'Pursue or pass',
       dueDays: g.daysToDeadline,
       // Undated rows rank on the stronger of the two signals (Jev 0-3 read onto 0-99).
       score: Math.max(g.fitScore, g.jevScore != null ? Math.round(g.jevScore * 33) : 0),
       amount: g.amountMax != null ? money(g.amountMax) : g.amountMin != null ? money(g.amountMin) : null,
       ghlUrl: null, workHref: `/org/${slug}/grants`, // /goods/grants folded into the desk 2026-09-25
       isDecision: !inGhl && !pursuing,
-      ghlPending: pursuing && !inGhl,
+      ghlPending: pursuing && !inGhl && !g.private,
       grant: {
         funder: g.provider, keyword: g.fitScore, jevScore: g.jevScore, jevConfidence: g.jevConfidence,
         jevOutsideArea: g.jevOutsideArea, taggedBy: g.taggedBy, closeDate: g.deadline,

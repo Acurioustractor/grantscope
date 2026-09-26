@@ -52,6 +52,8 @@ import {
 } from './lib/project-relevance.mjs';
 import { goodsRubricQualifies } from './lib/goods-relevance.mjs';
 import { loadWrongProjectVerdicts, humanNoFor, enforceHumanVerdicts } from './lib/human-verdicts.mjs';
+import { scoringTable, columnsFor } from './lib/scoring-table.mjs';
+const TABLE = scoringTable();
 
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith(`--${k}=`)); return a ? a.split('=')[1] : d; };
 const APPLY = process.argv.includes('--apply');
@@ -204,8 +206,8 @@ async function main() {
   const runId = run?.id ?? null;
 
   try {
-    let q = supabase.from('grant_opportunities')
-      .select('id, name, provider, description, categories, focus_areas, geography, aligned_projects, project_relevance, goods_relevance_score, goods_relevance_signals, source, closes_at, deadline')
+    let q = supabase.from(TABLE)
+      .select(columnsFor(TABLE, 'id, name, provider, description, categories, focus_areas, geography, aligned_projects, project_relevance, goods_relevance_score, goods_relevance_signals, source, closes_at, deadline'))
       .order('id')
       .limit(LIMIT);
     if (!ALL_TIME) {
@@ -307,7 +309,7 @@ async function main() {
           }
 
           if (APPLY) {
-            const { error: upErr } = await supabase.from('grant_opportunities')
+            const { error: upErr } = await supabase.from(TABLE)
               .update({ project_relevance: merged, aligned_projects: tagged, project_relevance_scored_at: at, ...(goodsSignals ? { goods_relevance_signals: goodsSignals } : {}) })
               .eq('id', g.id);
             if (upErr) throw upErr;

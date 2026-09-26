@@ -16,7 +16,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { createSmartyGrantsPlugin } from '../packages/grant-engine/src/sources/smartygrants.ts';
 import { placeFromGeography } from '../packages/grant-engine/src/storage/repository.ts';
-import { scoreGrantForGoods, applyGoodsTag } from './lib/goods-relevance.mjs';
 import { logStart, logComplete, logFailed } from './lib/log-agent-run.mjs';
 
 const DRY_RUN = process.argv.includes('--dry-run');
@@ -39,14 +38,14 @@ try {
       amount_min: g.amount?.min ?? null, amount_max: g.amount?.max ?? null,
       closes_at: g.deadline ?? null, url: g.sourceUrl, geography, categories: g.categories ?? [],
     };
-    const { score, signals } = scoreGrantForGoods(base);
-    const tag = applyGoodsTag({ aligned_projects: [] }, score, signals, now);
+    // Tags and relevance scores belong to the nightly scorers (score-goods-relevance, score-project-relevance,
+    // score-project-rubric), which honour Ben's "not a fit" passes. Writing them here rebuilt aligned_projects
+    // from Goods keywords every week and wiped every other project's tag (2026-09-25).
     rows.push({
       ...base,
       status: g.applicationStatus === 'upcoming' ? 'upcoming' : 'open',
       application_status: g.applicationStatus ?? 'unknown',
       metadata: place ? { place, last_seen_at: now } : { last_seen_at: now },
-      aligned_projects: tag.tagged, goods_relevance_score: score, goods_relevance_signals: tag.signals,
       source: 'smartygrants', discovery_method: 'smartygrants', updated_at: now,
     });
   }
