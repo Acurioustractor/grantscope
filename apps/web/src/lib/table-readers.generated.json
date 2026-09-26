@@ -130,6 +130,10 @@
  "act_person_roles": [
   "app/api/org/[orgProfileId]/people/route.ts"
  ],
+ "act_private_grant_rounds": [
+  "lib/services/act-desk-ghl.ts",
+  "lib/services/act-project-grants-triage.ts"
+ ],
  "act_research_initiatives": [
   "lib/services/act-research.ts"
  ],
