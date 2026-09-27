@@ -392,3 +392,14 @@ Source quirk: in the AER XLSX some rows tick "Aboriginal Organisation or ACCOs o
 ### Correction: Kimberley Empowered Youth Network provider found (2026-09-27)
 
 Provider is **Kimberley Aboriginal Medical Service (KAMS)**, contracted by Communities, $1.3M for 2022-23 to 2023-24 (Verified: MHC *Commitment to Aboriginal Youth Wellbeing Annual Progress Report 2022-23*, p.28). KAMS is community-controlled (`gs_entities.is_community_controlled = true`, ABN 31892339645). So the earlier reading "provider not flagged Aboriginal, strongest transition signal" was wrong: the AER row's unticked Aboriginal-organisation boxes misdescribe an ACCHO-delivered program. 2025DOC-99 is a re-procurement of an ACCO-held service, a retention question, not a transition one. Funding from 2024-25 onward and end dates: Unknown. Lesson: AER provider-type flags cannot be trusted row by row; confirm against a named-provider source.
+
+### AER provider-flag check, Kimberley (2026-09-27)
+
+Of 140 Kimberley AER programs, 88 are delivered wholly or partly by external parties; 56 carry an Aboriginal-organisation flag. The AER names no providers, so programs were linked to named suppliers by title containment (normalised `program_name` inside a WA award title, exact-matched suppliers only). **Only 7 of 88 link**, so this is a spot check, not a measured error rate.
+
+| Flag | Linked programs | Provider community-controlled |
+|---|---|---|
+| flagged | 6 | 5 |
+| not flagged | 1 | 1 (ACCHS Transition Care Program, Moorditj Koort, DoH202412641) |
+
+Plus Kimberley Empowered Youth Network (not flagged, KAMS, from the MHC report). **Both unflagged programs with a known provider are ACCO-delivered.** Rule: an unticked AER provider flag means "not recorded", never "not Aboriginal". Transition candidates need a named-provider source. Query: scratchpad `flags.sql` pattern (title containment join through `wa_supplier_entity_matches`).
