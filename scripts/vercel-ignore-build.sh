@@ -52,8 +52,11 @@ CHANGED="$(git diff --name-only "$BASE" HEAD 2>/dev/null)" || {
 }
 
 if [[ -z "$CHANGED" ]]; then
-  echo "no changed files vs $BASE — skipping"
-  exit 0
+  # An empty diff means a redeploy of the same commit, and a push never produces one. Redeploys
+  # exist to pick up changed environment variables, which only a new build can do: skipping here
+  # cancelled the 2026-09-28 redeploy for GRANTSCOPE_SYNC_SECRET and left the Goods feed on 503.
+  echo "no changed files vs $BASE — a deliberate redeploy, building"
+  exit 1
 fi
 
 # Paths that cannot affect what the app renders or how it builds.
