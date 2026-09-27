@@ -86,3 +86,21 @@ Not checked this pass (Unknown): WA Budget Paper service lists, Auditor General 
 - National Indigenous Times 2022 EYL forum story: names a West Kimberley EYL coordinator, no funder.
 - Web searches across ourstatebudget.wa.gov.au, parliament.wa.gov.au (Hansard/Estimates), audit.wa.gov.au, mediastatements.wa.gov.au for "Empowered Youth Network", KEYN and variants: no direct hit beyond the MHC report. Budget Statements and Auditor General reports were not read page by page, so absence there is Unverified.
 - empoweredyoungleaders.org supporters page: domain did not resolve.
+
+## Boab House (2026DOC-14): funder pass (2026-09-27)
+
+**Service type and client group.** Inferred, from search-engine snippets of MercyCare's own Boab House page (https://www.mercycare.com.au/community-services/family-children-and-community/broome-transitional-accommodation): transitional accommodation in Broome for women experiencing or at risk of homelessness or family and domestic violence. A direct fetch of that page returned no body text, so no quote is held. Search results list it beside MercyCare's FDV Hub services (Broome FDV Refuge, outreach, SAAFE).
+
+**Funder and program.** Unknown. Department of Communities is Inferred only from 2026DOC-14 sitting in the Communities forward procurement list; no source names the program (homelessness vs FDV) or the agreement.
+
+**Agreement value, start and end dates.** Unknown.
+
+**When it opened.** Unknown.
+
+**Aboriginal partner.** Unknown for Boab House. Note: the "new service open in Broome" page (https://www.mercycare.com.au/news-and-information/new-service-open-in-broome) is about the Broome Aboriginal Short Stay Accommodation (BASSA), not Boab House. It names partners Centacare Kimberley, Nirrumbuk and Nyamba Buru Yawuru, 44 units, opened April 2019 (Verified per fetch summary, not a verbatim quote). Do not carry these facts onto Boab House.
+
+**Capital funding.** Unknown. No Communities housing or Lotterywest capital link found.
+
+**Context, not Boab House.** Verified by search listing only: WA media statements on the Broome FDV hub (2022 announcement; Bibimbiya Jan-ga Buru hub opened 2025-06-05), a provider appointment for Broome (2024-06-17) and a $14.8m FDV refuge boost (2025-11-30). ABC (2025-12-14) reports MercyCare as interim operator of the Broome FDV refuge. None of these names Boab House.
+
+**Sources checked, nothing on Boab House found:** MercyCare Boab House page (empty fetch); MercyCare BASSA news page; web search for "Boab House" Broome plus Communities/MercyCare; mediastatements.wa.gov.au / wa.gov.au search. Not reached this pass: MercyCare annual reports, ACNC AIS for ABN 31098197490, Communities annual reports, Budget Papers, Hansard/Estimates, Lotterywest grants, Broome Advertiser, Shire of Broome.

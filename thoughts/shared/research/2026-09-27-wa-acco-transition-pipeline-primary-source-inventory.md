@@ -403,3 +403,9 @@ Of 140 Kimberley AER programs, 88 are delivered wholly or partly by external par
 | not flagged | 1 | 1 (ACCHS Transition Care Program, Moorditj Koort, DoH202412641) |
 
 Plus Kimberley Empowered Youth Network (not flagged, KAMS, from the MHC report). **Both unflagged programs with a known provider are ACCO-delivered.** Rule: an unticked AER provider flag means "not recorded", never "not Aboriginal". Transition candidates need a named-provider source. Query: scratchpad `flags.sql` pattern (title containment join through `wa_supplier_entity_matches`).
+
+### Boab House (2026DOC-14), checked 2026-09-27
+
+Verified by direct fetch of MercyCare's page (the agent's second fetch came back empty; a curl with a browser UA returns full text): "safe transitional accommodation in Broome for women aged 45 and over who are experiencing or at risk of homelessness or family and domestic violence", West Kimberley district, stays up to 12 months with case management. The page names **no funder**, value or dates. Communities as funder: Inferred from the SFPP listing only. No `acnc_ais` rows under ABN 31098197490 (group likely reports under 91111111379, and AIS is organisation-wide anyway). Trap: MercyCare's "new service open in Broome" page is BASSA (2019), not Boab House. Remaining routes: MercyCare annual report, Communities annual report, Estimates, or the SFPP existing-contract field.
+
+**Where the four plans stand:** two new services with no incumbent (SUSD, youth AOD); one ACCO-held re-procurement (KEYN, KAMS); one non-ACCO incumbent (Boab House, MercyCare) with the funder and term unconfirmed. Boab House is the only transition-shaped case, and it is a women's homelessness/FDV service where any change needs local authority and the women's safety first.
