@@ -126,3 +126,13 @@ outputs/
 
 # JEV pilot outputs: scraped third-party page text + derived verdicts, all regenerable
 data/jev-pilot/
+
+# WA transition raw captures: re-fetchable by scripts/wa/fetch-*; manifests are committed
+data/wa-tenders/history/
+data/wa-tenders/annual/*/
+data/wa-tenders/recent/details/
+data/wa-tenders/recent/list.html
+data/wa-app-performance/files/
+data/wa-app-performance/pages/
+data/wa-app-performance/collection.html
+data/wa-open-data/discovery.json

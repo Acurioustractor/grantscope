@@ -1,0 +1,160 @@
+{
+  "fetched_at": "2026-09-27T00:14:05.820Z",
+  "collection_url": "https://www.wa.gov.au/government/document-collections/aboriginal-procurement-policy-performance-reports",
+  "collection_sha256": "36b9fb56cba7540fa363d0f4a965a4a21d8f93652f9e54d8f8d659f561d0efb5",
+  "publication_pages": [
+    {
+      "title": "Aboriginal Procurement Policy Performance Report Infographic 2024-25",
+      "url": "https://www.wa.gov.au/government/publications/aboriginal-procurement-policy-performance-report-infographic-2024-25",
+      "sha256": "fd08a247823e2b818c60fc2ea32306b1c42468cac743c9d3843b409e307c7078",
+      "bytes": 82584,
+      "pdf_urls": [
+        "https://www.wa.gov.au/system/files/2025-10/aboriginal-procurement-policy-performance-report-2024-25.pdf",
+        "https://www.wa.gov.au/system/files/2025-10/aboriginal-procurement-case-study-2024-25_0.pdf"
+      ]
+    },
+    {
+      "title": "Aboriginal Procurement Policy Performance Report Infographic 2023-24",
+      "url": "https://www.wa.gov.au/government/publications/aboriginal-procurement-policy-performance-report-infographic-2023-24",
+      "sha256": "460ee07396e0c2d35e75d7f1c4097a1df879a3c24a17eee4049fe4807580aaf3",
+      "bytes": 83232,
+      "pdf_urls": [
+        "https://www.wa.gov.au/system/files/2024-11/aboriginal-procurement-policy-performance-report-2023-24-updated-11112024.pdf",
+        "https://www.wa.gov.au/system/files/2024-11/20241017_aboriginal-procurement-case-study-impact-services.pdf"
+      ]
+    },
+    {
+      "title": "Aboriginal Procurement Policy Performance Report Infographic 2022-2023",
+      "url": "https://www.wa.gov.au/government/publications/aboriginal-procurement-policy-performance-report-infographic-2022-2023",
+      "sha256": "1efe57cce9ac611d5d7d0bf08fae97029af9ac60ef8f89ce5c2cfb88530cdad2",
+      "bytes": 80188,
+      "pdf_urls": [
+        "https://www.wa.gov.au/system/files/2023-10/aboriginal-procurement-policy-performance-report-inforgraphic-2022-2023-v2.pdf"
+      ]
+    },
+    {
+      "title": "Aboriginal Procurement Policy Performance Report Infographic 2021-2022",
+      "url": "https://www.wa.gov.au/government/publications/aboriginal-procurement-policy-performance-report-infographic-2021-2022",
+      "sha256": "8d65fd67fc7ba8bbefba1e5da95aa89bf9dad1a848fa0414312f59187ace2986",
+      "bytes": 78597,
+      "pdf_urls": [
+        "https://www.wa.gov.au/system/files/2023-01/Aboriginal-Procurement-Policy-Report-Infographic-2021-2022.pdf"
+      ]
+    },
+    {
+      "title": "Aboriginal Procurement Policy Third Year Performance Report 1 July 2020 - 30 June 2021",
+      "url": "https://www.wa.gov.au/government/publications/aboriginal-procurement-policy-third-year-performance-report-1-july-2020-30-june-2021",
+      "sha256": "523d78cba2e2255ab8131d7aad139007f630a701529e4af2be025bccd24861c9",
+      "bytes": 84270,
+      "pdf_urls": [
+        "https://www.wa.gov.au/system/files/2022-04/Aboriginal%20Procurement%20Policy%20Performance%20Report%201%20July%202020%20-%2030%20June%202021.PDF",
+        "https://www.wa.gov.au/system/files/2022-04/Aboriginal%20Procurement%20Policy%20Performance%20Report%20Infographic%202020%20-%202021.PDF"
+      ]
+    },
+    {
+      "title": "Aboriginal Procurement Policy Second Year Performance Report 1 July 2019 - 30 June 2020",
+      "url": "https://www.wa.gov.au/government/publications/aboriginal-procurement-policy-second-year-performance-report-1-july-2019-30-june-2020",
+      "sha256": "34f0ea72c3975e8c6cebbe5ce5709486d4950d2dac834bb086f5b74ff1374d48",
+      "bytes": 82223,
+      "pdf_urls": [
+        "https://www.wa.gov.au/system/files/2020-11/Aboriginal%20Procurement%20Policy%20Second%20Year%20Performance%20Report%202019-2020.pdf",
+        "https://www.wa.gov.au/system/files/2020-11/APP%20Performance%20Report%202019-2020%20Infographic.pdf"
+      ]
+    },
+    {
+      "title": "Aboriginal Procurement Policy First Year Performance Report 1 July 2018 - 30 June 2019",
+      "url": "https://www.wa.gov.au/government/publications/aboriginal-procurement-policy-first-year-performance-report-1-july-2018-30-june-2019",
+      "sha256": "84f88d6d8b9c5eedec7d2bd105b71a2f43da992b15b29d309b3ebafbd57fcf04",
+      "bytes": 83557,
+      "pdf_urls": [
+        "https://www.wa.gov.au/system/files/2019-12/Aboriginal%20Procurement%20Policy%20First%20Year%20Performance%20Report%201%20July%202018%20-%2030%20June%202019.pdf"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "url": "https://www.wa.gov.au/system/files/2022-04/Aboriginal-Procurement-Policy-Performance-Report-2018-2021.pdf",
+      "file_name": "Aboriginal-Procurement-Policy-Performance-Report-2018-2021.pdf",
+      "sha256": "0dee8109182dd240330787c84ccf31b71802115b232698700642c731ef6c64cb",
+      "bytes": 409976,
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://www.wa.gov.au/system/files/2025-10/aboriginal-procurement-policy-performance-report-2024-25.pdf",
+      "file_name": "aboriginal-procurement-policy-performance-report-2024-25.pdf",
+      "sha256": "d6410fb4f482131964fad9144ee379531b5870f24dc79349ca6f0cd2dbb76467",
+      "bytes": 8678740,
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://www.wa.gov.au/system/files/2025-10/aboriginal-procurement-case-study-2024-25_0.pdf",
+      "file_name": "aboriginal-procurement-case-study-2024-25_0.pdf",
+      "sha256": "4736818d409854d0abefcdd2901028a780b510e477cffc9fa13ebb7d81362426",
+      "bytes": 3697310,
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://www.wa.gov.au/system/files/2024-11/aboriginal-procurement-policy-performance-report-2023-24-updated-11112024.pdf",
+      "file_name": "aboriginal-procurement-policy-performance-report-2023-24-updated-11112024.pdf",
+      "sha256": "7a9d67cf331905eec7f365286e793d634bbe30ee5f79ca8e3c07bae10a6c5579",
+      "bytes": 24860243,
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://www.wa.gov.au/system/files/2024-11/20241017_aboriginal-procurement-case-study-impact-services.pdf",
+      "file_name": "20241017_aboriginal-procurement-case-study-impact-services.pdf",
+      "sha256": "102bb2bbb2b3a7a1cb22757d04f755657bcde2f44717b55949ea279b0a366912",
+      "bytes": 2984298,
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://www.wa.gov.au/system/files/2023-10/aboriginal-procurement-policy-performance-report-inforgraphic-2022-2023-v2.pdf",
+      "file_name": "aboriginal-procurement-policy-performance-report-inforgraphic-2022-2023-v2.pdf",
+      "sha256": "f544d667d3549fbdf48181bee0c9f2af48591c27e04ad8452eede6c2d2ae4987",
+      "bytes": 6662741,
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://www.wa.gov.au/system/files/2023-01/Aboriginal-Procurement-Policy-Report-Infographic-2021-2022.pdf",
+      "file_name": "Aboriginal-Procurement-Policy-Report-Infographic-2021-2022.pdf",
+      "sha256": "c22cbe940b22ef013d1fd044ef5ef40f16304703e404858e50abf3a69608ea77",
+      "bytes": 8194586,
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://www.wa.gov.au/system/files/2022-04/Aboriginal%20Procurement%20Policy%20Performance%20Report%201%20July%202020%20-%2030%20June%202021.PDF",
+      "file_name": "Aboriginal Procurement Policy Performance Report 1 July 2020 - 30 June 2021.PDF",
+      "sha256": "ea446df7c092632f5fbdf435d546e5c790623775e86a1a1ca05e0481fb1aa9f0",
+      "bytes": 2032612,
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://www.wa.gov.au/system/files/2022-04/Aboriginal%20Procurement%20Policy%20Performance%20Report%20Infographic%202020%20-%202021.PDF",
+      "file_name": "Aboriginal Procurement Policy Performance Report Infographic 2020 - 2021.PDF",
+      "sha256": "09af8e8fd87b729f4de79973406d62d2fc206488c40b255e62939229e18c61fe",
+      "bytes": 1428372,
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://www.wa.gov.au/system/files/2020-11/Aboriginal%20Procurement%20Policy%20Second%20Year%20Performance%20Report%202019-2020.pdf",
+      "file_name": "Aboriginal Procurement Policy Second Year Performance Report 2019-2020.pdf",
+      "sha256": "72a51f466bd3b7a5000dc4e31da71ba9f7a9ea53e4ea9ec1da3eca716122b775",
+      "bytes": 2876754,
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://www.wa.gov.au/system/files/2020-11/APP%20Performance%20Report%202019-2020%20Infographic.pdf",
+      "file_name": "APP Performance Report 2019-2020 Infographic.pdf",
+      "sha256": "a7aac19f4e838f069e9d380bf2d1c11475719a4b04e345cdf0223b511a828711",
+      "bytes": 761747,
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://www.wa.gov.au/system/files/2019-12/Aboriginal%20Procurement%20Policy%20First%20Year%20Performance%20Report%201%20July%202018%20-%2030%20June%202019.pdf",
+      "file_name": "Aboriginal Procurement Policy First Year Performance Report 1 July 2018 - 30 June 2019.pdf",
+      "sha256": "35839ba636c5c48af0785819a8513a6dd3476344995181b6f9ef02503bf29316",
+      "bytes": 1437888,
+      "content_type": "application/pdf"
+    }
+  ]
+}
