@@ -388,3 +388,7 @@ Source quirk: in the AER XLSX some rows tick "Aboriginal Organisation or ACCOs o
 ### Correction after the external pass (2026-09-27)
 
 "0 of 4 link to an incumbent" splits in two. **New services, no incumbent exists (Verified):** Broome Step Up Step Down (MHC ROI for ACCHO/ACCO providers closed 21 Nov 2025) and Kimberley Youth AOD (MHC still settling the procurement approach with the ARGG). **Running services, agreement invisible:** Boab House (MercyCare runs it, Verified; funder Inferred as Communities) and Kimberley Empowered Youth Network (in the AER, provider Unknown). Sources and repeatable routes: `2026-09-27-wa-incumbent-access-routes.md`.
+
+### Correction: Kimberley Empowered Youth Network provider found (2026-09-27)
+
+Provider is **Kimberley Aboriginal Medical Service (KAMS)**, contracted by Communities, $1.3M for 2022-23 to 2023-24 (Verified: MHC *Commitment to Aboriginal Youth Wellbeing Annual Progress Report 2022-23*, p.28). KAMS is community-controlled (`gs_entities.is_community_controlled = true`, ABN 31892339645). So the earlier reading "provider not flagged Aboriginal, strongest transition signal" was wrong: the AER row's unticked Aboriginal-organisation boxes misdescribe an ACCHO-delivered program. 2025DOC-99 is a re-procurement of an ACCO-held service, a retention question, not a transition one. Funding from 2024-25 onward and end dates: Unknown. Lesson: AER provider-type flags cannot be trusted row by row; confirm against a named-provider source.

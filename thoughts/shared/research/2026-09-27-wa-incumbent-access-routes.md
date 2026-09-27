@@ -70,3 +70,19 @@ Next step: the MercyCare ACNC AIS and annual report (government grant totals onl
 | 8 | ORIC register (for ACCO candidates) | oric.gov.au | financial reports, grant income | ACCO providers only | Public | Medium |
 
 Not checked this pass (Unknown): WA Budget Paper service lists, Auditor General reports, HealthDirect entries for Boab House, Communities funded-services pages, Data WA datasets beyond the known award feed.
+
+## Kimberley Empowered Youth Network: lists pass (2026-09-27)
+
+**Provider: Kimberley Aboriginal Medical Service (KAMS). Verified.** The Mental Health Commission's *Commitment to Aboriginal Youth Wellbeing: Annual Progress Report 2022-23* says: "The Department of Communities contracted Kimberley Aboriginal Medical Service (KAMS) to deliver the Kimberley Empowered Youth Network (EYN) project to the value of $1.3 million for 2022-23 to 2023-24." Source: https://www.mhc.wa.gov.au/awcontent/Web/Documents/2015-2024/commitment-to-aboriginal-youth-wellbeing-annual-progress-report-2022-23.pdf (p.28 section, "Update on the five Aboriginal Youth Wellbeing Initiatives").
+
+- **Funder: WA Department of Communities. Verified** (same quote). The report adds that the funding "forms part of the Commitment to Aboriginal Youth Wellbeing and the project is also an activity within the Western Australian Recovery Plan."
+- **Value: $1.3m across 2022-23 to 2023-24. Verified** (same quote). No figure found for 2024-25 onward.
+- **Start and end dates: Unknown.** Only the financial-year span 2022-23 to 2023-24 is published. Presence on the 2026-27 SFPP (2025DOC-99) implies an extension or rollover past June 2024 (Inferred, not sourced).
+- **Link to Empowered Young Leaders: Verified, explicit.** Same report: "The EYN project aims to support the Kimberley Empowered Young Leaders to: form and sustain a network across the Kimberley..." and milestones include "Employment of two Empowered Young Leader Project Officers (1x East Kimberley and 1x West Kimberley)". The acronym list separates "EYL - Empowered Young Leaders Aboriginal Corporation" from "EYN - Kimberley Empowered Youth Network". So KAMS holds the contract and EYL is the beneficiary network, not the contracted party (Inferred from that wording). WAPHA's youth-leaders story (https://news.wapha.org.au/young-aboriginal-leaders-driving-change-in-the-kimberley/) traces EYL to the Kimberley Aboriginal Suicide Prevention Trial; no source found tying WAPHA money to KEYN.
+- **Classification tension. Inferred.** KAMS is an Aboriginal community controlled health service, yet the Aboriginal Expenditure Review row is not flagged as an Aboriginal organisation. Worth querying with Communities rather than trusting the flag.
+
+### Checked, nothing found for KEYN / EYN
+- Kimberley Juvenile Justice Strategy funded-provider page (https://www.wa.gov.au/organisation/department-of-justice/kimberley-juvenile-justice-strategy): 10 providers listed, none KAMS or EYL.
+- National Indigenous Times 2022 EYL forum story: names a West Kimberley EYL coordinator, no funder.
+- Web searches across ourstatebudget.wa.gov.au, parliament.wa.gov.au (Hansard/Estimates), audit.wa.gov.au, mediastatements.wa.gov.au for "Empowered Youth Network", KEYN and variants: no direct hit beyond the MHC report. Budget Statements and Auditor General reports were not read page by page, so absence there is Unverified.
+- empoweredyoungleaders.org supporters page: domain did not resolve.
