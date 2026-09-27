@@ -11,6 +11,9 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+// Secret-gated per-caller data: never let a CDN or browser keep a copy.
+const NO_STORE = { 'Cache-Control': 'no-store' };
+
 /**
  * GET /api/goods-workspace/data?section=communities|wa-sweep[&states=WA,NT][&limit=n]
  * Auth: x-grantscope-secret must equal GRANTSCOPE_SYNC_SECRET. Unset secret = 503, never open.
@@ -35,10 +38,10 @@ export async function GET(request: NextRequest) {
     const db = getServiceSupabase();
     if (section === 'communities') {
       const communities = await getVerifiedCommunities(db, { states, limit });
-      return NextResponse.json({ communities, count: communities.length, demandProvided: false });
+      return NextResponse.json({ communities, count: communities.length, demandProvided: false }, { headers: NO_STORE });
     }
     const sellers = await getWaSellerSweep(db, { limit });
-    return NextResponse.json({ waSweep: { sellers, count: sellers.length, basis: 'wa_transition_candidates, supplier_is_community_controlled, resolver v2 exact identity' } });
+    return NextResponse.json({ waSweep: { sellers, count: sellers.length, basis: 'wa_transition_candidates, supplier_is_community_controlled, resolver v2 exact identity' } }, { headers: NO_STORE });
   } catch (error) {
     console.error('[goods-workspace/data]', error);
     return NextResponse.json({ error: 'Failed to load Goods feed' }, { status: 500 });
