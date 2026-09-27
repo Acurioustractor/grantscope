@@ -384,3 +384,7 @@ Finding: **0 of 4 plans link to a published incumbent contract.** These are prob
 | `wa_aer_programs` (AER XLSX) | **Kimberley Empowered Youth Network is an existing program** (source row 30: Communities, State-only, Kimberley, CTG target 7, PR 1, External parties only, neither Aboriginal-organisation box ticked). Verified. So 2025DOC-99 re-procures a running service whose provider is not flagged Aboriginal. MHC Kimberley rows (Residential rehabilitation, Community Treatment, AOD Diversion etc.) are program families, not named services; Step Up Step Down and a youth AOD service are not listed by name. |
 
 Source quirk: in the AER XLSX some rows tick "Aboriginal Organisation or ACCOs only" without ticking "Aboriginal organisation or ACCOs" (e.g. Community Support Sobering Up Centre). The ingest preserved this faithfully; treat `_only = true` as implying involvement when counting.
+
+### Correction after the external pass (2026-09-27)
+
+"0 of 4 link to an incumbent" splits in two. **New services, no incumbent exists (Verified):** Broome Step Up Step Down (MHC ROI for ACCHO/ACCO providers closed 21 Nov 2025) and Kimberley Youth AOD (MHC still settling the procurement approach with the ARGG). **Running services, agreement invisible:** Boab House (MercyCare runs it, Verified; funder Inferred as Communities) and Kimberley Empowered Youth Network (in the AER, provider Unknown). Sources and repeatable routes: `2026-09-27-wa-incumbent-access-routes.md`.
