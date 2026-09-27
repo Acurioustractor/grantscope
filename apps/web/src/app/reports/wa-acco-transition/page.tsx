@@ -165,6 +165,31 @@ function stageTone(tone: (typeof STAGES)[number]['tone']): string {
   }[tone];
 }
 
+// Checked 2026-09-27/28 against award records, agency pages and provider sources.
+// Detail and confidence labels: thoughts/shared/research/2026-09-27-wa-incumbent-access-routes.md
+const FORWARD_PLAN_FINDINGS: Record<string, { status: string; finding: string; sourceUrl: string }> = {
+  'MHCSFFP-21': {
+    status: 'New service · no incumbent',
+    finding: 'Mental Health Commission registration of interest for Aboriginal community-controlled providers closed 21 November 2025.',
+    sourceUrl: 'https://www.mhc.wa.gov.au/news-and-resources/latest-news/service-provider-registration-of-interest-now-live',
+  },
+  'MHCSFFP-36': {
+    status: 'New service · no incumbent',
+    finding: 'Procurement approach still being settled with the Aboriginal reference group.',
+    sourceUrl: 'https://www.mhc.wa.gov.au/about-us/major-projects/enhancing-alcohol-and-other-drug-services-in-the-kimberley/',
+  },
+  '2025DOC-99': {
+    status: 'ACCO-held · re-procurement',
+    finding: 'Communities contracted Kimberley Aboriginal Medical Service, $1.3M for 2022-23 to 2023-24. Later funding and end date not public.',
+    sourceUrl: 'https://www.mhc.wa.gov.au/awcontent/Web/Documents/2015-2024/commitment-to-aboriginal-youth-wellbeing-annual-progress-report-2022-23.pdf',
+  },
+  '2026DOC-14': {
+    status: 'Non-ACCO incumbent',
+    finding: 'MercyCare runs Boab House, transitional accommodation for women 45+. Funder, value and term not public.',
+    sourceUrl: 'https://www.mercycare.com.au/community-services/family-children-and-community/broome-transitional-accommodation',
+  },
+};
+
 export default async function WaAccoTransitionPage() {
   const report = await getWaTransitionReport();
   const inventory = new Map(report.inventory.map((row) => [row.metric, Number(row.value)]));
@@ -284,9 +309,10 @@ export default async function WaAccoTransitionPage() {
           <div className="grid border-b-4 border-bauhaus-black lg:grid-cols-[1fr_auto]">
             <div className="p-5">
               <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Forward procurement · public display</p>
-              <h3 className="mt-2 text-2xl font-black">Four human-service plans now have a review path</h3>
+              <h3 className="mt-2 text-2xl font-black">Of four human-service plans, one has a non-ACCO incumbent</h3>
               <p className="mt-2 max-w-3xl text-sm font-medium leading-relaxed text-bauhaus-muted">
-                The September 2026 public plan contains five Kimberley rows labelled Community Services. Four describe human services. One describes airstrip works and is retained as a source-classification anomaly.
+                The September 2026 public plan contains five Kimberley rows labelled Community Services. Four describe human services; one describes airstrip works and is retained as a source-classification anomaly.
+                Checked against award records, agency pages and provider sources: two are new services with no incumbent, one re-procures a service an Aboriginal community-controlled health service already holds, and one is run by a non-ACCO provider whose funder and term are not public.
               </p>
             </div>
             <div className="grid grid-cols-2 border-t-4 border-bauhaus-black lg:border-l-4 lg:border-t-0">
@@ -308,7 +334,7 @@ export default async function WaAccoTransitionPage() {
                   <th className="p-3">Agency</th>
                   <th className="p-3">Release</th>
                   <th className="p-3">Evidence state</th>
-                  <th className="p-3">Next authority</th>
+                  <th className="p-3">What the sources show</th>
                 </tr>
               </thead>
               <tbody>
@@ -327,7 +353,13 @@ export default async function WaAccoTransitionPage() {
                       <p className="mt-1 font-medium leading-relaxed text-bauhaus-muted">{item.review_reason}</p>
                     </td>
                     <td className="max-w-[220px] p-3 align-top font-bold leading-relaxed">
-                      {item.existing_contract_number
+                      {FORWARD_PLAN_FINDINGS[item.source_ref] ? (
+                        <>
+                          <div className="text-[9px] font-black uppercase tracking-widest text-bauhaus-black">{FORWARD_PLAN_FINDINGS[item.source_ref].status}</div>
+                          <p className="mt-1 font-medium text-bauhaus-muted">{FORWARD_PLAN_FINDINGS[item.source_ref].finding}</p>
+                          <a href={FORWARD_PLAN_FINDINGS[item.source_ref].sourceUrl} target="_blank" rel="noreferrer" className="mt-1 inline-block font-mono text-[9px] text-bauhaus-blue hover:text-bauhaus-red">Source</a>
+                        </>
+                      ) : item.existing_contract_number
                         ? `Validate exact contract link: ${item.existing_contract_number}`
                         : item.review_classification === 'source_classification_anomaly'
                           ? 'Report owner to clarify classification'
