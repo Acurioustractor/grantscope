@@ -6,7 +6,7 @@
 
 ## Proposed opening
 
-We are developing a public-source evidence prototype aligned with the WA ACCO Transition Pipeline's first-phase commitment to map current human-service contracts and identify possible transition opportunities. We have ingested the public Tenders WA award fields and the annual Data WA contract CSVs, and we can clearly see their limits. Before extending the work, we would like to ask whether a machine-readable extract or an authorised report view could be made available under governance agreed with CASWA.
+We are developing a public-source evidence prototype aligned with the WA ACCO Transition Pipeline's first-phase commitment to map current human-service contracts and identify possible transition opportunities. We have ingested the public Tenders WA award fields and the annual Data WA contract CSVs, and we can clearly see their limits. One example makes the gap concrete: the public forward-procurement display lists four Kimberley human-service procurements for 2026-27, and none of the four can be matched to a current contract in 17,055 public award records. Who delivers these services today, and when their agreements end, is not visible from public data. Before extending the work, we would like to ask whether a machine-readable extract or an authorised report view could be made available under governance agreed with CASWA.
 
 The request is for evidence infrastructure, not an assessment of ACCO readiness. We would not publish organisation-level readiness, infer community authority or contact suppliers from the extract without an agreed process.
 
@@ -44,7 +44,7 @@ The public SFPP dashboard currently displays 2,574 planned procurements from 73 
 - agency contact; and
 - existing contract number where the procurement is a replacement.
 
-We have verified a bounded Kimberley slice in the public display: five rows labelled Community Services across three agencies, refreshed on 21 September 2026. Four describe youth, mental-health, alcohol and other drug, or place-based community services planned for 2026-27. One airstrip resurfacing row appears under the same procurement type despite a civil-works UNSPSC. We would value confirmation of that classification and an extract of the hidden linkage fields so these records can be reconciled to current contracts without inference.
+We have verified a bounded Kimberley slice in the public display: five rows labelled Community Services across three agencies, refreshed on 21 September 2026. Four describe youth, mental-health, alcohol and other drug, or place-based community services planned for 2026-27. One airstrip resurfacing row appears under the same procurement type despite a civil-works UNSPSC. We searched all 17,055 public WA award records for an incumbent to each of the four human-service rows, by title, service type and likely provider. None has a matching service contract. The nearest records are consultancy reviews of Step Up Step Down services and an adult alcohol and other drug withdrawal-beds agreement, which is a different service. We think these services are funded as service agreements that the award feeds do not report. The existing contract number field would settle it. We would also value confirmation of the airstrip classification.
 
 ## Requested coverage
 
@@ -70,8 +70,9 @@ We have verified a bounded Kimberley slice in the public display: five rows labe
 - 83 awards with source-published Aboriginal Participation Requirements;
 - 283 bounded human-service candidate/review records;
 - 54 Kimberley candidate/review records;
-- 473 Aboriginal Expenditure Review program rows; and
-- a review-first supplier-resolution and provenance model with no automated outreach.
-- five source-preserved Kimberley forward procurements, including four human-service review signals and one source-classification anomaly.
+- 473 Aboriginal Expenditure Review program rows;
+- a review-first supplier-resolution and provenance model with no automated outreach;
+- five source-preserved Kimberley forward procurements, including four human-service review signals and one source-classification anomaly; and
+- a search of all public award records showing none of those four has a visible incumbent contract.
 
 The preferred next step is a short data and governance conversation, followed by one bounded extract and a private validation pass with CASWA and participating organisations.
