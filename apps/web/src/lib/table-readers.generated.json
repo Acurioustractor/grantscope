@@ -902,6 +902,7 @@
   "lib/services/goods-funnel.ts",
   "lib/services/goods-living-data-adapter.ts",
   "lib/services/goods-proof.ts",
+  "lib/services/goods-workspace-feed.ts",
   "lib/services/wa-transition-report.ts"
  ],
  "goods_cost_allocation_decisions": [
@@ -1201,6 +1202,7 @@
   "lib/services/entity-service.ts",
   "lib/services/goods-community-detail.ts",
   "lib/services/goods-demand-map.ts",
+  "lib/services/goods-workspace-feed.ts",
   "lib/services/org-dashboard-service.ts",
   "lib/services/place-intelligence.ts",
   "lib/services/report-service.ts",
@@ -2544,6 +2546,7 @@
   "lib/services/wa-transition-report.ts"
  ],
  "wa_transition_candidates": [
+  "lib/services/goods-workspace-feed.ts",
   "lib/services/wa-transition-report.ts"
  ],
  "worst": [
