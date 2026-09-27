@@ -157,11 +157,11 @@ function pct(value: number, total: number): string {
 
 function stageTone(tone: (typeof STAGES)[number]['tone']): string {
   return {
-    blue: 'border-bauhaus-blue bg-blue-50 text-bauhaus-blue',
-    black: 'border-bauhaus-black bg-white text-bauhaus-black',
-    red: 'border-bauhaus-red bg-red-50 text-bauhaus-red',
+    blue: 'border-bauhaus-blue bg-link-light text-bauhaus-blue',
+    black: 'border-bauhaus-black bg-bauhaus-white text-bauhaus-black',
+    red: 'border-bauhaus-red bg-danger-light text-bauhaus-red',
     yellow: 'border-bauhaus-black bg-bauhaus-yellow text-bauhaus-black',
-    muted: 'border-bauhaus-black/30 bg-gray-50 text-bauhaus-muted',
+    muted: 'border-bauhaus-black/30 bg-bauhaus-canvas text-bauhaus-muted',
   }[tone];
 }
 
@@ -205,11 +205,11 @@ export default async function WaAccoTransitionPage() {
         &larr; Western Australia
       </Link>
 
-      <section className="mt-5 border-4 border-bauhaus-black bg-white">
+      <section className="mt-5 border-4 border-bauhaus-black bg-bauhaus-white">
         <div className="grid lg:grid-cols-[1.4fr_0.6fr]">
           <div className="border-b-4 border-bauhaus-black p-6 sm:p-9 lg:border-b-0 lg:border-r-4">
             <div className="mb-5 flex flex-wrap items-center gap-2">
-              <span className="border-2 border-bauhaus-red bg-bauhaus-red px-2 py-1 text-[10px] font-black uppercase tracking-widest text-white">
+              <span className="border-2 border-bauhaus-red bg-bauhaus-red px-2 py-1 text-[10px] font-black uppercase tracking-widest text-bauhaus-white">
                 Current evidence surface
               </span>
               <span className="text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">
@@ -225,15 +225,15 @@ export default async function WaAccoTransitionPage() {
             </p>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-1">
-            <div className="border-r-4 border-bauhaus-black bg-bauhaus-black p-5 text-white lg:border-b-4 lg:border-r-0">
-              <div className="text-[10px] font-black uppercase tracking-widest text-white/50">Official commitment</div>
+            <div className="border-r-4 border-bauhaus-black bg-bauhaus-black p-5 text-bauhaus-white lg:border-b-4 lg:border-r-0">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-white/50">Official commitment</div>
               <div className="mt-2 text-4xl font-black">$5.8m</div>
-              <div className="mt-2 text-xs font-bold leading-relaxed text-white/70">ACCO Transition Pipeline under WA Closing the Gap 2026-28</div>
+              <div className="mt-2 text-xs font-bold leading-relaxed text-bauhaus-white/70">ACCO Transition Pipeline under WA Closing the Gap 2026-28</div>
             </div>
-            <div className="bg-bauhaus-red p-5 text-white">
-              <div className="text-[10px] font-black uppercase tracking-widest text-white/60">Current WA award window</div>
+            <div className="bg-bauhaus-red p-5 text-bauhaus-white">
+              <div className="text-[10px] font-black uppercase tracking-widest text-bauhaus-white/60">Current WA award window</div>
               <div className="mt-2 text-4xl font-black">{fmt(currentWaAwardWindow)}</div>
-              <div className="mt-2 text-xs font-bold leading-relaxed text-white/80">Recently awarded Tenders WA contracts ingested. Six historical months are complete; earlier awards and variations remain outside the boundary.</div>
+              <div className="mt-2 text-xs font-bold leading-relaxed text-bauhaus-white/80">Recently awarded Tenders WA contracts ingested. Six historical months are complete; earlier awards and variations remain outside the boundary.</div>
             </div>
           </div>
         </div>
@@ -252,7 +252,7 @@ export default async function WaAccoTransitionPage() {
 
         <div className="grid border-4 border-bauhaus-black sm:grid-cols-3">
           {report.transitionDecisions.map((decision, index) => (
-            <div key={decision.candidate_status} className={`p-5 ${index < report.transitionDecisions.length - 1 ? 'border-b-2 border-bauhaus-black sm:border-b-0 sm:border-r-2' : ''} ${decision.candidate_status === 'candidate' ? 'bg-bauhaus-red text-white' : decision.candidate_status === 'review' ? 'bg-bauhaus-yellow text-bauhaus-black' : 'bg-white text-bauhaus-black'}`}>
+            <div key={decision.candidate_status} className={`p-5 ${index < report.transitionDecisions.length - 1 ? 'border-b-2 border-bauhaus-black sm:border-b-0 sm:border-r-2' : ''} ${decision.candidate_status === 'candidate' ? 'bg-bauhaus-red text-bauhaus-white' : decision.candidate_status === 'review' ? 'bg-bauhaus-yellow text-bauhaus-black' : 'bg-bauhaus-white text-bauhaus-black'}`}>
               <div className="text-4xl font-black tabular-nums">{fmt(Number(decision.records))}</div>
               <div className="mt-2 text-[10px] font-black uppercase tracking-widest">{decision.candidate_status}</div>
               <div className="mt-3 text-xs font-bold opacity-70">{money(Number(decision.recorded_value))} recorded value</div>
@@ -260,7 +260,7 @@ export default async function WaAccoTransitionPage() {
           ))}
         </div>
 
-        <div className="mt-6 grid border-4 border-bauhaus-black bg-white sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-6 grid border-4 border-bauhaus-black bg-bauhaus-white sm:grid-cols-2 lg:grid-cols-5">
           {[
             ['Supplier components', report.entityResolution.supplier_components, 'Every published supplier split from panels'],
             ['Graph linked', report.entityResolution.matched, 'Unique deterministic entity links'],
@@ -280,7 +280,7 @@ export default async function WaAccoTransitionPage() {
           In the Kimberley queue, {fmt(report.entityResolution.kimberley_linked)} of 54 contracts link to an entity and {fmt(report.entityResolution.kimberley_community_signals)} carry a community-controlled discovery signal.
         </p>
 
-        <div className="mt-8 border-4 border-bauhaus-black bg-white">
+        <div className="mt-8 border-4 border-bauhaus-black bg-bauhaus-white">
           <div className="grid border-b-4 border-bauhaus-black lg:grid-cols-[1fr_auto]">
             <div className="p-5">
               <p className="text-[10px] font-black uppercase tracking-widest text-bauhaus-blue">Forward procurement · public display</p>
@@ -290,11 +290,11 @@ export default async function WaAccoTransitionPage() {
               </p>
             </div>
             <div className="grid grid-cols-2 border-t-4 border-bauhaus-black lg:border-l-4 lg:border-t-0">
-              <div className="border-r-2 border-bauhaus-black bg-blue-50 p-5 text-bauhaus-blue">
+              <div className="border-r-2 border-bauhaus-black bg-link-light p-5 text-bauhaus-blue">
                 <div className="text-4xl font-black">{fmt(report.kimberleyForwardProcurements.filter((row) => row.review_classification === 'human_services_review').length)}</div>
                 <div className="mt-2 text-[9px] font-black uppercase tracking-widest">Human-service review</div>
               </div>
-              <div className="bg-red-50 p-5 text-bauhaus-red">
+              <div className="bg-danger-light p-5 text-bauhaus-red">
                 <div className="text-4xl font-black">{fmt(report.kimberleyForwardProcurements.filter((row) => row.review_classification === 'source_classification_anomaly').length)}</div>
                 <div className="mt-2 text-[9px] font-black uppercase tracking-widest">Source anomaly</div>
               </div>
@@ -302,7 +302,7 @@ export default async function WaAccoTransitionPage() {
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[850px] text-left text-xs">
-              <thead className="border-b-2 border-bauhaus-black bg-gray-100 text-[9px] font-black uppercase tracking-widest">
+              <thead className="border-b-2 border-bauhaus-black bg-bauhaus-canvas text-[9px] font-black uppercase tracking-widest">
                 <tr>
                   <th className="p-3">Planned procurement</th>
                   <th className="p-3">Agency</th>
@@ -344,7 +344,7 @@ export default async function WaAccoTransitionPage() {
         </div>
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[0.7fr_1.3fr]">
-          <div className="border-4 border-bauhaus-black bg-white">
+          <div className="border-4 border-bauhaus-black bg-bauhaus-white">
             <div className="border-b-4 border-bauhaus-black p-4">
               <h3 className="text-lg font-black">Candidate and review families</h3>
               <p className="mt-1 text-xs font-medium text-bauhaus-muted">Machine-routed, awaiting human confirmation</p>
@@ -360,14 +360,14 @@ export default async function WaAccoTransitionPage() {
             ))}
           </div>
 
-          <div className="min-w-0 border-4 border-bauhaus-black bg-white">
-            <div className="border-b-4 border-bauhaus-black bg-bauhaus-black p-4 text-white">
+          <div className="min-w-0 border-4 border-bauhaus-black bg-bauhaus-white">
+            <div className="border-b-4 border-bauhaus-black bg-bauhaus-black p-4 text-bauhaus-white">
               <h3 className="text-lg font-black">Kimberley review queue</h3>
-              <p className="mt-1 text-xs font-medium text-white/65">Source-published Kimberley region only · no inferred geography</p>
+              <p className="mt-1 text-xs font-medium text-bauhaus-white/65">Source-published Kimberley region only · no inferred geography</p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-left text-xs">
-                <thead className="border-b-2 border-bauhaus-black bg-gray-100 text-[9px] font-black uppercase tracking-widest">
+                <thead className="border-b-2 border-bauhaus-black bg-bauhaus-canvas text-[9px] font-black uppercase tracking-widest">
                   <tr>
                     <th className="p-3">Contract</th>
                     <th className="p-3">Service family</th>
@@ -406,7 +406,7 @@ export default async function WaAccoTransitionPage() {
                 </tbody>
               </table>
             </div>
-            <div className="border-t-4 border-bauhaus-black bg-blue-50 p-4 text-xs font-bold leading-relaxed text-bauhaus-blue">
+            <div className="border-t-4 border-bauhaus-black bg-link-light p-4 text-xs font-bold leading-relaxed text-bauhaus-blue">
               Community-controlled is a CivicGraph discovery signal from a unique entity match. It is not a CASWA-approved ACCO determination. Human review and local authority remain required.
             </div>
           </div>
@@ -414,7 +414,7 @@ export default async function WaAccoTransitionPage() {
       </section>
 
       {report.error && (
-        <div className="mt-5 flex items-start gap-3 border-4 border-bauhaus-red bg-red-50 p-4 text-sm font-bold text-bauhaus-red">
+        <div className="mt-5 flex items-start gap-3 border-4 border-bauhaus-red bg-danger-light p-4 text-sm font-bold text-bauhaus-red">
           <CircleAlert className="mt-0.5 h-5 w-5 shrink-0" />
           Live data is partially unavailable: {report.error}
         </div>
@@ -465,7 +465,7 @@ export default async function WaAccoTransitionPage() {
             {report.inventory.map((row, index) => (
               <div
                 key={row.metric}
-                className={`min-h-[130px] p-4 ${index % 3 !== 2 ? 'sm:border-r-2 sm:border-bauhaus-black' : ''} ${index < 6 ? 'border-b-2 border-bauhaus-black' : ''} ${row.metric === 'state_contracts' ? 'bg-red-50 text-bauhaus-red' : 'bg-white text-bauhaus-black'}`}
+                className={`min-h-[130px] p-4 ${index % 3 !== 2 ? 'sm:border-r-2 sm:border-bauhaus-black' : ''} ${index < 6 ? 'border-b-2 border-bauhaus-black' : ''} ${row.metric === 'state_contracts' ? 'bg-danger-light text-bauhaus-red' : 'bg-bauhaus-white text-bauhaus-black'}`}
               >
                 <div className="text-3xl font-black tabular-nums">{fmt(Number(row.value))}</div>
                 <div className="mt-2 text-[10px] font-black uppercase tracking-widest opacity-70">
@@ -484,7 +484,7 @@ export default async function WaAccoTransitionPage() {
               <h2 className="text-2xl font-black text-bauhaus-black">2,223 signals are not a verified register</h2>
             </div>
           </div>
-          <div className="border-4 border-bauhaus-black bg-white">
+          <div className="border-4 border-bauhaus-black bg-bauhaus-white">
             {[
               ['ABN present', report.accoCoverage.with_abn],
               ['LGA present', report.accoCoverage.with_lga],
@@ -503,7 +503,7 @@ export default async function WaAccoTransitionPage() {
                     <span>{label}</span>
                     <span>{fmt(count)} · {Math.round(percentage)}%</span>
                   </div>
-                  <div className="h-3 border-2 border-bauhaus-black bg-gray-100">
+                  <div className="h-3 border-2 border-bauhaus-black bg-bauhaus-canvas">
                     <div className="h-full bg-bauhaus-blue" style={{ width: `${percentage}%` }} />
                   </div>
                 </div>
@@ -523,11 +523,11 @@ export default async function WaAccoTransitionPage() {
             State procurement report <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        <div className="border-4 border-bauhaus-black bg-white">
+        <div className="border-4 border-bauhaus-black bg-bauhaus-white">
           {stateCoverage.map((row, index) => (
-            <div key={row.state} className={`grid gap-3 p-4 sm:grid-cols-[80px_1fr_160px_160px] sm:items-center ${index < stateCoverage.length - 1 ? 'border-b-2 border-bauhaus-black' : ''} ${row.state === 'WA' ? 'bg-red-50' : ''}`}>
+            <div key={row.state} className={`grid gap-3 p-4 sm:grid-cols-[80px_1fr_160px_160px] sm:items-center ${index < stateCoverage.length - 1 ? 'border-b-2 border-bauhaus-black' : ''} ${row.state === 'WA' ? 'bg-danger-light' : ''}`}>
               <div className={`text-2xl font-black ${row.state === 'WA' ? 'text-bauhaus-red' : 'text-bauhaus-black'}`}>{row.state}</div>
-              <div className="h-5 border-2 border-bauhaus-black bg-gray-100">
+              <div className="h-5 border-2 border-bauhaus-black bg-bauhaus-canvas">
                 <div
                   className={`h-full ${row.state === 'WA' ? 'bg-bauhaus-red' : 'bg-bauhaus-black'}`}
                   style={{ width: `${Math.max((row.contracts / maxStateContracts) * 100, row.contracts ? 1 : 0)}%` }}
@@ -552,7 +552,7 @@ export default async function WaAccoTransitionPage() {
               <h2 className="text-2xl font-black">WA justice rows contain different kinds of money</h2>
             </div>
           </div>
-          <div className="border-4 border-bauhaus-black bg-white">
+          <div className="border-4 border-bauhaus-black bg-bauhaus-white">
             {report.justiceSources.map((source, index) => (
               <div key={source.source} className={`grid grid-cols-[1fr_auto] gap-4 p-4 ${index < report.justiceSources.length - 1 ? 'border-b-2 border-bauhaus-black' : ''}`}>
                 <div>
@@ -578,23 +578,23 @@ export default async function WaAccoTransitionPage() {
               <h2 className="text-2xl font-black">ALMA needs curation before external use</h2>
             </div>
           </div>
-          <div className="grid grid-cols-3 border-4 border-bauhaus-black bg-white">
+          <div className="grid grid-cols-3 border-4 border-bauhaus-black bg-bauhaus-white">
             <div className="border-r-2 border-bauhaus-black p-4">
               <div className="text-3xl font-black">{fmt(almaTotal)}</div>
               <div className="mt-2 text-[10px] font-black uppercase tracking-widest text-bauhaus-muted">WA-linked rows</div>
             </div>
-            <div className="border-r-2 border-bauhaus-black bg-blue-50 p-4 text-bauhaus-blue">
+            <div className="border-r-2 border-bauhaus-black bg-link-light p-4 text-bauhaus-blue">
               <div className="text-3xl font-black">{fmt(almaCommunityVerified)}</div>
               <div className="mt-2 text-[10px] font-black uppercase tracking-widest">Community verified</div>
             </div>
-            <div className="bg-red-50 p-4 text-bauhaus-red">
+            <div className="bg-danger-light p-4 text-bauhaus-red">
               <div className="text-3xl font-black">{fmt(almaAiGenerated)}</div>
               <div className="mt-2 text-[10px] font-black uppercase tracking-widest">AI generated</div>
             </div>
           </div>
           <div className="mt-4 space-y-2">
             {report.almaQuality.map((row) => (
-              <div key={`${row.verification_status}-${row.review_status}`} className="flex items-center justify-between border-2 border-bauhaus-black bg-white px-3 py-2 text-xs">
+              <div key={`${row.verification_status}-${row.review_status}`} className="flex items-center justify-between border-2 border-bauhaus-black bg-bauhaus-white px-3 py-2 text-xs">
                 <span className="font-black uppercase tracking-wider">{row.verification_status} · {row.review_status}</span>
                 <span className="font-mono font-bold">{fmt(Number(row.records))}</span>
               </div>
@@ -613,12 +613,12 @@ export default async function WaAccoTransitionPage() {
             Red circles show current-window Tenders WA awards. Blue circles show regions with AER program evidence but no contract in this window. Circle area follows contract count, not need.
           </p>
         </div>
-        <div className="h-[520px] border-4 border-bauhaus-black bg-gray-100">
+        <div className="h-[520px] border-4 border-bauhaus-black bg-bauhaus-canvas">
           <RegionMap regions={report.regionCoverage} />
         </div>
       </section>
 
-      <section className="mt-14 border-y-4 border-bauhaus-black bg-bauhaus-black py-10 text-white">
+      <section className="mt-14 border-y-4 border-bauhaus-black bg-bauhaus-black py-10 text-bauhaus-white">
         <div className="px-5 sm:px-8">
           <div className="grid gap-8 lg:grid-cols-[0.75fr_1.25fr]">
             <div>
@@ -627,18 +627,18 @@ export default async function WaAccoTransitionPage() {
                 <p className="text-xs font-black uppercase tracking-[0.28em]">Kununurra · East Kimberley</p>
               </div>
               <h2 className="mt-4 text-4xl font-black leading-tight">A legitimate network, not an empty pilot location</h2>
-              <p className="mt-4 text-sm font-medium leading-relaxed text-white/65">
+              <p className="mt-4 text-sm font-medium leading-relaxed text-bauhaus-white/65">
                 The local work already connects youth, housing, employment, health and culture. A CivicGraph role begins with evidence under local direction, not choosing a solution for the place.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {KIMBERLEY_NETWORK.map((item) => (
-                <a key={item.name} href={item.href} className="group border-2 border-white/25 p-4 hover:border-bauhaus-yellow" target="_blank" rel="noreferrer">
+                <a key={item.name} href={item.href} className="group border-2 border-bauhaus-white/25 p-4 hover:border-bauhaus-yellow" target="_blank" rel="noreferrer">
                   <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-lg font-black text-white group-hover:text-bauhaus-yellow">{item.name}</h3>
-                    <ExternalLink className="h-4 w-4 shrink-0 text-white/40 group-hover:text-bauhaus-yellow" />
+                    <h3 className="text-lg font-black text-bauhaus-white group-hover:text-bauhaus-yellow">{item.name}</h3>
+                    <ExternalLink className="h-4 w-4 shrink-0 text-bauhaus-white/40 group-hover:text-bauhaus-yellow" />
                   </div>
-                  <p className="mt-2 text-xs font-medium leading-relaxed text-white/60">{item.role}</p>
+                  <p className="mt-2 text-xs font-medium leading-relaxed text-bauhaus-white/60">{item.role}</p>
                 </a>
               ))}
             </div>
@@ -656,11 +656,11 @@ export default async function WaAccoTransitionPage() {
           <p className="mt-3 text-sm font-bold leading-relaxed text-bauhaus-black/75">
             KWAC names Jeremy in connection with Youth Circuit Breaker cost-benefit work. The appropriate first route is through KWAC and the project leadership. His authority to speak for KWAC, Coolamon partners or Kununurra more broadly is not established by that contribution.
           </p>
-          <a href="https://kwac.com.au/projects/" target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 border-2 border-bauhaus-black bg-white px-3 py-2 text-xs font-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white">
+          <a href="https://kwac.com.au/projects/" target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 border-2 border-bauhaus-black bg-bauhaus-white px-3 py-2 text-xs font-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-bauhaus-white">
             View KWAC project evidence <ExternalLink className="h-4 w-4" />
           </a>
         </div>
-        <div className="border-4 border-bauhaus-black bg-white p-6">
+        <div className="border-4 border-bauhaus-black bg-bauhaus-white p-6">
           <div className="flex items-center gap-3 text-bauhaus-blue">
             <FileSpreadsheet className="h-6 w-6" />
             <p className="text-xs font-black uppercase tracking-widest">First ingestion result</p>
@@ -683,30 +683,30 @@ export default async function WaAccoTransitionPage() {
               <div className="mt-1 text-[9px] font-black uppercase tracking-widest text-bauhaus-muted">Org involvement</div>
             </div>
           </div>
-          <a href="https://www.wa.gov.au/government/publications/western-australian-aboriginal-expenditure-review-2023-24" target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 border-2 border-bauhaus-blue px-3 py-2 text-xs font-black uppercase tracking-widest text-bauhaus-blue hover:bg-bauhaus-blue hover:text-white">
+          <a href="https://www.wa.gov.au/government/publications/western-australian-aboriginal-expenditure-review-2023-24" target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 border-2 border-bauhaus-blue px-3 py-2 text-xs font-black uppercase tracking-widest text-bauhaus-blue hover:bg-bauhaus-blue hover:text-bauhaus-white">
             Open official source <ExternalLink className="h-4 w-4" />
           </a>
         </div>
-        <div className="border-4 border-bauhaus-black bg-bauhaus-blue p-6 text-white">
+        <div className="border-4 border-bauhaus-black bg-bauhaus-blue p-6 text-bauhaus-white">
           <div className="flex items-center gap-3">
             <Database className="h-6 w-6" />
             <p className="text-xs font-black uppercase tracking-widest">Policy evidence archive</p>
           </div>
           <h2 className="mt-4 text-2xl font-black">APP reports are preserved by source hash</h2>
-          <p className="mt-3 text-sm font-medium leading-relaxed text-white/75">
+          <p className="mt-3 text-sm font-medium leading-relaxed text-bauhaus-white/75">
             The annual APP publication pages and every linked PDF are now held as dated source artifacts. These reports establish aggregate policy performance, not a complete supplier-level award or expenditure ledger.
           </p>
-          <div className="mt-5 grid grid-cols-2 border-2 border-white text-center">
-            <div className="border-r-2 border-white p-3">
+          <div className="mt-5 grid grid-cols-2 border-2 border-bauhaus-white text-center">
+            <div className="border-r-2 border-bauhaus-white p-3">
               <div className="text-2xl font-black">{fmt(report.appReportCoverage.publication_pages)}</div>
-              <div className="mt-1 text-[9px] font-black uppercase tracking-widest text-white/70">Annual pages</div>
+              <div className="mt-1 text-[9px] font-black uppercase tracking-widest text-bauhaus-white/70">Annual pages</div>
             </div>
             <div className="p-3">
               <div className="text-2xl font-black">{fmt(report.appReportCoverage.pdf_artifacts)}</div>
-              <div className="mt-1 text-[9px] font-black uppercase tracking-widest text-white/70">PDF artifacts</div>
+              <div className="mt-1 text-[9px] font-black uppercase tracking-widest text-bauhaus-white/70">PDF artifacts</div>
             </div>
           </div>
-          <a href="https://www.wa.gov.au/government/document-collections/aboriginal-procurement-policy-performance-reports" target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 border-2 border-white px-3 py-2 text-xs font-black uppercase tracking-widest hover:bg-white hover:text-bauhaus-blue">
+          <a href="https://www.wa.gov.au/government/document-collections/aboriginal-procurement-policy-performance-reports" target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 border-2 border-bauhaus-white px-3 py-2 text-xs font-black uppercase tracking-widest hover:bg-bauhaus-white hover:text-bauhaus-blue">
             Open official collection <ExternalLink className="h-4 w-4" />
           </a>
         </div>
@@ -739,7 +739,7 @@ export default async function WaAccoTransitionPage() {
         </div>
       </section>
 
-      <section className="mt-14 border-4 border-bauhaus-black bg-white p-5 sm:p-7">
+      <section className="mt-14 border-4 border-bauhaus-black bg-bauhaus-white p-5 sm:p-7">
         <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.28em] text-bauhaus-muted">Source state</p>
@@ -764,9 +764,9 @@ export default async function WaAccoTransitionPage() {
               This surface shows what CivicGraph can currently prove, what it can only suggest and what must be learned through relationships. It is an operating evidence view, not a readiness assessment of WA organisations.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
-              <Link href="/reports/wa" className="border-2 border-bauhaus-black px-3 py-2 text-xs font-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-white">WA state dashboard</Link>
-              <Link href="/justice-reinvestment?state=WA" className="border-2 border-bauhaus-blue px-3 py-2 text-xs font-black uppercase tracking-widest text-bauhaus-blue hover:bg-bauhaus-blue hover:text-white">WA interventions</Link>
-              <Link href="/reports/state-procurement" className="border-2 border-bauhaus-red px-3 py-2 text-xs font-black uppercase tracking-widest text-bauhaus-red hover:bg-bauhaus-red hover:text-white">Procurement coverage</Link>
+              <Link href="/reports/wa" className="border-2 border-bauhaus-black px-3 py-2 text-xs font-black uppercase tracking-widest hover:bg-bauhaus-black hover:text-bauhaus-white">WA state dashboard</Link>
+              <Link href="/justice-reinvestment?state=WA" className="border-2 border-bauhaus-blue px-3 py-2 text-xs font-black uppercase tracking-widest text-bauhaus-blue hover:bg-bauhaus-blue hover:text-bauhaus-white">WA interventions</Link>
+              <Link href="/reports/state-procurement" className="border-2 border-bauhaus-red px-3 py-2 text-xs font-black uppercase tracking-widest text-bauhaus-red hover:bg-bauhaus-red hover:text-bauhaus-white">Procurement coverage</Link>
             </div>
           </div>
         </div>

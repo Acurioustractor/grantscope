@@ -194,7 +194,7 @@ export async function getWaTransitionReport(): Promise<WaTransitionReport> {
           SELECT 'justice_funding_rows', COUNT(*)::bigint FROM justice_funding WHERE state = 'WA'
           UNION ALL
           SELECT 'alma_interventions', COUNT(*)::bigint
-          FROM alma_interventions
+          FROM alma_interventions_valid
           WHERE 'WA' = ANY(geography) OR array_to_string(geography, ' ') ILIKE '%Western Australia%'
           UNION ALL
           SELECT 'goods_places', COUNT(*)::bigint FROM goods_communities WHERE state = 'WA'
@@ -244,7 +244,7 @@ export async function getWaTransitionReport(): Promise<WaTransitionReport> {
                  COALESCE(review_status, 'unknown') AS review_status,
                  COUNT(*)::bigint AS records,
                  COUNT(*) FILTER (WHERE gs_entity_id IS NOT NULL)::bigint AS entity_linked
-          FROM alma_interventions
+          FROM alma_interventions_valid
           WHERE 'WA' = ANY(geography) OR array_to_string(geography, ' ') ILIKE '%Western Australia%'
           GROUP BY verification_status, review_status
           ORDER BY records DESC

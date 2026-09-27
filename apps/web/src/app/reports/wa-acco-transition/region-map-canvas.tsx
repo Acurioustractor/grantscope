@@ -39,7 +39,7 @@ export function RegionMapCanvas({ regions }: { regions: WaRegionCoverage[] }) {
                 <div className="font-black uppercase">{region.region}</div>
                 <div className="mt-1">{contracts.toLocaleString('en-AU')} current-window contracts</div>
                 <div>{Number(region.aer_programs).toLocaleString('en-AU')} AER program signals</div>
-                <div className="mt-2 max-w-56 text-[10px] text-gray-600">Regional evidence coverage only. Not demand, readiness, authority or permission to engage.</div>
+                <div className="mt-2 max-w-56 text-[10px] text-bauhaus-muted">Regional evidence coverage only. Not demand, readiness, authority or permission to engage.</div>
               </div>
             </Tooltip>
           </CircleMarker>
