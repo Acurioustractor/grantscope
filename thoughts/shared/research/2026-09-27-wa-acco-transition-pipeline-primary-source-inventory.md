@@ -373,3 +373,14 @@ Method: title regex across all WA `state_tenders` (Boab House, Step Up/Step Down
 | MHCSFFP-36 Kimberley Youth AOD Service | nearest is MHC738A Wunan Low Medical Withdrawal Beds ($13.45M, to 2031-01-30), which is a different service | no youth AOD contract found |
 
 Finding: **0 of 4 plans link to a published incumbent contract.** These are probably service agreements that never appear in the Tenders WA / Data WA award feeds, which only report contracts. So the public record cannot answer "who delivers this now and when does it end". The authorised SFPP extract (existing contract number field) or a direct agency answer is the only route. Do not infer incumbency from the Wunan or Mercy Community Services (Catherine House) contracts.
+
+### What CivicGraph's own tables add (2026-09-27)
+
+| Source | Result for the four plans |
+|---|---|
+| `justice_funding` (WA: 473 rows, 8 sources) | nothing; no WA state service agreements are held |
+| `gs_relationships` for likely providers | Commonwealth (GrantConnect), Lotterywest, Telethon only; no WA state agreements for any provider |
+| `grantconnect_awards`, Kimberley postcodes 672x-676x | adjacent Commonwealth AOD/youth/mental-health funding only (e.g. Milliya Rumurra NIAA "Kimberley Alcohol and Other Drug Services", $14.4M to 2026-06-30 and $3.4M to 2027-06-30); maps who operates in each service family, **not** the state incumbent |
+| `wa_aer_programs` (AER XLSX) | **Kimberley Empowered Youth Network is an existing program** (source row 30: Communities, State-only, Kimberley, CTG target 7, PR 1, External parties only, neither Aboriginal-organisation box ticked). Verified. So 2025DOC-99 re-procures a running service whose provider is not flagged Aboriginal. MHC Kimberley rows (Residential rehabilitation, Community Treatment, AOD Diversion etc.) are program families, not named services; Step Up Step Down and a youth AOD service are not listed by name. |
+
+Source quirk: in the AER XLSX some rows tick "Aboriginal Organisation or ACCOs only" without ticking "Aboriginal organisation or ACCOs" (e.g. Community Support Sobering Up Centre). The ingest preserved this faithfully; treat `_only = true` as implying involvement when counting.
