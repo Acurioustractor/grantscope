@@ -43,10 +43,14 @@ fi
 
 URL="postgresql://postgres.tednluwflfhxyucgwigh:${DATABASE_PASSWORD}@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres"
 OUT=supabase/types/database.types.ts
-TMP=$(mktemp)
+TMP="$(mktemp).ts"
 
 npx --yes supabase gen types typescript --db-url "$URL" \
   --schema public --schema graphql_public > "$TMP"
+
+# Since 2026-09 the CLI emits unformatted output with quoted keys ("public": {), which
+# fails the block check below and is unreadable in a diff. It recommends oxfmt; use it.
+npx --yes oxfmt "$TMP" >/dev/null
 
 # A truncated generation would silently blank the types and typecheck "fine" in
 # files that do not use them. Refuse anything obviously short.
