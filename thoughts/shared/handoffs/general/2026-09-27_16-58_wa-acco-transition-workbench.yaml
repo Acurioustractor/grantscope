@@ -51,6 +51,9 @@ worked: [Official XLSX and CKAN CSV ingestion, source hashes and manifests, exac
 failed: [Treating public Power BI internals as a production API is unsupported; the visible public table did not provide the incumbent linkage fields; broad CKAN keyword ranking contains spatial false positives and still needs curation.]
 
 next:
+  - HOLD (Ben, 2026-09-27): branch feat/wa-acco-transition has 4 local commits, unpushed. Batch further WA work onto it; ship once at day end via /one-pr (VISIBLE: Ben merges after preview).
+  - After merge, record the 7 WA migrations with scripts/db-apply.sh --record-only from main (Ben's verb 'record the migrations' already given; objects verified live 2026-09-27).
+  - 0 of 4 forward plans link to a published incumbent contract (see inventory doc); lead the DTF request with this.
   - Read this handoff plus the primary-source inventory before changing code or claims.
   - Query the four forward plans beside related historical Kimberley contracts by service family, agency, supplier and expiry, preserving unmatched and ambiguous states.
   - Use the drafted DTF and CASWA request to seek an authorised SFPP extract and governance guidance.
