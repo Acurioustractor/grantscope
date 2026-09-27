@@ -1,0 +1,66 @@
+---
+session: general
+date: 2026-09-27
+status: partial
+outcome: PARTIAL_PLUS
+---
+
+goal: Built and verified the WA ACCO transition evidence workbench, linking public awards, forward plans, entity evidence, program data and explicit governance limits.
+now: Review the four 2026-27 Kimberley human-service plans against the 54-record historical queue, then pursue the authorised SFPP extract and incumbent links without inferring readiness or authority.
+test: cd apps/web && npx tsc --noEmit; open http://localhost:3003/reports/wa-acco-transition and confirm 4 human-service plans, 1 source anomaly and no partial-data warning
+
+done_this_session:
+  - task: Ingested and profiled the official WA Aboriginal Expenditure Review workbook, with immutable source metadata and 473 reconciled program rows.
+    files: [data/wa-aer/, scripts/wa/fetch-aer-program-list.mjs, scripts/wa/ingest-aer-program-list.mjs, supabase/migrations/20260927093000_wa_aer_program_inventory.sql]
+  - task: Ingested 2,883 Tenders WA portal records plus 14,172 official annual Data WA records and retained source coverage limits.
+    files: [data/wa-tenders/, scripts/wa/fetch-tenders-wa-history.mjs, scripts/wa/ingest-tenders-wa-history.mjs, scripts/wa/ingest-data-wa-contract-awards.mjs, supabase/migrations/20260927113000_extend_state_tenders_source_evidence.sql]
+  - task: Built the deterministic transition queue and read-only Jev second opinion covering all 283 candidate or review records.
+    files: [scripts/wa/build-transition-candidates.mjs, scripts/wa/review-transition-candidates-jev.mjs, data/jev-check/wa-transition-candidate-review.json, supabase/migrations/20260927160000_wa_transition_candidates.sql]
+  - task: Resolved supplier components against CivicGraph and registries using exact evidence only, including sourced Kimberley aliases.
+    files: [scripts/wa/resolve-supplier-entities.mjs, supabase/migrations/20260927180000_wa_supplier_entity_matches.sql, supabase/migrations/20260927181000_wa_kimberley_procurement_entity_aliases.sql]
+  - task: Captured and ingested the five public Kimberley Community Services forward plans, routing four human-service plans and one source anomaly.
+    files: [data/wa-forward-procurement/kimberley-community-services-2026-09-21.json, scripts/wa/ingest-forward-procurements.mjs, supabase/migrations/20260927190000_wa_forward_procurements.sql]
+  - task: Built and browser-verified the live WA evidence report and updated the source inventory and authorised-extract request.
+    files: [apps/web/src/app/reports/wa-acco-transition/page.tsx, apps/web/src/app/reports/wa-acco-transition/region-map.tsx, apps/web/src/lib/services/wa-transition-report.ts, thoughts/shared/research/2026-09-27-wa-acco-transition-pipeline-primary-source-inventory.md, thoughts/shared/drafts/2026-09-27-wa-transition-data-access-request.md]
+
+blockers:
+  - The public SFPP display has no supported row-level export; incumbent contract number, release quarter, value band, term and agency contact remain unavailable in the bounded capture.
+
+questions:
+  - Will DTF provide an authorised SFPP CSV or XLSX extract?
+  - Who governs ACCO cohort and readiness definitions?
+  - Which of the four forward plans should be tested first with local authority?
+  - Should this untracked work be committed as one feature or split into data and frontend commits?
+
+decisions:
+  - evidence_before_engagement: Public records may identify a review path but cannot establish ACCO readiness, local authority, demand or permission to contact.
+  - exact_identity_only: Supplier links use ABN or unique exact normalised names and sourced aliases; ambiguous panels and fuzzy similarities remain unresolved.
+  - jev_is_second_opinion: Jev reviewed the bounded queue but wrote no human decision, review status or outreach action.
+  - forward_plans_are_not_awards: SFPP rows remain planned procurements and must not be presented as guaranteed tenders or transition decisions.
+  - preserve_source_anomalies: Kalumburu Air Strip Resurfacing remains source-labelled Community Services but is excluded from human-service counts pending owner clarification.
+
+findings:
+  - current_scale: 17,055 WA contract records, 283 candidate or review records and 54 source-published Kimberley records.
+  - entity_resolution: 7,054 of 20,283 supplier components have unique deterministic links; 1,570 are ambiguous and 11,659 unmatched; no fuzzy links are committed.
+  - kimberley_resolution: 24 of 54 Kimberley queue records have a contract-level entity link and 11 carry a community-controlled discovery signal.
+  - forward_signal: Four concrete Kimberley human-service procurements are planned for 2026-27 across Communities and the Mental Health Commission.
+  - forward_gap: The public display omits the incumbent and commercial fields required to connect those plans to actual transition pathways.
+  - source_state: The SFPP report said refreshed 21 September 2026; the bounded capture was made 27 September 2026 with Kimberley and Community Services filters.
+
+worked: [Official XLSX and CKAN CSV ingestion, source hashes and manifests, exact entity resolution, bounded Jev review, public Power BI filtering through the visible UI, live browser verification, explicit verified-inferred-unknown states.]
+failed: [Treating public Power BI internals as a production API is unsupported; the visible public table did not provide the incumbent linkage fields; broad CKAN keyword ranking contains spatial false positives and still needs curation.]
+
+next:
+  - HOLD (Ben, 2026-09-27): branch feat/wa-acco-transition has 4 local commits, unpushed. Batch further WA work onto it; ship once at day end via /one-pr (VISIBLE: Ben merges after preview).
+  - After merge, record the 7 WA migrations with scripts/db-apply.sh --record-only from main (Ben's verb 'record the migrations' already given; objects verified live 2026-09-27).
+  - 0 of 4 forward plans link to a published incumbent contract (see inventory doc); lead the DTF request with this.
+  - Read this handoff plus the primary-source inventory before changing code or claims.
+  - Query the four forward plans beside related historical Kimberley contracts by service family, agency, supplier and expiry, preserving unmatched and ambiguous states.
+  - Use the drafted DTF and CASWA request to seek an authorised SFPP extract and governance guidance.
+  - Build a private decision register only after authorised fields arrive, with proven facts, inferences, missing evidence and required human authority per row.
+  - Do not publish readiness scores, automate outreach or describe the 2,223 discovery cohort as a verified ACCO register.
+  - Before committing, inspect the entire dirty tree because this checkout contains unrelated untracked user work.
+
+files:
+  created: [apps/web/src/app/reports/wa-acco-transition/, apps/web/src/lib/services/wa-transition-report.ts, data/wa-aer/, data/wa-app-performance/, data/wa-forward-procurement/, data/wa-open-data/, data/wa-tenders/, data/jev-check/wa-transition-candidate-review.json, data/jev-check/wa-transition-source-routing.json, scripts/wa/, supabase/migrations/20260927093000_wa_aer_program_inventory.sql, supabase/migrations/20260927113000_extend_state_tenders_source_evidence.sql, supabase/migrations/20260927160000_wa_transition_candidates.sql, supabase/migrations/20260927173000_state_tenders_procurement_policy_signals.sql, supabase/migrations/20260927180000_wa_supplier_entity_matches.sql, supabase/migrations/20260927181000_wa_kimberley_procurement_entity_aliases.sql, supabase/migrations/20260927190000_wa_forward_procurements.sql, thoughts/shared/drafts/2026-09-27-wa-transition-data-access-request.md, thoughts/shared/research/2026-09-27-wa-acco-transition-pipeline-primary-source-inventory.md]
+  modified: []

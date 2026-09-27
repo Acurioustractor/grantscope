@@ -1,0 +1,96 @@
+{
+  "generated_at": "2026-09-27T18:48:39.687Z",
+  "status": "review-only",
+  "rule": "Jev labels the relationship between conflicting identities. It does not choose an ABN, merge entities, or write matches or review decisions.",
+  "source": "file:/private/tmp/claude-501/-Users-benknight-Code-grantscope/dd9667bf-c308-41da-b4aa-573c5e765893/scratchpad/residue.json",
+  "records": 5,
+  "labels": {
+    "same_organisation": 4,
+    "related_company": 1,
+    "different_organisation": 0,
+    "cannot_tell": 0
+  },
+  "low_confidence": 3,
+  "results": [
+    {
+      "supplier_name": "SFDC Pty Ltd (Salesforce Pty Ltd)",
+      "lines": 3,
+      "name_candidates": "Salesforce [47010367576]",
+      "register_abn": "81692482554",
+      "register_legal_name": "SFDC PTY LTD",
+      "jev_label": "same_organisation",
+      "confidence": 0.57,
+      "probabilities": {
+        "related_company": 0.15,
+        "same_organisation": 0.68,
+        "different_organisation": 0.14,
+        "cannot_tell": 0.03
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "supplier_name": "Alcidion Aus Pty Limited (Alcidion Group)",
+      "lines": 1,
+      "name_candidates": "MKM Health [62103201663] | ALCIDION GROUP LIMITED [77143142410]",
+      "register_abn": "62103201663",
+      "register_legal_name": "ALCIDION AUS PTY LIMITED",
+      "jev_label": "same_organisation",
+      "confidence": 0.45,
+      "probabilities": {
+        "same_organisation": 0.58,
+        "related_company": 0.38,
+        "different_organisation": 0.03,
+        "cannot_tell": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "supplier_name": "Australia Western Railroad Pty Ltd (Aurizon)",
+      "lines": 1,
+      "name_candidates": "AUSTRALIA WESTERN RAILROAD PTY LTD (39 094 792 275) [39094792275] | Aurizon [70643305757]",
+      "register_abn": "39094792275",
+      "register_legal_name": "AUSTRALIA WESTERN RAILROAD PTY LTD",
+      "jev_label": "same_organisation",
+      "confidence": 0.87,
+      "probabilities": {
+        "related_company": 0.09,
+        "same_organisation": 0.9,
+        "cannot_tell": 0.01,
+        "different_organisation": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "supplier_name": "Evan Evans (Evan Evans Group)",
+      "lines": 1,
+      "name_candidates": "EVAN EVANS [49334340926]",
+      "register_abn": "20905687094",
+      "register_legal_name": "EVAN EVANS",
+      "jev_label": "same_organisation",
+      "confidence": 0.35,
+      "probabilities": {
+        "different_organisation": 0.3,
+        "related_company": 0.05,
+        "cannot_tell": 0.13,
+        "same_organisation": 0.52
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "supplier_name": "The Trustee for SuperSealing Unit Trust (SuperSealing Pty Ltd)",
+      "lines": 1,
+      "name_candidates": "SUPERSEALING PTY. LTD. [48103904329]",
+      "register_abn": "22868781289",
+      "register_legal_name": "The Trustee for SUPERSEALING UNIT TRUST",
+      "jev_label": "related_company",
+      "confidence": 0.86,
+      "probabilities": {
+        "cannot_tell": 0,
+        "different_organisation": 0.02,
+        "same_organisation": 0.08,
+        "related_company": 0.9
+      },
+      "model": "jev-1.13.0"
+    }
+  ]
+}

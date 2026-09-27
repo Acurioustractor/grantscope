@@ -1,0 +1,88 @@
+{
+  "source": {
+    "owner_page_url": "https://www.wa.gov.au/government/publications/strategic-forward-procurement-plan-public-report",
+    "report_url": "https://app.powerbi.com/view?r=eyJrIjoiY2Y5ZTI1NzktNjlmMy00MTY3LTk5OGEtZjk1ZDJkMGQ5NWM5IiwidCI6ImI3MzRiMTAyLWEyNjctNDI5YS1iNDVlLTQ2MGM4YWQ2M2FlMiJ9",
+    "report_refreshed_on": "2026-09-21",
+    "captured_at": "2026-09-27T00:00:00+08:00",
+    "capture_method": "public_power_bi_visible_table",
+    "filters": {
+      "contract_delivery_point": "Kimberley",
+      "procurement_type": "Community Services"
+    },
+    "reported_agencies": 3,
+    "reported_procurements": 5,
+    "coverage_note": "Bounded manual capture of the five rows visible after applying the two recorded filters. This is not a full machine-readable SFPP extract."
+  },
+  "records": [
+    {
+      "source_ref": "2025DOC-99",
+      "parent_agency": "Department of Communities",
+      "buying_agency": "Department of Communities",
+      "lead_delivery_agency": "Department of Communities",
+      "title": "Kimberley Empowered Youth Network",
+      "procurement_type": "Community Services",
+      "unspsc_code": "93140000",
+      "unspsc_title": "Community and social services",
+      "delivery_point": "Kimberley",
+      "release_financial_year": "2026-27",
+      "review_classification": "human_services_review",
+      "review_reason": "Named Kimberley youth network and community-services classification."
+    },
+    {
+      "source_ref": "2026DOC-14",
+      "parent_agency": "Department of Communities",
+      "buying_agency": "Department of Communities",
+      "lead_delivery_agency": "Department of Communities",
+      "title": "Mercycare Boab House (Broome)",
+      "procurement_type": "Community Services",
+      "unspsc_code": "93140000",
+      "unspsc_title": "Community and social services",
+      "delivery_point": "Kimberley",
+      "release_financial_year": "2026-27",
+      "review_classification": "human_services_review",
+      "review_reason": "Named Broome service and community-services classification."
+    },
+    {
+      "source_ref": "MHCSFFP-21",
+      "parent_agency": "Mental Health Commission",
+      "buying_agency": "Mental Health Commission",
+      "lead_delivery_agency": "Mental Health Commission",
+      "title": "Broome Step Up Step Down Service",
+      "procurement_type": "Community Services",
+      "unspsc_code": "93140000",
+      "unspsc_title": "Community and social services",
+      "delivery_point": "Kimberley",
+      "release_financial_year": "2026-27",
+      "review_classification": "human_services_review",
+      "review_reason": "Named Broome mental-health service and community-services classification."
+    },
+    {
+      "source_ref": "MHCSFFP-36",
+      "parent_agency": "Mental Health Commission",
+      "buying_agency": "Mental Health Commission",
+      "lead_delivery_agency": "Mental Health Commission",
+      "title": "Kimberley Youth Alcohol and Other Drug Service",
+      "procurement_type": "Community Services",
+      "unspsc_code": "93140000",
+      "unspsc_title": "Community and social services",
+      "delivery_point": "Kimberley",
+      "release_financial_year": "2026-27",
+      "review_classification": "human_services_review",
+      "review_reason": "Named Kimberley youth AOD service and community-services classification."
+    },
+    {
+      "source_ref": "MRWA000122",
+      "parent_agency": "Main Roads Western Australia",
+      "buying_agency": "Commissioner of Main Roads",
+      "lead_delivery_agency": "Commissioner of Main Roads",
+      "title": "Kalumburu Air Strip Resurfacing",
+      "procurement_type": "Community Services",
+      "unspsc_code": "72141000",
+      "unspsc_title": "Highway and road construction services",
+      "delivery_point": "Kimberley",
+      "release_financial_year": "2025-26",
+      "review_classification": "source_classification_anomaly",
+      "review_reason": "Source labels the row Community Services, but the title and UNSPSC describe civil works. Exclude from human-services totals pending owner clarification."
+    }
+  ]
+}

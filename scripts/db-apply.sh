@@ -10,9 +10,15 @@
 # 4. On success inserts the version + name into the tracker, so scripts/check-migration-parity.mjs and any
 #    other repo can see the schema moved.
 #
+#   scripts/db-apply.sh --record-only <file>
+#   Tracker insert only, for a file whose SQL already ran outside this script. Check first that every
+#   object the file creates exists; this does not execute the file.
+#
 # Tier 3 in the workflow rules: run only on Ben's explicit verb. Needs DATABASE_PASSWORD in .env.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+RECORD_ONLY=0
+if [[ "${1:-}" == "--record-only" ]]; then RECORD_ONLY=1; shift; fi
 FILE="${1:-}"
 [[ -n "$FILE" ]] || { echo "usage: scripts/db-apply.sh supabase/migrations/<version>_<name>.sql" >&2; exit 2; }
 [[ "$FILE" == supabase/migrations/*.sql ]] || { echo "refusing: migrations live in supabase/migrations/ only" >&2; exit 2; }
@@ -26,8 +32,12 @@ PSQL=(psql -h aws-0-ap-southeast-2.pooler.supabase.com -p 5432 -U "postgres.tedn
 export PGPASSWORD="$DATABASE_PASSWORD"
 already="$("${PSQL[@]}" -tAc "SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version='$VERSION'")"
 [[ "$already" == "0" ]] || { echo "refusing: version $VERSION is already in the tracker" >&2; exit 3; }
-echo "→ applying $FILE"
-"${PSQL[@]}" -f "$FILE"
+if [[ "$RECORD_ONLY" == "1" ]]; then
+  echo "→ recording $FILE (not executed)"
+else
+  echo "→ applying $FILE"
+  "${PSQL[@]}" -f "$FILE"
+fi
 "${PSQL[@]}" -c "INSERT INTO supabase_migrations.schema_migrations (version, name, statements, created_by) VALUES ('$VERSION', '$NAME', '{}', 'scripts/db-apply.sh $(whoami) $(date -u +%Y-%m-%dT%H:%MZ)')"
 echo "✓ applied and tracked as $VERSION ($NAME)"
 echo "  next: regenerate supabase/types/database.types.ts and run scripts/check-migration-parity.mjs"

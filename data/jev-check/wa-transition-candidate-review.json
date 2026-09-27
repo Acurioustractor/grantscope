@@ -1,0 +1,5071 @@
+{
+  "generated_at": "2026-09-27T01:24:00.420Z",
+  "status": "review-only",
+  "rule": "Jev supplies a bounded second opinion. It does not write review decisions or determine ACCO identity, authority, readiness, consent, outcomes or outreach.",
+  "records": 283,
+  "routes": {
+    "retain_candidate": 154,
+    "needs_review": 57,
+    "likely_exclude": 72
+  },
+  "low_confidence": 136,
+  "kimberley": [
+    {
+      "source_contract_id": "2023-24:c4d61318931460f0d99e1ada",
+      "title": "Family and Domestic Violence One Stop Hub - Broome FDV Hub Backbone (Lead) Organisation",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "likely_exclude": 0,
+        "retain_candidate": 1
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "135354",
+      "title": "Aboriginal Community Connectors Program – Derby",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:b60ae4f1e2f8e37d1d6598d9",
+      "title": "Derby Family Violence Refuge",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 1,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141229",
+      "title": "Safe at Home Program - Broome",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140918",
+      "title": "Broome Women’s Refuge (Catherine House)",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.97,
+      "probabilities": {
+        "needs_review": 0.02,
+        "likely_exclude": 0,
+        "retain_candidate": 0.98
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139298",
+      "title": "Aboriginal Community Connectors Program – Halls Creek",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "retain_candidate": 1,
+        "needs_review": 0,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139304",
+      "title": "Aboriginal Community Connectors Program – Kununurra",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140031",
+      "title": "Family and Domestic Violence Children and Young People Centralised Web-based and Telehealth Service (Centralised Service)",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.88,
+      "probabilities": {
+        "needs_review": 0.08,
+        "likely_exclude": 0,
+        "retain_candidate": 0.92
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139411",
+      "title": "Aboriginal Community Connectors Program - Broome",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 1,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "138919",
+      "title": "Improving health outcomes for people living with dementia in WA hospitals - Hospital training",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.87,
+      "probabilities": {
+        "retain_candidate": 0.91,
+        "needs_review": 0.06,
+        "likely_exclude": 0.03
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:9fad85d89185b71515047110",
+      "title": "Department of Justice - Broome Family and Domestic Violence Courthouse - Architectural Services",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.84,
+      "probabilities": {
+        "retain_candidate": 0.01,
+        "needs_review": 0.1,
+        "likely_exclude": 0.89
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:1fa2bf0a0626a1394245b4cf",
+      "title": "Monitoring and Evaluation Services - Primary Prevention of Family and Domestic Violence Initiatives and Respectful Relationships Sport and Recreation Program",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.37,
+      "probabilities": {
+        "needs_review": 0.58,
+        "likely_exclude": 0.37,
+        "retain_candidate": 0.05
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:bb3d4bde36f49e86ce34f6dc",
+      "title": "Monitoring and Evaluation Framework for the Family and Domestic Violence Hubs in Armadale and Broome",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.2,
+      "probabilities": {
+        "retain_candidate": 0.08,
+        "likely_exclude": 0.46,
+        "needs_review": 0.45999999999999996
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:75d38aceb2dd309f86362f37",
+      "title": "Community Take Home Naloxone Peer Delivery and Outreach Service",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "retain_candidate": 1,
+        "likely_exclude": 0,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:9e120f329bd07838d4cd2716",
+      "title": "Change Em Ways Kimberley",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 0.99,
+        "needs_review": 0.01,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141039",
+      "title": "EIS Support Services",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 1,
+        "needs_review": 0,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "138927",
+      "title": "Provision of a Pathways Program for the Tanami Road Project",
+      "rules_status": "review",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.48,
+      "probabilities": {
+        "retain_candidate": 0.3,
+        "likely_exclude": 0.05,
+        "needs_review": 0.65
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:fcabffed0adeb94a2a852f56",
+      "title": "Provision of Psychiatric Assessment Services for Adult and Young Offenders",
+      "rules_status": "candidate",
+      "service_family": "youth_justice",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.74,
+      "probabilities": {
+        "needs_review": 0.17,
+        "likely_exclude": 0,
+        "retain_candidate": 0.83
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:4f989509b648f34658c7045f",
+      "title": "Provision of Research Service for the Strong Spirit Strong Mind Youth Project Campaign",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.81,
+      "probabilities": {
+        "needs_review": 0.08,
+        "retain_candidate": 0.05,
+        "likely_exclude": 0.87
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:689ec38bbab3a3b99a8fd43d",
+      "title": "Delivery of a Place-Based Service Design Model for the Geraldton and Kununurra Aboriginal Short Stay Accommodation Projects",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.47,
+      "probabilities": {
+        "retain_candidate": 0.13,
+        "likely_exclude": 0.22,
+        "needs_review": 0.65
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:f4fee60e4e0fa386ac550ca4",
+      "title": "Consultancy Service to Draft the Aboriginal Family Safety Strategy",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.57,
+      "probabilities": {
+        "retain_candidate": 0.04,
+        "likely_exclude": 0.24,
+        "needs_review": 0.72
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:e16f7eeb2a0df6c1284130e8",
+      "title": "Regional Community Alcohol and Drug Services (CADS)",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "likely_exclude": 0,
+        "retain_candidate": 1
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:849d39535fd5ec8ce19df2ab",
+      "title": "Provision of Peer Support and Education for Lesbian, Gay, Bisexual, Transgender, Intersex, Queer (LGBTIQ+) Youth",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:71746022ad19f6a7336dddbd",
+      "title": "Out of Home Care Services (OOHCS)",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:cd0d2bac696b7fd59a576b77",
+      "title": "Service redesign of the Aboriginal Community Connectors Program",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.7,
+      "probabilities": {
+        "needs_review": 0.8,
+        "retain_candidate": 0.05,
+        "likely_exclude": 0.15
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:f83725ecbc184d2a9c8415ff",
+      "title": "Out of Home Care Services (OOHCS)",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 1,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:c206eff4d5e0839a632d8349",
+      "title": "Department of Justice - Broome Aboriginal-Led Specialist Family Violence Court - Architectural Services",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.88,
+      "probabilities": {
+        "needs_review": 0.07,
+        "retain_candidate": 0.01,
+        "likely_exclude": 0.92
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:8f0ca7f674371571516e81dd",
+      "title": "Provision of Fitzroy Valley Flood Recovery Employment Support Services",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.32,
+      "probabilities": {
+        "needs_review": 0.55,
+        "likely_exclude": 0.01,
+        "retain_candidate": 0.44
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:e6e137a03a4f8300ce0ad5f7",
+      "title": "Development of the Aboriginal and Torres Strait Islander Lived Experience (Peer) Workforces Guide",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.3,
+      "probabilities": {
+        "needs_review": 0.42,
+        "likely_exclude": 0.05,
+        "retain_candidate": 0.53
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "138888",
+      "title": "Provision of Service Design and Community Services in the Family ad Domestic Violence Sector",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.43,
+      "probabilities": {
+        "likely_exclude": 0.13,
+        "retain_candidate": 0.24,
+        "needs_review": 0.63
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:af1a4b960e76125c408b4367",
+      "title": "A Western Australia for Everyone: State Disability Strategy 2020-2030 Innovation Fund Tranche 2",
+      "rules_status": "candidate",
+      "service_family": "disability",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.39,
+      "probabilities": {
+        "retain_candidate": 0.59,
+        "needs_review": 0.4,
+        "likely_exclude": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:c6bc16421b49b3f9fb7bfd2d",
+      "title": "Provision of Kimberley Floods Social and Emotional Wellbeing Support Services",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:3c340b66d5ec47f3a348a941",
+      "title": "Panel of Foster Care Assessors",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.95,
+      "probabilities": {
+        "retain_candidate": 0.97,
+        "likely_exclude": 0,
+        "needs_review": 0.03
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:b93e1987e2116c733097fbc2",
+      "title": "Department of Justice - Broome Family & Domestic Violence Courthouse - Project Definition Plan - Architectural Services",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.7,
+      "probabilities": {
+        "needs_review": 0.19,
+        "retain_candidate": 0.01,
+        "likely_exclude": 0.8
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:2c5545f2bbd0a5d9333dfa3f",
+      "title": "Delivery of continuing professional development to the real estate and settlement industries",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.87,
+      "probabilities": {
+        "needs_review": 0.06,
+        "retain_candidate": 0.91,
+        "likely_exclude": 0.03
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:5b4b7b4d3882f990c48ebb8b",
+      "title": "Comprehensive Range of Community-based HIV Services",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "needs_review": 0.01,
+        "likely_exclude": 0,
+        "retain_candidate": 0.99
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:956cc97731be989263668a31",
+      "title": "Production, Supply and Delivery of Soap to regional areas",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.72,
+      "probabilities": {
+        "needs_review": 0.13,
+        "likely_exclude": 0.82,
+        "retain_candidate": 0.05
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:d206923b9cbd770348c4d439",
+      "title": "Provision of an Employee and Student Assistance Program for the WA TAFE Sector and the Department of Training and Workforce Development",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 0.99,
+        "needs_review": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:b6048b79fcc77f18ab1e008b",
+      "title": "Supply of Training & Assessment Services",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.42,
+      "probabilities": {
+        "retain_candidate": 0.22,
+        "likely_exclude": 0.17,
+        "needs_review": 0.61
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:e1c42a248a8cdd3692cfcfdc",
+      "title": "Panel of Preferred Mental Health Service Providers for Emergency Services",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.97,
+      "probabilities": {
+        "retain_candidate": 0.98,
+        "likely_exclude": 0,
+        "needs_review": 0.02
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:09ff4019a7ab857eda919fb2",
+      "title": "Helpline Service for Gambling Related Issues",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.88,
+      "probabilities": {
+        "needs_review": 0.06,
+        "likely_exclude": 0.02,
+        "retain_candidate": 0.92
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:31b413c94e9a13cc56a558d9",
+      "title": "Delivery of a Family Violence Learning Event",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.79,
+      "probabilities": {
+        "likely_exclude": 0.01,
+        "needs_review": 0.13,
+        "retain_candidate": 0.86
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:fb467a63533d30eede43f045",
+      "title": "Improving the Capacity and Capabilities of Non-Governmental Organisations in the Rare, Genetic and Undiagnosed Community Sector in Western Australia",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.55,
+      "probabilities": {
+        "retain_candidate": 0.7,
+        "likely_exclude": 0.02,
+        "needs_review": 0.28
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:d1757dbcf00b0b64daaddc56",
+      "title": "Employee Assistance Program",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 0.99,
+        "needs_review": 0.01,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:5488d3d7a09361358c52a8cb",
+      "title": "Youth Engagement Co-Design Project",
+      "rules_status": "candidate",
+      "service_family": "youth_justice",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.31,
+      "probabilities": {
+        "needs_review": 0.44,
+        "likely_exclude": 0.02,
+        "retain_candidate": 0.54
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:b5c862277ad6716447ba2f68",
+      "title": "Provision of Training Services in Individual Support for Community Aged Care in the Kimberley Region",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.89,
+      "probabilities": {
+        "needs_review": 0.06,
+        "retain_candidate": 0.93,
+        "likely_exclude": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:068093ba2692de5ea64ea3d6",
+      "title": "Provision of First Aid Training for Department of Education Public Schools in Western Australia",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.8,
+      "probabilities": {
+        "likely_exclude": 0.02,
+        "retain_candidate": 0.86,
+        "needs_review": 0.12
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:495ff8cbe946569856e0ffc3",
+      "title": "Content development and delivery of Tier 1 Trauma Informed Online Training Module - Royal Commission",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.79,
+      "probabilities": {
+        "needs_review": 0.11,
+        "likely_exclude": 0.03,
+        "retain_candidate": 0.86
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:c294c523a85e1f0472537e5c",
+      "title": "State-Wide Medical Equipment Audit",
+      "rules_status": "review",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.66,
+      "probabilities": {
+        "retain_candidate": 0.02,
+        "likely_exclude": 0.77,
+        "needs_review": 0.21
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:0634b4eddbdbdea8e5d47557",
+      "title": "Managed Security Services",
+      "rules_status": "review",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.95,
+      "probabilities": {
+        "needs_review": 0.03,
+        "likely_exclude": 0.97,
+        "retain_candidate": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:415cc740a9cbed67f17e0154",
+      "title": "Design and construction of four process control training rigs",
+      "rules_status": "review",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.7,
+      "probabilities": {
+        "retain_candidate": 0.02,
+        "likely_exclude": 0.8,
+        "needs_review": 0.18
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:194680ade3722195c480bf7c",
+      "title": "Provision of an Activity-based Curriculum through the Awards Scheme Development Accreditation Network (ASDAN)",
+      "rules_status": "review",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.53,
+      "probabilities": {
+        "retain_candidate": 0.3,
+        "needs_review": 0.6900000000000001,
+        "likely_exclude": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:8a2db588b01f3571782520e6",
+      "title": "Supply and Delivery of one (1) x 6 to 8 Tonne Tipper Truck and Trailer, including accessories for the delivery of civil construction vocational training at North Regional TAFE Broome Campus",
+      "rules_status": "review",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.85,
+      "probabilities": {
+        "needs_review": 0.09,
+        "retain_candidate": 0.01,
+        "likely_exclude": 0.9
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:d2f9310ff16be01d4ecbf3f2",
+      "title": "Provision of Cleaning Services for the Department of Communities - Child Protection and Family Support Broome Office",
+      "rules_status": "review",
+      "service_family": "child_family",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.94,
+      "probabilities": {
+        "retain_candidate": 0.01,
+        "likely_exclude": 0.96,
+        "needs_review": 0.03
+      },
+      "model": "jev-1.13.0"
+    }
+  ],
+  "results": [
+    {
+      "source_contract_id": "2023-24:c4d61318931460f0d99e1ada",
+      "title": "Family and Domestic Violence One Stop Hub - Broome FDV Hub Backbone (Lead) Organisation",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "likely_exclude": 0,
+        "retain_candidate": 1
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "135354",
+      "title": "Aboriginal Community Connectors Program – Derby",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:b60ae4f1e2f8e37d1d6598d9",
+      "title": "Derby Family Violence Refuge",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 1,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141229",
+      "title": "Safe at Home Program - Broome",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140918",
+      "title": "Broome Women’s Refuge (Catherine House)",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.97,
+      "probabilities": {
+        "needs_review": 0.02,
+        "likely_exclude": 0,
+        "retain_candidate": 0.98
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139298",
+      "title": "Aboriginal Community Connectors Program – Halls Creek",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "retain_candidate": 1,
+        "needs_review": 0,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139304",
+      "title": "Aboriginal Community Connectors Program – Kununurra",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140031",
+      "title": "Family and Domestic Violence Children and Young People Centralised Web-based and Telehealth Service (Centralised Service)",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.88,
+      "probabilities": {
+        "needs_review": 0.08,
+        "likely_exclude": 0,
+        "retain_candidate": 0.92
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139411",
+      "title": "Aboriginal Community Connectors Program - Broome",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 1,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "138919",
+      "title": "Improving health outcomes for people living with dementia in WA hospitals - Hospital training",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.87,
+      "probabilities": {
+        "retain_candidate": 0.91,
+        "needs_review": 0.06,
+        "likely_exclude": 0.03
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:9fad85d89185b71515047110",
+      "title": "Department of Justice - Broome Family and Domestic Violence Courthouse - Architectural Services",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.84,
+      "probabilities": {
+        "retain_candidate": 0.01,
+        "needs_review": 0.1,
+        "likely_exclude": 0.89
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:1fa2bf0a0626a1394245b4cf",
+      "title": "Monitoring and Evaluation Services - Primary Prevention of Family and Domestic Violence Initiatives and Respectful Relationships Sport and Recreation Program",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.37,
+      "probabilities": {
+        "needs_review": 0.58,
+        "likely_exclude": 0.37,
+        "retain_candidate": 0.05
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:bb3d4bde36f49e86ce34f6dc",
+      "title": "Monitoring and Evaluation Framework for the Family and Domestic Violence Hubs in Armadale and Broome",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.2,
+      "probabilities": {
+        "retain_candidate": 0.08,
+        "likely_exclude": 0.46,
+        "needs_review": 0.45999999999999996
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:75d38aceb2dd309f86362f37",
+      "title": "Community Take Home Naloxone Peer Delivery and Outreach Service",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "retain_candidate": 1,
+        "likely_exclude": 0,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:9e120f329bd07838d4cd2716",
+      "title": "Change Em Ways Kimberley",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 0.99,
+        "needs_review": 0.01,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141039",
+      "title": "EIS Support Services",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 1,
+        "needs_review": 0,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "138927",
+      "title": "Provision of a Pathways Program for the Tanami Road Project",
+      "rules_status": "review",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.48,
+      "probabilities": {
+        "retain_candidate": 0.3,
+        "likely_exclude": 0.05,
+        "needs_review": 0.65
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:fcabffed0adeb94a2a852f56",
+      "title": "Provision of Psychiatric Assessment Services for Adult and Young Offenders",
+      "rules_status": "candidate",
+      "service_family": "youth_justice",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.74,
+      "probabilities": {
+        "needs_review": 0.17,
+        "likely_exclude": 0,
+        "retain_candidate": 0.83
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:4f989509b648f34658c7045f",
+      "title": "Provision of Research Service for the Strong Spirit Strong Mind Youth Project Campaign",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.81,
+      "probabilities": {
+        "needs_review": 0.08,
+        "retain_candidate": 0.05,
+        "likely_exclude": 0.87
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:689ec38bbab3a3b99a8fd43d",
+      "title": "Delivery of a Place-Based Service Design Model for the Geraldton and Kununurra Aboriginal Short Stay Accommodation Projects",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.47,
+      "probabilities": {
+        "retain_candidate": 0.13,
+        "likely_exclude": 0.22,
+        "needs_review": 0.65
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:f4fee60e4e0fa386ac550ca4",
+      "title": "Consultancy Service to Draft the Aboriginal Family Safety Strategy",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.57,
+      "probabilities": {
+        "retain_candidate": 0.04,
+        "likely_exclude": 0.24,
+        "needs_review": 0.72
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:e16f7eeb2a0df6c1284130e8",
+      "title": "Regional Community Alcohol and Drug Services (CADS)",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "likely_exclude": 0,
+        "retain_candidate": 1
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:849d39535fd5ec8ce19df2ab",
+      "title": "Provision of Peer Support and Education for Lesbian, Gay, Bisexual, Transgender, Intersex, Queer (LGBTIQ+) Youth",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:71746022ad19f6a7336dddbd",
+      "title": "Out of Home Care Services (OOHCS)",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:cd0d2bac696b7fd59a576b77",
+      "title": "Service redesign of the Aboriginal Community Connectors Program",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.7,
+      "probabilities": {
+        "needs_review": 0.8,
+        "retain_candidate": 0.05,
+        "likely_exclude": 0.15
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:f83725ecbc184d2a9c8415ff",
+      "title": "Out of Home Care Services (OOHCS)",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 1,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:c206eff4d5e0839a632d8349",
+      "title": "Department of Justice - Broome Aboriginal-Led Specialist Family Violence Court - Architectural Services",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.88,
+      "probabilities": {
+        "needs_review": 0.07,
+        "retain_candidate": 0.01,
+        "likely_exclude": 0.92
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:8f0ca7f674371571516e81dd",
+      "title": "Provision of Fitzroy Valley Flood Recovery Employment Support Services",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.32,
+      "probabilities": {
+        "needs_review": 0.55,
+        "likely_exclude": 0.01,
+        "retain_candidate": 0.44
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:e6e137a03a4f8300ce0ad5f7",
+      "title": "Development of the Aboriginal and Torres Strait Islander Lived Experience (Peer) Workforces Guide",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.3,
+      "probabilities": {
+        "needs_review": 0.42,
+        "likely_exclude": 0.05,
+        "retain_candidate": 0.53
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "138888",
+      "title": "Provision of Service Design and Community Services in the Family ad Domestic Violence Sector",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.43,
+      "probabilities": {
+        "likely_exclude": 0.13,
+        "retain_candidate": 0.24,
+        "needs_review": 0.63
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:af1a4b960e76125c408b4367",
+      "title": "A Western Australia for Everyone: State Disability Strategy 2020-2030 Innovation Fund Tranche 2",
+      "rules_status": "candidate",
+      "service_family": "disability",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.39,
+      "probabilities": {
+        "retain_candidate": 0.59,
+        "needs_review": 0.4,
+        "likely_exclude": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:c6bc16421b49b3f9fb7bfd2d",
+      "title": "Provision of Kimberley Floods Social and Emotional Wellbeing Support Services",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:3c340b66d5ec47f3a348a941",
+      "title": "Panel of Foster Care Assessors",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.95,
+      "probabilities": {
+        "retain_candidate": 0.97,
+        "likely_exclude": 0,
+        "needs_review": 0.03
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:b93e1987e2116c733097fbc2",
+      "title": "Department of Justice - Broome Family & Domestic Violence Courthouse - Project Definition Plan - Architectural Services",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.7,
+      "probabilities": {
+        "needs_review": 0.19,
+        "retain_candidate": 0.01,
+        "likely_exclude": 0.8
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:2c5545f2bbd0a5d9333dfa3f",
+      "title": "Delivery of continuing professional development to the real estate and settlement industries",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.87,
+      "probabilities": {
+        "needs_review": 0.06,
+        "retain_candidate": 0.91,
+        "likely_exclude": 0.03
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:5b4b7b4d3882f990c48ebb8b",
+      "title": "Comprehensive Range of Community-based HIV Services",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "needs_review": 0.01,
+        "likely_exclude": 0,
+        "retain_candidate": 0.99
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:956cc97731be989263668a31",
+      "title": "Production, Supply and Delivery of Soap to regional areas",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.72,
+      "probabilities": {
+        "needs_review": 0.13,
+        "likely_exclude": 0.82,
+        "retain_candidate": 0.05
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:d206923b9cbd770348c4d439",
+      "title": "Provision of an Employee and Student Assistance Program for the WA TAFE Sector and the Department of Training and Workforce Development",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 0.99,
+        "needs_review": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:b6048b79fcc77f18ab1e008b",
+      "title": "Supply of Training & Assessment Services",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.42,
+      "probabilities": {
+        "retain_candidate": 0.22,
+        "likely_exclude": 0.17,
+        "needs_review": 0.61
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:e1c42a248a8cdd3692cfcfdc",
+      "title": "Panel of Preferred Mental Health Service Providers for Emergency Services",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.97,
+      "probabilities": {
+        "retain_candidate": 0.98,
+        "likely_exclude": 0,
+        "needs_review": 0.02
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:09ff4019a7ab857eda919fb2",
+      "title": "Helpline Service for Gambling Related Issues",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.88,
+      "probabilities": {
+        "needs_review": 0.06,
+        "likely_exclude": 0.02,
+        "retain_candidate": 0.92
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:31b413c94e9a13cc56a558d9",
+      "title": "Delivery of a Family Violence Learning Event",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.79,
+      "probabilities": {
+        "likely_exclude": 0.01,
+        "needs_review": 0.13,
+        "retain_candidate": 0.86
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:fb467a63533d30eede43f045",
+      "title": "Improving the Capacity and Capabilities of Non-Governmental Organisations in the Rare, Genetic and Undiagnosed Community Sector in Western Australia",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.55,
+      "probabilities": {
+        "retain_candidate": 0.7,
+        "likely_exclude": 0.02,
+        "needs_review": 0.28
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:d1757dbcf00b0b64daaddc56",
+      "title": "Employee Assistance Program",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 0.99,
+        "needs_review": 0.01,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:5488d3d7a09361358c52a8cb",
+      "title": "Youth Engagement Co-Design Project",
+      "rules_status": "candidate",
+      "service_family": "youth_justice",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.31,
+      "probabilities": {
+        "needs_review": 0.44,
+        "likely_exclude": 0.02,
+        "retain_candidate": 0.54
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:b5c862277ad6716447ba2f68",
+      "title": "Provision of Training Services in Individual Support for Community Aged Care in the Kimberley Region",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.89,
+      "probabilities": {
+        "needs_review": 0.06,
+        "retain_candidate": 0.93,
+        "likely_exclude": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:068093ba2692de5ea64ea3d6",
+      "title": "Provision of First Aid Training for Department of Education Public Schools in Western Australia",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.8,
+      "probabilities": {
+        "likely_exclude": 0.02,
+        "retain_candidate": 0.86,
+        "needs_review": 0.12
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:495ff8cbe946569856e0ffc3",
+      "title": "Content development and delivery of Tier 1 Trauma Informed Online Training Module - Royal Commission",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "retain_candidate",
+      "confidence": 0.79,
+      "probabilities": {
+        "needs_review": 0.11,
+        "likely_exclude": 0.03,
+        "retain_candidate": 0.86
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:c294c523a85e1f0472537e5c",
+      "title": "State-Wide Medical Equipment Audit",
+      "rules_status": "review",
+      "service_family": "health_mental_health",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.66,
+      "probabilities": {
+        "retain_candidate": 0.02,
+        "likely_exclude": 0.77,
+        "needs_review": 0.21
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:0634b4eddbdbdea8e5d47557",
+      "title": "Managed Security Services",
+      "rules_status": "review",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.95,
+      "probabilities": {
+        "needs_review": 0.03,
+        "likely_exclude": 0.97,
+        "retain_candidate": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:415cc740a9cbed67f17e0154",
+      "title": "Design and construction of four process control training rigs",
+      "rules_status": "review",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.7,
+      "probabilities": {
+        "retain_candidate": 0.02,
+        "likely_exclude": 0.8,
+        "needs_review": 0.18
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:194680ade3722195c480bf7c",
+      "title": "Provision of an Activity-based Curriculum through the Awards Scheme Development Accreditation Network (ASDAN)",
+      "rules_status": "review",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "needs_review",
+      "confidence": 0.53,
+      "probabilities": {
+        "retain_candidate": 0.3,
+        "needs_review": 0.6900000000000001,
+        "likely_exclude": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:8a2db588b01f3571782520e6",
+      "title": "Supply and Delivery of one (1) x 6 to 8 Tonne Tipper Truck and Trailer, including accessories for the delivery of civil construction vocational training at North Regional TAFE Broome Campus",
+      "rules_status": "review",
+      "service_family": "employment_training",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.85,
+      "probabilities": {
+        "needs_review": 0.09,
+        "retain_candidate": 0.01,
+        "likely_exclude": 0.9
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:d2f9310ff16be01d4ecbf3f2",
+      "title": "Provision of Cleaning Services for the Department of Communities - Child Protection and Family Support Broome Office",
+      "rules_status": "review",
+      "service_family": "child_family",
+      "is_kimberley": true,
+      "jev_route": "likely_exclude",
+      "confidence": 0.94,
+      "probabilities": {
+        "retain_candidate": 0.01,
+        "likely_exclude": 0.96,
+        "needs_review": 0.03
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140904",
+      "title": "Port Hedland Family and Domestic Violence Accommodation and Support Services and Mobile Outreach Initiative",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "retain_candidate": 1,
+        "needs_review": 0,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139407",
+      "title": "Aboriginal Community Connectors Program - Carnarvon",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "likely_exclude": 0,
+        "retain_candidate": 1
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139305",
+      "title": "Aboriginal Community Connectors Program – Meekatharra",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "retain_candidate": 1,
+        "likely_exclude": 0,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140884",
+      "title": "Safe at Home Program - Kalgoorlie",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 1,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:201a7527506cbdacaf716783",
+      "title": "Provision of a Counselling Service for Young People with Family and Domestic Violence Experience (Northam)",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "retain_candidate": 1,
+        "needs_review": 0,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140886",
+      "title": "Safe at Home Program - Albany",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139301",
+      "title": "Aboriginal Community Connectors Program – Geraldton",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 1,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:36dcdec755f44d4a6622267f",
+      "title": "Family and Domestic Violence One Stop Hub - Armadale Hub",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "retain_candidate": 1,
+        "needs_review": 0,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141230",
+      "title": "Safe at Home Program - Serpentine/Jarrahdale",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "likely_exclude": 0,
+        "needs_review": 0,
+        "retain_candidate": 1
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141227",
+      "title": "Safe at Home Program - Yanchep",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "likely_exclude": 0,
+        "retain_candidate": 1
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140883",
+      "title": "Safe at Home Program - Karratha",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "likely_exclude": 0,
+        "retain_candidate": 1
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139303",
+      "title": "Aboriginal Community Connectors Program – Kalgoorlie",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 1,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139309",
+      "title": "Aboriginal Community Connectors Program – Perth",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "likely_exclude": 0,
+        "retain_candidate": 1
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140879",
+      "title": "Safe at Home Program - Mandurah",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139302",
+      "title": "Aboriginal Community Connectors Program – Hedland",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 1,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "142533",
+      "title": "FDV Coercive Control and Culturally Safe Practice eLearning Package",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.85,
+      "probabilities": {
+        "retain_candidate": 0.9,
+        "likely_exclude": 0.02,
+        "needs_review": 0.08
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140885",
+      "title": "Safe at Home Program - Geraldton",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "likely_exclude": 0,
+        "retain_candidate": 1
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "138959",
+      "title": "Family and Domestic Violence One Stop Hub - Mirrabooka",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.98,
+      "probabilities": {
+        "needs_review": 0.01,
+        "likely_exclude": 0,
+        "retain_candidate": 0.99
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140508",
+      "title": "Family and Domestic Violence Caring Dads Program",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "retain_candidate": 1,
+        "likely_exclude": 0,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140888",
+      "title": "Safe at Home - Port Hedland",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "likely_exclude": 0,
+        "retain_candidate": 1
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140775",
+      "title": "Booraka Danjoo - Coordinated Outreach Services - Perth Metropolitan",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "retain_candidate": 1,
+        "likely_exclude": 0,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141469",
+      "title": "Booraka Danjoo - Coordinated Outreach Services Perth Metropolitan – Southern Corridor",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 1,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "133151",
+      "title": "Community Services Request For: Aboriginal Community Connectors Program - Laverton",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141741",
+      "title": "Provision of Child Development Services for Aboriginal Children and Families by Derbarl Yerrigan Health Service",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.98,
+      "probabilities": {
+        "needs_review": 0.01,
+        "retain_candidate": 0.99,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140753",
+      "title": "Booraka Danjoo - Coordinated Outreach Services - Perth Metropolitan – North East Corridor",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "retain_candidate": 1,
+        "needs_review": 0,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139317",
+      "title": "Aboriginal Community Connectors Program - Roebourne",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 1,
+        "needs_review": 0,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141755",
+      "title": "Provision of Child Development Services for Aboriginal Children and Families by Geraldton Regional Aboriginal Medical Service",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.97,
+      "probabilities": {
+        "retain_candidate": 0.98,
+        "needs_review": 0.02,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140763",
+      "title": "Booraka Danjoo - Coordinated Outreach Services Perth Metropolitan – North West Corridor",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 1,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139166",
+      "title": "Independent review of the assessment process and practices associated with issuing Working with Children’s Cards.",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.36,
+      "probabilities": {
+        "needs_review": 0.38,
+        "retain_candidate": 0.05,
+        "likely_exclude": 0.57
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:d0794bdf6ef0a5fa83fe2da9",
+      "title": "Ellenbrook Mobile Youth and Family Support Service",
+      "rules_status": "candidate",
+      "service_family": "youth_justice",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.87,
+      "probabilities": {
+        "needs_review": 0.07,
+        "likely_exclude": 0.01,
+        "retain_candidate": 0.92
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:1e682230b2acebf1cf09a45a",
+      "title": "Services to Develop the Aboriginal Healing Framework for Family Violence",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.66,
+      "probabilities": {
+        "needs_review": 0.78,
+        "likely_exclude": 0.13,
+        "retain_candidate": 0.09
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:bdb8a86090f16273ae7cc64e",
+      "title": "Provision of a Counselling Service for Young People with Family and Domestic Violence Experience (Rockingham & Northam)",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:a8619fd59d6a0dac14a114ab",
+      "title": "Consultancy Services to undertake human-centred service design ? counselling service for young people who have experienced family and domestic violence",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.78,
+      "probabilities": {
+        "retain_candidate": 0.11,
+        "likely_exclude": 0.04,
+        "needs_review": 0.85
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "142000",
+      "title": "Dare to Lead Youth Diversionary Program",
+      "rules_status": "candidate",
+      "service_family": "youth_justice",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "likely_exclude": 0,
+        "needs_review": 0,
+        "retain_candidate": 1
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:d59011e1f8a7b9cc4a869225",
+      "title": "Family and Domestic Violence Services for Women in Prison",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 0.99,
+        "needs_review": 0.01,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141646",
+      "title": "Bindjareb Region (Mandurah and surrounds) Support Network",
+      "rules_status": "review",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.94,
+      "probabilities": {
+        "needs_review": 0.04,
+        "likely_exclude": 0,
+        "retain_candidate": 0.96
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "138883",
+      "title": "Services to develop a 5-year Property Maintenance, Refurbishment and Capital Replacement Planning Report",
+      "rules_status": "review",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.94,
+      "probabilities": {
+        "retain_candidate": 0,
+        "needs_review": 0.04,
+        "likely_exclude": 0.96
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139405",
+      "title": "Perinatal and Infant Mental Health Prevention and Early Intervention Service",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "needs_review": 0.01,
+        "retain_candidate": 0.99,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141410",
+      "title": "Women's Legal Service WA Health Justice Partnership Extension",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.98,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 0.99,
+        "needs_review": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140866",
+      "title": "Primary Healthcare Services for People Experiencing or at Risk of Homelessness",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 1,
+        "needs_review": 0,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140285",
+      "title": "Provision of Surgical Simulation and Associated Training Programs",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.41,
+      "probabilities": {
+        "likely_exclude": 0.1,
+        "retain_candidate": 0.6,
+        "needs_review": 0.3
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139170",
+      "title": "Prevention Programs and System Navigation (Eating Disorders)",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140650",
+      "title": "Young People at Risk Service - Paraburdoo",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 1,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140309",
+      "title": "Provision of Women's Health Centre in Karratha",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.92,
+      "probabilities": {
+        "needs_review": 0.05,
+        "likely_exclude": 0,
+        "retain_candidate": 0.95
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140319",
+      "title": "Procurement of Demand and Cost Modelling - Family and Domestic Violence (FDV) Online Reporting (Under CUAAFA2024)",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.58,
+      "probabilities": {
+        "needs_review": 0.27,
+        "likely_exclude": 0.72,
+        "retain_candidate": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139489",
+      "title": "Home visiting Cervical Screening Test (CST) Pilot",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.94,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 0.96,
+        "needs_review": 0.04
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:c12b747a4751118e8f3c8ccc",
+      "title": "Family and Domestic Violence Clinical Forensic Services Social Support",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 1,
+        "needs_review": 0,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:9f4fb942384abf0fc8c07f5b",
+      "title": "Family and Domestic Violence Counselling in the Peel Region",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.67,
+      "probabilities": {
+        "retain_candidate": 0.78,
+        "likely_exclude": 0,
+        "needs_review": 0.22
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141971",
+      "title": "Cervical Screening Education and Testing to support metro CaLD population-Pilot",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 1,
+        "needs_review": 0,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:7cb9a25dd2f43a33f9fa6fc5",
+      "title": "Services to map the continuum of leaving care services for young people leaving State care and transitioning to adulthood in Western Australia",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.27,
+      "probabilities": {
+        "needs_review": 0.39,
+        "likely_exclude": 0.52,
+        "retain_candidate": 0.09
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:8c9aa23db1e7aa603bb511c3",
+      "title": "The Aboriginal Family Safety Program",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.93,
+      "probabilities": {
+        "needs_review": 0.05,
+        "retain_candidate": 0.95,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:b18550903217db1b62ef83a2",
+      "title": "Provision of Consultancy and review of the Metropolitan Community Alcohol and Drug Services and Drug and Alcohol Youth Service service model",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.63,
+      "probabilities": {
+        "retain_candidate": 0.12,
+        "likely_exclude": 0.12,
+        "needs_review": 0.76
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140374",
+      "title": "Monitoring & Evaluation Services for Children and Young People Family and Domestic Violence Initiatives",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.32,
+      "probabilities": {
+        "needs_review": 0.38,
+        "likely_exclude": 0.55,
+        "retain_candidate": 0.07
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:05f648ffbfbcc3f043edf35d",
+      "title": "Co-design and co-facilitation of training on leading child protection practice with Aboriginal families impacted by Alcohol and Other Drug use",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.76,
+      "probabilities": {
+        "retain_candidate": 0.84,
+        "likely_exclude": 0.01,
+        "needs_review": 0.15
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:3606bdfb770d6c40adeb1b94",
+      "title": "Development and Implementation of a Monitoring and Evaluation Framework for the Primary Prevention of FDV Grants Program 2022/23",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.43,
+      "probabilities": {
+        "needs_review": 0.34,
+        "retain_candidate": 0.04,
+        "likely_exclude": 0.62
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141854",
+      "title": "Temporary Personnel - Payroll Officers",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.35,
+      "probabilities": {
+        "needs_review": 0.23,
+        "retain_candidate": 0.2,
+        "likely_exclude": 0.57
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:f02d58d8f51d016f09c3a2ac",
+      "title": "Procurement of a Consultant to undertake and deliver a service design process for a family and domestic violence hub in the Metropolitan area",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.68,
+      "probabilities": {
+        "retain_candidate": 0.05,
+        "needs_review": 0.79,
+        "likely_exclude": 0.16
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:5b8e9696507b76bf8d69983f",
+      "title": "Supporting Women Experiencing Family and Domestic Violence in Public Tenancy",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 1,
+        "likely_exclude": 0,
+        "needs_review": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:3aa0a1bfa90fda2a3cc04f95",
+      "title": "Develop Service Model Options for Family and Domestic Violence Forensic Service",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.42,
+      "probabilities": {
+        "retain_candidate": 0.1,
+        "needs_review": 0.62,
+        "likely_exclude": 0.28
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "142500",
+      "title": "Monitoring, Evaluation and Quality Assurance Framework",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.3,
+      "probabilities": {
+        "retain_candidate": 0.03,
+        "needs_review": 0.53,
+        "likely_exclude": 0.44
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140768",
+      "title": "Winter Plan and Elective Surgery Management",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.58,
+      "probabilities": {
+        "likely_exclude": 0.72,
+        "retain_candidate": 0.02,
+        "needs_review": 0.26
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "142562",
+      "title": "Planning and Design Services for the Lucy Saw Refuge Rockingham",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.76,
+      "probabilities": {
+        "retain_candidate": 0.03,
+        "needs_review": 0.13,
+        "likely_exclude": 0.84
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "142454",
+      "title": "Planning and Design Services for the Lucy Saw Centre Fremantle (Warrawee Refuge)",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.63,
+      "probabilities": {
+        "retain_candidate": 0.05,
+        "likely_exclude": 0.75,
+        "needs_review": 0.2
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:2c98f8a16fbc9c02daaded5e",
+      "title": "Free from Family and Domestic Violence",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.98,
+      "probabilities": {
+        "retain_candidate": 0.98,
+        "needs_review": 0.02,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:b352d680b2db0151fa8a5744",
+      "title": "Accommodation and Support Services for Perpetrators of Family and Domestic Violence - Hedland  (Hedland Breathing Space)",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.61,
+      "probabilities": {
+        "retain_candidate": 0.74,
+        "likely_exclude": 0,
+        "needs_review": 0.26
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140533",
+      "title": "Provision of a Multicultural Community Service",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.57,
+      "probabilities": {
+        "needs_review": 0.24,
+        "likely_exclude": 0.04,
+        "retain_candidate": 0.72
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "138892",
+      "title": "Independent Probity Advisor services for the procurement of a Child Protection Case Management System.",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.67,
+      "probabilities": {
+        "needs_review": 0.21,
+        "retain_candidate": 0.01,
+        "likely_exclude": 0.78
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:0df588336114c8924deb3030",
+      "title": "Safe at Home Initiative for Aboriginal Women",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 0.99,
+        "needs_review": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:92c6c7cc3c18e5c03a60aacb",
+      "title": "Safe Phones for Women under the Prison Family Domestic Violence Program",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.33,
+      "probabilities": {
+        "retain_candidate": 0.4,
+        "needs_review": 0.55,
+        "likely_exclude": 0.04
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:7c0668e3efb0abca7f36d768",
+      "title": "Evaluation of the Primary Prevention of Family and Domestic Violence Grants Program",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.24,
+      "probabilities": {
+        "retain_candidate": 0.04,
+        "likely_exclude": 0.46,
+        "needs_review": 0.5
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:02eaec5ed1e16d5a45174a02",
+      "title": "Safe at Home Initiative",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 0.99,
+        "likely_exclude": 0,
+        "needs_review": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:d2ba6d633c6e9239c9a43beb",
+      "title": "Delivery Planning Support Services for Family and Domestic Violence Taskforce",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.52,
+      "probabilities": {
+        "likely_exclude": 0.27,
+        "retain_candidate": 0.05,
+        "needs_review": 0.68
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:e357a1cd6b0beea067611677",
+      "title": "Program Development Services for Respect in Mining",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.28,
+      "probabilities": {
+        "needs_review": 0.46,
+        "likely_exclude": 0.02,
+        "retain_candidate": 0.52
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:c6de4456dc831b7d31f04f95",
+      "title": "Provision of Safe and Together Training",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.83,
+      "probabilities": {
+        "needs_review": 0.1,
+        "likely_exclude": 0.01,
+        "retain_candidate": 0.89
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139820",
+      "title": "Temporary Personnel - Speech Pathologist PHC (Under CUATPS2024)",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.92,
+      "probabilities": {
+        "needs_review": 0.05,
+        "likely_exclude": 0.01,
+        "retain_candidate": 0.94
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:fbcf98a5a5d3effd83066bd0",
+      "title": "Services to Deliver a Service Design for a Family and Domestic Violence Hub in Broome, West Kimberley",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.56,
+      "probabilities": {
+        "likely_exclude": 0.22,
+        "retain_candidate": 0.08,
+        "needs_review": 0.7
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:9b06cfe052d31eff7cb230db",
+      "title": "Community Services Request for the Provision of Family Violence Youth Intervention Program",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 0.99,
+        "likely_exclude": 0,
+        "needs_review": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141481",
+      "title": "Cleaning Services for the Department of Communities CPFS Facility Merredin",
+      "rules_status": "review",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.93,
+      "probabilities": {
+        "likely_exclude": 0.95,
+        "retain_candidate": 0.01,
+        "needs_review": 0.04
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:edf5c337a41d0186816fa757",
+      "title": "Develop Business Case for ASSIST Replacement (CUAICTS2021)",
+      "rules_status": "review",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.66,
+      "probabilities": {
+        "needs_review": 0.21,
+        "retain_candidate": 0.02,
+        "likely_exclude": 0.77
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141294",
+      "title": "Cyber Security Specialist",
+      "rules_status": "review",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.78,
+      "probabilities": {
+        "retain_candidate": 0.02,
+        "likely_exclude": 0.85,
+        "needs_review": 0.13
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141569",
+      "title": "Subscription renewal 2026/2027",
+      "rules_status": "review",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 0,
+        "needs_review": 0.01,
+        "likely_exclude": 0.99
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:894b2cc43c322f601ffee357",
+      "title": "Provision of Counselling and Case Management Services",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.8,
+      "probabilities": {
+        "needs_review": 0.13,
+        "likely_exclude": 0.01,
+        "retain_candidate": 0.86
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:681aff2dac6ca3cecc5e6082",
+      "title": "Consultant to undertake a review of the systems and practices that underpin the Department’s approach to delivering safe and compliant Supported Independent Living (SIL) supports to National Disabilit",
+      "rules_status": "candidate",
+      "service_family": "disability",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.58,
+      "probabilities": {
+        "retain_candidate": 0.23,
+        "likely_exclude": 0.05,
+        "needs_review": 0.72
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:c217e01020e163f7dda0fdd3",
+      "title": "PROVISION OF CONSULTANCY SERVICES TO SUPPORT GROUPING AND ANALYSING DATA OF IDENTIFIED HOMELESSNESS SERVICES COSTS TO BUILD A FINANCIAL MODEL.",
+      "rules_status": "candidate",
+      "service_family": "housing_homelessness",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.34,
+      "probabilities": {
+        "retain_candidate": 0.02,
+        "likely_exclude": 0.56,
+        "needs_review": 0.42
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:3d29840b0fdeda23d5e3f9c5",
+      "title": "Human Resource Services",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.42,
+      "probabilities": {
+        "needs_review": 0.61,
+        "likely_exclude": 0.2,
+        "retain_candidate": 0.19
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:6f33906094626040d4a9e654",
+      "title": "Monitoring and Evaluation of the Perth Central Business District Accommodation for Rough Sleepers project for people experiencing homelessness",
+      "rules_status": "candidate",
+      "service_family": "housing_homelessness",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.38,
+      "probabilities": {
+        "likely_exclude": 0.59,
+        "needs_review": 0.39,
+        "retain_candidate": 0.02
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:500a9ff6e5303a71872d300c",
+      "title": "Perth Metropolitan Family Violence Prevention Legal Services for Aboriginal and Torres Strait Islander People",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "retain_candidate": 1,
+        "needs_review": 0,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:58b79a9af5905b69752df2f6",
+      "title": "Provision of Support Coordination Provider for the Pilot Youth Psychosocial Support Packages Program",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.58,
+      "probabilities": {
+        "needs_review": 0.28,
+        "likely_exclude": 0,
+        "retain_candidate": 0.72
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:3bf8f8c2982f7c2f76af8044",
+      "title": "Consultant to lead intensive case management support to a specific cohort of individuals with particularly complex needs in the Department of Communities’ (Communities) Supported Community Living (SCL",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.82,
+      "probabilities": {
+        "needs_review": 0.88,
+        "retain_candidate": 0.1,
+        "likely_exclude": 0.02
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:f31281e565becb1714c75029",
+      "title": "Junior Medical Officer (JMO) Workforce Gap Analysis",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.19,
+      "probabilities": {
+        "needs_review": 0.45,
+        "retain_candidate": 0.21,
+        "likely_exclude": 0.34
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:917e413b4b54fbe40273e866",
+      "title": "Infant, Child and Adolescent (ICA) Taskforce Implementation Program",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.68,
+      "probabilities": {
+        "needs_review": 0.78,
+        "retain_candidate": 0.1,
+        "likely_exclude": 0.12
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:981b0ac1532ff19bc1f3b902",
+      "title": "Perth Metropolitan Family Violence Prevention Legal Services for Aboriginal and Torres Strait Islander People",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "likely_exclude": 0,
+        "retain_candidate": 1
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:2ebd364088194de05b8571ba",
+      "title": "Alcohol and drug reintegration service for Bunbury Regional Prison",
+      "rules_status": "candidate",
+      "service_family": "youth_justice",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.25,
+      "probabilities": {
+        "retain_candidate": 0.46,
+        "needs_review": 0.5,
+        "likely_exclude": 0.04
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:99b2dacde309ab5e08fef532",
+      "title": "Evaluation Services of the Target 120 Project",
+      "rules_status": "candidate",
+      "service_family": "youth_justice",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.31,
+      "probabilities": {
+        "retain_candidate": 0.03,
+        "likely_exclude": 0.54,
+        "needs_review": 0.43
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:d293f26ac9fe2aeeb95a99de",
+      "title": "Provision of Hospital In The Home (HITH) evaluation",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.17,
+      "probabilities": {
+        "needs_review": 0.41,
+        "likely_exclude": 0.45,
+        "retain_candidate": 0.14
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:1d96c8804bb1c2304790e9ad",
+      "title": "Develop a model of care for the Justice Health Services",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.47,
+      "probabilities": {
+        "needs_review": 0.64,
+        "retain_candidate": 0.33,
+        "likely_exclude": 0.03
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:c62f70dcb93ba59918ad1b33",
+      "title": "Provision of Forensic Review for Disability Services",
+      "rules_status": "candidate",
+      "service_family": "disability",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.38,
+      "probabilities": {
+        "retain_candidate": 0.06,
+        "likely_exclude": 0.59,
+        "needs_review": 0.35
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:f61f15c60e45a475e8f887b4",
+      "title": "Provision of Alcohol and Other Drugs Lived Experience Representative Training (Foundational and Advanced Courses)",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.33,
+      "probabilities": {
+        "needs_review": 0.44,
+        "retain_candidate": 0.55,
+        "likely_exclude": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:f6ca0d7431705e5814fb915a",
+      "title": "Allied Health and Paediatric Service for children in out-of-home care in the East Metropolitan Region",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "needs_review": 0,
+        "likely_exclude": 0,
+        "retain_candidate": 1
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:3665023e4f742e3f7e3a4de5",
+      "title": "Provision of Psychosocial Support Package Providers for the Pilot Youth Psychosocial Support Packages Program",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 1,
+        "needs_review": 0,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:f8d54cd6fbe02225d1fe4abd",
+      "title": "Development of a Values-Based Recruitment Package",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.57,
+      "probabilities": {
+        "retain_candidate": 0.17,
+        "needs_review": 0.71,
+        "likely_exclude": 0.12
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:a8c8b5530936412ed6847540",
+      "title": "Workers Compensation Advisory Service",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.37,
+      "probabilities": {
+        "likely_exclude": 0.02,
+        "needs_review": 0.59,
+        "retain_candidate": 0.39
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:e6954141fdadeb8a3200c2a1",
+      "title": "Accommodation and health supports for people experiencing homelessness and isolating due to COVID-19",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.86,
+      "probabilities": {
+        "needs_review": 0.09,
+        "retain_candidate": 0.91,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:34cbd6dd9686d6687b818079",
+      "title": "Provision of services and management of the Social and Emotional Wellbeing Model of Service Pilot Program",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.33,
+      "probabilities": {
+        "retain_candidate": 0.56,
+        "likely_exclude": 0,
+        "needs_review": 0.44
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:5ebd1b08eaa464c9d3f6d4f7",
+      "title": "Consultancy Services for the Expansion of Drug Education and Support Services Workers in Youth Accommodation and Support Services",
+      "rules_status": "candidate",
+      "service_family": "housing_homelessness",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.67,
+      "probabilities": {
+        "needs_review": 0.78,
+        "retain_candidate": 0.08,
+        "likely_exclude": 0.14
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:c974370b0a27019fcee48bb9",
+      "title": "Monitoring, Evaluation and Outcomes Framework for the Health Navigator Pilot Program",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.47,
+      "probabilities": {
+        "needs_review": 0.25,
+        "likely_exclude": 0.64,
+        "retain_candidate": 0.11
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:3dfa4332b832b417fd0cd2b3",
+      "title": "Youth Accommodation and Support Service - Canning",
+      "rules_status": "candidate",
+      "service_family": "housing_homelessness",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 0.99,
+        "needs_review": 0.01,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:6454b4a5d7452a59292c260f",
+      "title": "Program review of Financial Counselling Services and No Interest Loans Scheme",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.65,
+      "probabilities": {
+        "retain_candidate": 0.07,
+        "needs_review": 0.76,
+        "likely_exclude": 0.17
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:63e91dc43f6aca47b7e71cb0",
+      "title": "Safe Perth City Outreach Services",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.91,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 0.94,
+        "needs_review": 0.06
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:c79e034fa16321d525c6add0",
+      "title": "Out of Home Care Reform - Monitoring and Evaluation Services",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.39,
+      "probabilities": {
+        "needs_review": 0.59,
+        "likely_exclude": 0.37,
+        "retain_candidate": 0.04
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:6f57c9830bb021642dcd3e6c",
+      "title": "Safe Perth City Initiative",
+      "rules_status": "candidate",
+      "service_family": "housing_homelessness",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.75,
+      "probabilities": {
+        "needs_review": 0.16,
+        "retain_candidate": 0.84,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:d74e599a4413597a6ccb0d46",
+      "title": "Provision of Forensic Review for Child Protection Services",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.53,
+      "probabilities": {
+        "needs_review": 0.26,
+        "likely_exclude": 0.68,
+        "retain_candidate": 0.06
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:1e46d98fe3d7a2147576af23",
+      "title": "Safe Perth City Initiative - Community Safety Patrols, and Community Engagement  and Cultural Liaison Services",
+      "rules_status": "candidate",
+      "service_family": "housing_homelessness",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.88,
+      "probabilities": {
+        "needs_review": 0.07,
+        "retain_candidate": 0.92,
+        "likely_exclude": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:c1e039cf03485a699c1e3ecb",
+      "title": "Perth Metropolitan Family Violence Prevention Legal Service",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.95,
+      "probabilities": {
+        "retain_candidate": 0.97,
+        "needs_review": 0.03,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:3d97c978767aa397bebd84e0",
+      "title": "Full Facilitation of the Procurement Process for Community Services Out of Home Care Services",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.36,
+      "probabilities": {
+        "needs_review": 0.57,
+        "likely_exclude": 0.39,
+        "retain_candidate": 0.04
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:e86e3aabb0e79c7e4d6bf9cc",
+      "title": "Provision of Specialist Advisory Service to undertake a Contemporary, Outcome based, Redesign and Recommissioning Services initially for Adult Rehabilitation and Reintegration Service Contracts",
+      "rules_status": "candidate",
+      "service_family": "youth_justice",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.76,
+      "probabilities": {
+        "retain_candidate": 0.01,
+        "needs_review": 0.84,
+        "likely_exclude": 0.15
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:9b31ea46c1e6b988f312c688",
+      "title": "Housing First Supported Accommodation - Murray Hotel Supported Accommodation Service",
+      "rules_status": "candidate",
+      "service_family": "housing_homelessness",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.71,
+      "probabilities": {
+        "needs_review": 0.19,
+        "retain_candidate": 0.81,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:56b4bd72d17228bfc139ad4e",
+      "title": "Mapping of Lived Experience Engagement Mechanisms Within the Mental Health, Alcohol and Other Drugs Sector",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.68,
+      "probabilities": {
+        "needs_review": 0.79,
+        "likely_exclude": 0.01,
+        "retain_candidate": 0.2
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141876",
+      "title": "Supporting ICA Taskforce accountability, implementation plan and youth mental health service mapping",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.5,
+      "probabilities": {
+        "likely_exclude": 0.3,
+        "retain_candidate": 0.03,
+        "needs_review": 0.67
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:a5caa9613b81b56c1b95e441",
+      "title": "Provision of Pre-Employment Psychometric Testing for Prison Officers, Youth Custodial Officers, Community Correction Officers and Youth Justice Officers",
+      "rules_status": "candidate",
+      "service_family": "youth_justice",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.3,
+      "probabilities": {
+        "likely_exclude": 0.1,
+        "needs_review": 0.37,
+        "retain_candidate": 0.53
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:1fc8a7de3fa8f3ed09dfc3ea",
+      "title": "Development of E-learning Content for Front-line Child Protection Workers",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.16,
+      "probabilities": {
+        "needs_review": 0.44,
+        "retain_candidate": 0.14,
+        "likely_exclude": 0.42
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:ad19d00d488fa08a744996ca",
+      "title": "Program Review of the Home Safe Trial",
+      "rules_status": "candidate",
+      "service_family": "youth_justice",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.45,
+      "probabilities": {
+        "needs_review": 0.63,
+        "likely_exclude": 0.24,
+        "retain_candidate": 0.13
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "142159",
+      "title": "Temporary Personnel - Chef Instructor - PN001803",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.84,
+      "probabilities": {
+        "needs_review": 0.1,
+        "retain_candidate": 0.89,
+        "likely_exclude": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:007a0c448eedf43e3f92eba0",
+      "title": "Provision of First Aid Training services for the Department of Communities (Disability Services) frontline staff",
+      "rules_status": "candidate",
+      "service_family": "disability",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.25,
+      "probabilities": {
+        "needs_review": 0.37,
+        "likely_exclude": 0.12,
+        "retain_candidate": 0.51
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:e191171c0d10a2549636a6e0",
+      "title": "Local Support Coordination",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.39,
+      "probabilities": {
+        "needs_review": 0.4,
+        "likely_exclude": 0,
+        "retain_candidate": 0.6
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:65e5807e2fe0321fb798af1f",
+      "title": "Services to Undertake a Comprehensive Review for the Department of Communities Secondary Family Support Services",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.28,
+      "probabilities": {
+        "needs_review": 0.53,
+        "likely_exclude": 0.41,
+        "retain_candidate": 0.06
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:3259cdbe3ab81c72825e393f",
+      "title": "Process and Outcomes Evaluation of the Kimberley Juvenile Justice Strategy",
+      "rules_status": "candidate",
+      "service_family": "youth_justice",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.47,
+      "probabilities": {
+        "needs_review": 0.65,
+        "retain_candidate": 0.12,
+        "likely_exclude": 0.23
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:2399b9bda266bbc03d11823f",
+      "title": "Development of Monitoring and Evaluation Framework and Evaluation of the Murray Supported Accommodation Service.",
+      "rules_status": "candidate",
+      "service_family": "housing_homelessness",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.36,
+      "probabilities": {
+        "likely_exclude": 0.36,
+        "retain_candidate": 0.07,
+        "needs_review": 0.57
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:33c362e264b1bad3cb025793",
+      "title": "Supply and Install Fire Detection System at Newman Women Refuge",
+      "rules_status": "candidate",
+      "service_family": "family_domestic_violence",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.92,
+      "probabilities": {
+        "needs_review": 0.04,
+        "retain_candidate": 0.01,
+        "likely_exclude": 0.95
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:92c5912365a97c7d36b84cad",
+      "title": "Aboriginal Financial Counselling Outreach Services",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.76,
+      "probabilities": {
+        "needs_review": 0.15,
+        "likely_exclude": 0.01,
+        "retain_candidate": 0.84
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:35e21ee0c0ff6aafe6ade78b",
+      "title": "Scoping of a Lived Experience (Peer) Workforce Association for the Western Australian Mental Health and Alcohol and Other Drug Sector",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.44,
+      "probabilities": {
+        "retain_candidate": 0.04,
+        "likely_exclude": 0.63,
+        "needs_review": 0.33
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:b8b060d46493b4a18b9c6f7b",
+      "title": "Supply & Delivery of Amatrol Inc Mechanical Training Equipment",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.68,
+      "probabilities": {
+        "likely_exclude": 0.78,
+        "retain_candidate": 0.04,
+        "needs_review": 0.18
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:774708cdf315d9affb94ca59",
+      "title": "North Metropolitan TAFE Signals Training Facility",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.67,
+      "probabilities": {
+        "retain_candidate": 0.05,
+        "likely_exclude": 0.17,
+        "needs_review": 0.78
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:dcf82c77941fdfa872b23205",
+      "title": "Agreement with Derbarl Yerrigan Health Service  to support the Health Navigator Pilot Program",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.97,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 0.98,
+        "needs_review": 0.02
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:e4eb488f878392c8868d08d1",
+      "title": "CAHS Internal Audit: Progress Against and Effectiveness of the Recommendations from the Chief Psychiatrist's Review",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.28,
+      "probabilities": {
+        "retain_candidate": 0.11,
+        "needs_review": 0.52,
+        "likely_exclude": 0.37
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:f3abb076195a13e25b412098",
+      "title": "Provision of Online Wounds Healing Learning Modules",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.32,
+      "probabilities": {
+        "retain_candidate": 0.11,
+        "likely_exclude": 0.55,
+        "needs_review": 0.34
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:52e4efe3ad63bbc3b363a413",
+      "title": "Provision of Services to Develop a Clinical Audit Framework and Scope up to 5 Clinical Audits / Model of Care Reviews",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.4,
+      "probabilities": {
+        "needs_review": 0.6,
+        "retain_candidate": 0.11,
+        "likely_exclude": 0.29
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140724",
+      "title": "PTA'S ANNUAL ARA MEMBERSHIP 2026-27",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.53,
+      "probabilities": {
+        "needs_review": 0.25,
+        "retain_candidate": 0.69,
+        "likely_exclude": 0.06
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:9f83c279ac55c29f6d2ae9bd",
+      "title": "Investigation Writing Baseline Workshops for Commercial and Contracting Services",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.84,
+      "probabilities": {
+        "needs_review": 0.09,
+        "retain_candidate": 0.9,
+        "likely_exclude": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:52d9ca53ddf39c439278166e",
+      "title": "ANZSOG Training",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.7,
+      "probabilities": {
+        "needs_review": 0.13,
+        "likely_exclude": 0.07,
+        "retain_candidate": 0.8
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140613",
+      "title": "Role Players for L&OD - TORT, PTA & RP",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.88,
+      "probabilities": {
+        "needs_review": 0.07,
+        "likely_exclude": 0.01,
+        "retain_candidate": 0.92
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:5b607c06d753cbddac734bfe",
+      "title": "Provision of Vocational Education and Training (VET) Programs for Manea Senior College",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.92,
+      "probabilities": {
+        "retain_candidate": 0.94,
+        "likely_exclude": 0.01,
+        "needs_review": 0.05
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:51d8dcbd985ace0fa053a271",
+      "title": "Critical Incident Trauma Counselling Services",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:7f079f3cec0fa2d85d6f2b32",
+      "title": "Supply of Group Training Organisation Services for a Defence Industry Traineeship Program",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.97,
+      "probabilities": {
+        "retain_candidate": 0.98,
+        "needs_review": 0.02,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:136f071b90cbdfbddf1a4eb4",
+      "title": "Lotterywest Retailer Mental Health Services",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.45,
+      "probabilities": {
+        "likely_exclude": 0.01,
+        "needs_review": 0.35,
+        "retain_candidate": 0.64
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:d65900b9144c11f6bf6dbaf4",
+      "title": "Provision of Training Services to East Metropolitan Health Service Security",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.89,
+      "probabilities": {
+        "needs_review": 0.06,
+        "likely_exclude": 0.02,
+        "retain_candidate": 0.92
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:beb81896cc54b4f1385dabcc",
+      "title": "Provision of Training and Assessment Services for North Regional TAFE",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.95,
+      "probabilities": {
+        "needs_review": 0.03,
+        "retain_candidate": 0.96,
+        "likely_exclude": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:b2808328fc812cb7aee30d52",
+      "title": "Youth Mental Health Service in the Shire of Manjimup",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.96,
+      "probabilities": {
+        "retain_candidate": 0.98,
+        "likely_exclude": 0,
+        "needs_review": 0.02
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:04d71f00fbf3d8c4b70b1120",
+      "title": "Third Party Management of the WA Defence Industry Internship and Graduate Scholarship Program",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.71,
+      "probabilities": {
+        "retain_candidate": 0.81,
+        "likely_exclude": 0.01,
+        "needs_review": 0.18
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:b68fe238bddce4cf4de507ac",
+      "title": "Provision of Vocational Education and Training (VET) Program in Public Sector Procurement",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.79,
+      "probabilities": {
+        "retain_candidate": 0.86,
+        "likely_exclude": 0.04,
+        "needs_review": 0.1
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:a18178a28cfc6fedc97f3a9b",
+      "title": "Provision of an Employee and Student Assistance Program for the WA TAFE Sector and the Department of Training and Workforce Development",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 0.99,
+        "likely_exclude": 0,
+        "needs_review": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:1d4ad6a5d7821cf8fb88f30e",
+      "title": "Communication Skills Training",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.34,
+      "probabilities": {
+        "retain_candidate": 0.56,
+        "likely_exclude": 0.01,
+        "needs_review": 0.43
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:fd70195aa2e7899fdf689af0",
+      "title": "Hepatitis B and Hepatitis C Hub Project Capital",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.3,
+      "probabilities": {
+        "likely_exclude": 0.53,
+        "retain_candidate": 0.06,
+        "needs_review": 0.41
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:c909bf158d12a44feb806ff7",
+      "title": "Provision of Communication Framework and Delivery",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.26,
+      "probabilities": {
+        "needs_review": 0.47,
+        "retain_candidate": 0.51,
+        "likely_exclude": 0.02
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141684",
+      "title": "Media Monitoring and Social Media Monitoring Services",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.97,
+      "probabilities": {
+        "needs_review": 0.02,
+        "likely_exclude": 0.98,
+        "retain_candidate": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:f4e51183e8187f86e894b791",
+      "title": "DDLS Training Provision",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.33,
+      "probabilities": {
+        "likely_exclude": 0.11,
+        "retain_candidate": 0.55,
+        "needs_review": 0.34
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:0502ebcc71c9de33de840e08",
+      "title": "Provision of Training Services for Microsoft Word and Microsoft Excel",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.81,
+      "probabilities": {
+        "likely_exclude": 0.03,
+        "retain_candidate": 0.88,
+        "needs_review": 0.09
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:5de887a1a6e24760b5d62f45",
+      "title": "Provision of Vocational Education and Training (VET) Course for Manea Senior College",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.92,
+      "probabilities": {
+        "retain_candidate": 0.94,
+        "likely_exclude": 0.01,
+        "needs_review": 0.05
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:5e0edb532a4befe78b40282e",
+      "title": "Agreement with South West Aboriginal Medical Service to support the Health Navigator Pilot Program",
+      "rules_status": "candidate",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.95,
+      "probabilities": {
+        "retain_candidate": 0.97,
+        "likely_exclude": 0,
+        "needs_review": 0.03
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:eae445c63041ae65c8b6065d",
+      "title": "Event Health Services, First Aid Training and First Aid Kits",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.75,
+      "probabilities": {
+        "retain_candidate": 0.16,
+        "needs_review": 0.83,
+        "likely_exclude": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:aa230c1ef737e1a06578c2fa",
+      "title": "Recruitment Marketing Campaign Mental Health Services",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.48,
+      "probabilities": {
+        "needs_review": 0.26,
+        "likely_exclude": 0.65,
+        "retain_candidate": 0.09
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:2d254e51c1b7664badc8adae",
+      "title": "Peer Support Workforce for a Mental Health Transitional Care Unit",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.85,
+      "probabilities": {
+        "needs_review": 0.1,
+        "retain_candidate": 0.9,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:c6abf8c045dfaeb379f54412",
+      "title": "Provision of an Employee and Student Assistance Program for the WA TAFE Sector and the Department of Training and Workforce Development",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "needs_review": 0.01,
+        "likely_exclude": 0,
+        "retain_candidate": 0.99
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:52ebbba32f0f774d7a63c7ae",
+      "title": "Provision of an Employee and Student Assistance Program for the WA TAFE Sector and the Department of Training and Workforce Development",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "retain_candidate": 0.99,
+        "likely_exclude": 0,
+        "needs_review": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:96906ff6cb9a5ce086695b5d",
+      "title": "High-Level Transition Plan for Specialised Infant, Child and Adolescent (ICA) Mental Health Services",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.63,
+      "probabilities": {
+        "likely_exclude": 0.19,
+        "retain_candidate": 0.05,
+        "needs_review": 0.76
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:07cd38ecef6a3974aefd5e27",
+      "title": "Provision of Hospitality and Tourism Course Content",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.6,
+      "probabilities": {
+        "likely_exclude": 0.73,
+        "retain_candidate": 0.07,
+        "needs_review": 0.2
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:9a5d6f58316557bc680dc2f0",
+      "title": "Ad-Hoc Security Services for Child and Adolescent Health Service",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.36,
+      "probabilities": {
+        "retain_candidate": 0.14,
+        "likely_exclude": 0.57,
+        "needs_review": 0.29
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:90e16f072b721f84800c410b",
+      "title": "Provision of Training and Assessment Materials for Certificate IV in Electrical - Rail Signalling (UEE41220)",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.12,
+      "probabilities": {
+        "retain_candidate": 0.31,
+        "needs_review": 0.41,
+        "likely_exclude": 0.28
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:0b0c99a63aa9d5af88d11a98",
+      "title": "Operational Governance Models for Specialised Infant, Child and Adolescent (ICA) Mental Health Services",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.58,
+      "probabilities": {
+        "needs_review": 0.72,
+        "likely_exclude": 0.23,
+        "retain_candidate": 0.05
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:004acb9a45842773dfacdf75",
+      "title": "Karratha Women's Place Inc Grant - 12 Month Women's Health Centre Pilot",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.98,
+      "probabilities": {
+        "retain_candidate": 0.99,
+        "likely_exclude": 0,
+        "needs_review": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:4710f6815b524774b0ce8872",
+      "title": "WHS Online Professional learning",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.5,
+      "probabilities": {
+        "retain_candidate": 0.67,
+        "likely_exclude": 0.05,
+        "needs_review": 0.28
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:557c25bc2fced81b7df669d9",
+      "title": "Emotional Intelligence and Communication Skills Training",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.91,
+      "probabilities": {
+        "retain_candidate": 0.94,
+        "likely_exclude": 0,
+        "needs_review": 0.06
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:9a47784c38e279018cc78d2c",
+      "title": "Deadly Diversion Youth Service",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 1,
+      "probabilities": {
+        "needs_review": 0,
+        "retain_candidate": 1,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:e3c70af55f9552b72ef70adb",
+      "title": "Provision of a Student Counselling Service at the South Regional TAFE",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.75,
+      "probabilities": {
+        "retain_candidate": 0.83,
+        "needs_review": 0.17,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:5b77a92f0cdc72049bfac09d",
+      "title": "IDEAcademy Portfolio Based Senior Education Program for Cecil Andrews College",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.72,
+      "probabilities": {
+        "likely_exclude": 0.01,
+        "needs_review": 0.18,
+        "retain_candidate": 0.81
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:85b61cfe3b1d020709933274",
+      "title": "Provision of an Employee and Student Assistance Program for the WA TAFE Sector and the Department of Training and Workforce Development",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "needs_review": 0.01,
+        "retain_candidate": 0.99,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:1b4539ae553fdd343b9211cc",
+      "title": "Incident Leadership Training",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.9,
+      "probabilities": {
+        "likely_exclude": 0.01,
+        "retain_candidate": 0.93,
+        "needs_review": 0.05
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:e5b5e15957d4b87bcad67103",
+      "title": "Provision of Alcohol and Other Drugs Testing",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.54,
+      "probabilities": {
+        "retain_candidate": 0.69,
+        "likely_exclude": 0.06,
+        "needs_review": 0.25
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:efc5ea942adf949b9fda062e",
+      "title": "Provision of an Employee and Student Assistance Program for the WA TAFE Sector and the Department of Training and Workforce Development",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.99,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 0.99,
+        "needs_review": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:9fc2d379df3f8e18823528f7",
+      "title": "RFQ9/2022PG Delivery of Defensive Driver Training",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.46,
+      "probabilities": {
+        "needs_review": 0.35,
+        "likely_exclude": 0.01,
+        "retain_candidate": 0.64
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:8a94924082584c4d583acf24",
+      "title": "Evaluation Support Services for the Evaluation of the Aboriginal Community Connectors Program",
+      "rules_status": "candidate",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.31,
+      "probabilities": {
+        "likely_exclude": 0.54,
+        "needs_review": 0.43,
+        "retain_candidate": 0.03
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140152",
+      "title": "Recruitment consultant services - Recruitment of Director, Health and Disability Services Complaints Office",
+      "rules_status": "candidate",
+      "service_family": "disability",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.27,
+      "probabilities": {
+        "needs_review": 0.44,
+        "retain_candidate": 0.05,
+        "likely_exclude": 0.51
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:41e9d052a9ee416a7bf17352",
+      "title": "International Employment Services Procurement Consultancy Service",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.67,
+      "probabilities": {
+        "needs_review": 0.21,
+        "likely_exclude": 0.78,
+        "retain_candidate": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:fd6fd492f1f1934b0f10f03f",
+      "title": "Business Agility Team Support",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.39,
+      "probabilities": {
+        "retain_candidate": 0.6,
+        "needs_review": 0.38,
+        "likely_exclude": 0.02
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:5f803b31298c2cc81e7ecf65",
+      "title": "Provision of Early Career Discovery Resource Development including Instruction Design/e-learning Development for North Metropolitan TAFE",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.13,
+      "probabilities": {
+        "needs_review": 0.42,
+        "likely_exclude": 0.3,
+        "retain_candidate": 0.28
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:1249971088c1bb3d46a29f4d",
+      "title": "Training Program & Services",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.38,
+      "probabilities": {
+        "needs_review": 0.4,
+        "likely_exclude": 0.01,
+        "retain_candidate": 0.59
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:a5f1ddf578f9e3aa53c0d7a1",
+      "title": "Specialist Consultancy Services to Support Neurodiversity in Education",
+      "rules_status": "candidate",
+      "service_family": "disability",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.61,
+      "probabilities": {
+        "needs_review": 0.74,
+        "likely_exclude": 0.12,
+        "retain_candidate": 0.14
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:d1b3703a8405c8e9ba3a97f8",
+      "title": "Provision of Defensive Tactics Training Services",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.84,
+      "probabilities": {
+        "needs_review": 0.09,
+        "likely_exclude": 0.01,
+        "retain_candidate": 0.9
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:9adc6ea0e477529e706a8560",
+      "title": "SJGMPH Model of Care Review of Mental Health Services",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.26,
+      "probabilities": {
+        "needs_review": 0.5,
+        "likely_exclude": 0.17,
+        "retain_candidate": 0.33
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139104",
+      "title": "Painting - CAMHS Fremantle 1 Stirling St - CAHS",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.92,
+      "probabilities": {
+        "needs_review": 0.04,
+        "retain_candidate": 0.01,
+        "likely_exclude": 0.95
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:6ef3b01783f1fb6c019ba941",
+      "title": "Youth Mental Health Service in the Shire of Bridgetown-Greenbushes",
+      "rules_status": "candidate",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.98,
+      "probabilities": {
+        "retain_candidate": 0.99,
+        "likely_exclude": 0,
+        "needs_review": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:5eeea363c2e9fafcd5c93141",
+      "title": "Delivery of training and assessment of Certificate III in Government for up to 50 Aboriginal trainees employed by the Public Sector Commission",
+      "rules_status": "candidate",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.96,
+      "probabilities": {
+        "retain_candidate": 0.98,
+        "needs_review": 0.02,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:a8f146e7aab345b143982790",
+      "title": "Allied Health Care Services at Burbridge School",
+      "rules_status": "candidate",
+      "service_family": "disability",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.96,
+      "probabilities": {
+        "retain_candidate": 0.97,
+        "likely_exclude": 0,
+        "needs_review": 0.03
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:94371f556bf11cc8b1cde2fc",
+      "title": "Child Protection Platform UX Consultancy Services",
+      "rules_status": "review",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.38,
+      "probabilities": {
+        "likely_exclude": 0.36,
+        "needs_review": 0.58,
+        "retain_candidate": 0.06
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:91ad392c83d8481ecfd5d712",
+      "title": "Setup of Early Diversionary Support Network - South West",
+      "rules_status": "review",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.89,
+      "probabilities": {
+        "likely_exclude": 0,
+        "retain_candidate": 0.93,
+        "needs_review": 0.07
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139101",
+      "title": "Cleaning Services at Fremantle District Office CPFS and Enhanced Contact Centre",
+      "rules_status": "review",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.93,
+      "probabilities": {
+        "retain_candidate": 0.01,
+        "likely_exclude": 0.96,
+        "needs_review": 0.03
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139705",
+      "title": "Western Australian Health Translation Network (WAHTN) Program Support 2026",
+      "rules_status": "review",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.23,
+      "probabilities": {
+        "retain_candidate": 0.46,
+        "likely_exclude": 0.05,
+        "needs_review": 0.49
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:1848691cc391eec80ef550f2",
+      "title": "Provision of Cleaning Services for Youth Justice Services Kalgoorlie",
+      "rules_status": "review",
+      "service_family": "youth_justice",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.88,
+      "probabilities": {
+        "likely_exclude": 0.92,
+        "needs_review": 0.04,
+        "retain_candidate": 0.04
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:5da527d75f13e66f357c2aae",
+      "title": "HSS Workflow Optimisation Approach",
+      "rules_status": "review",
+      "service_family": "disability",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.78,
+      "probabilities": {
+        "retain_candidate": 0,
+        "needs_review": 0.14,
+        "likely_exclude": 0.86
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:9a2191d3cbe5241fee098c49",
+      "title": "Child Protection Platform Enterprise Architecture Consultancy Services",
+      "rules_status": "review",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.68,
+      "probabilities": {
+        "needs_review": 0.2,
+        "likely_exclude": 0.79,
+        "retain_candidate": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "138581",
+      "title": "Accelerated Reporting Model",
+      "rules_status": "review",
+      "service_family": "disability",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.89,
+      "probabilities": {
+        "needs_review": 0.07,
+        "likely_exclude": 0.92,
+        "retain_candidate": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141473",
+      "title": "Provision of Cleaning Services, Midwest Gascoyne Youth Justice Services",
+      "rules_status": "review",
+      "service_family": "youth_justice",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.92,
+      "probabilities": {
+        "likely_exclude": 0.95,
+        "retain_candidate": 0.01,
+        "needs_review": 0.04
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:90b392e53ce2332c16daa0f5",
+      "title": "Case Management System (CMS-2023) (under CUAICTS2021)",
+      "rules_status": "review",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.88,
+      "probabilities": {
+        "retain_candidate": 0.01,
+        "needs_review": 0.07,
+        "likely_exclude": 0.92
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:157c4b2125080fc23bdfdae8",
+      "title": "Provision of Office Building Security System Preventative Maintenance Services",
+      "rules_status": "review",
+      "service_family": "disability",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.97,
+      "probabilities": {
+        "needs_review": 0.01,
+        "likely_exclude": 0.99,
+        "retain_candidate": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:f247f82b24b0469b0d8f98b8",
+      "title": "Cleaning Services for Armadale and Cannington District Carers",
+      "rules_status": "review",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.53,
+      "probabilities": {
+        "retain_candidate": 0.17,
+        "likely_exclude": 0.6799999999999999,
+        "needs_review": 0.15
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:a7a5e0937bc64aecf389ecbd",
+      "title": "Integrated Case Management System Infrastructure Uplift for the Mental Health Advocacy Service (CUAICTS2021)",
+      "rules_status": "review",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.74,
+      "probabilities": {
+        "needs_review": 0.17,
+        "likely_exclude": 0.83,
+        "retain_candidate": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:33a7aa471d4288d536179428",
+      "title": "Online Homelessness Services Portal",
+      "rules_status": "review",
+      "service_family": "housing_homelessness",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.36,
+      "probabilities": {
+        "needs_review": 0.34,
+        "retain_candidate": 0.08,
+        "likely_exclude": 0.58
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139956",
+      "title": "Supply of Audio-Visual Equipment for Geraldton Health Campus",
+      "rules_status": "review",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.95,
+      "probabilities": {
+        "likely_exclude": 0.97,
+        "retain_candidate": 0,
+        "needs_review": 0.03
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:26a37eed37c26d55f279afdf",
+      "title": "IP Telephony and Network Services - Wanneroo Community Mental Health Service",
+      "rules_status": "review",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.89,
+      "probabilities": {
+        "likely_exclude": 0.93,
+        "retain_candidate": 0,
+        "needs_review": 0.07
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140669",
+      "title": "Heavy Vehicle Driver Training and Practical Assessment for South Regional TAFE",
+      "rules_status": "review",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.85,
+      "probabilities": {
+        "needs_review": 0.1,
+        "retain_candidate": 0.9,
+        "likely_exclude": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:8741d01d1c62594bca6575ad",
+      "title": "GSR - Temporary Contract Personnel - 2023",
+      "rules_status": "review",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.51,
+      "probabilities": {
+        "needs_review": 0.68,
+        "likely_exclude": 0.08,
+        "retain_candidate": 0.24
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141013",
+      "title": "Provision of an Online Work Health & Safety and Case Management Solutions",
+      "rules_status": "review",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.9,
+      "probabilities": {
+        "needs_review": 0.06,
+        "likely_exclude": 0.9299999999999999,
+        "retain_candidate": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "142101",
+      "title": "Provision of Aviation Flying Training Services",
+      "rules_status": "review",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "retain_candidate",
+      "confidence": 0.63,
+      "probabilities": {
+        "retain_candidate": 0.76,
+        "likely_exclude": 0.01,
+        "needs_review": 0.23
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "140914",
+      "title": "Digital Reintegration Services GSR",
+      "rules_status": "review",
+      "service_family": "youth_justice",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.98,
+      "probabilities": {
+        "retain_candidate": 0,
+        "likely_exclude": 0.99,
+        "needs_review": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:392570166bcec39efdf17303",
+      "title": "New Network Rules and Procedures - Instructional Design of Training",
+      "rules_status": "review",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.63,
+      "probabilities": {
+        "needs_review": 0.75,
+        "likely_exclude": 0.02,
+        "retain_candidate": 0.23
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "141948",
+      "title": "Development of new training and assessment resources for the CPC60121 Advanced Diploma of Building Surveying.",
+      "rules_status": "review",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.19,
+      "probabilities": {
+        "retain_candidate": 0.1,
+        "likely_exclude": 0.46,
+        "needs_review": 0.44
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:7301b401260485849523edb0",
+      "title": "Butler Community Mental Health Services, 81 Exmouth Drive, Butler - WAN/LAN/IP-Tel",
+      "rules_status": "review",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.81,
+      "probabilities": {
+        "needs_review": 0.11,
+        "likely_exclude": 0.88,
+        "retain_candidate": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:15b384597b4acb3789758f8f",
+      "title": "Online Recruitment Application Portal and Case Management System",
+      "rules_status": "review",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.71,
+      "probabilities": {
+        "likely_exclude": 0.81,
+        "retain_candidate": 0.06,
+        "needs_review": 0.13
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:d1fad1ddfc050d1299d70506",
+      "title": "Provision of Case Management Software for the Management of Workers' Compensation and Injury Management Files",
+      "rules_status": "review",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.89,
+      "probabilities": {
+        "needs_review": 0.07,
+        "likely_exclude": 0.93,
+        "retain_candidate": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:b3e8ff597268722eb87a2ed5",
+      "title": "Cleaning - Wanneroo Community Mental Health Service",
+      "rules_status": "review",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.94,
+      "probabilities": {
+        "needs_review": 0.03,
+        "likely_exclude": 0.96,
+        "retain_candidate": 0.01
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2022-23:3f0e00fc64710b52fae09bce",
+      "title": "iBase Intelligence Software Products - Renewal of Support and Maintenance",
+      "rules_status": "review",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.99,
+      "probabilities": {
+        "needs_review": 0,
+        "likely_exclude": 1,
+        "retain_candidate": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:9049d035d2f08b6a524b6b49",
+      "title": "Cleaning Services For Dept of Communities Mandurah CPFS District Office",
+      "rules_status": "review",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.94,
+      "probabilities": {
+        "retain_candidate": 0.01,
+        "needs_review": 0.03,
+        "likely_exclude": 0.96
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:591e79ee5ecd01864bdbf0b1",
+      "title": "Mental Health Advocacy Service - CLMI Solution (under CUAICTS2021 - Category 2)",
+      "rules_status": "review",
+      "service_family": "community_services",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.92,
+      "probabilities": {
+        "needs_review": 0.04,
+        "retain_candidate": 0.01,
+        "likely_exclude": 0.95
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2023-24:1fc6f21dd0134e33453c380d",
+      "title": "Knowledge Management (KM) Solution - Practice Manual Redevelopment Project",
+      "rules_status": "review",
+      "service_family": "child_family",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.8,
+      "probabilities": {
+        "needs_review": 0.11,
+        "retain_candidate": 0.02,
+        "likely_exclude": 0.87
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139537",
+      "title": "Services of a Solution Architect (CIMS and GHCR)",
+      "rules_status": "review",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.76,
+      "probabilities": {
+        "needs_review": 0.14,
+        "retain_candidate": 0.01,
+        "likely_exclude": 0.85
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "142456",
+      "title": "Specialist Building Condition Assessment services for Disability Service Commission (DSC) assets",
+      "rules_status": "review",
+      "service_family": "disability",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.78,
+      "probabilities": {
+        "needs_review": 0.12,
+        "likely_exclude": 0.85,
+        "retain_candidate": 0.03
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:494a89473918e545b8e537ce",
+      "title": "Provision of Road Construction & Maintenance Training Program",
+      "rules_status": "review",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.39,
+      "probabilities": {
+        "needs_review": 0.6,
+        "likely_exclude": 0.09,
+        "retain_candidate": 0.31
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "2021-22:92faf85afc3fddb51bf6b009",
+      "title": "Rockingham Community Child and Adolescent Mental Health Service  (CAMHS)Reconfiguration",
+      "rules_status": "review",
+      "service_family": "health_mental_health",
+      "is_kimberley": false,
+      "jev_route": "likely_exclude",
+      "confidence": 0.95,
+      "probabilities": {
+        "needs_review": 0.03,
+        "likely_exclude": 0.97,
+        "retain_candidate": 0
+      },
+      "model": "jev-1.13.0"
+    },
+    {
+      "source_contract_id": "139756",
+      "title": "Phriendly Phishing Cyber Security Awareness Training with Phishing Simulation Platform with Maintenance and Support",
+      "rules_status": "review",
+      "service_family": "employment_training",
+      "is_kimberley": false,
+      "jev_route": "needs_review",
+      "confidence": 0.58,
+      "probabilities": {
+        "needs_review": 0.72,
+        "retain_candidate": 0.16,
+        "likely_exclude": 0.12
+      },
+      "model": "jev-1.13.0"
+    }
+  ]
+}

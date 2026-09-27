@@ -1,0 +1,37 @@
+{
+  "fetched_at": "2026-09-27T01:25:16.637Z",
+  "licence": "Creative Commons Attribution 4.0",
+  "publisher": "WA Department of Treasury and Finance via Data WA",
+  "artifacts": [
+    {
+      "year": "2021-22",
+      "dataset": "cab2f08c-6776-4328-b4b3-776f1f88eb3a",
+      "resource": "2f29a5b8-ad39-465a-8374-84cbe5a2afc9",
+      "url": "https://catalogue.data.wa.gov.au/dataset/cab2f08c-6776-4328-b4b3-776f1f88eb3a/resource/2f29a5b8-ad39-465a-8374-84cbe5a2afc9/download/tenders-wa-contract-award-details-2021-22-financial-year.csv",
+      "path": "/Users/benknight/Code/grantscope/data/wa-tenders/annual/2021-22/contracts.csv",
+      "bytes": 4025812,
+      "sha256": "68cfb871e24207cb5cd25098b71081290d7796ddb5e197c45693b51c4e21554e"
+    },
+    {
+      "year": "2022-23",
+      "dataset": "a66013f6-07db-433b-bc6a-984b249a1013",
+      "resource": "063fa676-4ae3-48dd-ad0b-0e207182abf8",
+      "url": "https://catalogue.data.wa.gov.au/dataset/a66013f6-07db-433b-bc6a-984b249a1013/resource/063fa676-4ae3-48dd-ad0b-0e207182abf8/download/tenders-wa-contract-award-details-2022-23-financial-year.csv",
+      "path": "/Users/benknight/Code/grantscope/data/wa-tenders/annual/2022-23/contracts.csv",
+      "bytes": 4426937,
+      "sha256": "41c7267bad5aeecfaf741f9ad4f1263d9f03737bf4990ba93727911d5d7df6ea"
+    },
+    {
+      "year": "2023-24",
+      "dataset": "90b272e8-9ae0-4995-8dc9-86f8249b51d1",
+      "resource": "855378f8-0398-4a0a-a1c2-218816508ec9",
+      "url": "https://catalogue.data.wa.gov.au/dataset/90b272e8-9ae0-4995-8dc9-86f8249b51d1/resource/855378f8-0398-4a0a-a1c2-218816508ec9/download/tenders-wa-contract-award-details-2023-24-financial-year.csv",
+      "path": "/Users/benknight/Code/grantscope/data/wa-tenders/annual/2023-24/contracts.csv",
+      "bytes": 4622055,
+      "sha256": "a6e9859f99ba7211c75222ffebc938c5395487dd2491eff5ba2a60a62d7c3241"
+    }
+  ],
+  "contracts": 14172,
+  "active_or_future": 2310,
+  "kimberley": 1087
+}

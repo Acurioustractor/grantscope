@@ -1,0 +1,447 @@
+{
+  "generated_at": "2026-09-26T23:13:34.503Z",
+  "status": "review-only",
+  "rule": "Jev routes public evidence sources only. It does not decide ACCO identity, authority, readiness, consent, outcomes or outreach.",
+  "sources": 23,
+  "agreement": 13,
+  "low_confidence": 11,
+  "results": [
+    {
+      "source_key": "wa-transition:aer-2023-24",
+      "source_name": "WA Aboriginal Expenditure Review 2023-24",
+      "declared_data_fit": "direct-ingestion",
+      "expected_route": "ingest_structured",
+      "jev_route": "extract_documents",
+      "confidence": 0.97,
+      "probabilities": {
+        "validate_dashboard": 0,
+        "ingest_structured": 0.03,
+        "test_portal": 0,
+        "govern_relationship": 0,
+        "monitor_only": 0,
+        "extract_documents": 0.97
+      },
+      "agrees_with_declared_fit": false,
+      "model": "jev-1.13.0",
+      "input_tokens": 666
+    },
+    {
+      "source_key": "wa-transition:tenders-wa",
+      "source_name": "Tenders WA",
+      "declared_data_fit": "portal-feasibility",
+      "expected_route": "test_portal",
+      "jev_route": "test_portal",
+      "confidence": 0.87,
+      "probabilities": {
+        "validate_dashboard": 0,
+        "extract_documents": 0.06,
+        "monitor_only": 0,
+        "test_portal": 0.89,
+        "ingest_structured": 0.05,
+        "govern_relationship": 0
+      },
+      "agrees_with_declared_fit": true,
+      "model": "jev-1.13.0",
+      "input_tokens": 625
+    },
+    {
+      "source_key": "wa-transition:sfpp",
+      "source_name": "Strategic Forward Procurement Plan Public Report",
+      "declared_data_fit": "dashboard-validation",
+      "expected_route": "validate_dashboard",
+      "jev_route": "extract_documents",
+      "confidence": 0.95,
+      "probabilities": {
+        "validate_dashboard": 0,
+        "ingest_structured": 0.03,
+        "govern_relationship": 0,
+        "test_portal": 0,
+        "monitor_only": 0.01,
+        "extract_documents": 0.96
+      },
+      "agrees_with_declared_fit": false,
+      "model": "jev-1.13.0",
+      "input_tokens": 659
+    },
+    {
+      "source_key": "wa-transition:app-performance",
+      "source_name": "Aboriginal Procurement Policy Performance Reports",
+      "declared_data_fit": "document-extraction",
+      "expected_route": "extract_documents",
+      "jev_route": "extract_documents",
+      "confidence": 0.97,
+      "probabilities": {
+        "validate_dashboard": 0,
+        "ingest_structured": 0.02,
+        "test_portal": 0,
+        "govern_relationship": 0,
+        "monitor_only": 0,
+        "extract_documents": 0.98
+      },
+      "agrees_with_declared_fit": true,
+      "model": "jev-1.13.0",
+      "input_tokens": 651
+    },
+    {
+      "source_key": "wa-transition:ctg-plan",
+      "source_name": "WA Closing the Gap Implementation Plan",
+      "declared_data_fit": "document-extraction",
+      "expected_route": "extract_documents",
+      "jev_route": "extract_documents",
+      "confidence": 0.65,
+      "probabilities": {
+        "monitor_only": 0.28,
+        "extract_documents": 0.71,
+        "validate_dashboard": 0,
+        "ingest_structured": 0.01,
+        "govern_relationship": 0,
+        "test_portal": 0
+      },
+      "agrees_with_declared_fit": true,
+      "model": "jev-1.13.0",
+      "input_tokens": 639
+    },
+    {
+      "source_key": "wa-transition:kjjs",
+      "source_name": "Kimberley Juvenile Justice Strategy",
+      "declared_data_fit": "document-extraction",
+      "expected_route": "extract_documents",
+      "jev_route": "extract_documents",
+      "confidence": 0.74,
+      "probabilities": {
+        "ingest_structured": 0,
+        "govern_relationship": 0,
+        "validate_dashboard": 0,
+        "test_portal": 0,
+        "monitor_only": 0.21,
+        "extract_documents": 0.79
+      },
+      "agrees_with_declared_fit": true,
+      "model": "jev-1.13.0",
+      "input_tokens": 645
+    },
+    {
+      "source_key": "wa-transition:goods-evidence-contract",
+      "source_name": "Goods on Country evidence and decision contract",
+      "declared_data_fit": "relationship-governed",
+      "expected_route": "govern_relationship",
+      "jev_route": "extract_documents",
+      "confidence": 0.56,
+      "probabilities": {
+        "test_portal": 0.04,
+        "ingest_structured": 0.02,
+        "extract_documents": 0.64,
+        "monitor_only": 0.28,
+        "validate_dashboard": 0,
+        "govern_relationship": 0.02
+      },
+      "agrees_with_declared_fit": false,
+      "model": "jev-1.13.0",
+      "input_tokens": 626
+    },
+    {
+      "source_key": "wa-transition:app-audit",
+      "source_name": "OAG Implementation of the Aboriginal Procurement Policy",
+      "declared_data_fit": "document-extraction",
+      "expected_route": "extract_documents",
+      "jev_route": "extract_documents",
+      "confidence": 0.99,
+      "probabilities": {
+        "extract_documents": 0.99,
+        "monitor_only": 0.01,
+        "govern_relationship": 0,
+        "test_portal": 0,
+        "ingest_structured": 0,
+        "validate_dashboard": 0
+      },
+      "agrees_with_declared_fit": true,
+      "model": "jev-1.13.0",
+      "input_tokens": 647
+    },
+    {
+      "source_key": "wa-transition:wa-budget-aboriginal",
+      "source_name": "WA State Budget Aboriginal wellbeing",
+      "declared_data_fit": "document-extraction",
+      "expected_route": "extract_documents",
+      "jev_route": "extract_documents",
+      "confidence": 0.93,
+      "probabilities": {
+        "ingest_structured": 0.01,
+        "govern_relationship": 0,
+        "validate_dashboard": 0,
+        "test_portal": 0,
+        "monitor_only": 0.04,
+        "extract_documents": 0.95
+      },
+      "agrees_with_declared_fit": true,
+      "model": "jev-1.13.0",
+      "input_tokens": 636
+    },
+    {
+      "source_key": "wa-transition:productivity-services",
+      "source_name": "Report on Government Services",
+      "declared_data_fit": "direct-ingestion",
+      "expected_route": "ingest_structured",
+      "jev_route": "extract_documents",
+      "confidence": 0.76,
+      "probabilities": {
+        "monitor_only": 0,
+        "ingest_structured": 0.15,
+        "test_portal": 0,
+        "extract_documents": 0.8,
+        "validate_dashboard": 0.05,
+        "govern_relationship": 0
+      },
+      "agrees_with_declared_fit": false,
+      "model": "jev-1.13.0",
+      "input_tokens": 625
+    },
+    {
+      "source_key": "wa-transition:oics-reports",
+      "source_name": "Office of the Inspector of Custodial Services reports",
+      "declared_data_fit": "document-extraction",
+      "expected_route": "extract_documents",
+      "jev_route": "extract_documents",
+      "confidence": 0.98,
+      "probabilities": {
+        "test_portal": 0,
+        "validate_dashboard": 0,
+        "extract_documents": 0.98,
+        "govern_relationship": 0,
+        "monitor_only": 0.01,
+        "ingest_structured": 0.01
+      },
+      "agrees_with_declared_fit": true,
+      "model": "jev-1.13.0",
+      "input_tokens": 629
+    },
+    {
+      "source_key": "wa-transition:oric-register",
+      "source_name": "ORIC public register",
+      "declared_data_fit": "direct-ingestion",
+      "expected_route": "ingest_structured",
+      "jev_route": "test_portal",
+      "confidence": 0.35,
+      "probabilities": {
+        "test_portal": 0.46,
+        "monitor_only": 0,
+        "govern_relationship": 0,
+        "extract_documents": 0.27,
+        "validate_dashboard": 0.03,
+        "ingest_structured": 0.24
+      },
+      "agrees_with_declared_fit": false,
+      "model": "jev-1.13.0",
+      "input_tokens": 621
+    },
+    {
+      "source_key": "wa-transition:procurement-bi",
+      "source_name": "WA Government Procurement Business Intelligence Reports",
+      "declared_data_fit": "dashboard-validation",
+      "expected_route": "validate_dashboard",
+      "jev_route": "validate_dashboard",
+      "confidence": 0.42,
+      "probabilities": {
+        "govern_relationship": 0,
+        "monitor_only": 0,
+        "ingest_structured": 0.02,
+        "extract_documents": 0.46,
+        "validate_dashboard": 0.52,
+        "test_portal": 0
+      },
+      "agrees_with_declared_fit": true,
+      "model": "jev-1.13.0",
+      "input_tokens": 644
+    },
+    {
+      "source_key": "wa-transition:pc-ctg-dashboard",
+      "source_name": "Closing the Gap Information Repository",
+      "declared_data_fit": "direct-ingestion",
+      "expected_route": "ingest_structured",
+      "jev_route": "validate_dashboard",
+      "confidence": 0.92,
+      "probabilities": {
+        "extract_documents": 0.01,
+        "ingest_structured": 0.06,
+        "test_portal": 0,
+        "monitor_only": 0,
+        "validate_dashboard": 0.93,
+        "govern_relationship": 0
+      },
+      "agrees_with_declared_fit": false,
+      "model": "jev-1.13.0",
+      "input_tokens": 624
+    },
+    {
+      "source_key": "wa-transition:app-policy",
+      "source_name": "WA Aboriginal Procurement Policy 2025",
+      "declared_data_fit": "document-extraction",
+      "expected_route": "extract_documents",
+      "jev_route": "extract_documents",
+      "confidence": 0.44,
+      "probabilities": {
+        "ingest_structured": 0.01,
+        "extract_documents": 0.53,
+        "govern_relationship": 0,
+        "validate_dashboard": 0,
+        "test_portal": 0,
+        "monitor_only": 0.46
+      },
+      "agrees_with_declared_fit": true,
+      "model": "jev-1.13.0",
+      "input_tokens": 659
+    },
+    {
+      "source_key": "wa-transition:data-wa",
+      "source_name": "Data WA catalogue",
+      "declared_data_fit": "catalogue-discovery",
+      "expected_route": "monitor_only",
+      "jev_route": "test_portal",
+      "confidence": 0.48,
+      "probabilities": {
+        "ingest_structured": 0.37,
+        "extract_documents": 0.03,
+        "govern_relationship": 0,
+        "validate_dashboard": 0.02,
+        "test_portal": 0.58,
+        "monitor_only": 0
+      },
+      "agrees_with_declared_fit": false,
+      "model": "jev-1.13.0",
+      "input_tokens": 628
+    },
+    {
+      "source_key": "wa-transition:abs-census-aboriginal",
+      "source_name": "ABS Census Aboriginal and Torres Strait Islander peoples data",
+      "declared_data_fit": "direct-ingestion",
+      "expected_route": "ingest_structured",
+      "jev_route": "extract_documents",
+      "confidence": 0.49,
+      "probabilities": {
+        "ingest_structured": 0.36,
+        "govern_relationship": 0,
+        "validate_dashboard": 0.04,
+        "test_portal": 0.01,
+        "monitor_only": 0.02,
+        "extract_documents": 0.57
+      },
+      "agrees_with_declared_fit": false,
+      "model": "jev-1.13.0",
+      "input_tokens": 643
+    },
+    {
+      "source_key": "wa-transition:aihw-indigenous",
+      "source_name": "AIHW Indigenous Australians data",
+      "declared_data_fit": "document-extraction",
+      "expected_route": "extract_documents",
+      "jev_route": "extract_documents",
+      "confidence": 0.82,
+      "probabilities": {
+        "monitor_only": 0.01,
+        "test_portal": 0,
+        "ingest_structured": 0.09,
+        "extract_documents": 0.86,
+        "validate_dashboard": 0.04,
+        "govern_relationship": 0
+      },
+      "agrees_with_declared_fit": true,
+      "model": "jev-1.13.0",
+      "input_tokens": 635
+    },
+    {
+      "source_key": "wa-transition:acnc-register",
+      "source_name": "ACNC Charity Register data",
+      "declared_data_fit": "direct-ingestion",
+      "expected_route": "ingest_structured",
+      "jev_route": "ingest_structured",
+      "confidence": 0.94,
+      "probabilities": {
+        "ingest_structured": 0.95,
+        "test_portal": 0.01,
+        "monitor_only": 0,
+        "extract_documents": 0.03,
+        "govern_relationship": 0,
+        "validate_dashboard": 0.01
+      },
+      "agrees_with_declared_fit": true,
+      "model": "jev-1.13.0",
+      "input_tokens": 623
+    },
+    {
+      "source_key": "wa-transition:justice-annual-reports",
+      "source_name": "WA Department of Justice annual reports",
+      "declared_data_fit": "document-extraction",
+      "expected_route": "extract_documents",
+      "jev_route": "extract_documents",
+      "confidence": 0.96,
+      "probabilities": {
+        "validate_dashboard": 0,
+        "test_portal": 0,
+        "monitor_only": 0,
+        "extract_documents": 0.97,
+        "ingest_structured": 0.03,
+        "govern_relationship": 0
+      },
+      "agrees_with_declared_fit": true,
+      "model": "jev-1.13.0",
+      "input_tokens": 630
+    },
+    {
+      "source_key": "wa-transition:wa-communities-map",
+      "source_name": "WA Aboriginal communities maps and services",
+      "declared_data_fit": "relationship-governed",
+      "expected_route": "govern_relationship",
+      "jev_route": "extract_documents",
+      "confidence": 0.48,
+      "probabilities": {
+        "ingest_structured": 0.01,
+        "test_portal": 0.01,
+        "govern_relationship": 0.12,
+        "validate_dashboard": 0,
+        "extract_documents": 0.57,
+        "monitor_only": 0.29
+      },
+      "agrees_with_declared_fit": false,
+      "model": "jev-1.13.0",
+      "input_tokens": 629
+    },
+    {
+      "source_key": "wa-transition:ombudsman-child-deaths",
+      "source_name": "WA Ombudsman child death review reports",
+      "declared_data_fit": "document-extraction",
+      "expected_route": "extract_documents",
+      "jev_route": "extract_documents",
+      "confidence": 0.98,
+      "probabilities": {
+        "test_portal": 0,
+        "ingest_structured": 0.01,
+        "monitor_only": 0.01,
+        "extract_documents": 0.98,
+        "govern_relationship": 0,
+        "validate_dashboard": 0
+      },
+      "agrees_with_declared_fit": true,
+      "model": "jev-1.13.0",
+      "input_tokens": 636
+    },
+    {
+      "source_key": "wa-transition:pipeline-of-works",
+      "source_name": "WA Pipeline of Works",
+      "declared_data_fit": "dashboard-validation",
+      "expected_route": "validate_dashboard",
+      "jev_route": "extract_documents",
+      "confidence": 0.39,
+      "probabilities": {
+        "ingest_structured": 0.06,
+        "govern_relationship": 0,
+        "validate_dashboard": 0.04,
+        "test_portal": 0.39,
+        "monitor_only": 0.02,
+        "extract_documents": 0.49
+      },
+      "agrees_with_declared_fit": false,
+      "model": "jev-1.13.0",
+      "input_tokens": 633
+    }
+  ]
+}

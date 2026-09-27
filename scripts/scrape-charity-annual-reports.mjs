@@ -34,7 +34,10 @@ if (!FIRECRAWL_KEY) {
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const DRY_RUN = process.argv.includes('--dry-run');
-const ABNS = process.argv.filter(a => a.startsWith('--abn=')).map(a => a.split('=')[1]);
+// --abn=<abn>@<site> overrides acnc_charities.website, for charities that registered no website.
+const ABN_ARGS = process.argv.filter(a => a.startsWith('--abn=')).map(a => a.slice('--abn='.length));
+const ABNS = ABN_ARGS.map(a => a.split('@')[0]);
+const SITE_OVERRIDES = Object.fromEntries(ABN_ARGS.filter(a => a.includes('@')).map(a => a.split('@')));
 const MAX_REPORTS = Number(process.argv.find(a => a.startsWith('--max-reports='))?.split('=')[1] || 8);
 
 if (!ABNS.length) {
@@ -171,7 +174,7 @@ async function processCharity(abn) {
     return { found: 0, inserted: 0 };
   }
 
-  const site = normaliseUrl(charity.website);
+  const site = normaliseUrl(SITE_OVERRIDES[abn] || charity.website);
   if (!site) {
     console.log(`  no website on file`);
     return { found: 0, inserted: 0 };
