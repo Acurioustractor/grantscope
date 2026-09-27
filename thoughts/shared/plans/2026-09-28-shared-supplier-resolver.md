@@ -57,3 +57,18 @@ WA v2 found about 25 names where gs_entities holds a different ABN from the acti
 3. Generalise the ledger and function; port WA onto it with no behaviour change (compare counts).
 4. Port QLD (step a heavy), then AusTender's backfill.
 5. Audit the mode backfill; entity ABN hygiene job.
+
+## Audit of the guessed-ABN backfill (2026-09-28, read-only)
+
+`backfill-state-tenders-abn.sql` (commit f01cbe01, 2026-03-27) reported +31,450 state-tender ABNs (82.2% -> 98.0%). Phase 1 copies the most frequent ABN per upper-case name; phases 2 and 3 take the alphabetically first ABN when a name has several. No provenance column exists, and a later process restamped `updated_at` on 2026-08-08, so the backfilled rows cannot be isolated directly (only 405 DOE rows still carry the 2026-03-27 stamp).
+
+Measured instead (queries: temp tables + ROLLBACK):
+
+| source | rows with a valid-shape ABN | name has several active register ABNs | stored ABN contradicts the name's only register ABN |
+|---|---|---|---|
+| qld_doe_disclosure | 72,321 | 1,557 | 3,292 (3,212 are `#N/A`, 77 an active ABN of another name, 3 cancelled) |
+| other 7 QLD sources | 103,229 | 2,165 | 229 |
+
+- The alphabetical-first signature is not above chance (337 of 1,557 DOE rows), so there is no evidence phases 2-3 wrote many guesses. The realistic exposure is the ~3.7K rows on multi-ABN names, plus a handful of wrong-company ABNs (e.g. BUYEQUIP PTY LTD stored under EQUIPMENTOR PTY LTD's ABN).
+- **The bigger defect is junk in `supplier_abn`:** 20,314 non-null values that are not an 11-digit ABN, 20,093 of them in DOE. Examples: `#N/A`, `0`, `Notassigned`, `#VALUE!`, `NoABN`, plus comma-separated lists of joint suppliers. Phase 1 counted any non-null value as an ABN, so it could have spread `#N/A` to same-name rows (Logan City Council: 192 rows of `#N/A`, while the register gives it one ABN).
+- The QLD ingest is JusticeHub's; the fix belongs there (validate shape + checksum, split lists, null the rest) and in step a of the shared resolver: treat `published_abn` as an ABN only if it is 11 digits, passes the checksum and exists in `abr_registry`.
