@@ -282,27 +282,55 @@ begin
     and b.n = 1
     and (m.match_status = 'unmatched' or b.entity_id = any(m.candidate_entity_ids));
 
-  -- A name match whose entity carries a DIFFERENT ABN from the register's is not trusted either
-  -- way (2026-09-28 trial: 439 components, 65 names, e.g. "Australia Post" linked to a person via
-  -- a bad alias; a shared trading name linked to another company). Send both to review.
-  update wa_supplier_entity_matches m set
-    candidate_entity_ids = array_remove(array[m.matched_entity_id, (
-      select min(e2.id::text)::uuid from gs_entities e2 where e2.abn = m.identified_abn)], null),
-    matched_entity_id = null,
-    match_status = 'ambiguous',
-    match_method = 'abn_conflict',
-    match_confidence = null,
-    evidence = m.evidence || jsonb_build_object('abn_conflict', jsonb_build_object(
-      'name_matched_entity', m.matched_entity_id, 'name_method', m.match_method,
-      'entity_abn', e.abn, 'register_abn', m.identified_abn)),
-    updated_at = now()
-  from gs_entities e
-  where e.id = m.matched_entity_id
-    and m.match_status = 'matched'
+  -- A name match whose entity carries a DIFFERENT ABN from the register's (2026-09-28 trial:
+  -- 439 components, 65 names; e.g. "Australia Post" linked to a person via a bad alias, trading
+  -- names linked to other companies that share them, entities holding a stale ABN).
+  -- Trust the register when the WA source itself supplied the name that hit it: the bracketed
+  -- legal name, or the whole published name when there are no brackets. Relink to the entity
+  -- holding that ABN, or leave unmatched with the ABN recorded when the graph has none.
+  -- Anything else goes to review with both candidates.
+  create temporary table tmp_wa_abn_conflicts on commit drop as
+  select m.state_tender_id, m.supplier_ordinal, m.matched_entity_id as name_entity_id,
+         m.match_method as name_method, e.abn as entity_abn, m.identified_abn,
+         exists (
+           select 1 from tmp_wa_abr_candidates c
+           where c.state_tender_id = m.state_tender_id and c.supplier_ordinal = m.supplier_ordinal
+             and c.abn = m.identified_abn
+             and (c.alias_kind = 'legal_name'
+                  or (c.alias_kind = 'trading_name' and c.alias_name = btrim(m.supplier_name)))
+         ) as source_named_legal,
+         (select array_agg(g.id order by g.id) from gs_entities g where g.abn = m.identified_abn) as abn_entities
+  from wa_supplier_entity_matches m
+  join gs_entities e on e.id = m.matched_entity_id
+  where m.match_status = 'matched'
     and m.review_status <> 'confirmed'
     and m.identified_abn is not null
     and e.abn is not null
     and e.abn <> m.identified_abn;
+
+  update wa_supplier_entity_matches m set
+    matched_entity_id = case
+      when k.source_named_legal and cardinality(k.abn_entities) = 1 then k.abn_entities[1]
+      else null end,
+    match_status = case
+      when k.source_named_legal and cardinality(k.abn_entities) = 1 then 'matched'
+      when k.source_named_legal and k.abn_entities is null then 'unmatched'
+      else 'ambiguous' end,
+    match_method = case
+      when k.source_named_legal and cardinality(k.abn_entities) = 1 then 'abn_override_legal_name'
+      when k.source_named_legal and k.abn_entities is null then 'abn_override_no_entity'
+      else 'abn_conflict' end,
+    match_confidence = case
+      when k.source_named_legal and cardinality(k.abn_entities) = 1 then 0.980 else null end,
+    candidate_entity_ids = array_remove(array[k.name_entity_id] || coalesce(k.abn_entities, '{}'::uuid[]), null),
+    evidence = m.evidence || jsonb_build_object('abn_conflict', jsonb_build_object(
+      'name_matched_entity', k.name_entity_id, 'name_method', k.name_method,
+      'entity_abn', k.entity_abn, 'register_abn', k.identified_abn,
+      'source_named_legal', k.source_named_legal)),
+    updated_at = now()
+  from tmp_wa_abn_conflicts k
+  where m.state_tender_id = k.state_tender_id
+    and m.supplier_ordinal = k.supplier_ordinal;
 
   update state_tenders t set
     gs_entity_id = resolved.entity_id,
@@ -364,6 +392,8 @@ begin
     'abr_legal_name', count(*) filter (where match_method = 'exact_abr_legal_name'),
     'abr_tiebreak', count(*) filter (where match_method = 'exact_abr_tiebreak'),
     'abn_conflict', count(*) filter (where match_method = 'abn_conflict'),
+    'abn_override_legal_name', count(*) filter (where match_method = 'abn_override_legal_name'),
+    'abn_override_no_entity', count(*) filter (where match_method = 'abn_override_no_entity'),
     'abn_identified', count(*) filter (where identified_abn is not null),
     'abn_identified_no_entity', count(*) filter (where identified_abn is not null and matched_entity_id is null),
     'fuzzy_status', 'deferred_review_only'
