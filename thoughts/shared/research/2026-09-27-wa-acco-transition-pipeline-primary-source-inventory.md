@@ -415,3 +415,14 @@ Verified by direct fetch of MercyCare's page (the agent's second fetch came back
 `acnc_ais_line_items` cannot be loaded with a funder split: the public ACNC AIS CSV (2023) has one `revenue from government` column, already in `acnc_ais`. The split lives in each charity's audited financial report PDF. Firecrawl returned 402 (no credits), so `scripts/wa/fetch-provider-reports.py` fetches PDFs from providers' own sites instead (sitemap walk, robots.txt checked; empoweredcommunities.org.au, winunngari.org.au and yic.com.au excluded for `Disallow: /`).
 
 Result: 19 Kimberley-linked providers, **43 PDFs from 10**; KAMS, Garnduwa, Boab Health, BRAMS-adjacent and 5 others publish no findable report. MercyCare's 2022 report link now redirects to its homepage. Funder lines found: Wunan (Communities funds Transitional Housing Program and advocacy, 2018), KCLS (Communities funds part of its work), PBHRWA (audited revenue by funder and program, e.g. MHC Naloxone/OPAM $172,694). **Nothing on the four SFPP services.** Audited statements are the useful document; multi-column layout garbles narrative text. Site list: `data/wa-provider-reports-sites.txt`.
+
+### ABN register as a supplier-identity source (dry run, 2026-09-28)
+
+WA award records carry **no ABNs** (0 of 20,283 supplier components), so names are the only key. `mv_abr_name_lookup` (active ABR legal names over `abr_registry`) was not used by `refresh_wa_supplier_entity_matches`. Dry run (`scripts/wa/sql/abr-name-match-dry-run.sql`, temp tables + ROLLBACK, 7s): look up by the indexed `norm_name`, then **require exact upper-case legal-name equality** (the index strips "Aboriginal", so norm alone would create false friends); try both the outer label and the parenthesised legal name.
+
+| status | names | exactly one ABN | several ABNs | components gaining an ABN | of which community-controlled |
+|---|---|---|---|---|---|
+| unmatched | 4,367 | 1,989 | 101 | 5,860 | 4 |
+| ambiguous | 199 | 106 | 14 | 975 | 30 |
+
+Unmatched components would fall from 11,659 to about 5,800. Only 1,654 of the 5,860 resolve to an ABN already in `gs_entities`; the rest are businesses the graph has never held. Almost no new ACCOs: they were already found through ORIC and ACNC. Counts joined to `gs_entities` may carry slight fan-out (multiple rows per ABN). Applying this means a new resolver version in the SQL function, i.e. a migration.
