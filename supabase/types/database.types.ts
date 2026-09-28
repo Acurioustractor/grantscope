@@ -27764,7 +27764,11 @@ export type Database = {
           created_at: string | null;
           date: string;
           description: string;
+          end_date: string | null;
+          featured: boolean;
           id: number;
+          image_url: string | null;
+          link_url: string | null;
           location: string;
           status: string;
           submittedBy: string | null;
@@ -27778,7 +27782,11 @@ export type Database = {
           created_at?: string | null;
           date: string;
           description: string;
+          end_date?: string | null;
+          featured?: boolean;
           id?: number;
+          image_url?: string | null;
+          link_url?: string | null;
           location: string;
           status?: string;
           submittedBy?: string | null;
@@ -27792,7 +27800,11 @@ export type Database = {
           created_at?: string | null;
           date?: string;
           description?: string;
+          end_date?: string | null;
+          featured?: boolean;
           id?: number;
+          image_url?: string | null;
+          link_url?: string | null;
           location?: string;
           status?: string;
           submittedBy?: string | null;
