@@ -63,7 +63,7 @@ export interface GoodsMoneyDoor {
 }
 
 export interface GoodsForm {
-  id: 'maker' | 'public-good' | 'community-enterprise';
+  id: 'goods-on-country' | 'community-partner';
   label: string;
   legalState: string;
   holds: string;
@@ -400,27 +400,19 @@ export const GOODS_COST_CENTRES = [
 
 export const GOODS_FORMS: GoodsForm[] = [
   {
-    id: 'maker',
-    label: 'Goods. inside A Curious Tractor Pty Ltd',
-    legalState: 'Current legal recipient, with seller-of-record during transition still to confirm',
-    holds: 'Product design, quality, training, equipment support, buyers, working capital and back office',
-    receives: 'Orders and repayable investment',
-    status: 'open',
-  },
-  {
-    id: 'public-good',
-    label: 'Goods on Country inside The Butterfly Movement Ltd',
-    legalState: 'Current charity and DGR recipient',
-    holds: 'Relationship work, learning, community participation, evidence and wraparound',
-    receives: 'Tax-deductible gifts and public-good funding',
+    id: 'goods-on-country',
+    label: 'Goods on Country · The Butterfly Movement Ltd',
+    legalState: 'Registered business name of The Butterfly Movement Ltd; historic seller and asset transfers retain their exact status',
+    holds: 'Products, making, quality, sales, delivery, capital, governance, relationships and evidence',
+    receives: 'Orders, gifts and capital under the correct agreement and accounting treatment',
     status: 'verified',
   },
   {
-    id: 'community-enterprise',
-    label: 'Community production enterprise',
-    legalState: 'Intended third form, not yet settled',
-    holds: 'Local machinery, making, customer contracts, margin, knowledge and decisions as agreed',
-    receives: 'Future local trading revenue and assets as they transfer',
+    id: 'community-partner',
+    label: 'Community partner decisions',
+    legalState: 'Activity-specific authority must be confirmed; ownership is a pathway, not a completed transfer',
+    holds: 'How beds are used, who is paid and what is made next in place',
+    receives: 'Community sale proceeds and locally agreed resources remain with the community organisation',
     status: 'open',
   },
 ];
@@ -438,7 +430,7 @@ export const GOODS_MONEY_DOORS: GoodsMoneyDoor[] = [
     id: 'buy',
     label: 'Buy or order',
     verb: 'Prove the product',
-    recipient: 'Goods. trading recipient, seller-of-record to be confirmed',
+    recipient: 'Goods on Country, with the seller of record confirmed for each transaction',
     paysFor: 'Beds, making, ordinary delivery and contribution to the shared Goods network.',
     proofBeforeMore: 'Signed or authorised demand, delivered product, quality record and real contribution.',
   },
@@ -446,7 +438,7 @@ export const GOODS_MONEY_DOORS: GoodsMoneyDoor[] = [
     id: 'invest',
     label: 'Invest repayably',
     verb: 'Bridge the work',
-    recipient: 'A Curious Tractor Pty Ltd, subject to agreed terms',
+    recipient: 'Goods on Country, subject to signed terms, a repayment source and agreed asset ownership',
     paysFor: 'Order-backed working capital, measured production and selected productive assets.',
     proofBeforeMore: 'A measured run, clear repayment source, agreed asset owner and release milestones.',
   },
@@ -473,8 +465,8 @@ export const GOODS_DECISION_GATES = [
   },
   {
     label: 'Transfer',
-    question: 'Who will sell, own the assets and hold the margin at each milestone?',
-    why: 'The third form is the destination of the work, not a company box that can be assumed in advance.',
+    question: 'Which decisions and assets could move into community control, and on whose terms?',
+    why: 'Goods on Country is the current operating home. Any later transfer is a community-led pathway, not an assumed entity or completed outcome.',
     status: 'open' as const,
   },
 ];

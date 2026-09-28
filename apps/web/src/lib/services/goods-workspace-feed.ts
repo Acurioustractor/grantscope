@@ -11,7 +11,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  * sends sourced facts only: demand fields are always 0 and `demandProvided` is false.
  */
 
-export const GOODS_FEED_SECTIONS = ['communities', 'wa-sweep'] as const;
+export const GOODS_FEED_SECTIONS = ['communities', 'wa-sweep', 'place'] as const;
 export type GoodsFeedSection = (typeof GOODS_FEED_SECTIONS)[number];
 
 export function goodsFeedSecret(): string {
@@ -52,6 +52,17 @@ export interface GoodsCommunityFact {
     assetsDeployedSource: 'goods_register' | null;
     partnersBasis: 'community-controlled entities registered in this postcode (inferred: registered address, not service area)';
   };
+}
+
+/** Exact UUID read for a reviewed Goods place link. An absent row stays absent. */
+export async function getGoodsPlaceFact(db: SupabaseClient, id: string) {
+  const { data, error } = await db
+    .from('goods_communities')
+    .select('id, community_name, state, postcode, region_label, overcrowded_pct, overcrowding_source, overcrowding_as_at')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new Error(`goods_communities: ${error.message}`);
+  return data;
 }
 
 type CommunityRow = {
