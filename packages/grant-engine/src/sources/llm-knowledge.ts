@@ -21,6 +21,8 @@ interface LLMKnowledgeConfig {
   maxTokens?: number;
   requestDelayMs?: number;
   sources?: LLMSource[];
+  /** Tests inject one; otherwise a client that reads ANTHROPIC_API_KEY is built. */
+  client?: Pick<Anthropic, 'messages'>;
 }
 
 const DEFAULT_AU_SOURCES: LLMSource[] = [
@@ -39,7 +41,7 @@ const DEFAULT_AU_SOURCES: LLMSource[] = [
 ];
 
 export function createLLMKnowledgePlugin(config: LLMKnowledgeConfig = {}): SourcePlugin {
-  const anthropic = new Anthropic();
+  const anthropic = config.client ?? new Anthropic();
   const model = config.model || 'claude-3-5-haiku-20241022';
   const maxTokens = config.maxTokens || 2000;
   const delayMs = config.requestDelayMs || 1000;
@@ -62,6 +64,7 @@ export function createLLMKnowledgePlugin(config: LLMKnowledgeConfig = {}): Sourc
     async *discover(query: DiscoveryQuery): AsyncGenerator<RawGrant> {
       const sources = config.sources || DEFAULT_AU_SOURCES;
       const year = new Date().getFullYear();
+      const failures: string[] = [];
 
       for (const source of sources) {
         await rateLimit();
@@ -135,7 +138,15 @@ Rules:
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           console.error(`[llm-knowledge] Error searching ${source.name}: ${msg}`);
+          failures.push(`${source.name}: ${msg}`);
         }
+      }
+
+      // The registry records a thrown error under this source's stats.errors. Until now every failed
+      // lookup was logged and dropped, so a missing key, an empty credit balance and a retired model
+      // all read as "0 grants, no errors".
+      if (failures.length > 0) {
+        throw new Error(`llm-knowledge: ${failures.length} of ${sources.length} lookups failed. ${failures.join(' | ')}`);
       }
     },
   };
