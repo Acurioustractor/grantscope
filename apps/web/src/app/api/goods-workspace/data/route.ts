@@ -4,6 +4,7 @@ import {
   GOODS_FEED_SECTIONS,
   type GoodsFeedSection,
   getVerifiedCommunities,
+  getGoodsPlaceFact,
   getWaSellerSweep,
   goodsFeedSecret,
   isGoodsFeedAuthorised,
@@ -36,6 +37,15 @@ export async function GET(request: NextRequest) {
 
   try {
     const db = getServiceSupabase();
+    if (section === 'place') {
+      const id = request.nextUrl.searchParams.get('id') ?? '';
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+        return NextResponse.json({ error: 'A valid place UUID is required' }, { status: 400 });
+      }
+      const place = await getGoodsPlaceFact(db, id);
+      if (!place) return NextResponse.json({ error: 'Place not found' }, { status: 404, headers: NO_STORE });
+      return NextResponse.json({ place, source: 'goods_communities', demandProvided: false, readAt: new Date().toISOString() }, { headers: NO_STORE });
+    }
     if (section === 'communities') {
       const communities = await getVerifiedCommunities(db, { states, limit });
       return NextResponse.json({ communities, count: communities.length, demandProvided: false }, { headers: NO_STORE });

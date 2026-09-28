@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { isGoodsFeedAuthorised } from './goods-workspace-feed';
+import { getGoodsPlaceFact, isGoodsFeedAuthorised } from './goods-workspace-feed';
 
 const ROUTE = join(process.cwd(), 'src/app/api/goods-workspace/data/route.ts');
 
@@ -28,5 +28,18 @@ describe('Goods workspace feed', () => {
   it('never sends modelled demand', () => {
     const src = readFileSync(join(process.cwd(), 'src/lib/services/goods-workspace-feed.ts'), 'utf8');
     expect(src).not.toMatch(/demand_beds|demand_washers|known_buyer_name/);
+  });
+
+  it('looks up a place by exact UUID and preserves database errors', async () => {
+    const maybeSingle = () => Promise.resolve({ data: { id: 'place-id' }, error: null });
+    const eq = (column: string, value: string) => {
+      expect([column, value]).toEqual(['id', 'place-id']);
+      return { maybeSingle };
+    };
+    const db = { from: (table: string) => {
+      expect(table).toBe('goods_communities');
+      return { select: () => ({ eq }) };
+    } };
+    expect(await getGoodsPlaceFact(db as never, 'place-id')).toEqual({ id: 'place-id' });
   });
 });

@@ -556,7 +556,7 @@ function ContextPanel({ active }: { active: ContextView }) {
   return (
     <div className="grid gap-5 lg:grid-cols-2">
       <div>
-        <h4 className="text-sm font-semibold text-slate-950">Three organisational jobs</h4>
+        <h4 className="text-sm font-semibold text-slate-950">One Goods on Country home, with decisions in place</h4>
         <div className="mt-3 divide-y divide-slate-200 rounded-xl border border-slate-200">
           {GOODS_FORMS.map((form) => (
             <div key={form.id} className="p-4">

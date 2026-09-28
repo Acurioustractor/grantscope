@@ -61,15 +61,12 @@ describe('place-first pathways', () => {
 });
 
 describe('money and entity boundaries', () => {
-  it('shows three money doors but only two current legal recipients', () => {
+  it('shows three money doors through one operating home with community decisions in place', () => {
     expect(GOODS_MONEY_DOORS).toHaveLength(3);
-
-    const currentForms = GOODS_FORMS.filter((form) => form.id !== 'community-enterprise');
-    expect(currentForms).toHaveLength(2);
-
-    const communityForm = GOODS_FORMS.find((form) => form.id === 'community-enterprise');
-    expect(communityForm?.status).toBe('open');
-    expect(communityForm?.legalState).toMatch(/not yet settled/i);
+    expect(GOODS_FORMS.map((form) => form.id)).toEqual(['goods-on-country', 'community-partner']);
+    expect(GOODS_FORMS[0].label).toMatch(/Goods on Country/);
+    expect(GOODS_FORMS[1].legalState).toMatch(/authority must be confirmed/i);
+    expect(GOODS_MONEY_DOORS.filter((door) => door.id !== 'give').every((door) => door.recipient.includes('Goods on Country'))).toBe(true);
   });
 
   it('requires evidence before more money moves through every door', () => {
