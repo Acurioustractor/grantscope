@@ -315,15 +315,17 @@ function WorkspaceModeLink({ href, label, active, index, hint }: WorkspaceLink &
     <Link
       href={href}
       aria-current={active ? 'page' : undefined}
-      className={`grid min-h-10 grid-cols-[26px_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-3 py-2 transition-colors [@media(max-height:680px)]:min-h-9 ${
+      className={`grid min-h-10 grid-cols-[26px_minmax(0,1fr)] items-center gap-2 rounded-md px-3 py-2 transition-colors [@media(max-height:680px)]:min-h-9 ${
         active ? 'bg-white/10 text-white' : 'text-[#c7d1ca] hover:bg-white/5 hover:text-white'
       }`}
     >
       <span className={`font-mono text-[10px] font-semibold ${active ? 'text-[#e7ef65]' : 'text-[#8fa196]'}`}>
         {String(index).padStart(2, '0')}
       </span>
-      <span className="truncate text-sm font-semibold">{label}</span>
-      {hint ? <span className="min-w-0 truncate text-right font-mono text-[8px] text-[#9fb0a4]">{hint}</span> : null}
+      <span className="min-w-0">
+        <span className="block shrink-0 text-sm font-semibold">{label}</span>
+        {hint ? <span className="block truncate font-mono text-[8px] text-[#9fb0a4]">{hint}</span> : null}
+      </span>
     </Link>
   );
 }
