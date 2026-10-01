@@ -125,7 +125,7 @@ export function ActPlaceFieldWorkspace({
           <Metric label="Completed" value={countStatus(field.initiatives, 'complete').toString()} detail="endorsed complete" />
           <Metric label="Regional orgs" value={field.summary.organisationCount.toLocaleString('en-AU')} detail={`${field.summary.communityControlledOrganisationCount} community-controlled`} />
           <Metric label="ACT people" value={field.summary.relationshipCount.toLocaleString('en-AU')} detail="linked to regional orgs" warning={field.summary.relationshipCount === 0} />
-          <Metric label="Goods assets" value={field.summary.recordedAssets.toLocaleString('en-AU')} detail={`${field.summary.recordedNeed.toLocaleString('en-AU')} recorded need`} />
+          <Metric label="Goods assets" value={field.summary.recordedAssets.toLocaleString('en-AU')} detail={`${field.summary.recordedNeed.toLocaleString('en-AU')} modelled need`} />
           <Metric label="Justice records" value={field.summary.justiceRecordCount.toLocaleString('en-AU')} detail="matched public evidence" />
         </section>
 
@@ -252,7 +252,7 @@ function Communities({ field, slug, place }: { field: ActPlaceFieldData; slug: s
                   <span className="font-mono text-[8px] uppercase text-[#52745f]">{place.name}</span>
                 </div>
                 <dl className="mt-4 grid grid-cols-2 gap-2">
-                  <CompactFact label="Recorded need" value={community.need.toLocaleString('en-AU')} />
+                  <CompactFact label="Modelled need" value={community.need.toLocaleString('en-AU')} />
                   <CompactFact label="Goods assets" value={community.assets.toLocaleString('en-AU')} />
                   <CompactFact label="Mapped buyers" value={community.buyers.toLocaleString('en-AU')} />
                   <CompactFact label="Evidence sources" value={community.sourceCount.toLocaleString('en-AU')} />

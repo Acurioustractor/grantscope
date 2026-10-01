@@ -85,7 +85,7 @@ export default async function GoodsCommunitiesHubPage({
           <Cell label="Most disadvantaged (≤D3)" value={summary.high_disadvantage} />
           <Cell label="With deployments" value={summary.with_deployments} />
           <Cell label="With open signals" value={summary.with_open_signals} />
-          <Cell label="Beds demanded" value={summary.total_beds_demanded} />
+          <Cell label="Modelled bed need" value={summary.total_beds_demanded} />
           <Cell label="Beds deployed in this view" value={summary.total_beds_deployed} />
         </div>
 
@@ -126,8 +126,8 @@ export default async function GoodsCommunitiesHubPage({
                 <Th>Region / LC</Th>
                 <Th>Priority</Th>
                 <Th>Disadv. / Serve</Th>
-                <Th align="right">Beds (D / Demand)</Th>
-                <Th align="right">Washers (D / Demand)</Th>
+                <Th align="right">Beds (delivered / modelled)</Th>
+                <Th align="right">Washers (delivered / modelled)</Th>
                 <Th align="right">Open signals</Th>
                 <Th align="right">Buyers (GHL)</Th>
                 <Th>Last action</Th>
@@ -148,7 +148,7 @@ export default async function GoodsCommunitiesHubPage({
           <ul className="mt-2 list-disc pl-5 space-y-1">
             <li>Filter to <code className="bg-white px-1">scope=lead</code> for the highest-priority NT/QLD set</li>
             <li>Click any community for buyers, signals, matched grants, and Push-to-GHL</li>
-            <li>Sort by demand to surface largest unmet beds first</li>
+            <li>Need is modelled from population and household data. Nobody has asked for these beds; demand is only what a community has requested</li>
             <li>Beds-deployed column is sourced from <code className="bg-white px-1">goods_communities.assets_deployed</code>. This counter currently shows 0 or 1 for most rows — the actual Goods asset register isn't yet syncing back. Phase B will add this.</li>
           </ul>
         </div>
@@ -229,7 +229,7 @@ function Row({ c, alt, orgSlug, renderedAtMs }: { c: CommunityHubRow; alt: boole
         {c.demand_beds > 0 && (
           <div
             className="mt-1 flex h-1.5 w-16 ml-auto overflow-hidden border border-bauhaus-black/40 bg-white"
-            title={`${c.assets_deployed} delivered of ${c.demand_beds} needed`}
+            title={`${c.assets_deployed} delivered against ${c.demand_beds} modelled`}
           >
             <div className="bg-bauhaus-black" style={{ width: `${Math.min(100, (c.assets_deployed / c.demand_beds) * 100)}%` }} />
             <div className="flex-1 bg-bauhaus-red/60" />
